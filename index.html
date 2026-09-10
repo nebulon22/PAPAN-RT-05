@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Denah Interaktif RT 05 Kayen</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
+    #map { width: 100%; height: 100vh; }
+    
+    .btn-rute {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 6px 12px;
+      background-color: #00c853;
+      color: white !important;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+    }
+    .custom-pin { background: none; border: none; }
+
+    #top-panel {
+      position: absolute;
+      top: 70px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      width: 86%;
+      max-width: 340px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #search-box {
+      background: white;
+      padding: 8px 10px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      display: flex;
+      gap: 6px;
+    }
+    #searchInput {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    #search-box button {
+      padding: 8px 12px;
+      background: #111;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    #filter-box {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+    #filter-box::-webkit-scrollbar { display: none; }
+
+    .btn-filter {
+      padding: 6px 12px;
+      background: white;
+      color: #333;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .btn-filter.active {
+      background: #00c853;
+      color: white;
+      border-color: #00c853;
+    }
+
+    .btn-info-rt {
+      background: #ff9800;
+      color: white;
+      border-color: #f57c00;
+    }
+
+    .badge-count {
+      background: #d32f2f;
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+
+    .modal-bg {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-content {
+      background: white;
+      width: 90%;
+      max-width: 400px;
+      max-height: 75vh;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    .modal-header h3 { margin: 0; font-size: 16px; color: #111; }
+    .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #777; font-weight: bold; }
+    .modal-body { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    
+    .card-info {
+      background: #fdfdfd;
+      border: 1px solid #e0e0e0;
+      border-left: 4px solid #ff9800;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+    .card-info .tgl { font-size: 11px; color: #777; font-weight: bold; }
+    .card-info .judul { font-size: 14px; font-weight: bold; margin: 4px 0; color: #222; }
+    .card-info .detail { font-size: 12.5px; color: #444; margin-bottom: 8px; line-height: 1.4; white-space: pre-line; }
+    
+    .btn-lihat-lokasi {
+      display: inline-block;
+      font-size: 11px;
+      padding: 6px 10px;
+      background: #0288d1;
+      color: white;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .rt-dark-area {
+      backdrop-filter: brightness(0.65) invert(0.85) contrast(1.2) hue-rotate(190deg);
+      -webkit-backdrop-filter: brightness(0.65) invert(0.85) contrast(1.2) hue-rotate(190deg);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="top-panel">
+    <div id="search-box">
+      <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
+      <button onclick="cariLokasi()">Cari</button>
+    </div>
+    
+    <div id="filter-box">
+      <button class="btn-filter btn-info-rt" onclick="bukaModalInfo()">
+        📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
+      </button>
+      <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
+      <button class="btn-filter" onclick="filterKategori('rumah', this)">🏠 Rumah</button>
+      <button class="btn-filter" onclick="filterKategori('usaha', this)">🏪 Usaha</button>
+      <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📢 Pengumuman RT 05</h3>
+        <button class="close-btn" onclick="tutupModalInfo()">&times;</button>
+      </div>
+      <div class="modal-body" id="list-pengumuman">
+        <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
+    var GID_PENGUMUMAN = '1885853390'; // <--- GANTI ANGKA INI DENGAN GID TAB PENGUMUMAN ANDA
+
+    var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+    var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
+
+    var map = L.map('map').setView([-7.7423, 110.3842], 17);
+
+    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps'
+    }).addTo(map);
+
+    var batasRT05 = [
+      [-7.7441031, 110.3835], [-7.7447197, 110.3852273], [-7.743848, 110.3854633],
+      [-7.7440818, 110.3861822], [-7.742955, 110.3864933], [-7.7428593, 110.3858925],
+      [-7.7407331, 110.3866972], [-7.7404886, 110.3861929], [-7.740563, 110.3848089],
+      [-7.7399995, 110.3831674], [-7.740159, 110.382234], [-7.7414879, 110.3818906],
+      [-7.7421789, 110.3819979], [-7.7428699, 110.3838755], [-7.7441031, 110.3835]
+    ];
+
+    L.polygon(batasRT05, { 
+      className: 'rt-dark-area',
+      color: '#00e676', 
+      weight: 3, 
+      fillColor: '#000000', 
+      fillOpacity: 0.1 
+    }).addTo(map).bindPopup('<b>Batas Wilayah RT 05 Kayen</b>');
+
+    var daftarPin = [];
+    var daftarPengumuman = [];
+    var pinRumahAktif = null;
+
+    function parseCSV(text) {
+      var lines = text.replace(/\r/g, '').split('\n');
+      var result = [];
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (!line) continue;
+        var row = [];
+        var inQuotes = false;
+        var cur = '';
+        for (var c = 0; c < line.length; c++) {
+          var char = line[c];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === ',' && !inQuotes) {
+            row.push(cur.trim().replace(/^"|"$/g, ''));
+            cur = '';
+          } else {
+            cur += char;
+          }
+        }
+        row.push(cur.trim().replace(/^"|"$/g, ''));
+        result.push(row);
+      }
+      return result;
+    }
+
+    function perbaikiKoordinat(val) {
+      if (!val) return "";
+      var str = val.toString().replace(/,/g, '.').replace(/\s+/g, '');
+      var isNegatif = str.startsWith('-');
+      str = str.replace(/-/g, '').replace(/\./g, '');
+      
+      if (str.length > 2) {
+        if (isNegatif && str.startsWith('7')) {
+          str = '-7.' + str.substring(1);
+        } else if (!isNegatif && str.startsWith('110')) {
+          str = '110.' + str.substring(3);
+        } else {
+          str = (isNegatif ? '-' : '') + str.substring(0, 1) + '.' + str.substring(1);
+        }
+      }
+      return str;
+    }
+
+   // 1. MEMBACA SHEET UTAMA (TITIK LOKASI)
+    fetch(SHEET_URL)
+      .then(response => response.text())
+      .then(csvText => {
+        var baris = parseCSV(csvText).slice(1);
+
+        baris.forEach(function(kolom) {
+          if (kolom.length >= 3 && kolom[0] !== '') {
+            var latClean = perbaikiKoordinat(kolom[1]);
+            var lngClean = perbaikiKoordinat(kolom[2]);
+            var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
+            var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
+
+            var namaAsli = kolom[0].trim();
+
+            // ==========================================
+            // FUNGSI PENGENSENSORAN NAMA OTOMATIS
+            // ==========================================
+            var namaTampil = namaAsli;
+            
+            // Contoh aturan sensor: Jika nama mengandung format "(Pak Nama Asli)" atau sejenisnya
+            // Kita buat fungsi untuk menyensor nama di dalam kurung
+            namaTampil = namaTampil.replace(/\(([^)]+)\)/, function(match, isiKurung) {
+              var kataKata = isiKurung.split(' ');
+              var hasilSensor = kataKata.map(function(kata) {
+                if (kata.length <= 2) return kata; // Biarkan kata pendek seperti "pak", "bu" tetap utuh
+                // Ambil huruf pertama, selebihnya diganti bintang (*)
+                return kata.charAt(0) + '*'.repeat(kata.length - 1);
+              }).join(' ');
+              return '(' + hasilSensor + ')';
+            });
+            // ==========================================
+
+            var item = {
+              name: namaTampil, // Menggunakan nama yang sudah disensor untuk tampilan publik
+              nameAsli: namaAsli, // Menyimpan nama asli untuk keperluan pencocokan di latar belakang
+              lat: parseFloat(latClean),
+              lng: parseFloat(lngClean),
+              hidden: statusHidden
+            };
+
+            if (isNaN(item.lat) || isNaN(item.lng)) return;
+
+            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+            var popupContent = `<b>${item.name}</b><br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+            
+            let emoji = '🏠'; 
+            let kategori = 'rumah';
+            let namaUpper = item.nameAsli.toUpperCase();
+
+            if (kategoriManual.includes('usaha') || kategoriManual.includes('toko') || kategoriManual.includes('warung')) {
+              kategori = 'usaha'; emoji = '🏪';
+            } else if (kategoriManual.includes('fasum') || kategoriManual.includes('fasilitas') || kategoriManual.includes('umum')) {
+              kategori = 'fasum'; emoji = '🏛️';
+            } else if (kategoriManual.includes('rumah')) {
+              kategori = 'rumah'; emoji = '🏠';
+            } else {
+              if (namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('WARUNG') || namaUpper.includes('TOKO') || namaUpper.includes('KEDAI') || namaUpper.includes('LAUNDRY') || namaUpper.includes('BENGKEL')) {
+                emoji = (namaUpper.includes('WARUNG') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) ? '🏪' : '☕';
+                kategori = 'usaha';
+              }
+              else if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL') || namaUpper.includes('BALAI') || namaUpper.includes('LAPANGAN')) {
+                if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA')) emoji = '🕌';
+                else if (namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL') || namaUpper.includes('LAPANGAN')) emoji = '🏀';
+                else if (namaUpper.includes('BALAI')) emoji = '🏛️';
+                kategori = 'fasum';
+              }
+            }
+
+            var customIcon = L.divIcon({
+              className: 'custom-pin',
+              html: `<div style="background: white; border: 1.5px solid #00c853; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${emoji}</div>`,
+              iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -11]
+            });
+            
+            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent);
+            if (!item.hidden) marker.addTo(map);
+
+            daftarPin.push({ 
+              namaRaw: item.nameAsli,
+              nama: item.nameAsli.toLowerCase(), 
+              marker: marker, 
+              lat: item.lat, 
+              lng: item.lng,
+              hidden: item.hidden,
+              kategori: kategori 
+            });
+          }
+        });
+      })
+      .catch(error => console.error(error));
+
+    // 2. MEMBACA SHEET PENGUMUMAN (DENGAN GID)
+    fetch(PENGUMUMAN_URL)
+      .then(response => response.text())
+      .then(csvText => {
+        var baris = parseCSV(csvText).slice(1);
+        daftarPengumuman = [];
+
+        baris.forEach(function(kolom) {
+          if (kolom.length >= 2 && kolom[1] !== '') {
+            var status = kolom[4] ? kolom[4].trim().toUpperCase() : 'AKTIF';
+            
+            if (status === 'AKTIF') {
+              daftarPengumuman.push({
+                tanggal: kolom[0] || '',
+                judul: kolom[1] || '',
+                detail: kolom[2] || '',
+                lokasi: kolom[3] ? kolom[3].trim() : ''
+              });
+            }
+          }
+        });
+
+        var badge = document.getElementById('badge-count');
+        if (daftarPengumuman.length > 0) {
+          badge.innerText = daftarPengumuman.length;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
+      })
+      .catch(error => console.error("Gagal membaca tab Pengumuman:", error));
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function bukaModalInfo() {
+      var container = document.getElementById('list-pengumuman');
+      container.innerHTML = '';
+
+      if (daftarPengumuman.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
+      } else {
+        daftarPengumuman.forEach(function(info) {
+          var lokasiParam = encodeURIComponent(info.lokasi);
+          var html = `
+            <div class="card-info">
+              ${info.tanggal ? `<div class="tgl">📅 ${escapeHtml(info.tanggal)}</div>` : ''}
+              <div class="judul">${escapeHtml(info.judul)}</div>
+              <div class="detail">${escapeHtml(info.detail)}</div>
+              ${info.lokasi ? `<button class="btn-lihat-lokasi" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHtml(info.lokasi)})</button>` : ''}
+            </div>
+          `;
+          container.innerHTML += html;
+        });
+      }
+
+      document.getElementById('modal-info').style.display = 'flex';
+    }
+
+    function tutupModalInfo() {
+      document.getElementById('modal-info').style.display = 'none';
+    }
+
+    function bukaTutupLuar(e) {
+      if (e.target.id === 'modal-info') tutupModalInfo();
+    }
+
+    function sorotLokasi(lokasiEncoded) {
+      var namaLokasi = decodeURIComponent(lokasiEncoded).trim();
+      tutupModalInfo();
+
+      if (!namaLokasi) return;
+
+      var kataKunci = namaLokasi.toLowerCase();
+
+      var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci);
+
+      if (!hasil) {
+        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
+      }
+
+      if (hasil) {
+        if (pinRumahAktif) {
+          map.removeLayer(pinRumahAktif);
+          pinRumahAktif = null;
+        }
+
+        if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
+          hasil.marker.addTo(map);
+          pinRumahAktif = hasil.marker;
+        }
+
+        map.flyTo([hasil.lat, hasil.lng], 19);
+        setTimeout(() => { hasil.marker.openPopup(); }, 800);
+      } else {
+        alert("Lokasi '" + namaLokasi + "' tidak ditemukan.\n\nPastikan ejaan lokasi di Sheet Pengumuman (Kolom D) sama persis dengan Nama di Sheet Utama (Kolom A).");
+      }
+    }
+
+    function filterKategori(kat, btnElement) {
+      document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
+      btnElement.classList.add('active');
+
+      daftarPin.forEach(pin => {
+        map.removeLayer(pin.marker);
+
+        if (!pin.hidden) {
+          if (kat === 'semua') {
+            pin.marker.addTo(map);
+          } else if (pin.kategori === kat) {
+            pin.marker.addTo(map);
+          }
+        }
+      });
+    }
+function cariLokasi() {
+      var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
+      if (!kataKunci) return;
+
+      var hasil = null;
+
+      // 1. Cari yang persis sama dengan nama mentah
+      hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+
+      // 2. Khusus jika yang diketik berupa ANGKA (misal "6" atau "06")
+      if (!hasil && /^\d+$/.test(kataKunci)) {
+        var angkaCari = parseInt(kataKunci, 10); // Mengubah "06" atau "6" jadi angka 6
+        
+        hasil = daftarPin.find(pin => {
+          var kataKata = pin.nama.split(/[\s,().-]+/);
+          // Cek apakah ada kata yang jika dijadikan angka bernilai sama (sehingga "6" dan "06" dianggap sama)
+          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
+        });
+      }
+
+      // 3. Jika berupa huruf/nama (misal "bejo" atau "budi"), gunakan pencarian parsial
+      if (!hasil && !/^\d+$/.test(kataKunci)) {
+        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
+      }
+      
+      if (hasil) {
+        if (pinRumahAktif) {
+          map.removeLayer(pinRumahAktif);
+          pinRumahAktif = null;
+        }
+
+        // Karena Rumah No 06 statusnya Hidden (TRUE), paksa agar muncul di peta saat dicari
+        if (!map.hasLayer(hasil.marker)) {
+          hasil.marker.addTo(map);
+          pinRumahAktif = hasil.marker;
+        }
+
+        map.flyTo([hasil.lat, hasil.lng], 19);
+        setTimeout(() => { hasil.marker.openPopup(); }, 800);
+      } else {
+        alert("Nomor atau nama tempat tidak ditemukan.");
+      }
+    }
+    
+  </script>
+</body>
+</html>
