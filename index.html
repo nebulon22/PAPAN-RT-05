@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Denah Interaktif RT 05 Kayen</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
@@ -194,6 +194,7 @@
   justify-content: center;
   padding: 10px;
   box-sizing: border-box;
+  touch-action: manipulation; /* Mencegah auto zoom dari browser HP */
 }
 .modal-foto-img {
   max-width: 95%;
@@ -202,6 +203,7 @@
   object-fit: contain;
   box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
 }
+
   </style>
 </head>
 <body>
@@ -236,9 +238,9 @@
       </div>
     </div>
   </div>
-  <!-- Modal untuk Memperbesar Foto -->
-<div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar()">
-  <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto">
+  <!-- Modal Foto dengan event handler yang diperbaiki -->
+<div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)">
+  <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
 </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -562,14 +564,20 @@
         alert("Nomor atau nama tempat tidak ditemukan.");
       }
     }
-	function bukaFotoBesar(src) {
+	// Panggil dengan menyertakan event: bukaFotoBesar('url_foto', event)
+function bukaFotoBesar(src, e) {
+  if (e) e.stopPropagation();
   var modal = document.getElementById('modal-foto');
   var imgPreview = document.getElementById('foto-preview');
   imgPreview.src = src;
   modal.style.display = 'flex';
 }
 
-function tutupFotoBesar() {
+function tutupFotoBesar(e) {
+  if (e) {
+    e.stopPropagation(); // Mencegah klik tembus ke peta Leaflet
+    e.preventDefault();
+  }
   document.getElementById('modal-foto').style.display = 'none';
 }
   </script>
