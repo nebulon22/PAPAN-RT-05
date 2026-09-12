@@ -19,8 +19,19 @@
       border-radius: 4px;
       font-size: 12px;
       font-weight: bold;
+      text-align: center;
     }
     .custom-pin { background: none; border: none; }
+
+    /* Styling Gambar Rumah di Popup */
+    .img-popup {
+      width: 100%;
+      max-height: 140px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-top: 6px;
+      border: 1px solid #ddd;
+    }
 
     #top-panel {
       position: absolute;
@@ -161,11 +172,6 @@
       cursor: pointer;
       font-weight: bold;
     }
-
-    .rt-dark-area {
-      backdrop-filter: brightness(0.65) invert(0.85) contrast(1.2) hue-rotate(190deg);
-      -webkit-backdrop-filter: brightness(0.65) invert(0.85) contrast(1.2) hue-rotate(190deg);
-    }
   </style>
 </head>
 <body>
@@ -204,7 +210,7 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
-    var GID_PENGUMUMAN = '1885853390'; // <--- GANTI ANGKA INI DENGAN GID TAB PENGUMUMAN ANDA
+    var GID_PENGUMUMAN = '1885853390'; 
 
     var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
     var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
@@ -226,10 +232,9 @@
     ];
 
     L.polygon(batasRT05, { 
-      className: 'rt-dark-area',
-      color: '#00e676', 
+      color: '#00c853', 
       weight: 3, 
-      fillColor: '#000000', 
+      fillColor: '#00c853', 
       fillOpacity: 0.1 
     }).addTo(map).bindPopup('<b>Batas Wilayah RT 05 Kayen</b>');
 
@@ -281,7 +286,6 @@
       return str;
     }
 
-   // 1. MEMBACA SHEET UTAMA (TITIK LOKASI)
     fetch(SHEET_URL)
       .then(response => response.text())
       .then(csvText => {
@@ -293,39 +297,36 @@
             var lngClean = perbaikiKoordinat(kolom[2]);
             var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
             var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
+            var urlFoto = kolom[5] ? kolom[5].trim() : ''; // Kolom F untuk Foto
 
             var namaAsli = kolom[0].trim();
-
-            // ==========================================
-            // FUNGSI PENGENSENSORAN NAMA OTOMATIS
-            // ==========================================
             var namaTampil = namaAsli;
             
-            // Contoh aturan sensor: Jika nama mengandung format "(Pak Nama Asli)" atau sejenisnya
-            // Kita buat fungsi untuk menyensor nama di dalam kurung
             namaTampil = namaTampil.replace(/\(([^)]+)\)/, function(match, isiKurung) {
               var kataKata = isiKurung.split(' ');
               var hasilSensor = kataKata.map(function(kata) {
-                if (kata.length <= 2) return kata; // Biarkan kata pendek seperti "pak", "bu" tetap utuh
-                // Ambil huruf pertama, selebihnya diganti bintang (*)
+                if (kata.length <= 2) return kata;
                 return kata.charAt(0) + '*'.repeat(kata.length - 1);
               }).join(' ');
               return '(' + hasilSensor + ')';
             });
-            // ==========================================
 
             var item = {
-              name: namaTampil, // Menggunakan nama yang sudah disensor untuk tampilan publik
-              nameAsli: namaAsli, // Menyimpan nama asli untuk keperluan pencocokan di latar belakang
+              name: namaTampil,
+              nameAsli: namaAsli,
               lat: parseFloat(latClean),
               lng: parseFloat(lngClean),
-              hidden: statusHidden
+              hidden: statusHidden,
+              foto: urlFoto
             };
 
             if (isNaN(item.lat) || isNaN(item.lng)) return;
 
             var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var popupContent = `<b>${item.name}</b><br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+            
+            // Render gambar jika URL foto di Kolom F diisi
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan Rumah" onError="this.style.display='none'">` : '';
+            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
             let emoji = '🏠'; 
             let kategori = 'rumah';
@@ -356,7 +357,7 @@
               iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -11]
             });
             
-            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent);
+            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
             if (!item.hidden) marker.addTo(map);
 
             daftarPin.push({ 
@@ -373,7 +374,6 @@
       })
       .catch(error => console.error(error));
 
-    // 2. MEMBACA SHEET PENGUMUMAN (DENGAN GID)
     fetch(PENGUMUMAN_URL)
       .then(response => response.text())
       .then(csvText => {
@@ -449,7 +449,6 @@
       if (!namaLokasi) return;
 
       var kataKunci = namaLokasi.toLowerCase();
-
       var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci);
 
       if (!hasil) {
@@ -490,27 +489,23 @@
         }
       });
     }
-function cariLokasi() {
+
+    function cariLokasi() {
       var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
       if (!kataKunci) return;
 
       var hasil = null;
-
-      // 1. Cari yang persis sama dengan nama mentah
       hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
 
-      // 2. Khusus jika yang diketik berupa ANGKA (misal "6" atau "06")
       if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10); // Mengubah "06" atau "6" jadi angka 6
+        var angkaCari = parseInt(kataKunci, 10);
         
         hasil = daftarPin.find(pin => {
           var kataKata = pin.nama.split(/[\s,().-]+/);
-          // Cek apakah ada kata yang jika dijadikan angka bernilai sama (sehingga "6" dan "06" dianggap sama)
           return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
         });
       }
 
-      // 3. Jika berupa huruf/nama (misal "bejo" atau "budi"), gunakan pencarian parsial
       if (!hasil && !/^\d+$/.test(kataKunci)) {
         hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
       }
@@ -521,7 +516,6 @@ function cariLokasi() {
           pinRumahAktif = null;
         }
 
-        // Karena Rumah No 06 statusnya Hidden (TRUE), paksa agar muncul di peta saat dicari
         if (!map.hasLayer(hasil.marker)) {
           hasil.marker.addTo(map);
           pinRumahAktif = hasil.marker;
@@ -533,7 +527,6 @@ function cariLokasi() {
         alert("Nomor atau nama tempat tidak ditemukan.");
       }
     }
-    
   </script>
 </body>
 </html>
