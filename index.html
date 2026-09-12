@@ -172,6 +172,36 @@
       cursor: pointer;
       font-weight: bold;
     }
+	
+	/* Penanda bahwa gambar bisa diklik */
+.img-popup {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+.img-popup:hover {
+  opacity: 0.9;
+}
+
+/* Modal Foto Layar Penuh */
+.modal-foto-bg {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; 
+  width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 3000;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  box-sizing: border-box;
+}
+.modal-foto-img {
+  max-width: 95%;
+  max-height: 85vh;
+  border-radius: 8px;
+  object-fit: contain;
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+}
   </style>
 </head>
 <body>
@@ -206,6 +236,10 @@
       </div>
     </div>
   </div>
+  <!-- Modal untuk Memperbesar Foto -->
+<div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar()">
+  <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto">
+</div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -325,7 +359,8 @@
             var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
             
             // Render gambar jika URL foto di Kolom F diisi
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan Rumah" onError="this.style.display='none'">` : '';
+            // Tambahkan atribut onclick="bukaFotoBesar('${item.foto}')"
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan Rumah" onclick="bukaFotoBesar('${item.foto}')" onError="this.style.display='none'">` : '';
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
             let emoji = '🏠'; 
@@ -527,6 +562,16 @@
         alert("Nomor atau nama tempat tidak ditemukan.");
       }
     }
+	function bukaFotoBesar(src) {
+  var modal = document.getElementById('modal-foto');
+  var imgPreview = document.getElementById('foto-preview');
+  imgPreview.src = src;
+  modal.style.display = 'flex';
+}
+
+function tutupFotoBesar() {
+  document.getElementById('modal-foto').style.display = 'none';
+}
   </script>
 </body>
 </html>
