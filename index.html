@@ -23,7 +23,6 @@
     }
     .custom-pin { background: none; border: none; }
 
-    /* Styling Gambar Rumah di Popup */
     .img-popup {
       width: 100%;
       max-height: 140px;
@@ -31,7 +30,10 @@
       border-radius: 6px;
       margin-top: 6px;
       border: 1px solid #ddd;
+      cursor: pointer;
+      transition: transform 0.2s ease;
     }
+    .img-popup:hover { opacity: 0.9; }
 
     #top-panel {
       position: absolute;
@@ -73,15 +75,22 @@
       font-size: 13px;
     }
 
-    #filter-box {
+    /* Penyesuaian Filter 3 Baris */
+    .filter-container {
       display: flex;
-      gap: 8px;
-      overflow-x: auto;
-      scrollbar-width: none;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
     }
-    #filter-box::-webkit-scrollbar { display: none; }
+    .filter-row {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
 
     .btn-filter {
+      flex: 1;
+      justify-content: center;
       padding: 6px 12px;
       background: white;
       color: #333;
@@ -146,7 +155,6 @@
       padding-bottom: 8px;
       margin-bottom: 12px;
     }
-	  
     .modal-header h3 { margin: 0; font-size: 16px; color: #111; }
     .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #777; font-weight: bold; }
     .modal-body { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
@@ -173,38 +181,27 @@
       cursor: pointer;
       font-weight: bold;
     }
-	
-	/* Penanda bahwa gambar bisa diklik */
-.img-popup {
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-.img-popup:hover {
-  opacity: 0.9;
-}
 
-/* Modal Foto Layar Penuh */
-.modal-foto-bg {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; 
-  width: 100%; height: 100%;
-  background: rgba(0, 0, 0, 0.85);
-  z-index: 3000;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  box-sizing: border-box;
-  touch-action: manipulation; /* Mencegah auto zoom dari browser HP */
-}
-.modal-foto-img {
-  max-width: 95%;
-  max-height: 85vh;
-  border-radius: 8px;
-  object-fit: contain;
-  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
-}
-
+    .modal-foto-bg {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; 
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+    .modal-foto-img {
+      max-width: 95%;
+      max-height: 85vh;
+      border-radius: 8px;
+      object-fit: contain;
+      box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+    }
   </style>
 </head>
 <body>
@@ -215,19 +212,28 @@
       <button onclick="cariLokasi()">Cari</button>
     </div>
     
-    <div id="filter-box">
-      <button class="btn-filter btn-info-rt" onclick="bukaModalInfo()">
-        📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
-      </button>
-      <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
-      <button class="btn-filter" onclick="filterKategori('rumah', this)">🏠 Rumah</button>
-      <button class="btn-filter" onclick="filterKategori('usaha', this)">🏪 Usaha</button>
-      <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
+    <!-- Filter 3 Baris -->
+    <div class="filter-container">
+      <div class="filter-row">
+        <button class="btn-filter btn-info-rt" onclick="bukaModalInfo()">
+          📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
+        </button>
+        <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
+      </div>
+      <div class="filter-row">
+        <button class="btn-filter" onclick="filterKategori('rumah', this)">🏠 Rumah</button>
+        <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
+      </div>
+      <div class="filter-row">
+        <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
+        <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
+      </div>
     </div>
   </div>
 
   <div id="map"></div>
 
+  <!-- Modal Pengumuman -->
   <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
     <div class="modal-content">
       <div class="modal-header">
@@ -239,10 +245,11 @@
       </div>
     </div>
   </div>
-  <!-- Modal Foto dengan event handler yang diperbaiki -->
-<div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)">
-  <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
-</div>
+
+  <!-- Modal Foto Layar Penuh -->
+  <div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)">
+    <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
+  </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -334,7 +341,7 @@
             var lngClean = perbaikiKoordinat(kolom[2]);
             var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
             var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? kolom[5].trim() : ''; // Kolom F untuk Foto
+            var urlFoto = kolom[5] ? kolom[5].trim() : '';
 
             var namaAsli = kolom[0].trim();
             var namaTampil = namaAsli;
@@ -360,40 +367,44 @@
             if (isNaN(item.lat) || isNaN(item.lng)) return;
 
             var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            
-            // Render gambar jika URL foto di Kolom F diisi
-            // Tambahkan atribut onclick="bukaFotoBesar('${item.foto}')"
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan Rumah" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
+            // --- Logika Kategori & Ikon Baru ---
             let emoji = '🏠'; 
             let kategori = 'rumah';
             let namaUpper = item.nameAsli.toUpperCase();
+            
+            // Gaya ikon standar untuk rumah dan marker biasa
+            let bgStyle = 'background: white; border: 1.5px solid #00c853; color: black; width: 22px; height: 22px; font-size: 12px;';
 
-            if (kategoriManual.includes('usaha') || kategoriManual.includes('toko') || kategoriManual.includes('warung')) {
-              kategori = 'usaha'; emoji = '🏪';
-            } else if (kategoriManual.includes('fasum') || kategoriManual.includes('fasilitas') || kategoriManual.includes('umum')) {
+            if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
+              kategori = 'kuliner'; emoji = '🍽️';
+            } 
+            else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
+              kategori = 'minimarket'; emoji = '🏪';
+            } 
+            else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
               kategori = 'fasum'; emoji = '🏛️';
-            } else if (kategoriManual.includes('rumah')) {
+              
+              // Ikon Khusus Masjid
+              if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
+                emoji = '🕌';
+                bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;'; // Tampilan mencolok
+              } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
+                emoji = '🏀';
+              }
+            } 
+            else if (kategoriManual.includes('rumah')) {
               kategori = 'rumah'; emoji = '🏠';
-            } else {
-              if (namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('WARUNG') || namaUpper.includes('TOKO') || namaUpper.includes('KEDAI') || namaUpper.includes('LAUNDRY') || namaUpper.includes('BENGKEL')) {
-                emoji = (namaUpper.includes('WARUNG') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) ? '🏪' : '☕';
-                kategori = 'usaha';
-              }
-              else if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL') || namaUpper.includes('BALAI') || namaUpper.includes('LAPANGAN')) {
-                if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA')) emoji = '🕌';
-                else if (namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL') || namaUpper.includes('LAPANGAN')) emoji = '🏀';
-                else if (namaUpper.includes('BALAI')) emoji = '🏛️';
-                kategori = 'fasum';
-              }
             }
 
             var customIcon = L.divIcon({
               className: 'custom-pin',
-              html: `<div style="background: white; border: 1.5px solid #00c853; border-radius: 50%; width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${emoji}</div>`,
-              iconSize: [22, 22], iconAnchor: [11, 11], popupAnchor: [0, -11]
+              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${emoji}</div>`,
+              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
             });
+            // --- Akhir Logika Ikon ---
             
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
             if (!item.hidden) marker.addTo(map);
@@ -512,6 +523,7 @@
     }
 
     function filterKategori(kat, btnElement) {
+      // Hilangkan status aktif dari tombol selain Info RT
       document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
       btnElement.classList.add('active');
 
@@ -565,22 +577,22 @@
         alert("Nomor atau nama tempat tidak ditemukan.");
       }
     }
-	// Panggil dengan menyertakan event: bukaFotoBesar('url_foto', event)
-function bukaFotoBesar(src, e) {
-  if (e) e.stopPropagation();
-  var modal = document.getElementById('modal-foto');
-  var imgPreview = document.getElementById('foto-preview');
-  imgPreview.src = src;
-  modal.style.display = 'flex';
-}
 
-function tutupFotoBesar(e) {
-  if (e) {
-    e.stopPropagation(); // Mencegah klik tembus ke peta Leaflet
-    e.preventDefault();
-  }
-  document.getElementById('modal-foto').style.display = 'none';
-}
+    function bukaFotoBesar(src, e) {
+      if (e) e.stopPropagation();
+      var modal = document.getElementById('modal-foto');
+      var imgPreview = document.getElementById('foto-preview');
+      imgPreview.src = src;
+      modal.style.display = 'flex';
+    }
+
+    function tutupFotoBesar(e) {
+      if (e) {
+        e.stopPropagation(); 
+        e.preventDefault();
+      }
+      document.getElementById('modal-foto').style.display = 'none';
+    }
   </script>
 </body>
 </html>
