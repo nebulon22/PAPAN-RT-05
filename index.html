@@ -371,40 +371,41 @@
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
             // --- Logika Kategori & Ikon Baru ---
-            let emoji = '🏠'; 
-            let kategori = 'rumah';
-            let namaUpper = item.nameAsli.toUpperCase();
-            
-            // Gaya ikon standar untuk rumah dan marker biasa
-            let bgStyle = 'background: white; border: 1.5px solid #00c853; color: black; width: 22px; height: 22px; font-size: 12px;';
+let emoji = '🏠'; 
+let kategori = 'rumah';
+let namaUpper = item.nameAsli.toUpperCase();
 
-            if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
-              kategori = 'kuliner'; emoji = '🍽️';
-            } 
-            else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
-              kategori = 'minimarket'; emoji = '🏪';
-            } 
-            else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
-              kategori = 'fasum'; emoji = '🏛️';
-              
-              // Ikon Khusus Masjid
-              if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
-                emoji = '🕌';
-                bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;'; // Tampilan mencolok
-              } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
-                emoji = '🏀';
-              }
-            } 
-            else if (kategoriManual.includes('rumah')) {
-              kategori = 'rumah'; emoji = '🏠';
-            }
+// 1. Ganti warna border jadi merah menyala (#ef4444) dan pertegas ketebalannya menjadi 2px
+let bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px; font-size: 12px;';
 
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.3);">${emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            // --- Akhir Logika Ikon ---
+if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
+  kategori = 'kuliner'; emoji = '🍽️';
+} 
+else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
+  kategori = 'minimarket'; emoji = '🏪';
+} 
+else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
+  kategori = 'fasum'; emoji = '🏛️';
+  
+  // Ikon Khusus Masjid (tetap hijau teal dan lebih besar)
+  if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
+    emoji = '🕌';
+    bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;';
+  } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
+    emoji = '🏀';
+  }
+} 
+else if (kategoriManual.includes('rumah')) {
+  kategori = 'rumah'; emoji = '🏠';
+}
+
+// 2. Tambahkan bayangan ganda (box-shadow) agar tercipta efek 2.5D melayang
+var customIcon = L.divIcon({
+  className: 'custom-pin',
+  html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
+  iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+});
+// --- Akhir Logika Ikon ---
             
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
             if (!item.hidden) marker.addTo(map);
