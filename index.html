@@ -462,9 +462,482 @@
               lng: lngClean,
               hidden: statusHidden,
               foto: urlFoto
+            Tentu, ini adalah versi kode yang sudah diperbaiki, dibersihkan dari spasi tersembunyi (non-breaking spaces) yang sering menyebabkan error, dan strukturnya dirapikan agar lebih mudah dibaca serta dimodifikasi. Anda bisa langsung menyalin (copy) dan menempelkannya (paste) ke file HTML Anda.
+
+```html
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Denah Interaktif RT 05 Kayen</title>
+  
+  <!-- Leaflet CSS -->
+  <link rel="stylesheet" href="[https://unpkg.com/leaflet@1.9.4/dist/leaflet.css](https://unpkg.com/leaflet@1.9.4/dist/leaflet.css)" />
+  
+  <style>
+    /* --- Global Styles --- */
+    html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
+    #map { width: 100%; height: 100vh; }
+    
+    .btn-rute {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 6px 12px;
+      background-color: #00c853;
+      color: white !important;
+      text-decoration: none;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: bold;
+      text-align: center;
+    }
+    
+    .custom-pin { background: none; border: none; }
+
+    .img-popup {
+      width: 100%;
+      max-height: 140px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-top: 6px;
+      border: 1px solid #ddd;
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+    .img-popup:hover { opacity: 0.9; }
+
+    /* --- Top Panel & Filter --- */
+    #top-panel {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      width: 90%;
+      max-width: 360px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    #search-box {
+      background: white;
+      padding: 8px 10px;
+      border-radius: 8px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      display: flex;
+      gap: 6px;
+    }
+    
+    #searchInput {
+      flex: 1;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+    
+    #search-box button {
+      padding: 8px 12px;
+      background: #111;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 13px;
+    }
+
+    .filter-container {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      width: 100%;
+    }
+    
+    .filter-row {
+      display: flex;
+      gap: 6px;
+      width: 100%;
+    }
+
+    .btn-filter {
+      flex: 1;
+      justify-content: center;
+      padding: 8px 12px;
+      background: white;
+      color: #333;
+      border: 1px solid #ccc;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: bold;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+    
+    .btn-filter.active { background: #00c853; color: white; border-color: #00c853; }
+    .btn-info-rt { background: #ff9800; color: white; border-color: #f57c00; }
+
+    .badge-count {
+      background: #d32f2f;
+      color: white;
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-weight: bold;
+    }
+
+    /* --- Modals --- */
+    .modal-bg {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5);
+      z-index: 2000;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .modal-content {
+      background: white;
+      width: 90%;
+      max-width: 400px;
+      max-height: 80vh;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 8px;
+      margin-bottom: 12px;
+    }
+    
+    .modal-header h3 { margin: 0; font-size: 16px; color: #111; }
+    
+    .close-btn { 
+      background: none; border: none; font-size: 22px; cursor: pointer; color: #777; font-weight: bold; 
+    }
+    
+    .modal-body { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
+    
+    .card-info {
+      background: #fdfdfd;
+      border: 1px solid #e0e0e0;
+      border-left: 4px solid #ff9800;
+      padding: 10px 12px;
+      border-radius: 6px;
+    }
+    .card-info .tgl { font-size: 11px; color: #777; font-weight: bold; }
+    .card-info .judul { font-size: 14px; font-weight: bold; margin: 4px 0; color: #222; }
+    .card-info .detail { font-size: 12.5px; color: #444; margin-bottom: 8px; line-height: 1.4; white-space: pre-line; }
+    
+    .btn-lihat-lokasi {
+      display: inline-block;
+      font-size: 11px;
+      padding: 6px 10px;
+      background: #0288d1;
+      color: white;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .modal-foto-bg {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      z-index: 3000;
+      align-items: center;
+      justify-content: center;
+      padding: 10px;
+      box-sizing: border-box;
+      touch-action: manipulation;
+    }
+    
+    .modal-foto-img {
+      max-width: 95%;
+      max-height: 85vh;
+      border-radius: 8px;
+      object-fit: contain;
+      box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-admin-floating {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 1100;
+      background: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: 16px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+      border: 1px solid #ddd;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
+    .btn-admin-floating:hover { transform: scale(1.1); background: #f4f4f4; }
+  </style>
+</head>
+<body>
+
+  <!-- Tombol Admin -->
+  <a href="[https://admin.papan05.my.id](https://admin.papan05.my.id)" target="_blank" class="btn-admin-floating" title="Halaman Admin">🔒</a>
+
+  <!-- Peta -->
+  <div id="map"></div>
+
+  <!-- Panel Atas (Pencarian & Filter) -->
+  <div id="top-panel">
+    <div id="search-box">
+      <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') cariLokasi()">
+      <button onclick="cariLokasi()">Cari</button>
+    </div>
+    
+    <div class="filter-container">
+      <div class="filter-row">
+        <button class="btn-filter btn-info-rt" onclick="bukaModalInfo()">
+          📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
+        </button>
+        <button class="btn-filter btn-keuangan" style="background: #0288d1; color: white; border-color: #0288d1;" onclick="bukaModalKeuangan()">
+          💰 Keuangan
+        </button>
+      </div>
+      <div class="filter-row">
+        <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
+        <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
+      </div>
+      <div class="filter-row">
+        <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
+        <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
+      </div>
+      <div class="filter-row">
+        <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Rekening Koran -->
+  <div id="modal-keuangan" class="modal-bg" onclick="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
+    <div class="modal-content" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3>📜 Rekening Koran Divisi</h3>
+        <button class="close-btn" onclick="tutupModalKeuangan()">&times;</button>
+      </div>
+      
+      <div style="margin-bottom: 12px;">
+        <label style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
+        <select id="filterDivisi" onchange="tampilkanRekeningKoran()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
+          <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
+        </select>
+      </div>
+
+      <div style="background:#0288d1; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
+        <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Saldo Saat Ini</span>
+        <div id="saldo-kas" style="font-size:22px; font-weight:bold;">Rp 0</div>
+      </div>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 260px; background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px;">
+          <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 13px; border-bottom: 2px solid #a5d6a7; padding-bottom: 4px;">
+            📥 5 Pemasukan Terakhir
+          </h4>
+          <table style="width:100%; font-size:11px; border-collapse:collapse;">
+            <tbody id="list-pemasukan">
+              <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="flex: 1; min-width: 260px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 8px; padding: 10px;">
+          <h4 style="margin: 0 0 8px 0; color: #c62828; font-size: 13px; border-bottom: 2px solid #ef9a9a; padding-bottom: 4px;">
+            📤 5 Pengeluaran Terakhir
+          </h4>
+          <table style="width:100%; font-size:11px; border-collapse:collapse;">
+            <tbody id="list-pengeluaran">
+              <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Pengumuman -->
+  <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📢 Pengumuman RT 05</h3>
+        <button class="close-btn" onclick="tutupModalInfo()">&times;</button>
+      </div>
+      <div class="modal-body" id="list-pengumuman">
+        <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Foto Layar Penuh -->
+  <div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)">
+    <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
+  </div>
+
+  <!-- Leaflet JS -->
+  <script src="[https://unpkg.com/leaflet@1.9.4/dist/leaflet.js](https://unpkg.com/leaflet@1.9.4/dist/leaflet.js)"></script>
+  
+  <script>
+    var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
+    var GID_PENGUMUMAN = '1885853390'; 
+    var GID_KEUANGAN = '1568425671';
+
+    var SHEET_URL = `[https://docs.google.com/spreadsheets/d/$](https://docs.google.com/spreadsheets/d/$){SHEET_ID}/export?format=csv`;
+    var PENGUMUMAN_URL = `[https://docs.google.com/spreadsheets/d/$](https://docs.google.com/spreadsheets/d/$){SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
+    var KEUANGAN_URL = `[https://docs.google.com/spreadsheets/d/$](https://docs.google.com/spreadsheets/d/$){SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
+
+    var map = L.map('map').setView([-7.7423, 110.3842], 17);
+
+    L.tileLayer('https://{s}[.google.com/vt/lyrs=m&x=](https://.google.com/vt/lyrs=m&x=){x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+    }).addTo(map);
+
+    var batasRT05 = [
+      [-7.7441031, 110.3835], [-7.7447197, 110.3852273], [-7.743848, 110.3854633],
+      [-7.7440818, 110.3861822], [-7.742955, 110.3864933], [-7.7428593, 110.3858925],
+      [-7.7407331, 110.3866972], [-7.7404886, 110.3861929], [-7.740563, 110.3848089],
+      [-7.7399995, 110.3831674], [-7.740159, 110.382234], [-7.7414879, 110.3818906],
+      [-7.7421789, 110.3819979], [-7.7428699, 110.3838755], [-7.7441031, 110.3835]
+    ];
+
+    L.polygon(batasRT05, { 
+      color: '#00c853', 
+      weight: 3, 
+      fillColor: '#00c853', 
+      fillOpacity: 0.1 
+    }).addTo(map).bindPopup('<b>Batas Wilayah RT 05 Kayen</b>');
+
+    var daftarPin = [];
+    var daftarPengumuman = [];
+    var dataKeuangan = [];
+    var pinRumahAktif = null;
+
+    // Parser CSV
+    function parseCSV(text) {
+      var lines = text.replace(/\r/g, '').split('\n').filter(line => line.trim() !== '');
+      if (lines.length === 0) return [];
+
+      var firstLine = lines[0];
+      var commaCount = (firstLine.match(/,/g) || []).length;
+      var semiCount = (firstLine.match(/;/g) || []).length;
+      var delimiter = semiCount > commaCount ? ';' : ',';
+
+      var result = [];
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        var row = [];
+        var inQuotes = false;
+        var cur = '';
+        for (var c = 0; c < line.length; c++) {
+          var char = line[c];
+          if (char === '"') {
+            inQuotes = !inQuotes;
+          } else if (char === delimiter && !inQuotes) {
+            row.push(cur.trim().replace(/^"|"$/g, ''));
+            cur = '';
+          } else {
+            cur += char;
+          }
+        }
+        row.push(cur.trim().replace(/^"|"$/g, ''));
+        result.push(row);
+      }
+      return result;
+    }
+
+    function perbaikiKoordinat(val) {
+      if (val === undefined || val === null || val === '') return null;
+      var str = val.toString().trim().replace(/,/g, '.');
+      
+      var num = parseFloat(str);
+      if (!isNaN(num) && Math.abs(num) <= 180 && Math.abs(num) > 0) {
+        return num;
+      }
+
+      var digitsOnly = str.replace(/[^0-9]/g, '');
+      if (str.startsWith('-')) {
+        if (digitsOnly.startsWith('7')) {
+          var fixed = parseFloat('-7.' + digitsOnly.substring(1));
+          if (!isNaN(fixed)) return fixed;
+        }
+      } else {
+        if (digitsOnly.startsWith('110')) {
+          var fixed = parseFloat('110.' + digitsOnly.substring(3));
+          if (!isNaN(fixed)) return fixed;
+        }
+      }
+      return isNaN(num) ? null : num;
+    }
+
+    // Load Main Map Data
+    fetch(SHEET_URL)
+      .then(response => response.text())
+      .then(csvText => {
+        var baris = parseCSV(csvText).slice(1);
+
+        baris.forEach(function(kolom) {
+          if (kolom.length >= 3 && kolom[0] !== '') {
+            var latClean = perbaikiKoordinat(kolom[1]);
+            var lngClean = perbaikiKoordinat(kolom[2]);
+
+            if (latClean === null || lngClean === null) return;
+
+            var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
+            var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
+            var urlFoto = kolom[5] ? kolom[5].trim() : '';
+
+            var namaAsli = kolom[0].trim();
+            var namaTampil = namaAsli;
+            
+            // Sensor text within brackets
+            namaTampil = namaTampil.replace(/\(([^)]+)\)/, function(match, isiKurung) {
+              var kataKata = isiKurung.split(' ');
+              var hasilSensor = kataKata.map(function(kata) {
+                if (kata.length <= 2) return kata;
+                return kata.charAt(0) + '*'.repeat(kata.length - 1);
+              }).join(' ');
+              return '(' + hasilSensor + ')';
+            });
+
+            var item = {
+              name: namaTampil,
+              nameAsli: namaAsli,
+              lat: latClean,
+              lng: lngClean,
+              hidden: statusHidden,
+              foto: urlFoto
             };
 
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+            var urlRute = `[https://www.google.com/maps/dir/?api=1&destination=$](https://www.google.com/maps/dir/?api=1&destination=$){item.lat},${item.lng}`;
             var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
@@ -521,7 +994,7 @@
       })
       .catch(error => console.error("Gagal membaca Google Sheet:", error));
 
-    // Memuat Pengumuman
+    // Load Announcements
     fetch(PENGUMUMAN_URL)
       .then(response => response.text())
       .then(csvText => {
@@ -621,7 +1094,7 @@
       }
     }
 
-    // Fungsi Filter Kategori
+    // Filter Function
     function filterKategori(kat, btnElement) {
       document.querySelectorAll('.btn-filter:not(.btn-info-rt):not(.btn-keuangan)').forEach(btn => btn.classList.remove('active'));
       btnElement.classList.add('active');
@@ -639,7 +1112,7 @@
       });
     }
 
-    // Fungsi Pencarian Nomor Rumah / Teks
+    // Search Function
     function cariLokasi() {
       var inputEl = document.getElementById('searchInput');
       var kataKunci = inputEl.value.toLowerCase().trim();
@@ -652,10 +1125,10 @@
 
       var hasil = null;
 
-      // 1. Persis sama (Exact Match)
+      // 1. Exact Match
       hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase().trim() === kataKunci);
 
-      // 2. Pencarian Berdasarkan Angka (misal: "1", "01", "No. 1", "Rumah 1")
+      // 2. Search by Number
       if (!hasil) {
         var angkaInputMatch = kataKunci.match(/\d+/);
         if (angkaInputMatch) {
@@ -671,7 +1144,7 @@
         }
       }
 
-      // 3. Pencarian Teks Parsial (misal: "Kost", "Masjid", dll)
+      // 3. Partial Match
       if (!hasil) {
         hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
       }
@@ -710,7 +1183,7 @@
       document.getElementById('modal-foto').style.display = 'none';
     }
 
-    // Memuat Data Keuangan
+    // Load Financial Data
     function muatDataKeuangan() {
       fetch(KEUANGAN_URL)
         .then(response => response.text())
