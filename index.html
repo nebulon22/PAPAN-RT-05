@@ -725,16 +725,21 @@ function muatDataKeuangan() {
         }
       });
 
-      // Populate Dropdown Divisi
+      // Populate Dropdown Divisi (Tanpa gabungan "Semua Divisi")
       var selectDivisi = document.getElementById('filterDivisi');
-      var divisiAktif = selectDivisi.value;
-      selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
+      var divisiSebelumnya = selectDivisi.value;
+      selectDivisi.innerHTML = '';
       
       daftarDivisi.forEach(div => {
         selectDivisi.innerHTML += `<option value="${div}">${div}</option>`;
       });
       
-      selectDivisi.value = divisiAktif || "semua";
+      // Pilih divisi pertama secara otomatis jika belum ada yang dipilih
+      if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
+        selectDivisi.value = divisiSebelumnya;
+      } else if (selectDivisi.options.length > 0) {
+        selectDivisi.selectedIndex = 0;
+      }
 
       tampilkanRekeningKoran();
     })
@@ -742,12 +747,20 @@ function muatDataKeuangan() {
 }
 
 function tampilkanRekeningKoran() {
-  var divisiTerpilih = document.getElementById('filterDivisi').value;
-  
-  // Filter data berdasarkan divisi
-  var dataFilter = dataKeuangan.filter(item => divisiTerpilih === 'semua' || item.divisi === divisiTerpilih);
+  var selectDivisi = document.getElementById('filterDivisi');
+  var divisiTerpilih = selectDivisi.value;
 
-  // 1. Hitung Saldo Total Divisi Terpilih
+  if (!divisiTerpilih) {
+    document.getElementById('saldo-kas').innerText = 'Rp 0';
+    renderTabelKeuangan('list-pemasukan', [], '#2e7d32', '+');
+    renderTabelKeuangan('list-pengeluaran', [], '#c62828', '-');
+    return;
+  }
+  
+  // Filter data MURNI per divisi yang dipilih
+  var dataFilter = dataKeuangan.filter(item => item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
+
+  // Hitung Saldo Khusus Divisi Terpilih
   var totMasuk = 0;
   var totKeluar = 0;
 
@@ -759,15 +772,15 @@ function tampilkanRekeningKoran() {
   var saldoAkhir = totMasuk - totKeluar;
   document.getElementById('saldo-kas').innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
 
-  // 2. Ambil 5 Pemasukan Terakhir
+  // Ambil 5 Pemasukan Terakhir Khusus Divisi Ini
   var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
   renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
 
-  // 3. Ambil 5 Pengeluaran Terakhir
+  // Ambil 5 Pengeluaran Terakhir Khusus Divisi Ini
   var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
   renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
 }
-
+	  
 function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
   var tbody = document.getElementById(elementId);
   tbody.innerHTML = '';
