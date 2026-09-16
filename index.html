@@ -231,6 +231,58 @@
 </head>
 <body>
 
+<!-- Modal Rekening Koran Per Divisi -->
+<div id="modal-keuangan" class="modal-bg" onclick="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
+  <div class="modal-content" style="max-width: 650px;">
+    <div class="modal-header">
+      <h3>📜 Rekening Koran Divisi</h3>
+      <button class="close-btn" onclick="tutupModalKeuangan()">&times;</button>
+    </div>
+    
+    <!-- Pilih Divisi -->
+    <div style="margin-bottom: 12px;">
+      <label style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
+      <select id="filterDivisi" onchange="tampilkanRekeningKoran()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
+        <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
+      </select>
+    </div>
+
+    <!-- Ringkasan Saldo Divisi -->
+    <div style="background:#0288d1; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
+      <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Saldo Saat Ini</span>
+      <div id="saldo-kas" style="font-size:22px; font-weight:bold;">Rp 0</div>
+    </div>
+
+    <!-- Tabel 2 Kolom (5 Masuk & 5 Keluar) -->
+    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+      
+      <!-- Kolom Pemasukan (Hijau) -->
+      <div style="flex: 1; min-width: 260px; background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px;">
+        <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 13px; border-bottom: 2px solid #a5d6a7; padding-bottom: 4px;">
+          📥 5 Pemasukan Terakhir
+        </h4>
+        <table style="width:100%; font-size:11px; border-collapse:collapse;">
+          <tbody id="list-pemasukan">
+            <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Kolom Pengeluaran (Merah) -->
+      <div style="flex: 1; min-width: 260px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 8px; padding: 10px;">
+        <h4 style="margin: 0 0 8px 0; color: #c62828; font-size: 13px; border-bottom: 2px solid #ef9a9a; padding-bottom: 4px;">
+          📤 5 Pengeluaran Terakhir
+        </h4>
+        <table style="width:100%; font-size:11px; border-collapse:collapse;">
+          <tbody id="list-pengeluaran">
+            <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+  </div>
+</div>
 
   <!-- Tombol Gembok Admin (Pojok Kanan Atas) -->
   <a href="https://admin.papan05.my.id" target="_blank" class="btn-admin-floating" title="Halaman Admin">🔒</a>
@@ -637,6 +689,114 @@ var customIcon = L.divIcon({
       }
       document.getElementById('modal-foto').style.display = 'none';
     }
+	
+	var GID_KEUANGAN = '1568425671'; // Ganti GID tab respon Google Form / Sheet keuangan kamu
+var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
+
+var dataKeuangan = [];
+
+function muatDataKeuangan() {
+  fetch(KEUANGAN_URL)
+    .then(response => response.text())
+    .then(csvText => {
+      var baris = parseCSV(csvText).slice(1);
+      dataKeuangan = [];
+      var daftarDivisi = new Set();
+
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 5 && (kolom[1] !== '' || kolom[0] !== '')) {
+          var tgl = kolom[1] ? kolom[1].trim() : kolom[0].split(' ')[0];
+          var divisi = kolom[2] ? kolom[2].trim() : 'Umum';
+          var ket = kolom[3] ? kolom[3].trim() : '-';
+          
+          var tipeRaw = kolom[4] ? kolom[4].trim().toUpperCase() : 'MASUK';
+          var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
+          
+          var nominal = parseInt(kolom[5] ? kolom[5].replace(/[^0-9]/g, '') : kolom[4].replace(/[^0-9]/g, '')) || 0;
+
+          if (divisi) daftarDivisi.add(divisi);
+
+          dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
+        }
+      });
+
+      // Populate Dropdown Divisi
+      var selectDivisi = document.getElementById('filterDivisi');
+      var divisiAktif = selectDivisi.value;
+      selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
+      
+      daftarDivisi.forEach(div => {
+        selectDivisi.innerHTML += `<option value="${div}">${div}</option>`;
+      });
+      
+      selectDivisi.value = divisiAktif || "semua";
+
+      tampilkanRekeningKoran();
+    })
+    .catch(err => console.error("Gagal muat data keuangan:", err));
+}
+
+function tampilkanRekeningKoran() {
+  var divisiTerpilih = document.getElementById('filterDivisi').value;
+  
+  // Filter data berdasarkan divisi
+  var dataFilter = dataKeuangan.filter(item => divisiTerpilih === 'semua' || item.divisi === divisiTerpilih);
+
+  // 1. Hitung Saldo Total Divisi Terpilih
+  var totMasuk = 0;
+  var totKeluar = 0;
+
+  dataFilter.forEach(item => {
+    if (item.tipe === 'MASUK') totMasuk += item.nominal;
+    if (item.tipe === 'KELUAR') totKeluar += item.nominal;
+  });
+
+  var saldoAkhir = totMasuk - totKeluar;
+  document.getElementById('saldo-kas').innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
+
+  // 2. Ambil 5 Pemasukan Terakhir
+  var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
+  renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
+
+  // 3. Ambil 5 Pengeluaran Terakhir
+  var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
+  renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
+}
+
+function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
+  var tbody = document.getElementById(elementId);
+  tbody.innerHTML = '';
+
+  if (dataset.length === 0) {
+    tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
+    return;
+  }
+
+  dataset.forEach(item => {
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+    tr.innerHTML = `
+      <td style="padding:6px 0;">
+        <span style="color:#666; font-size:10px;">${escapeHtml(item.tgl)}</span><br>
+        <b>${escapeHtml(item.ket)}</b>
+      </td>
+      <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
+        ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function bukaModalKeuangan() {
+  document.getElementById('modal-keuangan').style.display = 'flex';
+  muatDataKeuangan();
+}
+
+function tutupModalKeuangan() {
+  document.getElementById('modal-keuangan').style.display = 'none';
+}
+	
   </script>
 </body>
 </html>
