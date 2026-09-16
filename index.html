@@ -3,63 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Admin - Denah Interaktif RT 05 Kayen</title>
+  <title>Denah Interaktif & Keuangan RT 05 Kayen</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
     html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
     #map { width: 100%; height: 100vh; }
     
-    /* Overlay Login Admin */
-    #login-overlay {
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: #111827;
-      z-index: 9999;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .login-box {
-      background: white;
-      padding: 24px;
-      border-radius: 12px;
-      width: 90%;
-      max-width: 320px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-      text-align: center;
-    }
-    .login-box h2 { margin-top: 0; font-size: 18px; color: #111; margin-bottom: 16px; }
-    .login-box input {
-      width: 100%;
-      padding: 10px;
-      margin-bottom: 12px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      box-sizing: border-box;
-      font-size: 14px;
-    }
-    .login-box button {
-      width: 100%;
-      padding: 10px;
-      background: #00c853;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      font-weight: bold;
-      cursor: pointer;
-      font-size: 14px;
-    }
-    .login-box button:hover { background: #00a844; }
-    .login-error { color: #d32f2f; font-size: 12px; margin-top: 8px; display: none; }
-    .btn-kembali-login {
-      display: block;
-      margin-top: 14px;
-      font-size: 12px;
-      color: #666;
-      text-decoration: none;
-    }
-
-    /* Tombol Floating Navigasi Ke Web Publik */
+    /* Tombol Floating Navigasi Ke Admin (Ikon Gembok) */
     .btn-back-floating {
       position: absolute;
       top: 12px;
@@ -73,6 +23,9 @@
       font-size: 12px;
       font-weight: bold;
       box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
 
     .btn-rute {
@@ -271,19 +224,8 @@
 </head>
 <body>
 
-  <!-- Screen Login Admin (Hanya Password) -->
-  <div id="login-overlay">
-    <div class="login-box">
-      <h2>Login Admin RT 05</h2>
-      <input type="password" id="adminPass" placeholder="Masukkan Password Admin" onkeyup="if(event.key === 'Enter') prosesLogin()">
-      <button onclick="prosesLogin()">Masuk</button>
-      <div id="loginErr" class="login-error">Password salah!</div>
-      <a href="https://papan05.my.id" class="btn-kembali-login">← Kembali ke Peta Publik</a>
-    </div>
-  </div>
-
-  <!-- Tombol Navigasi Kembali ke Peta Publik -->
-  <a href="https://papan05.my.id" class="btn-back-floating">← Peta Publik</a>
+  <!-- Tombol Navigasi ke Halaman Admin (Ikon Gembok) -->
+  <a href="https://admin.papan05.my.id/" class="btn-back-floating" title="Login Admin">🔒 Admin</a>
 
   <!-- Peta Utama -->
   <div id="map"></div>
@@ -384,26 +326,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // --- SETTING PASSWORD ADMIN ---
-    var PASS_ADMIN = "rt05kayen";
-
-    function prosesLogin() {
-      var p = document.getElementById('adminPass').value;
-      var err = document.getElementById('loginErr');
-
-      if (p === PASS_ADMIN) {
-        sessionStorage.setItem('adminAuthorized', 'true');
-        document.getElementById('login-overlay').style.display = 'none';
-      } else {
-        err.style.display = 'block';
-      }
-    }
-
-    // Cek status login saat halaman dibuka
-    if (sessionStorage.getItem('adminAuthorized') === 'true') {
-      document.getElementById('login-overlay').style.display = 'none';
-    }
-
     // --- KODE PETA & DATA ---
     var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
     var GID_PENGUMUMAN = '1885853390'; 
