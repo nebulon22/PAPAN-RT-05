@@ -212,26 +212,25 @@
       <button onclick="cariLokasi()">Cari</button>
     </div>
     
-    <!-- Filter 3 Baris -->
-    <div class="filter-container">
-      <div class="filter-row">
-        <button class="btn-filter btn-info-rt" onclick="bukaModalInfo()">
-          📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
-        </button>
-        <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
-      </div>
-      <div class="filter-row">
-        <button class="btn-filter" onclick="filterKategori('rumah', this)">🏠 Rumah</button>
-        <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
-      </div>
-      <div class="filter-row">
-        <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
-        <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
-      </div>
-    </div>
+  <!-- Filter 3 Baris -->
+<div class="filter-container">
+  <div class="filter-row">
+    <button class="btn-filter btn-info-rt" onclick="bukaModalInfo()">
+      📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
+    </button>
+    <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
   </div>
+  <div class="filter-row">
+    <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
+    <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
+  </div>
+  <div class="filter-row">
+    <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
+    <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
+  </div>
+</div>
 
-  <div id="map"></div>
+<div id="map"></div>
 
   <!-- Modal Pengumuman -->
   <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
@@ -370,12 +369,12 @@
             var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
-          // --- Logika Kategori & Ikon Baru ---
+         // --- Logika Kategori & Ikon Baru ---
 let emoji = '🏠'; 
-let kategori = 'rumah';
+let kategori = 'rumah'; // Default untuk Rumah Warga / RT / RW
 let namaUpper = item.nameAsli.toUpperCase();
 
-// 1. Gaya Bawaan Khusus RUMAH: Latar hijau muda pastel (#dcfce7) & border hijau menyala (#00FF66)
+// Gaya bawaan khusus RUMAH: Latar hijau muda pastel (#dcfce7) & border hijau menyala (#00FF66)
 let bgStyle = 'background: #dcfce7; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
 
 if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
@@ -388,7 +387,7 @@ else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko'
   // Minimarket: Latar putih, border kuning menyala (#FFEA00)
   bgStyle = 'background: white; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
 } 
-// --- FITUR BARU: KOST & KONTRAKAN ---
+// --- FITUR KOST & KONTRAKAN (Menggantikan Filter Rumah) ---
 else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
   kategori = 'kost'; emoji = '🛏️';
   // Kost: Latar ungu muda (#f3e8ff), border ungu (#a855f7)
@@ -406,10 +405,6 @@ else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || 
   } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
     emoji = '🏀';
   }
-} 
-else if (kategoriManual.includes('rumah')) {
-  kategori = 'rumah'; emoji = '🏠';
-  // Rumah tidak perlu diubah lagi karena sudah memakai gaya bawaan di atas (hijau muda)
 }
 
 // 2. Tambahkan bayangan ganda (box-shadow) agar tercipta efek 2.5D melayang
@@ -419,7 +414,6 @@ var customIcon = L.divIcon({
   iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
 });
 // --- Akhir Logika Ikon ---
-
             
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
             if (!item.hidden) marker.addTo(map);
