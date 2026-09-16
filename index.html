@@ -238,7 +238,7 @@
   <!-- Panel Atas (Pencarian & Filter) -->
   <div id="top-panel">
     <div id="search-box">
-      <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
+      <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') cariLokasi()">
       <button onclick="cariLokasi()">Cari</button>
     </div>
     
@@ -263,7 +263,7 @@
         <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
       </div>
     </div>
-  </div> <!-- Penutup top-panel -->
+  </div>
 
   <!-- Modal Rekening Koran -->
   <div id="modal-keuangan" class="modal-bg" onclick="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
@@ -367,12 +367,19 @@
     var dataKeuangan = [];
     var pinRumahAktif = null;
 
+    // Parser CSV yang otomatis mendeteksi koma (,) atau titik-koma (;)
     function parseCSV(text) {
-      var lines = text.replace(/\r/g, '').split('\n');
+      var lines = text.replace(/\r/g, '').split('\n').filter(line => line.trim() !== '');
+      if (lines.length === 0) return [];
+
+      var firstLine = lines[0];
+      var commaCount = (firstLine.match(/,/g) || []).length;
+      var semiCount = (firstLine.match(/;/g) || []).length;
+      var delimiter = semiCount > commaCount ? ';' : ',';
+
       var result = [];
       for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (!line) continue;
+        var line = lines[i];
         var row = [];
         var inQuotes = false;
         var cur = '';
@@ -380,7 +387,7 @@
           var char = line[c];
           if (char === '"') {
             inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
+          } else if (char === delimiter && !inQuotes) {
             row.push(cur.trim().replace(/^"|"$/g, ''));
             cur = '';
           } else {
@@ -393,24 +400,32 @@
       return result;
     }
 
+    // Fungsi perbaikan koordinat yang aman
     function perbaikiKoordinat(val) {
-      if (!val) return "";
-      var str = val.toString().replace(/,/g, '.').replace(/\s+/g, '');
-      var isNegatif = str.startsWith('-');
-      str = str.replace(/-/g, '').replace(/\./g, '');
+      if (val === undefined || val === null || val === '') return null;
+      var str = val.toString().trim().replace(/,/g, '.');
       
-      if (str.length > 2) {
-        if (isNegatif && str.startsWith('7')) {
-          str = '-7.' + str.substring(1);
-        } else if (!isNegatif && str.startsWith('110')) {
-          str = '110.' + str.substring(3);
-        } else {
-          str = (isNegatif ? '-' : '') + str.substring(0, 1) + '.' + str.substring(1);
+      var num = parseFloat(str);
+      if (!isNaN(num) && Math.abs(num) <= 180 && Math.abs(num) > 0) {
+        return num;
+      }
+
+      var digitsOnly = str.replace(/[^0-9]/g, '');
+      if (str.startsWith('-')) {
+        if (digitsOnly.startsWith('7')) {
+          var fixed = parseFloat('-7.' + digitsOnly.substring(1));
+          if (!isNaN(fixed)) return fixed;
+        }
+      } else {
+        if (digitsOnly.startsWith('110')) {
+          var fixed = parseFloat('110.' + digitsOnly.substring(3));
+          if (!isNaN(fixed)) return fixed;
         }
       }
-      return str;
+      return isNaN(num) ? null : num;
     }
 
+    // Memuat Data Utama Peta dari Google Sheet
     fetch(SHEET_URL)
       .then(response => response.text())
       .then(csvText => {
@@ -420,6 +435,9 @@
           if (kolom.length >= 3 && kolom[0] !== '') {
             var latClean = perbaikiKoordinat(kolom[1]);
             var lngClean = perbaikiKoordinat(kolom[2]);
+
+            if (latClean === null || lngClean === null) return;
+
             var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
             var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
             var urlFoto = kolom[5] ? kolom[5].trim() : '';
@@ -427,6 +445,7 @@
             var namaAsli = kolom[0].trim();
             var namaTampil = namaAsli;
             
+            // Sensor teks dalam tanda kurung
             namaTampil = namaTampil.replace(/\(([^)]+)\)/, function(match, isiKurung) {
               var kataKata = isiKurung.split(' ');
               var hasilSensor = kataKata.map(function(kata) {
@@ -439,13 +458,11 @@
             var item = {
               name: namaTampil,
               nameAsli: namaAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
+              lat: latClean,
+              lng: lngClean,
               hidden: statusHidden,
               foto: urlFoto
             };
-
-            if (isNaN(item.lat) || isNaN(item.lng)) return;
 
             var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
             var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
@@ -454,25 +471,26 @@
             let emoji = '🏠'; 
             let kategori = 'rumah';
             let namaUpper = item.nameAsli.toUpperCase();
+            let katManual = kategoriManual.toLowerCase();
             let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
 
-            if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
+            if (katManual.includes('kuliner') || katManual.includes('makanan') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
               kategori = 'kuliner'; emoji = '🍽️';
               bgStyle = 'background: #FFA500; border: 2px solid #FFFFFF; color: black; width: 22px; height: 22px; font-size: 12px;';
             } 
-            else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
+            else if (katManual.includes('minimarket') || katManual.includes('toko') || katManual.includes('laundry') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
               kategori = 'minimarket'; emoji = '🏪';
               bgStyle = 'background: #FFFF00; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
             } 
-            else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
+            else if (katManual.includes('kost') || katManual.includes('kos') || katManual.includes('kontrakan') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
               kategori = 'kost'; emoji = '🛏️';
               bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px; font-size: 12px;';
             }
-            else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
+            else if (katManual.includes('fasum') || katManual.includes('umum') || katManual.includes('masjid') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
               kategori = 'fasum'; emoji = '🏛️';
               bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px; font-size: 12px;';
               
-              if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
+              if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || katManual.includes('masjid')) {
                 emoji = '🕌';
                 bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;';
               } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
@@ -501,8 +519,9 @@
           }
         });
       })
-      .catch(error => console.error(error));
+      .catch(error => console.error("Gagal membaca Google Sheet:", error));
 
+    // Memuat Pengumuman
     fetch(PENGUMUMAN_URL)
       .then(response => response.text())
       .then(csvText => {
@@ -598,10 +617,11 @@
         map.flyTo([hasil.lat, hasil.lng], 19);
         setTimeout(() => { hasil.marker.openPopup(); }, 800);
       } else {
-        alert("Lokasi '" + namaLokasi + "' tidak ditemukan.\n\nPastikan ejaan lokasi di Sheet Pengumuman (Kolom D) sama persis dengan Nama di Sheet Utama (Kolom A).");
+        alert("Lokasi '" + namaLokasi + "' tidak ditemukan.");
       }
     }
 
+    // Fungsi Filter Kategori
     function filterKategori(kat, btnElement) {
       document.querySelectorAll('.btn-filter:not(.btn-info-rt):not(.btn-keuangan)').forEach(btn => btn.classList.remove('active'));
       btnElement.classList.add('active');
@@ -619,26 +639,43 @@
       });
     }
 
+    // Fungsi Pencarian Nomor Rumah / Teks
     function cariLokasi() {
-      var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
+      var inputEl = document.getElementById('searchInput');
+      var kataKunci = inputEl.value.toLowerCase().trim();
       if (!kataKunci) return;
 
-      var hasil = null;
-      hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
-
-      if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10);
-        
-        hasil = daftarPin.find(pin => {
-          var kataKata = pin.nama.split(/[\s,().-]+/);
-          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-        });
+      if (daftarPin.length === 0) {
+        alert("Data dari Google Sheet belum selesai dimuat. Silakan tunggu sebentar dan coba lagi.");
+        return;
       }
 
-      if (!hasil && !/^\d+$/.test(kataKunci)) {
+      var hasil = null;
+
+      // 1. Persis sama (Exact Match)
+      hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase().trim() === kataKunci);
+
+      // 2. Pencarian Berdasarkan Angka (misal: "1", "01", "No. 1", "Rumah 1")
+      if (!hasil) {
+        var angkaInputMatch = kataKunci.match(/\d+/);
+        if (angkaInputMatch) {
+          var angkaCari = parseInt(angkaInputMatch[0], 10);
+          
+          hasil = daftarPin.find(pin => {
+            var angkaPinMatches = pin.namaRaw.match(/\d+/g);
+            if (angkaPinMatches) {
+              return angkaPinMatches.some(numStr => parseInt(numStr, 10) === angkaCari);
+            }
+            return false;
+          });
+        }
+      }
+
+      // 3. Pencarian Teks Parsial (misal: "Kost", "Masjid", dll)
+      if (!hasil) {
         hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
       }
-      
+
       if (hasil) {
         if (pinRumahAktif) {
           map.removeLayer(pinRumahAktif);
@@ -653,7 +690,7 @@
         map.flyTo([hasil.lat, hasil.lng], 19);
         setTimeout(() => { hasil.marker.openPopup(); }, 800);
       } else {
-        alert("Nomor atau nama tempat tidak ditemukan.");
+        alert("Nomor rumah atau nama tempat '" + inputEl.value + "' tidak ditemukan.");
       }
     }
 
@@ -673,6 +710,7 @@
       document.getElementById('modal-foto').style.display = 'none';
     }
 
+    // Memuat Data Keuangan
     function muatDataKeuangan() {
       fetch(KEUANGAN_URL)
         .then(response => response.text())
