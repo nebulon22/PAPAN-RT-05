@@ -75,7 +75,6 @@
       font-size: 13px;
     }
 
-    /* Penyesuaian Filter 3 Baris */
     .filter-container {
       display: flex;
       flex-direction: column;
@@ -203,109 +202,52 @@
       box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
     }
 
-    /* Tombol Gembok Admin Melayang di Pojok Kanan Atas */
-.btn-admin-floating {
-  position: absolute;
-  top: 15px;
-  right: 15px;
-  z-index: 1100; /* Posisi di atas peta & panel filter */
-  background: white;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-decoration: none;
-  font-size: 16px;
-  box-shadow: 0 3px 8px rgba(0,0,0,0.25);
-  border: 1px solid #ddd;
-  transition: transform 0.2s ease, background 0.2s ease;
-}
+    .btn-admin-floating {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      z-index: 1100;
+      background: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+      font-size: 16px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.25);
+      border: 1px solid #ddd;
+      transition: transform 0.2s ease, background 0.2s ease;
+    }
 
-.btn-admin-floating:hover {
-  transform: scale(1.1);
-  background: #f4f4f4;
-}
+    .btn-admin-floating:hover {
+      transform: scale(1.1);
+      background: #f4f4f4;
+    }
   </style>
 </head>
 <body>
 
-<!-- Modal Rekening Koran Per Divisi -->
-<div id="modal-keuangan" class="modal-bg" onclick="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
-  <div class="modal-content" style="max-width: 650px;">
-    <div class="modal-header">
-      <h3>📜 Rekening Koran Divisi</h3>
-      <button class="close-btn" onclick="tutupModalKeuangan()">&times;</button>
-    </div>
-    
-    <!-- Pilih Divisi -->
-    <div style="margin-bottom: 12px;">
-      <label style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
-      <select id="filterDivisi" onchange="tampilkanRekeningKoran()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
-        <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
-      </select>
-    </div>
-
-    <!-- Ringkasan Saldo Divisi -->
-    <div style="background:#0288d1; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
-      <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Saldo Saat Ini</span>
-      <div id="saldo-kas" style="font-size:22px; font-weight:bold;">Rp 0</div>
-    </div>
-
-    <!-- Tabel 2 Kolom (5 Masuk & 5 Keluar) -->
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-      
-      <!-- Kolom Pemasukan (Hijau) -->
-      <div style="flex: 1; min-width: 260px; background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px;">
-        <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 13px; border-bottom: 2px solid #a5d6a7; padding-bottom: 4px;">
-          📥 5 Pemasukan Terakhir
-        </h4>
-        <table style="width:100%; font-size:11px; border-collapse:collapse;">
-          <tbody id="list-pemasukan">
-            <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Kolom Pengeluaran (Merah) -->
-      <div style="flex: 1; min-width: 260px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 8px; padding: 10px;">
-        <h4 style="margin: 0 0 8px 0; color: #c62828; font-size: 13px; border-bottom: 2px solid #ef9a9a; padding-bottom: 4px;">
-          📤 5 Pengeluaran Terakhir
-        </h4>
-        <table style="width:100%; font-size:11px; border-collapse:collapse;">
-          <tbody id="list-pengeluaran">
-            <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
-          </tbody>
-        </table>
-      </div>
-
-    </div>
-  </div>
-</div>
-
-  <!-- Tombol Gembok Admin (Pojok Kanan Atas) -->
+  <!-- Tombol Admin -->
   <a href="https://admin.papan05.my.id" target="_blank" class="btn-admin-floating" title="Halaman Admin">🔒</a>
 
-
-  <!-- 1. Peta diletakkan di luar agar memenuhi seluruh layar (100vh) -->
+  <!-- Peta -->
   <div id="map"></div>
 
-  <!-- 2. Panel pencarian dan filter melayang di atas peta -->
+  <!-- Panel Atas (Pencarian & Filter) -->
   <div id="top-panel">
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
       <button onclick="cariLokasi()">Cari</button>
     </div>
     
-    <!-- Filter 3 Baris -->
-    <!-- Filter Baris (Sudah Ditambah Tombol Keuangan) -->
     <div class="filter-container">
       <div class="filter-row">
         <button class="btn-filter btn-info-rt" onclick="bukaModalInfo()">
           📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
         </button>
-        <button class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1;" onclick="bukaModalKeuangan()">
+        <button class="btn-filter btn-keuangan" style="background: #0288d1; color: white; border-color: #0288d1;" onclick="bukaModalKeuangan()">
           💰 Keuangan
         </button>
       </div>
@@ -321,6 +263,53 @@
         <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
       </div>
     </div>
+  </div> <!-- Penutup top-panel -->
+
+  <!-- Modal Rekening Koran -->
+  <div id="modal-keuangan" class="modal-bg" onclick="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
+    <div class="modal-content" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3>📜 Rekening Koran Divisi</h3>
+        <button class="close-btn" onclick="tutupModalKeuangan()">&times;</button>
+      </div>
+      
+      <div style="margin-bottom: 12px;">
+        <label style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
+        <select id="filterDivisi" onchange="tampilkanRekeningKoran()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
+          <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
+        </select>
+      </div>
+
+      <div style="background:#0288d1; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
+        <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Saldo Saat Ini</span>
+        <div id="saldo-kas" style="font-size:22px; font-weight:bold;">Rp 0</div>
+      </div>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 260px; background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px;">
+          <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 13px; border-bottom: 2px solid #a5d6a7; padding-bottom: 4px;">
+            📥 5 Pemasukan Terakhir
+          </h4>
+          <table style="width:100%; font-size:11px; border-collapse:collapse;">
+            <tbody id="list-pemasukan">
+              <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="flex: 1; min-width: 260px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 8px; padding: 10px;">
+          <h4 style="margin: 0 0 8px 0; color: #c62828; font-size: 13px; border-bottom: 2px solid #ef9a9a; padding-bottom: 4px;">
+            📤 5 Pengeluaran Terakhir
+          </h4>
+          <table style="width:100%; font-size:11px; border-collapse:collapse;">
+            <tbody id="list-pengeluaran">
+              <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Modal Pengumuman -->
   <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
@@ -335,8 +324,6 @@
     </div>
   </div>
 
-
-
   <!-- Modal Foto Layar Penuh -->
   <div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)">
     <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
@@ -346,9 +333,11 @@
   <script>
     var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
     var GID_PENGUMUMAN = '1885853390'; 
+    var GID_KEUANGAN = '1568425671';
 
     var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
     var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
+    var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
 
     var map = L.map('map').setView([-7.7423, 110.3842], 17);
 
@@ -375,6 +364,7 @@
 
     var daftarPin = [];
     var daftarPengumuman = [];
+    var dataKeuangan = [];
     var pinRumahAktif = null;
 
     function parseCSV(text) {
@@ -461,51 +451,40 @@
             var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
-         // --- Logika Kategori & Ikon Baru ---
-let emoji = '🏠'; 
-let kategori = 'rumah'; // Default untuk Rumah Warga / RT / RW
-let namaUpper = item.nameAsli.toUpperCase();
+            let emoji = '🏠'; 
+            let kategori = 'rumah';
+            let namaUpper = item.nameAsli.toUpperCase();
+            let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
 
-// Gaya bawaan khusus RUMAH: Latar hijau muda pastel (#dcfce7) & border hijau menyala (#00FF66)
-let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
+            if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
+              kategori = 'kuliner'; emoji = '🍽️';
+              bgStyle = 'background: #FFA500; border: 2px solid #FFFFFF; color: black; width: 22px; height: 22px; font-size: 12px;';
+            } 
+            else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
+              kategori = 'minimarket'; emoji = '🏪';
+              bgStyle = 'background: #FFFF00; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
+            } 
+            else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
+              kategori = 'kost'; emoji = '🛏️';
+              bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px; font-size: 12px;';
+            }
+            else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
+              kategori = 'fasum'; emoji = '🏛️';
+              bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px; font-size: 12px;';
+              
+              if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
+                emoji = '🕌';
+                bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;';
+              } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
+                emoji = '🏀';
+              }
+            }
 
-if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
-  kategori = 'kuliner'; emoji = '🍽️';
-  // Kuliner: Latar coklat muda (#F5E6D3), border biru muda (#38BDF8)
-  bgStyle = 'background: #FFA500; border: 2px solid #FFFFFF; color: black; width: 22px; height: 22px; font-size: 12px;';
-} 
-else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
-  kategori = 'minimarket'; emoji = '🏪';
-  // Minimarket: Latar putih, border kuning menyala (#FFEA00)
-  bgStyle = 'background: #FFFF00; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
-} 
-// --- FITUR KOST & KONTRAKAN (Menggantikan Filter Rumah) ---
-else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
-  kategori = 'kost'; emoji = '🛏️';
-  // Kost: Latar ungu muda (#f3e8ff), border ungu (#a855f7)
-  bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px; font-size: 12px;';
-}
-else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
-  kategori = 'fasum'; emoji = '🏛️';
-  // Fasum Umum: Latar putih, border merah
-  bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px; font-size: 12px;';
-  
-  // Ikon Khusus Masjid (Tetap Teal & Lebih Besar)
-  if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
-    emoji = '🕌';
-    bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;';
-  } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
-    emoji = '🏀';
-  }
-}
-
-// 2. Tambahkan bayangan ganda (box-shadow) agar tercipta efek 2.5D melayang
-var customIcon = L.divIcon({
-  className: 'custom-pin',
-  html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
-  iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-});
-// --- Akhir Logika Ikon ---
+            var customIcon = L.divIcon({
+              className: 'custom-pin',
+              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
+              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+            });
             
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
             if (!item.hidden) marker.addTo(map);
@@ -624,22 +603,21 @@ var customIcon = L.divIcon({
     }
 
     function filterKategori(kat, btnElement) {
-    // Hilangkan status aktif dari tombol selain Info RT dan Keuangan
-    document.querySelectorAll('.btn-filter:not(.btn-info-rt):not(.btn-keuangan)').forEach(btn => btn.classList.remove('active'));
-    btnElement.classList.add('active');
+      document.querySelectorAll('.btn-filter:not(.btn-info-rt):not(.btn-keuangan)').forEach(btn => btn.classList.remove('active'));
+      btnElement.classList.add('active');
 
-    daftarPin.forEach(pin => {
-      map.removeLayer(pin.marker);
+      daftarPin.forEach(pin => {
+        map.removeLayer(pin.marker);
 
-      if (!pin.hidden) {
-        if (kat === 'semua') {
-          pin.marker.addTo(map);
-        } else if (pin.kategori === kat) {
-          pin.marker.addTo(map);
+        if (!pin.hidden) {
+          if (kat === 'semua') {
+            pin.marker.addTo(map);
+          } else if (pin.kategori === kat) {
+            pin.marker.addTo(map);
+          }
         }
-      }
-    });
-}
+      });
+    }
 
     function cariLokasi() {
       var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -694,127 +672,112 @@ var customIcon = L.divIcon({
       }
       document.getElementById('modal-foto').style.display = 'none';
     }
-	
-	var GID_KEUANGAN = '1568425671'; // Ganti GID tab respon Google Form / Sheet keuangan kamu
-var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
 
-var dataKeuangan = [];
+    function muatDataKeuangan() {
+      fetch(KEUANGAN_URL)
+        .then(response => response.text())
+        .then(csvText => {
+          var baris = parseCSV(csvText).slice(1);
+          dataKeuangan = [];
+          var daftarDivisi = new Set();
 
-function muatDataKeuangan() {
-  fetch(KEUANGAN_URL)
-    .then(response => response.text())
-    .then(csvText => {
-      var baris = parseCSV(csvText).slice(1);
-      dataKeuangan = [];
-      var daftarDivisi = new Set();
+          baris.forEach(function(kolom) {
+            if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
+              var tgl = kolom[1] ? kolom[1].trim() : (kolom[0] ? kolom[0].split(' ')[0] : '-');
+              var divisi = kolom[2] ? kolom[2].trim() : 'Umum';
+              var ket = kolom[3] ? kolom[3].trim() : '-';
+              
+              var tipeRaw = kolom[4] ? kolom[4].trim().toUpperCase() : 'MASUK';
+              var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
+              
+              var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
+              var nominal = parseInt(nominalRaw ? nominalRaw.replace(/[^0-9]/g, '') : '0') || 0;
 
-      baris.forEach(function(kolom) {
-        if (kolom.length >= 5 && (kolom[1] !== '' || kolom[0] !== '')) {
-          var tgl = kolom[1] ? kolom[1].trim() : kolom[0].split(' ')[0];
-          var divisi = kolom[2] ? kolom[2].trim() : 'Umum';
-          var ket = kolom[3] ? kolom[3].trim() : '-';
+              if (divisi) daftarDivisi.add(divisi);
+
+              dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
+            }
+          });
+
+          var selectDivisi = document.getElementById('filterDivisi');
+          var divisiSebelumnya = selectDivisi.value;
           
-          var tipeRaw = kolom[4] ? kolom[4].trim().toUpperCase() : 'MASUK';
-          var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
+          selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
           
-          var nominal = parseInt(kolom[5] ? kolom[5].replace(/[^0-9]/g, '') : kolom[4].replace(/[^0-9]/g, '')) || 0;
+          daftarDivisi.forEach(div => {
+            selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
+          });
+          
+          if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
+            selectDivisi.value = divisiSebelumnya;
+          } else {
+            selectDivisi.value = 'semua';
+          }
 
-          if (divisi) daftarDivisi.add(divisi);
+          tampilkanRekeningKoran();
+        })
+        .catch(err => console.error("Gagal muat data keuangan:", err));
+    }
 
-          dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
-        }
-      });
-
-      // Populate Dropdown Divisi (Tanpa gabungan "Semua Divisi")
+    function tampilkanRekeningKoran() {
       var selectDivisi = document.getElementById('filterDivisi');
-      var divisiSebelumnya = selectDivisi.value;
-      selectDivisi.innerHTML = '';
-      
-      daftarDivisi.forEach(div => {
-        selectDivisi.innerHTML += `<option value="${div}">${div}</option>`;
+      var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+
+      var dataFilter = (divisiTerpilih === 'semua')
+        ? dataKeuangan
+        : dataKeuangan.filter(item => item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
+
+      var totMasuk = 0;
+      var totKeluar = 0;
+
+      dataFilter.forEach(item => {
+        if (item.tipe === 'MASUK') totMasuk += item.nominal;
+        if (item.tipe === 'KELUAR') totKeluar += item.nominal;
       });
+
+      var saldoAkhir = totMasuk - totKeluar;
+      document.getElementById('saldo-kas').innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
+
+      var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
+      renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
+
+      var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
+      renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
+    }
       
-      // Pilih divisi pertama secara otomatis jika belum ada yang dipilih
-      if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
-        selectDivisi.value = divisiSebelumnya;
-      } else if (selectDivisi.options.length > 0) {
-        selectDivisi.selectedIndex = 0;
+    function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
+      var tbody = document.getElementById(elementId);
+      tbody.innerHTML = '';
+
+      if (dataset.length === 0) {
+        tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
+        return;
       }
 
-      tampilkanRekeningKoran();
-    })
-    .catch(err => console.error("Gagal muat data keuangan:", err));
-}
+      dataset.forEach(item => {
+        var tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+        tr.innerHTML = `
+          <td style="padding:6px 0;">
+            <span style="color:#666; font-size:10px;">${escapeHtml(item.tgl)}</span><br>
+            <b>${escapeHtml(item.ket)}</b>
+          </td>
+          <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
+            ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
 
-function tampilkanRekeningKoran() {
-  var selectDivisi = document.getElementById('filterDivisi');
-  var divisiTerpilih = selectDivisi.value;
+    function bukaModalKeuangan() {
+      document.getElementById('modal-keuangan').style.display = 'flex';
+      muatDataKeuangan();
+    }
 
-  if (!divisiTerpilih) {
-    document.getElementById('saldo-kas').innerText = 'Rp 0';
-    renderTabelKeuangan('list-pemasukan', [], '#2e7d32', '+');
-    renderTabelKeuangan('list-pengeluaran', [], '#c62828', '-');
-    return;
-  }
-  
-  // Filter data MURNI per divisi yang dipilih
-  var dataFilter = dataKeuangan.filter(item => item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
-
-  // Hitung Saldo Khusus Divisi Terpilih
-  var totMasuk = 0;
-  var totKeluar = 0;
-
-  dataFilter.forEach(item => {
-    if (item.tipe === 'MASUK') totMasuk += item.nominal;
-    if (item.tipe === 'KELUAR') totKeluar += item.nominal;
-  });
-
-  var saldoAkhir = totMasuk - totKeluar;
-  document.getElementById('saldo-kas').innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
-
-  // Ambil 5 Pemasukan Terakhir Khusus Divisi Ini
-  var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
-  renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
-
-  // Ambil 5 Pengeluaran Terakhir Khusus Divisi Ini
-  var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
-  renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
-}
-	  
-function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
-  var tbody = document.getElementById(elementId);
-  tbody.innerHTML = '';
-
-  if (dataset.length === 0) {
-    tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
-    return;
-  }
-
-  dataset.forEach(item => {
-    var tr = document.createElement('tr');
-    tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
-    tr.innerHTML = `
-      <td style="padding:6px 0;">
-        <span style="color:#666; font-size:10px;">${escapeHtml(item.tgl)}</span><br>
-        <b>${escapeHtml(item.ket)}</b>
-      </td>
-      <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
-        ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-}
-
-function bukaModalKeuangan() {
-  document.getElementById('modal-keuangan').style.display = 'flex';
-  muatDataKeuangan();
-}
-
-function tutupModalKeuangan() {
-  document.getElementById('modal-keuangan').style.display = 'none';
-}
-	
+    function tutupModalKeuangan() {
+      document.getElementById('modal-keuangan').style.display = 'none';
+    }
   </script>
 </body>
 </html>
