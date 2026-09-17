@@ -137,25 +137,21 @@
     </div>
   </div>
 
-  
-<div class="fab-container" id="fabContainer">
-  <button class="fab-main" onclick="toggleFab()">⚙️</button>
-  <div class="fab-menu">
-    <button class="fab-item" onclick="bukaModalFormPin()">📍 Tambah / Edit Tempat</button>
-    
-    <!-- Menu Google Form Keuangan -->
-    <a href="https://forms.gle/vpfvQAwNqtJyKW6Q6" target="_blank" style="text-decoration:none;">
-      <button class="fab-item">📝 Form Input Keuangan</button>
-    </a>
-
-    <a href="https://docs.google.com/spreadsheets/d/1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y/edit" target="_blank" style="text-decoration:none;">
-      <button class="fab-item">💰 Edit Keuangan</button>
-    </a>
-    <a href="https://docs.google.com/spreadsheets/d/1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y/edit" target="_blank" style="text-decoration:none;">
-      <button class="fab-item">📢 Edit Pengumuman</button>
-    </a>
+  <div class="fab-container" id="fabContainer">
+    <button class="fab-main" onclick="toggleFab()">⚙️</button>
+    <div class="fab-menu">
+      <button class="fab-item" onclick="bukaModalFormPin()">📍 Tambah / Edit Tempat</button>
+      <a href="https://forms.gle/vpfvQAwNqtJyKW6Q6" target="_blank" style="text-decoration:none;">
+        <button class="fab-item">📝 Form Input Keuangan</button>
+      </a>
+      <a href="https://docs.google.com/spreadsheets/d/1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y/edit" target="_blank" style="text-decoration:none;">
+        <button class="fab-item">💰 Edit Keuangan</button>
+      </a>
+      <a href="https://docs.google.com/spreadsheets/d/1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y/edit" target="_blank" style="text-decoration:none;">
+        <button class="fab-item">📢 Edit Pengumuman</button>
+      </a>
+    </div>
   </div>
-</div>
 
   <div id="modal-form" class="modal-bg">
     <div class="modal-content">
@@ -289,6 +285,7 @@
         document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
         document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
         document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
+        document.getElementById('inputFoto').value = "";
         document.getElementById('modal-form').style.display = 'flex';
       });
 
@@ -297,7 +294,6 @@
 
         baris.forEach(function(kolom) {
           if (kolom.length >= 3 && kolom[0] !== '') {
-            // PERBAIKAN: Menambahkan indeks [1] untuk Latitude dan [2] untuk Longitude
             var latClean = perbaikiKoordinat(kolom[1] || '');
             var lngClean = perbaikiKoordinat(kolom[2] || '');
             var parsedLat = parseFloat(latClean);
@@ -339,8 +335,9 @@
               }
             }
 
+            var currIdx = daftarPin.length;
             var htmlFoto = urlFoto ? `<img src="${urlFoto}" class="img-popup">` : '';
-            var popupContent = `<b>${namaAsli}</b>${htmlFoto}<br><button class="btn-edit" onclick="editData('${escapeHtml(namaAsli)}', ${parsedLat}, ${parsedLng}, '${kategori}', ${statusHidden}, '${urlFoto}')">✏️ Edit Data Ini</button>`;
+            var popupContent = `<b>${namaAsli}</b>${htmlFoto}<br><button class="btn-edit" onclick="editDataByIdx(${currIdx})">✏️ Edit Data Ini</button>`;
 
             var customIcon = L.divIcon({
               className: 'custom-pin',
@@ -351,7 +348,16 @@
             var marker = L.marker([parsedLat, parsedLng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
             if (!statusHidden) marker.addTo(map);
 
-            daftarPin.push({ namaRaw: namaAsli, nama: namaAsli.toLowerCase(), marker: marker, lat: parsedLat, lng: parsedLng, hidden: statusHidden, kategori: kategori });
+            daftarPin.push({ 
+              namaRaw: namaAsli, 
+              nama: namaAsli.toLowerCase(), 
+              marker: marker, 
+              lat: parsedLat, 
+              lng: parsedLng, 
+              hidden: statusHidden, 
+              kategori: kategori,
+              foto: urlFoto 
+            });
           }
         });
       });
@@ -390,25 +396,39 @@
       return str;
     }
 
-    function escapeHtml(text) { return text.replace(/'/g, "&#039;").replace(/"/g, "&quot;"); }
     function toggleFab() { document.getElementById('fabContainer').classList.toggle('active'); }
+    
     function bukaModalFormPin() { 
       document.getElementById('formTitle').innerText = "📍 Tambah Data Baru"; 
       document.getElementById('inputNama').value = ""; 
       document.getElementById('inputLat').value = map.getCenter().lat.toFixed(6); 
       document.getElementById('inputLng').value = map.getCenter().lng.toFixed(6); 
       document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
+      document.getElementById('inputFoto').value = "";
       document.getElementById('modal-form').style.display = 'flex'; 
     }
+    
     function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
       
-    window.editData = function(nama, lat, lng, kategori, hidden, foto) {
-      document.getElementById('formTitle').innerText = "✏️ Edit: " + nama;
-      document.getElementById('inputNama').value = nama; document.getElementById('inputLat').value = lat; document.getElementById('inputLng').value = lng;
+    window.editDataByIdx = function(idx) {
+      var item = daftarPin[idx];
+      if (!item) return;
+
+      document.getElementById('formTitle').innerText = "✏️ Edit: " + item.namaRaw;
+      document.getElementById('inputNama').value = item.namaRaw; 
+      document.getElementById('inputLat').value = item.lat; 
+      document.getElementById('inputLng').value = item.lng;
       document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
+      
       var formK = document.getElementById('inputKategori');
-      if (kategori === 'kuliner') formK.value = 'Kuliner'; else if (kategori === 'kost') formK.value = 'Kost'; else if (kategori === 'fasum') formK.value = 'Fasum'; else formK.value = 'Rumah';
-      document.getElementById('inputHidden').value = hidden ? 'TRUE' : 'FALSE'; document.getElementById('inputFoto').value = foto || '';
+      if (item.kategori === 'kuliner') formK.value = 'Kuliner'; 
+      else if (item.kategori === 'kost') formK.value = 'Kost'; 
+      else if (item.kategori === 'fasum') formK.value = 'Fasum'; 
+      else if (item.kategori === 'minimarket') formK.value = 'Minimarket'; 
+      else formK.value = 'Rumah';
+
+      document.getElementById('inputHidden').value = item.hidden ? 'TRUE' : 'FALSE'; 
+      document.getElementById('inputFoto').value = item.foto || '';
       document.getElementById('modal-form').style.display = 'flex';
     };
 
