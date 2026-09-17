@@ -9,7 +9,6 @@
     html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
     #map { width: 100%; height: 100vh; }
     
-    /* --- LAYER LOGIN PIN ADMIN --- */
     #login-overlay {
       position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: #111827; z-index: 9999; display: flex; flex-direction: column;
@@ -33,7 +32,6 @@
     }
     .login-box button:hover { background: #0277bd; }
 
-    /* Tombol Kembali ke Warga */
     .btn-back-floating {
       position: absolute; top: 12px; right: 12px; z-index: 1001; background: #d32f2f;
       color: #fff !important; padding: 8px 14px; border-radius: 20px; text-decoration: none;
@@ -52,7 +50,6 @@
     .custom-pin { background: none; border: none; }
     .img-popup { width: 100%; max-height: 140px; object-fit: cover; border-radius: 6px; margin-top: 6px; border: 1px solid #ddd; }
 
-    /* Panel Pencarian */
     #top-panel {
       position: absolute; top: 70px; left: 50%; transform: translateX(-50%); z-index: 1000;
       width: 86%; max-width: 340px; display: flex; flex-direction: column; gap: 10px;
@@ -70,7 +67,6 @@
     }
     .btn-filter.active { background: #00c853; color: white; border-color: #00c853; }
 
-    /* --- GAYA KHUSUS ADMIN (MODAL FORM & FAB) --- */
     .modal-bg {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
       background: rgba(0,0,0,0.6); z-index: 2000; align-items: center; justify-content: center;
@@ -88,7 +84,6 @@
     .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
     .btn-submit { background: #00c853; color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%; }
 
-    /* Floating Action Button */
     .fab-container {
       position: fixed; bottom: 20px; right: 20px; z-index: 1500; display: flex;
       flex-direction: column-reverse; align-items: flex-end; gap: 10px;
@@ -110,21 +105,16 @@
 </head>
 <body>
 
-  <!-- LAYER LOGIN PIN -->
   <div id="login-overlay">
     <div class="login-box">
       <h2>🔒 Akses Admin</h2>
       <p class="subtitle">Masukkan 6 Digit PIN Pengurus</p>
-      
-      <!-- Input Mode Numeric memunculkan numpad khusus angka di HP -->
       <input type="password" id="adminPin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••" onkeypress="if(event.key === 'Enter') cekLogin()">
-      
       <button onclick="cekLogin()">Buka Kunci</button>
     </div>
   </div>
 
   <a href="index.html" class="btn-back-floating">⬅️ Mode Warga</a>
-
   <div id="map"></div>
 
   <div id="top-panel">
@@ -163,7 +153,11 @@
         <h3 id="formTitle">📍 Tambah Data Baru</h3>
         <button class="close-btn" onclick="tutupModalForm()">&times;</button>
       </div>
+      <!-- URL_WEBHOOK_APPS_SCRIPT_ANDA diganti URL Web App GAS Anda -->
       <form id="dataForm" action="URL_WEBHOOK_APPS_SCRIPT_ANDA" method="POST" target="_blank">
+        <!-- Input hidden untuk membawa PIN ke backend GAS -->
+        <input type="hidden" name="pin" id="inputPinForm">
+        
         <div class="form-group"><label>Nama / No. Rumah / Tempat:</label><input type="text" name="nama" id="inputNama" required></div>
         <div style="display: flex; gap: 10px;">
           <div class="form-group" style="flex: 1;"><label>Latitude:</label><input type="text" name="lat" id="inputLat" required></div>
@@ -191,10 +185,6 @@
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    // --- SISTEM LOGIN PIN 6 DIGIT ---
-    // PIN default saat ini adalah: 123456
-    // MTIzNDU2 adalah hasil sandi Base64 dari "123456"
-    
     document.addEventListener("DOMContentLoaded", () => {
       if(sessionStorage.getItem('authAdmin') === 'true') {
         bukaAkses();
@@ -203,29 +193,29 @@
 
     function cekLogin() {
       const input = document.getElementById('adminPin').value;
-      
       if(input.length !== 6) {
         alert("PIN harus berisi 6 digit angka!");
         return;
       }
-
-      // Membandingkan hasil encode PIN dengan kode sandi rahasia
+      // Ganti MTIzNDU2 sesuai base64 PIN 6 digit Anda (misal 050505 -> MDUwNTA1)
       if (btoa(input) === "MDUwNTA1") {
         sessionStorage.setItem('authAdmin', 'true');
+        sessionStorage.setItem('verifiedPin', input); // Simpan PIN asli untuk submit form
         bukaAkses();
       } else {
         alert("PIN salah! Akses ditolak.");
-        document.getElementById('adminPin').value = ""; // Kosongkan kolom jika salah
+        document.getElementById('adminPin').value = "";
       }
     }
 
     function bukaAkses() {
       document.getElementById('login-overlay').style.display = 'none';
       document.body.style.overflow = 'auto';
+      // Isi otomatis hidden PIN form
+      document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
       initMap(); 
     }
 
-    // --- KODE PETA & DATA ---
     var map, daftarPin = [], pinRumahAktif = null;
     var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
     var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
@@ -248,6 +238,7 @@
         document.getElementById('inputNama').value = "";
         document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
         document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+        document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
         document.getElementById('modal-form').style.display = 'flex';
       });
 
@@ -298,12 +289,20 @@
 
     function escapeHtml(text) { return text.replace(/'/g, "&#039;").replace(/"/g, "&quot;"); }
     function toggleFab() { document.getElementById('fabContainer').classList.toggle('active'); }
-    function bukaModalFormPin() { document.getElementById('formTitle').innerText = "📍 Tambah Data Baru"; document.getElementById('inputNama').value = ""; document.getElementById('inputLat').value = map.getCenter().lat.toFixed(6); document.getElementById('inputLng').value = map.getCenter().lng.toFixed(6); document.getElementById('modal-form').style.display = 'flex'; }
+    function bukaModalFormPin() { 
+      document.getElementById('formTitle').innerText = "📍 Tambah Data Baru"; 
+      document.getElementById('inputNama').value = ""; 
+      document.getElementById('inputLat').value = map.getCenter().lat.toFixed(6); 
+      document.getElementById('inputLng').value = map.getCenter().lng.toFixed(6); 
+      document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
+      document.getElementById('modal-form').style.display = 'flex'; 
+    }
     function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
     
     window.editData = function(nama, lat, lng, kategori, hidden, foto) {
       document.getElementById('formTitle').innerText = "✏️ Edit: " + nama;
       document.getElementById('inputNama').value = nama; document.getElementById('inputLat').value = lat; document.getElementById('inputLng').value = lng;
+      document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
       var formK = document.getElementById('inputKategori');
       if (kategori === 'kuliner') formK.value = 'Kuliner'; else if (kategori === 'kost') formK.value = 'Kost'; else if (kategori === 'fasum') formK.value = 'Fasum'; else formK.value = 'Rumah';
       document.getElementById('inputHidden').value = hidden ? 'TRUE' : 'FALSE'; document.getElementById('inputFoto').value = foto || '';
