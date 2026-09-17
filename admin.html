@@ -86,23 +86,9 @@
     .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
     .btn-submit { background: #00c853; color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%; }
 
-    .fab-container {
-      position: fixed; bottom: 20px; right: 20px; z-index: 1500; display: flex;
-      flex-direction: column-reverse; align-items: flex-end; gap: 10px;
-    }
-    .fab-menu { display: none; flex-direction: column; align-items: flex-end; gap: 10px; margin-bottom: 10px; }
-    .fab-container:hover .fab-menu, .fab-container.active .fab-menu { display: flex; }
-    .fab-main {
-      width: 56px; height: 56px; border-radius: 50%; background: #111827; color: white;
-      font-size: 24px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;
-      display: flex; align-items: center; justify-content: center; transition: 0.3s;
-    }
-    .fab-main:hover { background: #374151; }
-    .fab-item {
-      background: white; color: #111; border: 1px solid #ccc; padding: 8px 16px;
-      border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;
-    }
+    .btn-admin-act { background: #111827; color: #ffffff; border: 1px solid #111827; }
+    .btn-admin-act:hover { background: #374151; }
+  
   </style>
 </head>
 <body>
@@ -124,7 +110,8 @@
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
       <button onclick="cariLokasi()">Cari</button>
     </div>
-    <div class="filter-container">
+
+   <div class="filter-container">
       <div class="filter-row">
         <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
         <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
@@ -134,24 +121,25 @@
         <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
         <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
       </div>
-    </div>
-  </div>
 
-  <div class="fab-container" id="fabContainer">
-    <button class="fab-main" onclick="toggleFab()">⚙️</button>
-    <div class="fab-menu">
-      <button class="fab-item" onclick="bukaModalFormPin()">📍 Tambah / Edit Tempat</button>
-      <a href="https://forms.gle/vpfvQAwNqtJyKW6Q6" target="_blank" style="text-decoration:none;">
-        <button class="fab-item">📝 Form Input Keuangan</button>
-      </a>
-      <a href="https://docs.google.com/spreadsheets/d/1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y/edit" target="_blank" style="text-decoration:none;">
-        <button class="fab-item">💰 Edit Keuangan</button>
-      </a>
-      <a href="https://docs.google.com/spreadsheets/d/1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y/edit" target="_blank" style="text-decoration:none;">
-        <button class="fab-item">📢 Edit Pengumuman</button>
-      </a>
+      <!-- Menu Tombol Admin Baru -->
+      <div class="filter-row" style="margin-top: 4px;">
+        <button class="btn-filter btn-admin-act" onclick="bukaModalFormPin()">📍 Tambah Tempat</button>
+        <a href="https://forms.gle/vpfvQAwNqtJyKW6Q6" target="_blank" style="flex:1; text-decoration:none; display:flex;">
+          <button class="btn-filter btn-admin-act" style="width:100%;">📝 Form Keuangan</button>
+        </a>
+      </div>
+      <div class="filter-row">
+        <a href="https://docs.google.com/spreadsheets/d/1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y/edit" target="_blank" style="flex:1; text-decoration:none; display:flex;">
+          <button class="btn-filter btn-admin-act" style="width:100%;">💰 Sheet Keuangan</button>
+        </a>
+        <a href="https://docs.google.com/spreadsheets/d/1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y/edit" target="_blank" style="flex:1; text-decoration:none; display:flex;">
+          <button class="btn-filter btn-admin-act" style="width:100%;">📢 Sheet Pengumuman</button>
+        </a>
+      </div>
     </div>
-  </div>
+
+
 
   <div id="modal-form" class="modal-bg">
     <div class="modal-content">
@@ -407,7 +395,7 @@
       return str;
     }
 
-    function toggleFab() { document.getElementById('fabContainer').classList.toggle('active'); }
+    
     
     function bukaModalFormPin() { 
       document.getElementById('formTitle').innerText = "📍 Tambah Data Baru"; 
@@ -444,7 +432,7 @@
     };
 
     function filterKategori(kat, btnElement) {
-      document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active')); btnElement.classList.add('active');
+      document.querySelectorAll('.filter-row .btn-filter:not(.btn-admin-act)').forEach(btn => btn.classList.remove('active'));
       daftarPin.forEach(pin => { map.removeLayer(pin.marker); if (!pin.hidden) { if (kat === 'semua' || pin.kategori === kat) pin.marker.addTo(map); } });
     }
 
