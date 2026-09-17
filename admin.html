@@ -417,9 +417,29 @@
     };
 
     function filterKategori(kat, btnElement) {
-      document.querySelectorAll('.filter-row .btn-filter:not(.btn-admin-act)').forEach(btn => btn.classList.remove('active'));
-      daftarPin.forEach(pin => { map.removeLayer(pin.marker); if (!pin.hidden) { if (kat === 'semua' || pin.kategori === kat) pin.marker.addTo(map); } });
+  // Otomatis ambil tombol yang diklik
+  var btn = btnElement || (window.event ? window.event.currentTarget : null);
+
+  // 1. Lepas warna hijau dari semua tombol
+  document.querySelectorAll('.btn-filter').forEach(function(b) {
+    b.classList.remove('active');
+  });
+
+  // 2. Pasang warna hijau ke tombol yang baru diklik
+  if (btn && btn.classList) {
+    btn.classList.add('active');
+  }
+
+  // 3. Tampilkan pin sesuai kategori
+  daftarPin.forEach(function(pin) {
+    map.removeLayer(pin.marker);
+    if (!pin.hidden) {
+      if (kat === 'semua' || pin.kategori === kat) {
+        pin.marker.addTo(map);
+      }
     }
+  });
+}
 
     function cariLokasi() {
       var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
