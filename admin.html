@@ -245,6 +245,7 @@
 
     function initMap() {
       map = L.map('map').setView([-7.7423, 110.3842], 17);
+      L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
       L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
 
       var batasRT05 = [
@@ -256,15 +257,18 @@
       ];
       L.polygon(batasRT05, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-      map.on('click', function(e) {
-        document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
-        document.getElementById('inputNama').value = "";
-        document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
-        document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
-        document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
-        document.getElementById('inputFoto').value = "";
-        document.getElementById('modal-form').style.display = 'flex';
-      });
+     map.on('click', function(e) {
+  // 🟢 BARIS TAMBAHAN: Jika modal sedang terbuka, abaikan klik di peta
+  if (document.getElementById('modal-form').style.display === 'flex') return;
+
+  document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
+  document.getElementById('inputNama').value = "";
+  document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
+  document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+  document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
+  document.getElementById('inputFoto').value = "";
+  document.getElementById('modal-form').style.display = 'flex';
+});
 
           fetch(SHEET_URL)
       .then(response => response.text())
