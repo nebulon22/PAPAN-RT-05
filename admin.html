@@ -289,26 +289,41 @@
         document.getElementById('modal-form').style.display = 'flex';
       });
 
-      fetch(SHEET_URL).then(res => res.text()).then(csv => {
-        var baris = parseCSV(csv).slice(1);
+          fetch(SHEET_URL)
+      .then(response => response.text())
+      .then(csvText => {
+        var baris = parseCSV(csvText).slice(1);
 
         baris.forEach(function(kolom) {
           if (kolom.length >= 3 && kolom[0] !== '') {
-            var latClean = perbaikiKoordinat(kolom[1] || '');
-            var lngClean = perbaikiKoordinat(kolom[2] || '');
-            var parsedLat = parseFloat(latClean);
-            var parsedLng = parseFloat(lngClean);
-            if (isNaN(parsedLat) || isNaN(parsedLng)) return;
-            
-            var kategoriManual = kolom[3] ? kolom[3].trim().toLowerCase() : '';
-            var statusHidden = kolom[4] ? kolom[4].trim().toUpperCase() === 'TRUE' : false;
+            var latClean = perbaikiKoordinat(kolom[1]);
+            var lngClean = perbaikiKoordinat(kolom[2]);
+            var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
+            var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
             var urlFoto = kolom[5] ? kolom[5].trim() : '';
 
             var namaAsli = kolom[0].trim();
-            var namaUpper = namaAsli.toUpperCase();
+            var namaTampil = namaAsli;
 
+            var item = {
+              name: namaTampil,
+              nameAsli: namaAsli,
+              lat: parseFloat(latClean),
+              lng: parseFloat(lngClean),
+              hidden: statusHidden,
+              foto: urlFoto
+            };
+
+            if (isNaN(item.lat) || isNaN(item.lng)) return;
+
+            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+            
             let emoji = '🏠'; 
             let kategori = 'rumah';
+            let namaUpper = item.nameAsli.toUpperCase();
+
             let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
 
             if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
@@ -335,32 +350,28 @@
               }
             }
 
-            var currIdx = daftarPin.length;
-            var htmlFoto = urlFoto ? `<img src="${urlFoto}" class="img-popup">` : '';
-            var popupContent = `<b>${namaAsli}</b>${htmlFoto}<br><button class="btn-edit" onclick="editDataByIdx(${currIdx})">✏️ Edit Data Ini</button>`;
-
             var customIcon = L.divIcon({
               className: 'custom-pin',
               html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
               iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
             });
-
-            var marker = L.marker([parsedLat, parsedLng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-            if (!statusHidden) marker.addTo(map);
+            
+            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+            if (!item.hidden) marker.addTo(map);
 
             daftarPin.push({ 
-              namaRaw: namaAsli, 
-              nama: namaAsli.toLowerCase(), 
+              namaRaw: item.nameAsli,
+              nama: item.nameAsli.toLowerCase(), 
               marker: marker, 
-              lat: parsedLat, 
-              lng: parsedLng, 
-              hidden: statusHidden, 
-              kategori: kategori,
-              foto: urlFoto 
+              lat: item.lat, 
+              lng: item.lng,
+              hidden: item.hidden,
+              kategori: kategori 
             });
           }
         });
-      });
+      })
+      .catch(error => console.error(error));
     }
       
     function parseCSV(text) {
