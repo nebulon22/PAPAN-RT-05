@@ -153,9 +153,8 @@
         <h3 id="formTitle">📍 Tambah Data Baru</h3>
         <button class="close-btn" onclick="tutupModalForm()">&times;</button>
       </div>
-      <!-- URL_WEBHOOK_APPS_SCRIPT_ANDA diganti URL Web App GAS Anda -->
-      <form id="dataForm" action="URL_WEBHOOK_APPS_SCRIPT_ANDA" method="POST" target="_blank">
-        <!-- Input hidden untuk membawa PIN ke backend GAS -->
+      <!-- Form murni dikontrol JavaScript (tanpa action/target error) -->
+      <form id="dataForm">
         <input type="hidden" name="pin" id="inputPinForm">
         
         <div class="form-group"><label>Nama / No. Rumah / Tempat:</label><input type="text" name="nama" id="inputNama" required></div>
@@ -178,13 +177,16 @@
           <select name="hidden" id="inputHidden"><option value="FALSE">Tidak (Tampil)</option><option value="TRUE">Ya (Sembunyikan)</option></select>
         </div>
         <div class="form-group"><label>URL Foto Depan (Opsional):</label><input type="url" name="foto" id="inputFoto"></div>
-        <button type="submit" class="btn-submit">💾 Simpan ke Google Sheet</button>
+        <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan ke Google Sheet</button>
       </form>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    // ⚠️ GANTI DENGAN URL WEB APP GAS ANDA YANG BENAR (contoh: https://script.google.com/macros/s/AKfyc.../exec)
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/GANTI_DENGAN_DEPLOYMENT_ID_ANDA/exec';
+
     document.addEventListener("DOMContentLoaded", () => {
       if(sessionStorage.getItem('authAdmin') === 'true') {
         bukaAkses();
@@ -197,10 +199,9 @@
         alert("PIN harus berisi 6 digit angka!");
         return;
       }
-      // Ganti MTIzNDU2 sesuai base64 PIN 6 digit Anda (misal 050505 -> MDUwNTA1)
-      if (btoa(input) === "MDUwNTA1") {
+      if (btoa(input) === "MDUwNTA1") { // Ganti MDUwNTA1 jika base64 PIN berbeda
         sessionStorage.setItem('authAdmin', 'true');
-        sessionStorage.setItem('verifiedPin', input); // Simpan PIN asli untuk submit form
+        sessionStorage.setItem('verifiedPin', input);
         bukaAkses();
       } else {
         alert("PIN salah! Akses ditolak.");
@@ -211,10 +212,50 @@
     function bukaAkses() {
       document.getElementById('login-overlay').style.display = 'none';
       document.body.style.overflow = 'auto';
-      // Isi otomatis hidden PIN form
       document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
       initMap(); 
     }
+
+    // Submit handler via Fetch AJAX
+    document.getElementById('dataForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+      const btn = document.getElementById('btnSubmitForm');
+      btn.innerText = '⏳ Menyimpan...';
+      btn.disabled = true;
+
+      const payload = {
+        pin: document.getElementById('inputPinForm').value,
+        nama: document.getElementById('inputNama').value,
+        lat: document.getElementById('inputLat').value,
+        lng: document.getElementById('inputLng').value,
+        kategori: document.getElementById('inputKategori').value,
+        hidden: document.getElementById('inputHidden').value,
+        foto: document.getElementById('inputFoto').value
+      };
+
+      fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Menghindari preflight CORS issue di GAS
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.text())
+      .then(result => {
+        btn.innerText = '💾 Simpan ke Google Sheet';
+        btn.disabled = false;
+        if(result.includes('SUCCESS')) {
+          alert('✅ Data berhasil disimpan!');
+          tutupModalForm();
+          location.reload();
+        } else {
+          alert('❌ Gagal dari server: ' + result);
+        }
+      })
+      .catch(err => {
+        btn.innerText = '💾 Simpan ke Google Sheet';
+        btn.disabled = false;
+        alert('❌ Error koneksi: ' + err);
+      });
+    });
 
     var map, daftarPin = [], pinRumahAktif = null;
     var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
@@ -314,6 +355,7 @@
       daftarPin.forEach(pin => { map.removeLayer(pin.marker); if (!pin.hidden) { if (kat === 'semua' || pin.kategori === kat) pin.marker.addTo(map); } });
     }
 
+    function cariLonkat() {}
     function cariLokasi() {
       var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
       var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci) || daftarPin.find(pin => pin.nama.includes(kataKunci));
