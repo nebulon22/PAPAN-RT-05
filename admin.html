@@ -298,17 +298,19 @@
       fetch(SHEET_URL).then(res => res.text()).then(csv => {
         var baris = parseCSV(csv).slice(1);
 
-        baris.forEach(kolom => {
-          if (kolom.length >= 3 && kolom[0] !== '') {
-           var latClean = parseFloat(perbaikiKoordinat(kolom));
-           var lngClean = parseFloat(perbaikiKoordinat(kolom));
-            if (isNaN(latClean) || isNaN(lngClean)) return;
+       baris.forEach(kolom => {
+  if (kolom.length >= 3 && kolom[0] !== '') {
+    // ✅ BENAR: Ambil dari kolom ke-1 (lat) dan ke-2 (lng)
+    var latClean = parseFloat(perbaikiKoordinat(kolom));
+    var lngClean = parseFloat(perbaikiKoordinat(kolom));
+    if (isNaN(latClean) || isNaN(lngClean)) return;
+    
+    var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
+    var urlFoto = kolom[5] ? kolom[5].trim() : '';
+    var namaAsli = kolom[0].trim();
+    var namaUpper = namaAsli.toUpperCase();
+    var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
 
-            var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
-            var urlFoto = kolom[5] ? kolom[5].trim() : '';
-            var namaAsli = kolom[0].trim();
-            var namaUpper = namaAsli.toUpperCase();
-            var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
 
             let emoji = '🏠'; 
             let kategori = 'rumah';
