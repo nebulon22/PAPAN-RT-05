@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel - RT 05 Kayen</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; display: flex; height: 100vh; overflow: hidden; background: #f3f4f6; }
+    
+    /* Overlay PIN Security */
+    #pin-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+    .pin-box { background: white; padding: 25px; border-radius: 12px; width: 300px; text-align: center; box-shadow: 0 4px 20px rgba(0,0,0,0.3); }
+    .pin-box input { width: 100%; padding: 12px; font-size: 20px; text-align: center; letter-spacing: 8px; margin: 15px 0; border: 1px solid #ccc; border-radius: 8px; }
+    .pin-box button { width: 100%; padding: 12px; background: #00c853; color: white; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+    #map { flex: 1; height: 100%; }
+    #panel { width: 380px; background: white; padding: 20px; box-shadow: -2px 0 10px rgba(0,0,0,0.1); display: flex; flex-direction: column; gap: 16px; overflow-y: auto; height: 100vh; }
+    
+    h2, h3 { margin: 0; color: #111; }
+    .section-box { background: #f9fafb; padding: 12px; border-radius: 8px; border: 1px solid #e5e7eb; display: flex; flex-direction: column; gap: 8px; }
+    .btn-link { display: block; background: #2563eb; color: white; text-align: center; padding: 10px; border-radius: 6px; text-decoration: none; font-size: 13px; font-weight: bold; }
+    .btn-link.warga { background: #0d9488; }
+    
+    .form-group { display: flex; flex-direction: column; gap: 4px; }
+    label { font-size: 12px; font-weight: bold; color: #374151; }
+    input, select { padding: 9px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 13px; }
+    
+    button.btn-save { background: #00c853; color: white; border: none; padding: 12px; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 14px; }
+    button.btn-save:hover { background: #00b04ff0; }
+    
+    .coord-row { display: flex; gap: 8px; }
+    .coord-row input { width: 50%; background: #f3f4f6; color: #4b5563; }
+    .hint { font-size: 11px; color: #4b5563; background: #e0f2fe; padding: 8px; border-radius: 6px; line-height: 1.4; }
+  </style>
+</head>
+<body>
+
+  <!-- Layar PIN -->
+  <div id="pin-overlay">
+    <div class="pin-box">
+      <h3>🔒 Panel Admin RT 05</h3>
+      <p style="font-size: 12px; color: #666; margin-top:5px;">Masukkan PIN (default: 0505)</p>
+      <input type="password" id="pinInput" maxlength="4" placeholder="••••">
+      <button onclick="cekPin()">Masuk</button>
+    </div>
+  </div>
+
+  <div id="map"></div>
+
+  <div id="panel">
+    <div>
+      <h2>🔒 Panel Admin RT 05</h2>
+      <div style="font-size: 12px; color: #666;">Kelola peta & pintasan pengurus</div>
+    </div>
+
+    <!-- Pintasan Form Pengurus -->
+    <div class="section-box">
+      <h3 style="font-size: 13px;">📝 Form Khusus Pengurus/Divisi</h3>
+      <a href="GANTI_LINK_FORM_KEUANGAN" target="_blank" class="btn-link">💰 Form Laporan Keuangan</a>
+      <a href="GANTI_LINK_FORM_WARGA" target="_blank" class="btn-link warga">👥 Form Pendataan Warga</a>
+    </div>
+
+    <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 0;">
+
+    <!-- Click to Map -->
+    <h3>🗺️ Input Titik Rumah / Tempat</h3>
+    <div class="hint">💡 <b>Cara:</b> Klik di mana saja pada peta untuk meletakkan pin. Geser marker jika kurang pas.</div>
+    
+    <form id="formDenah" onsubmit="simpanKeSheet(event)">
+      <div class="form-group">
+        <label>Nama / No. Rumah / Tempat:</label>
+        <input type="text" id="inputNama" required placeholder="Contoh: Budi (No. 12) atau Kost Melati">
+      </div>
+
+      <div class="coord-row">
+        <div class="form-group">
+          <label>Latitude:</label>
+          <input type="text" id="inputLat" readonly required placeholder="-7.xxxxx">
+        </div>
+        <div class="form-group">
+          <label>Longitude:</label>
+          <input type="text" id="inputLng" readonly required placeholder="110.xxxxx">
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Kategori:</label>
+        <select id="inputKategori">
+          <option value="rumah">🏠 Rumah</option>
+          <option value="kost">🛏️ Kost</option>
+          <option value="kuliner">🍽️ Kuliner</option>
+          <option value="minimarket">🏪 Minimarket / Toko</option>
+          <option value="fasum">🏛️ Fasum / Masjid</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Sembunyikan dari default? (House on Demand)</label>
+        <select id="inputHidden">
+          <option value="FALSE">Tampilkan Langsung (FALSE)</option>
+          <option value="TRUE">Sembunyikan / Muncul saat Dicari (TRUE)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>URL Foto Depan (Opsional):</label>
+        <input type="url" id="inputFoto" placeholder="https://link-foto.com/...">
+      </div>
+
+      <button type="submit" id="btnSimpan" class="btn-save">💾 Simpan ke Google Sheet</button>
+    </form>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script>
+    // Konfigurasi PIN
+    const CORRECT_PIN = '0505'; // Ganti PIN sesuai keinginan
+    function cekPin() {
+      const val = document.getElementById('pinInput').value;
+      if (val === CORRECT_PIN) {
+        document.getElementById('pin-overlay').style.display = 'none';
+      } else {
+        alert('PIN salah!');
+        document.getElementById('pinInput').value = '';
+      }
+    }
+    document.getElementById('pinInput').addEventListener('keypress', e => { if (e.key === 'Enter') cekPin(); });
+
+    // Inisialisasi Peta
+    var map = L.map('map').setView([-7.7423, 110.3842], 18);
+    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+    }).addTo(map);
+
+    var adminMarker = null;
+
+    map.on('click', function(e) {
+      updateKoordinatForm(e.latlng.lat, e.latlng.lng);
+    });
+
+    function updateKoordinatForm(lat, lng) {
+      var latFix = parseFloat(lat).toFixed(7);
+      var lngFix = parseFloat(lng).toFixed(7);
+      
+      document.getElementById('inputLat').value = latFix;
+      document.getElementById('inputLng').value = lngFix;
+
+      if (adminMarker) {
+        adminMarker.setLatLng([latFix, lngFix]);
+      } else {
+        adminMarker = L.marker([latFix, lngFix], { draggable: true }).addTo(map);
+        adminMarker.on('dragend', function(event) {
+          var pos = event.target.getLatLng();
+          document.getElementById('inputLat').value = pos.lat.toFixed(7);
+          document.getElementById('inputLng').value = pos.lng.toFixed(7);
+        });
+      }
+    }
+
+    // ⚠️ GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA
+    var GAS_API_URL = 'PASTE_URL_WEB_APP_GAS_DI_SINI';
+
+    function simpanKeSheet(e) {
+      e.preventDefault();
+      if (GAS_API_URL.includes('PASTE_URL')) {
+        alert('URL Google Apps Script belum diset di admin.html!');
+        return;
+      }
+
+      var btn = document.getElementById('btnSimpan');
+      btn.innerText = 'Menyimpan...';
+      btn.disabled = true;
+
+      var payload = {
+        nama: document.getElementById('inputNama').value,
+        lat: document.getElementById('inputLat').value,
+        lng: document.getElementById('inputLng').value,
+        hidden: document.getElementById('inputHidden').value,
+        kategori: document.getElementById('inputKategori').value,
+        foto: document.getElementById('inputFoto').value
+      };
+
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        body: JSON.stringify(payload)
+      })
+      .then(response => response.text())
+      .then(result => {
+        alert('Berhasil tersimpan ke Google Sheet!');
+        document.getElementById('formDenah').reset();
+        if (adminMarker) map.removeLayer(adminMarker);
+        adminMarker = null;
+        btn.innerText = '💾 Simpan ke Google Sheet';
+        btn.disabled = false;
+      })
+      .catch(err => {
+        alert('Gagal: ' + err);
+        btn.innerText = '💾 Simpan ke Google Sheet';
+        btn.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>
