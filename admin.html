@@ -292,68 +292,70 @@
         document.getElementById('modal-form').style.display = 'flex';
       });
 
-      fetch(SHEET_URL).then(res => res.text()).then(csv => {
-        var baris = parseCSV(csv).slice(1);
+     fetch(SHEET_URL).then(res => res.text()).then(csv => {
+      var baris = parseCSV(csv).slice(1);
 
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 3 && kolom[0] !== '') {
-            var latClean = perbaikiKoordinat(kolom);
-            var lngClean = perbaikiKoordinat(kolom);
-            var parsedLat = parseFloat(latClean);
-            var parsedLng = parseFloat(lngClean);
-            if (isNaN(parsedLat) || isNaN(parsedLng)) return;
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          // Perbaiki indeks: kolom = lat, kolom = lng
+          var latClean = perbaikiKoordinat(kolom);
+          var lngClean = perbaikiKoordinat(kolom);
+          var parsedLat = parseFloat(latClean);
+          var parsedLng = parseFloat(lngClean);
+          if (isNaN(parsedLat) || isNaN(parsedLng)) return;
 
-            var statusHidden = kolom ? kolom.trim().toUpperCase() === 'TRUE' : false;
-            var kategoriManual = kolom ? kolom.trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? kolom[5].trim() : '';
+          // Koreksi indeks kolom metadata (sesuaikan urutan kolom Sheet: 0:nama, 1:lat, 2:lng, 3:kategori, 4:hidden, 5:foto)
+          var statusHidden = kolom ? kolom.trim().toUpperCase() === 'TRUE' : false;
+          var kategoriManual = kolom ? kolom.trim().toLowerCase() : '';
+          var urlFoto = kolom[5] ? kolom[5].trim() : '';
 
-            var namaAsli = kolom[0].trim();
-            var namaUpper = namaAsli.toUpperCase();
+          var namaAsli = kolom[0].trim();
+          var namaUpper = namaAsli.toUpperCase();
 
-            let emoji = '🏠'; 
-            let kategori = 'rumah';
-            let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
+          let emoji = '🏠'; 
+          let kategori = 'rumah';
+          let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
 
-            if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
-              kategori = 'kuliner'; emoji = '🍽️';
-              bgStyle = 'background: #FFA500; border: 2px solid #FFFFFF; color: black; width: 22px; height: 22px; font-size: 12px;';
-            } 
-            else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
-              kategori = 'minimarket'; emoji = '🏪';
-              bgStyle = 'background: #FFFF00; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
-            } 
-            else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
-              kategori = 'kost'; emoji = '🛏️';
-              bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px; font-size: 12px;';
-            }
-            else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
-              kategori = 'fasum'; emoji = '🏛️';
-              bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px; font-size: 12px;';
-              
-              if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
-                emoji = '🕌';
-                bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;';
-              } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
-                emoji = '🏀';
-              }
-            }
-
-            var htmlFoto = urlFoto ? `<img src="${urlFoto}" class="img-popup">` : '';
-            var popupContent = `<b>${namaAsli}</b>${htmlFoto}<br><button class="btn-edit" onclick="editData('${escapeHtml(namaAsli)}', ${parsedLat}, ${parsedLng}, '${kategori}', ${statusHidden}, '${urlFoto}')">✏️ Edit Data Ini</button>`;
-
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-
-            var marker = L.marker([parsedLat, parsedLng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-            if (!statusHidden) marker.addTo(map);
-
-            daftarPin.push({ namaRaw: namaAsli, nama: namaAsli.toLowerCase(), marker: marker, lat: parsedLat, lng: parsedLng, hidden: statusHidden, kategori: kategori });
+          if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
+            kategori = 'kuliner'; emoji = '🍽️';
+            bgStyle = 'background: #FFA500; border: 2px solid #FFFFFF; color: black; width: 22px; height: 22px; font-size: 12px;';
+          } 
+          else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
+            kategori = 'minimarket'; emoji = '🏪';
+            bgStyle = 'background: #FFFF00; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
+          } 
+          else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
+            kategori = 'kost'; emoji = '🛏️';
+            bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px; font-size: 12px;';
           }
-        });
+          else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
+            kategori = 'fasum'; emoji = '🏛️';
+            bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px; font-size: 12px;';
+            
+            if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
+              emoji = '🕌';
+              bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;';
+            } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
+              emoji = '🏀';
+            }
+          }
+
+          var htmlFoto = urlFoto ? `<img src="${urlFoto}" class="img-popup">` : '';
+          var popupContent = `<b>${namaAsli}</b>${htmlFoto}<br><button class="btn-edit" onclick="editData('${escapeHtml(namaAsli)}', ${parsedLat}, ${parsedLng}, '${kategori}', ${statusHidden}, '${urlFoto}')">✏️ Edit Data Ini</button>`;
+
+          var customIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
+            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+          });
+
+          var marker = L.marker([parsedLat, parsedLng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+          if (!statusHidden) marker.addTo(map);
+
+          daftarPin.push({ namaRaw: namaAsli, nama: namaAsli.toLowerCase(), marker: marker, lat: parsedLat, lng: parsedLng, hidden: statusHidden, kategori: kategori });
+        }
       });
+    });
     }
       
     function parseCSV(text) {
