@@ -6,41 +6,42 @@
   <title>Admin - Denah & Keuangan RT 05</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <style>
-    /* Menggunakan style dasar yang sama persis dengan warga */
-    html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
+    html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
     #map { width: 100%; height: 100vh; }
     
+    /* --- LAYER LOGIN ADMIN --- */
+    #login-overlay {
+      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: #111827; z-index: 9999; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; color: white;
+    }
+    .login-box {
+      background: white; color: #111; padding: 24px; border-radius: 12px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; width: 80%; max-width: 300px;
+    }
+    .login-box h2 { margin: 0 0 16px 0; font-size: 18px; }
+    .login-box input {
+      width: 100%; padding: 10px; margin-bottom: 12px; border: 1px solid #ccc;
+      border-radius: 6px; box-sizing: border-box; font-size: 14px; text-align: center;
+    }
+    .login-box button {
+      width: 100%; background: #0288d1; color: white; padding: 10px;
+      border: none; border-radius: 6px; font-weight: bold; font-size: 14px; cursor: pointer;
+    }
+    .login-box button:hover { background: #0277bd; }
+
+    /* Tombol Kembali ke Warga */
     .btn-back-floating {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      z-index: 1001;
-      background: #d32f2f; /* Warna merah untuk penanda Mode Admin */
-      color: #fff !important;
-      padding: 8px 14px;
-      border-radius: 20px;
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: bold;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      position: absolute; top: 12px; right: 12px; z-index: 1001; background: #d32f2f;
+      color: #fff !important; padding: 8px 14px; border-radius: 20px; text-decoration: none;
+      font-size: 12px; font-weight: bold; box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      display: flex; align-items: center; gap: 4px;
     }
 
     .btn-rute, .btn-edit {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 6px 12px;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-      text-align: center;
-      text-decoration: none;
-      border: none;
-      cursor: pointer;
-      width: 100%;
-      box-sizing: border-box;
+      display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 4px;
+      font-size: 12px; font-weight: bold; text-align: center; text-decoration: none;
+      border: none; cursor: pointer; width: 100%; box-sizing: border-box;
     }
     .btn-rute { background-color: #00c853; color: white !important; }
     .btn-edit { background-color: #ff9800; color: white !important; margin-top: 4px; }
@@ -48,18 +49,10 @@
     .custom-pin { background: none; border: none; }
     .img-popup { width: 100%; max-height: 140px; object-fit: cover; border-radius: 6px; margin-top: 6px; border: 1px solid #ddd; }
 
-    /* Panel Pencarian (Sama dengan Warga) */
+    /* Panel Pencarian */
     #top-panel {
-      position: absolute;
-      top: 70px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      width: 86%;
-      max-width: 340px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
+      position: absolute; top: 70px; left: 50%; transform: translateX(-50%); z-index: 1000;
+      width: 86%; max-width: 340px; display: flex; flex-direction: column; gap: 10px;
     }
     #search-box { background: white; padding: 8px 10px; border-radius: 8px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); display: flex; gap: 6px; }
     #searchInput { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; outline: none; }
@@ -70,10 +63,9 @@
     .btn-filter {
       flex: 1; justify-content: center; padding: 6px 12px; background: white; color: #333;
       border: 1px solid #ccc; border-radius: 20px; font-size: 12px; font-weight: bold;
-      cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); white-space: nowrap; display: flex; align-items: center; gap: 4px;
+      cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 4px;
     }
     .btn-filter.active { background: #00c853; color: white; border-color: #00c853; }
-    .btn-info-rt { background: #ff9800; color: white; border-color: #f57c00; }
 
     /* --- GAYA KHUSUS ADMIN (MODAL FORM & FAB) --- */
     .modal-bg {
@@ -90,32 +82,16 @@
     
     .form-group { margin-bottom: 10px; }
     .form-group label { display: block; font-size: 12px; font-weight: bold; color: #444; margin-bottom: 4px; }
-    .form-group input, .form-group select {
-      width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;
-    }
+    .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
     .btn-submit { background: #00c853; color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%; }
 
     /* Floating Action Button (Menu Pojok Kanan Bawah) */
     .fab-container {
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      z-index: 1500;
-      display: flex;
-      flex-direction: column-reverse;
-      align-items: flex-end;
-      gap: 10px;
+      position: fixed; bottom: 20px; right: 20px; z-index: 1500; display: flex;
+      flex-direction: column-reverse; align-items: flex-end; gap: 10px;
     }
-    .fab-menu {
-      display: none;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 10px;
-      margin-bottom: 10px;
-    }
-    .fab-container:hover .fab-menu, .fab-container.active .fab-menu {
-      display: flex;
-    }
+    .fab-menu { display: none; flex-direction: column; align-items: flex-end; gap: 10px; margin-bottom: 10px; }
+    .fab-container:hover .fab-menu, .fab-container.active .fab-menu { display: flex; }
     .fab-main {
       width: 56px; height: 56px; border-radius: 50%; background: #111827; color: white;
       font-size: 24px; border: none; box-shadow: 0 4px 10px rgba(0,0,0,0.3); cursor: pointer;
@@ -127,17 +103,24 @@
       border-radius: 20px; font-size: 13px; font-weight: bold; cursor: pointer;
       box-shadow: 0 2px 8px rgba(0,0,0,0.2); white-space: nowrap;
     }
-    .fab-item:hover { background: #f3f4f6; }
   </style>
 </head>
 <body>
 
-  <!-- Tombol Kembali ke Warga -->
+  <!-- LAYER LOGIN -->
+  <div id="login-overlay">
+    <div class="login-box">
+      <h2>🔒 Login Admin RT 05</h2>
+      <input type="password" id="adminPassword" placeholder="Masukkan Password" onkeypress="if(event.key === 'Enter') cekLogin()">
+      <button onclick="cekLogin()">Masuk</button>
+      <p style="font-size:10px; color:#777; margin-top:12px;">Halaman khusus pengurus.</p>
+    </div>
+  </div>
+
   <a href="index.html" class="btn-back-floating">⬅️ Mode Warga</a>
 
   <div id="map"></div>
 
-  <!-- Panel Pencarian dan Filter -->
   <div id="top-panel">
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
@@ -155,12 +138,10 @@
     </div>
   </div>
 
-  <!-- Menu Admin Mengambang (Pojok Kanan Bawah) -->
   <div class="fab-container" id="fabContainer">
     <button class="fab-main" onclick="toggleFab()">⚙️</button>
     <div class="fab-menu">
       <button class="fab-item" onclick="bukaModalFormPin()">📍 Tambah / Edit Tempat</button>
-      <!-- Ganti URL ini dengan link Spreadsheet/Google Form Keuangan & Pengumuman Anda -->
       <a href="https://docs.google.com/spreadsheets/d/ID_SHEET_ANDA/edit" target="_blank" style="text-decoration:none;">
         <button class="fab-item">💰 Edit Keuangan</button>
       </a>
@@ -170,131 +151,128 @@
     </div>
   </div>
 
-  <!-- Modal Form Input Data (Hanya Muncul Saat Ditambahkan/Edit) -->
   <div id="modal-form" class="modal-bg">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="formTitle">📍 Tambah Data Baru</h3>
         <button class="close-btn" onclick="tutupModalForm()">&times;</button>
       </div>
-      
-      <!-- Sesuaikan action dengan link Webhook Apps Script Anda -->
       <form id="dataForm" action="URL_WEBHOOK_APPS_SCRIPT_ANDA" method="POST" target="_blank">
-        <div class="form-group">
-          <label>Nama / No. Rumah / Tempat:</label>
-          <input type="text" name="nama" id="inputNama" required placeholder="Contoh: Budi (No. 12)">
-        </div>
+        <div class="form-group"><label>Nama / No. Rumah / Tempat:</label><input type="text" name="nama" id="inputNama" required></div>
         <div style="display: flex; gap: 10px;">
-          <div class="form-group" style="flex: 1;">
-            <label>Latitude:</label>
-            <input type="text" name="lat" id="inputLat" required>
-          </div>
-          <div class="form-group" style="flex: 1;">
-            <label>Longitude:</label>
-            <input type="text" name="lng" id="inputLng" required>
-          </div>
+          <div class="form-group" style="flex: 1;"><label>Latitude:</label><input type="text" name="lat" id="inputLat" required></div>
+          <div class="form-group" style="flex: 1;"><label>Longitude:</label><input type="text" name="lng" id="inputLng" required></div>
         </div>
         <div class="form-group">
-          <label>Kategori (Pilih salah satu):</label>
+          <label>Kategori:</label>
           <select name="kategori" id="inputKategori">
-            <option value="Rumah">🏠 Rumah (Default)</option>
-            <option value="Kost">🛏️ Kost / Kontrakan</option>
-            <option value="Fasum">🏛️ Fasum (Masjid, Balai, dll)</option>
-            <option value="Kuliner">🍽️ Kuliner (Warung, Kafe)</option>
-            <option value="Minimarket">🏪 Toko / Minimarket</option>
+            <option value="Rumah">🏠 Rumah</option>
+            <option value="Kost">🛏️ Kost</option>
+            <option value="Fasum">🏛️ Fasum</option>
+            <option value="Kuliner">🍽️ Kuliner</option>
+            <option value="Minimarket">🏪 Minimarket</option>
           </select>
         </div>
         <div class="form-group">
-          <label>Sembunyikan dari Peta? (House on Demand)</label>
-          <select name="hidden" id="inputHidden">
-            <option value="FALSE">Tampilkan Terus (FALSE)</option>
-            <option value="TRUE">Sembunyikan (TRUE)</option>
-          </select>
+          <label>Sembunyikan dari Peta?</label>
+          <select name="hidden" id="inputHidden"><option value="FALSE">Tidak (Tampil)</option><option value="TRUE">Ya (Sembunyikan)</option></select>
         </div>
-        <div class="form-group">
-          <label>URL Foto Depan (Opsional):</label>
-          <input type="url" name="foto" id="inputFoto" placeholder="https://link-foto.com/...">
-        </div>
+        <div class="form-group"><label>URL Foto Depan (Opsional):</label><input type="url" name="foto" id="inputFoto"></div>
         <button type="submit" class="btn-submit">💾 Simpan ke Google Sheet</button>
-        <p style="font-size:11px; color:#888; text-align:center; margin-top:8px;">*Anda bisa mengisi form ini dengan cara klik sembarang tempat pada area peta.</p>
       </form>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    // --- SISTEM LOGIN ADMIN (ANTI INSPECT ELEMENT SEDERHANA) ---
+    // Password default saat ini adalah: adminrt05
+    // YWRtaW5ydDA1 adalah hasil sandi Base64 dari kata "adminrt05"
+    
+    document.addEventListener("DOMContentLoaded", () => {
+      // Cek apakah admin sudah login sebelumnya di sesi ini
+      if(sessionStorage.getItem('authAdmin') === 'true') {
+        bukaAkses();
+      }
+    });
+
+    function cekLogin() {
+      const input = document.getElementById('adminPassword').value;
+      // Membandingkan hasil encode input dengan kode rahasia
+      if (btoa(input) === "YWRtaW5ydDA1") {
+        sessionStorage.setItem('authAdmin', 'true');
+        bukaAkses();
+      } else {
+        alert("Password salah!");
+      }
+    }
+
+    function bukaAkses() {
+      document.getElementById('login-overlay').style.display = 'none';
+      document.body.style.overflow = 'auto'; // Kembalikan scroll
+      initMap(); // Muat peta hanya setelah login berhasil
+    }
+
+    // --- KODE PETA & DATA ---
+    var map, daftarPin = [], pinRumahAktif = null;
     var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
     var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
 
-    var map = L.map('map').setView([-7.7423, 110.3842], 17);
+    function initMap() {
+      map = L.map('map').setView([-7.7423, 110.3842], 17);
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
 
-    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Maps'
-    }).addTo(map);
+      var batasRT05 = [
+        [-7.7441031, 110.3835], [-7.7447197, 110.3852273], [-7.743848, 110.3854633],
+        [-7.7440818, 110.3861822], [-7.742955, 110.3864933], [-7.7428593, 110.3858925],
+        [-7.7407331, 110.3866972], [-7.7404886, 110.3861929], [-7.740563, 110.3848089],
+        [-7.7399995, 110.3831674], [-7.740159, 110.382234], [-7.7414879, 110.3818906],
+        [-7.7421789, 110.3819979], [-7.7428699, 110.3838755], [-7.7441031, 110.3835]
+      ];
+      L.polygon(batasRT05, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-    var batasRT05 = [
-      [-7.7441031, 110.3835], [-7.7447197, 110.3852273], [-7.743848, 110.3854633],
-      [-7.7440818, 110.3861822], [-7.742955, 110.3864933], [-7.7428593, 110.3858925],
-      [-7.7407331, 110.3866972], [-7.7404886, 110.3861929], [-7.740563, 110.3848089],
-      [-7.7399995, 110.3831674], [-7.740159, 110.382234], [-7.7414879, 110.3818906],
-      [-7.7421789, 110.3819979], [-7.7428699, 110.3838755], [-7.7441031, 110.3835]
-    ];
-    L.polygon(batasRT05, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+      map.on('click', function(e) {
+        document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
+        document.getElementById('inputNama').value = "";
+        document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+        document.getElementById('modal-form').style.display = 'flex';
+      });
 
-    var daftarPin = [];
-    var pinRumahAktif = null;
+      fetch(SHEET_URL).then(res => res.text()).then(csv => {
+        var baris = parseCSV(csv).slice(1);
+        baris.forEach(kolom => {
+          if (kolom.length >= 3 && kolom[0] !== '') {
+            var latClean = parseFloat(kolom[1].toString().replace(/,/g, '.'));
+            var lngClean = parseFloat(kolom[2].toString().replace(/,/g, '.'));
+            var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
+            var urlFoto = kolom[5] ? kolom[5].trim() : '';
+            var namaAsli = kolom[0].trim();
+            if (isNaN(latClean) || isNaN(lngClean)) return;
 
-    // --- KLIK PETA UNTUK MENGISI FORM OTOMATIS ---
-    map.on('click', function(e) {
-      document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
-      document.getElementById('inputNama').value = "";
-      document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
-      document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
-      document.getElementById('modal-form').style.display = 'flex';
-    });
+            let kategori = 'rumah'; let emoji = '🏠'; let bgStyle = 'background: #000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
+            var katMan = kolom[4] ? kolom[4].trim().toLowerCase() : '';
+            if (katMan.includes('kuliner')) { kategori = 'kuliner'; emoji = '🍽️'; bgStyle = 'background: #FFA500; border: 2px solid #FFF; color: black; width: 22px; height: 22px;'; }
+            else if (katMan.includes('kost')) { kategori = 'kost'; emoji = '🛏️'; bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px;'; }
+            else if (katMan.includes('fasum')) { kategori = 'fasum'; emoji = '🏛️'; bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px;'; }
 
-    function toggleFab() {
-      document.getElementById('fabContainer').classList.toggle('active');
+            var htmlFoto = urlFoto ? `<img src="${urlFoto}" class="img-popup">` : '';
+            var popupContent = `<b>${namaAsli}</b>${htmlFoto}<br><button class="btn-edit" onclick="editData('${escapeHtml(namaAsli)}', ${latClean}, ${lngClean}, '${kategori}', ${statusHidden}, '${urlFoto}')">✏️ Edit Data Ini</button>`;
+            
+            var customIcon = L.divIcon({ className: 'custom-pin', html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${emoji}</div>`, iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14] });
+            var marker = L.marker([latClean, lngClean], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+            if (!statusHidden) marker.addTo(map);
+
+            daftarPin.push({ namaRaw: namaAsli, nama: namaAsli.toLowerCase(), marker: marker, lat: latClean, lng: lngClean, hidden: statusHidden, kategori: kategori });
+          }
+        });
+      });
     }
-
-    function bukaModalFormPin() {
-      document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
-      document.getElementById('inputNama').value = "";
-      document.getElementById('inputLat').value = map.getCenter().lat.toFixed(6);
-      document.getElementById('inputLng').value = map.getCenter().lng.toFixed(6);
-      document.getElementById('modal-form').style.display = 'flex';
-    }
-
-    function tutupModalForm() {
-      document.getElementById('modal-form').style.display = 'none';
-    }
-
-    // Fungsi klik edit dari dalam Popup
-    window.editData = function(nama, lat, lng, kategori, hidden, foto) {
-      document.getElementById('formTitle').innerText = "✏️ Edit: " + nama;
-      document.getElementById('inputNama').value = nama;
-      document.getElementById('inputLat').value = lat;
-      document.getElementById('inputLng').value = lng;
-      
-      var formKategori = document.getElementById('inputKategori');
-      if (kategori === 'kuliner') formKategori.value = 'Kuliner';
-      else if (kategori === 'kost') formKategori.value = 'Kost';
-      else if (kategori === 'fasum') formKategori.value = 'Fasum';
-      else if (kategori === 'minimarket') formKategori.value = 'Minimarket';
-      else formKategori.value = 'Rumah';
-
-      document.getElementById('inputHidden').value = hidden ? 'TRUE' : 'FALSE';
-      document.getElementById('inputFoto').value = foto || '';
-      
-      document.getElementById('modal-form').style.display = 'flex';
-    };
 
     function parseCSV(text) {
-      var lines = text.replace(/\r/g, '').split('\n');
-      var result = [];
+      var lines = text.replace(/\r/g, '').split('\n'); var result = [];
       for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (!line) continue;
+        var line = lines[i].trim(); if (!line) continue;
         var row = []; var inQuotes = false; var cur = '';
         for (var c = 0; c < line.length; c++) {
           var char = line[c];
@@ -303,68 +281,26 @@
           else cur += char;
         }
         row.push(cur.trim().replace(/^"|"$/g, '')); result.push(row);
-      }
-      return result;
+      } return result;
     }
 
-    fetch(SHEET_URL)
-      .then(response => response.text())
-      .then(csvText => {
-        var baris = parseCSV(csvText).slice(1);
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 3 && kolom[0] !== '') {
-            var latClean = parseFloat(kolom[1].toString().replace(/,/g, '.'));
-            var lngClean = parseFloat(kolom[2].toString().replace(/,/g, '.'));
-            var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
-            var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? kolom[5].trim() : '';
-            var namaAsli = kolom[0].trim();
-
-            if (isNaN(latClean) || isNaN(lngClean)) return;
-
-            let kategori = 'rumah'; let emoji = '🏠';
-            let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
-            let namaUpper = namaAsli.toUpperCase();
-
-            if (kategoriManual.includes('kuliner') || namaUpper.includes('CAFE') || namaUpper.includes('WARUNG')) {
-              kategori = 'kuliner'; emoji = '🍽️'; bgStyle = 'background: #FFA500; border: 2px solid #FFFFFF; color: black; width: 22px; height: 22px;';
-            } else if (kategoriManual.includes('kost') || namaUpper.includes('KOST')) {
-              kategori = 'kost'; emoji = '🛏️'; bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px;';
-            } else if (kategoriManual.includes('fasum') || namaUpper.includes('MASJID')) {
-              kategori = 'fasum'; emoji = '🏛️'; bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px;';
-            }
-
-            var htmlFoto = urlFoto ? `<img src="${urlFoto}" class="img-popup">` : '';
-            // Modifikasi Pop-up dengan tombol tambahan untuk Admin
-            var popupContent = `
-              <b>${namaAsli}</b>${htmlFoto}<br>
-              <button class="btn-edit" onclick="editData('${escapeHtml(namaAsli)}', ${latClean}, ${lngClean}, '${kategori}', ${statusHidden}, '${urlFoto}')">✏️ Edit Data Ini</button>
-            `;
-            
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            
-            var marker = L.marker([latClean, lngClean], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-            if (!statusHidden) marker.addTo(map);
-
-            daftarPin.push({ namaRaw: namaAsli, nama: namaAsli.toLowerCase(), marker: marker, lat: latClean, lng: lngClean, hidden: statusHidden, kategori: kategori });
-          }
-        });
-      })
-      .catch(error => console.error(error));
-
     function escapeHtml(text) { return text.replace(/'/g, "&#039;").replace(/"/g, "&quot;"); }
+    function toggleFab() { document.getElementById('fabContainer').classList.toggle('active'); }
+    function bukaModalFormPin() { document.getElementById('formTitle').innerText = "📍 Tambah Data Baru"; document.getElementById('inputNama').value = ""; document.getElementById('inputLat').value = map.getCenter().lat.toFixed(6); document.getElementById('inputLng').value = map.getCenter().lng.toFixed(6); document.getElementById('modal-form').style.display = 'flex'; }
+    function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
+    
+    window.editData = function(nama, lat, lng, kategori, hidden, foto) {
+      document.getElementById('formTitle').innerText = "✏️ Edit: " + nama;
+      document.getElementById('inputNama').value = nama; document.getElementById('inputLat').value = lat; document.getElementById('inputLng').value = lng;
+      var formK = document.getElementById('inputKategori');
+      if (kategori === 'kuliner') formK.value = 'Kuliner'; else if (kategori === 'kost') formK.value = 'Kost'; else if (kategori === 'fasum') formK.value = 'Fasum'; else formK.value = 'Rumah';
+      document.getElementById('inputHidden').value = hidden ? 'TRUE' : 'FALSE'; document.getElementById('inputFoto').value = foto || '';
+      document.getElementById('modal-form').style.display = 'flex';
+    };
 
     function filterKategori(kat, btnElement) {
-      document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active'));
-      btnElement.classList.add('active');
-      daftarPin.forEach(pin => {
-        map.removeLayer(pin.marker);
-        if (!pin.hidden) { if (kat === 'semua' || pin.kategori === kat) pin.marker.addTo(map); }
-      });
+      document.querySelectorAll('.btn-filter').forEach(btn => btn.classList.remove('active')); btnElement.classList.add('active');
+      daftarPin.forEach(pin => { map.removeLayer(pin.marker); if (!pin.hidden) { if (kat === 'semua' || pin.kategori === kat) pin.marker.addTo(map); } });
     }
 
     function cariLokasi() {
@@ -373,8 +309,7 @@
       if (hasil) {
         if (pinRumahAktif) map.removeLayer(pinRumahAktif);
         if (!map.hasLayer(hasil.marker)) { hasil.marker.addTo(map); pinRumahAktif = hasil.marker; }
-        map.flyTo([hasil.lat, hasil.lng], 19);
-        setTimeout(() => { hasil.marker.openPopup(); }, 800);
+        map.flyTo([hasil.lat, hasil.lng], 19); setTimeout(() => { hasil.marker.openPopup(); }, 800);
       } else alert("Lokasi tidak ditemukan.");
     }
   </script>
