@@ -188,10 +188,16 @@
     // ⚠️ GANTI DENGAN URL WEB APP GOOGLE APPS SCRIPT ANDA
     var GAS_API_URL = 'https://script.google.com/macros/s/AKfycbyxzIaIlibKBJssWxEAAfOvCl3SYF_pPV2o2v-wh33f5aY42mGYirpuE6aQ1D1PA78-lA/exec';
 
-    function simpanKeSheet(e) {
+   function simpanKeSheet(e) {
       e.preventDefault();
       if (GAS_API_URL.includes('PASTE_URL')) {
         alert('URL Google Apps Script belum diset di admin.html!');
+        return;
+      }
+
+      var pinUser = document.getElementById('pinInput').value;
+      if (!pinUser) {
+        alert('Silakan masukkan PIN di layar login terlebih dahulu!');
         return;
       }
 
@@ -200,6 +206,7 @@
       btn.disabled = true;
 
       var payload = {
+        pin: pinUser, // 🔒 Mengirim PIN yang diisi user ke server Google untuk dicek
         nama: document.getElementById('inputNama').value,
         lat: document.getElementById('inputLat').value,
         lng: document.getElementById('inputLng').value,
@@ -214,15 +221,21 @@
       })
       .then(response => response.text())
       .then(result => {
-        alert('Berhasil tersimpan ke Google Sheet!');
-        document.getElementById('formDenah').reset();
-        if (adminMarker) map.removeLayer(adminMarker);
-        adminMarker = null;
+        if (result === 'SUCCESS') {
+          alert('Berhasil tersimpan ke Google Sheet!');
+          document.getElementById('formDenah').reset();
+          if (adminMarker) map.removeLayer(adminMarker);
+          adminMarker = null;
+        } else if (result.includes('PIN Admin Salah')) {
+          alert('Gagal: PIN Admin yang Anda masukkan salah!');
+        } else {
+          alert('Gagal menyimpan: ' + result);
+        }
         btn.innerText = '💾 Simpan ke Google Sheet';
         btn.disabled = false;
       })
       .catch(err => {
-        alert('Gagal: ' + err);
+        alert('Gagal koneksi: ' + err);
         btn.innerText = '💾 Simpan ke Google Sheet';
         btn.disabled = false;
       });
