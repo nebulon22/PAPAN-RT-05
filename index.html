@@ -1082,6 +1082,15 @@ function simpanJimpitan(dataBaru) {
 
 let sedangMengirim = false;
 
+// Saat membentuk dataBaru sebelum masuk simpanJimpitan():
+let dataBaru = {
+  action: 'jimpitan', // MANDATORI: Agar dibaca sebagai jimpitan di Apps Script
+  tanggal: new Date().toLocaleString('id-ID'),
+  warga: nama,        // Menggunakan properti 'warga'
+  nominal: parseInt(nominal, 10) || 0
+};
+
+// Update fungsi prosesKirimAntrean() untuk mengecek balasan "SUCCESS":
 function prosesKirimAntrean() {
   if (sedangMengirim || !navigator.onLine) return;
 
@@ -1097,14 +1106,16 @@ function prosesKirimAntrean() {
     body: JSON.stringify(item)
   })
   .then(res => {
-    // Validasi respons HTTP: Jika server error (bukan 2xx), lempar ke block .catch()
-    if (!res.ok) {
-      throw new Error('Server Google Apps Script bermasalah: ' + res.status);
-    }
+    if (!res.ok) throw new Error('HTTP Error: ' + res.status);
     return res.text();
   })
-  .then(data => {
-    // Baca ulang storage untuk mencegah race-condition
+  .then(responseText => {
+    // Validasi respons teks dari Apps Script
+    if (!responseText.includes("SUCCESS")) {
+      throw new Error("Gagal dari Server: " + responseText);
+    }
+
+    // HANYA hapus antrean jika server merespons "SUCCESS"
     let antreanTerbaru = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
     antreanTerbaru.shift();
     localStorage.setItem('antrean_jimpitan', JSON.stringify(antreanTerbaru));
@@ -1115,13 +1126,12 @@ function prosesKirimAntrean() {
 
     sedangMengirim = false;
 
-    // Lanjut kirim sisa antrean jika ada
     if (antreanTerbaru.length > 0) {
       prosesKirimAntrean();
     }
   })
   .catch(err => {
-    console.warn("Gagal terkirim, data tetap aman di HP:", err);
+    console.warn("Kirim data tertunda, tersimpan aman di HP:", err);
     sedangMengirim = false;
 
     if (typeof perbaruiIndikatorSync === 'function') {
@@ -1129,6 +1139,7 @@ function prosesKirimAntrean() {
     }
   });
 }
+
 
 // Otomatis kirim saat koneksi terhubung kembali
 window.addEventListener('online', prosesKirimAntrean);
