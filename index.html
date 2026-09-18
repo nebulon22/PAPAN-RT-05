@@ -892,30 +892,27 @@
     }
 
 function dapatkanLabelMalamRonda(dateObj) {
-  var namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-  var namaHariDepan = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  // Pemetaan hari ke nama Malam Ronda
+  // Jumat = Malam Sabtu, Sabtu = Malam Minggu, dst.
+  var daftarMalam = [
+    'Malam Senin',  // Minggu (0)
+    'Malam Selasa', // Senin (1)
+    'Malam Rabu',   // Selasa (2)
+    'Malam Kamis',  // Rabu (3)
+    'Malam Jumat',  // Kamis (4)
+    'Malam Sabtu',  // Jumat (5)
+    'Malam Minggu'  // Sabtu (6)
+  ];
   
-  var jam = dateObj.getHours();
   var tgl = dateObj.getDate().toString().padStart(2, '0');
   var bln = (dateObj.getMonth() + 1).toString().padStart(2, '0');
   var thn = dateObj.getFullYear();
-
-  // Jika scan jam 18:00 - 23:59 -> Masuk Malam (Hari Esok)
-  // Jika scan jam 00:00 - 06:00 -> Tetap Malam (Hari Ini)
-  var hariIdx = dateObj.getDay();
-  var labelMalam = '';
   var tanggalFormat = `${tgl}/${bln}/${thn}`;
 
-  if (jam >= 18) {
-    labelMalam = `Malam ${namaHariDepan[hariIdx]} (${tanggalFormat})`;
-  } else if (jam < 6) {
-    labelMalam = `Malam ${namaHari[hariIdx]} (${tanggalFormat})`;
-  } else {
-    // Jika diisi siang hari, dikelompokkan berdasarkan tanggalnya
-    labelMalam = `${namaHari[hariIdx]} Siang (${tanggalFormat})`;
-  }
+  var hariIdx = dateObj.getDay();
+  var label = daftarMalam[hariIdx];
 
-  return labelMalam;
+  return `${label} (${tanggalFormat})`;
 }
 
 function muatDataJimpitan() {
