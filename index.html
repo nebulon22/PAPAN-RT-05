@@ -1185,12 +1185,26 @@ function muatDataJimpitan() {
         if (dataMalam.items.length === 0) {
           itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
         } else {
-          itemListHTML = dataMalam.items.reverse().map(item => `
-            <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; padding: 4px 0;">
-              <span style="color: #374151; font-weight: 500;">${escapeHtml(item.warga)}</span>
-              <span style="color: #059669; font-weight: bold;">Rp ${item.nominal.toLocaleString('id-ID')}</span>
-            </div>
-          `).join('');
+         itemListHTML = dataMalam.items.reverse().map(item => {
+  // Cek apakah nominal 0 / Absen
+  var isAbsen = item.nominal === 0;
+  
+  // Atur warna teks & latar belakang secara dinamis
+  var warnaNominal = isAbsen ? '#dc2626' : '#059669'; // Merah jika 0, Hijau jika ada nominal
+  var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
+  var teksNominal = isAbsen ? 'Rp 0 (Absen)' : 'Rp ' + item.nominal.toLocaleString('id-ID');
+
+  return `
+    <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
+      <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">
+        ${escapeHtml(item.warga)}
+      </span>
+      <span style="color: ${warnaNominal}; font-weight: bold;">
+        ${teksNominal}
+      </span>
+    </div>
+  `;
+}).join('');
         }
 
         card.innerHTML = `
