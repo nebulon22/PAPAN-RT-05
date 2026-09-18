@@ -896,110 +896,7 @@ function dapatkanNamaMalam(dateObj) {
   return petaMalam[dayIdx] || null;
 }
 
-function muatDataJimpitan() {
-  fetch(JIMPITAN_URL)
-    .then(response => response.text())
-    .then(csvText => {
-      var baris = parseCSV(csvText).slice(1);
-      var gridContainer = document.getElementById('grid-jimpitan');
-      gridContainer.innerHTML = '';
-      var grandTotal = 0;
 
-      // Filter otomatis untuk bulan & tahun berjalan
-      var skrg = new Date();
-      var bulanSkrg = skrg.getMonth();
-      var tahunSkrg = skrg.getFullYear();
-
-      // Inisialisasi 6 Kotak Malam Ronda
-      var rekapMalam = {
-        'Malam Senin': { subtotal: 0, items: [] },
-        'Malam Selasa': { subtotal: 0, items: [] },
-        'Malam Rabu': { subtotal: 0, items: [] },
-        'Malam Kamis': { subtotal: 0, items: [] },
-        'Malam Jumat': { subtotal: 0, items: [] },
-        'Malam Sabtu': { subtotal: 0, items: [] }
-      };
-
-      // Kelompokkan data dari Google Sheets
-      baris.forEach(kolom => {
-        if (kolom.length >= 3 && kolom[0] !== '') {
-          var tglStr = kolom[0];
-          var warga = kolom[1] || '-';
-          var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
-          var nominal = parseInt(nominalRaw, 10) || 0;
-
-          // Parsing Tanggal
-          var bagian = tglStr.split(',');
-          var tglPart = bagian[0].trim().split('/');
-          var timePart = bagian[1] ? bagian[1].trim().split('.') : [19, 0, 0];
-          
-          var dateObj = new Date(
-            tglPart[2] || tahunSkrg, 
-            (tglPart[1] || 1) - 1, 
-            tglPart[0] || 1, 
-            timePart[0] || 19, 
-            timePart[1] || 0
-          );
-
-          // Hanya hitung data di bulan & tahun saat ini
-          if (dateObj.getMonth() === bulanSkrg && dateObj.getFullYear() === tahunSkrg) {
-            var namaMalam = dapatkanNamaMalam(dateObj);
-
-            if (namaMalam && rekapMalam[namaMalam]) {
-              rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-              rekapMalam[namaMalam].subtotal += nominal;
-              grandTotal += nominal;
-            }
-          }
-        }
-      });
-
-      // Render 6 Kotak Kecil ke Modal
-      Object.keys(rekapMalam).forEach(malam => {
-        var dataMalam = rekapMalam[malam];
-        
-        var card = document.createElement('div');
-        card.style.cssText = `
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 10px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-          display: flex;
-          flex-direction: column;
-        `;
-
-        var itemListHTML = '';
-        if (dataMalam.items.length === 0) {
-          itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
-        } else {
-          itemListHTML = dataMalam.items.reverse().map(item => `
-            <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; padding: 4px 0;">
-              <span style="color: #374151; font-weight: 500;">${escapeHtml(item.warga)}</span>
-              <span style="color: #059669; font-weight: bold;">Rp ${item.nominal.toLocaleString('id-ID')}</span>
-            </div>
-          `).join('');
-        }
-
-        card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 8px;">
-            <span style="font-weight: bold; font-size: 12px; color: #065f46;">🌙 ${malam}</span>
-            <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
-              Rp ${dataMalam.subtotal.toLocaleString('id-ID')}
-            </span>
-          </div>
-          <div style="max-height: 120px; overflow-y: auto; flex-grow: 1;">
-            ${itemListHTML}
-          </div>
-        `;
-
-        gridContainer.appendChild(card);
-      });
-
-      document.getElementById('total-jimpitan').innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
-    })
-    .catch(err => console.error("Gagal muat data jimpitan:", err));
-}
     
 // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
 const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzLblHq-ECpLSC5XK4KgjnoNpnkVWm4bJyzPbLGep3Ux5C3LQH3jVOfQFXaKmvVd4bZgg/exec';
@@ -1096,40 +993,109 @@ function muatDataJimpitan() {
     .then(response => response.text())
     .then(csvText => {
       var baris = parseCSV(csvText).slice(1);
-      var tbody = document.getElementById('list-riwayat-jimpitan');
-      tbody.innerHTML = '';
-      var total = 0;
-
-      if (baris.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Belum ada catatan jimpitan.</td></tr>';
-        document.getElementById('total-jimpitan').innerText = 'Rp 0';
+      var gridContainer = document.getElementById('grid-jimpitan');
+      
+      // Semakan keselamatan jika elemen grid wujud
+      if (!gridContainer) {
+        console.error("Elemen #grid-jimpitan tidak ditemui dalam HTML!");
         return;
       }
+      gridContainer.innerHTML = '';
+      var grandTotal = 0;
 
-      // Urutkan dari catatan terbaru
-      baris.reverse().forEach(kolom => {
+      // Filter automatik untuk bulan & tahun semasa
+      var skrg = new Date();
+      var bulanSkrg = skrg.getMonth();
+      var tahunSkrg = skrg.getFullYear();
+
+      // Inisialisasi 6 Kotak Malam Ronda
+      var rekapMalam = {
+        'Malam Senin': { subtotal: 0, items: [] },
+        'Malam Selasa': { subtotal: 0, items: [] },
+        'Malam Rabu': { subtotal: 0, items: [] },
+        'Malam Kamis': { subtotal: 0, items: [] },
+        'Malam Jumat': { subtotal: 0, items: [] },
+        'Malam Sabtu': { subtotal: 0, items: [] }
+      };
+
+      // Kelompokkan data dari Google Sheets
+      baris.forEach(kolom => {
         if (kolom.length >= 3 && kolom[0] !== '') {
-          var tgl = kolom[0] || '-';
+          var tglStr = kolom[0];
           var warga = kolom[1] || '-';
           var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
           var nominal = parseInt(nominalRaw, 10) || 0;
-          
-          total += nominal;
 
-          var tr = document.createElement('tr');
-          tr.style.borderBottom = '1px solid #eee';
-          tr.innerHTML = `
-            <td style="padding:8px 6px; font-size:11px; color:#666;">${escapeHtml(tgl)}</td>
-            <td style="padding:8px 6px; font-weight:bold; color:#333;">${escapeHtml(warga)}</td>
-            <td style="padding:8px 6px; text-align:right; color:#059669; font-weight:bold; white-space:nowrap;">
-              Rp ${nominal.toLocaleString('id-ID')}
-            </td>
-          `;
-          tbody.appendChild(tr);
+          // Parsing Tarikh
+          var bagian = tglStr.split(',');
+          var tglPart = bagian[0].trim().split('/');
+          var timePart = bagian[1] ? bagian[1].trim().split('.') : [19, 0, 0];
+          
+          var dateObj = new Date(
+            tglPart[2] || tahunSkrg, 
+            (tglPart[1] || 1) - 1, 
+            tglPart[0] || 1, 
+            timePart[0] || 19, 
+            timePart[1] || 0
+          );
+
+          // Hanya kira data pada bulan & tahun semasa
+          if (dateObj.getMonth() === bulanSkrg && dateObj.getFullYear() === tahunSkrg) {
+            var namaMalam = dapatkanNamaMalam(dateObj);
+
+            if (namaMalam && rekapMalam[namaMalam]) {
+              rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+              rekapMalam[namaMalam].subtotal += nominal;
+              grandTotal += nominal;
+            }
+          }
         }
       });
 
-      document.getElementById('total-jimpitan').innerText = 'Rp ' + total.toLocaleString('id-ID');
+      // Render 6 Kad Malam Ronda ke dalam Grid
+      Object.keys(rekapMalam).forEach(malam => {
+        var dataMalam = rekapMalam[malam];
+        
+        var card = document.createElement('div');
+        card.style.cssText = `
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 10px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          display: flex;
+          flex-direction: column;
+        `;
+
+        var itemListHTML = '';
+        if (dataMalam.items.length === 0) {
+          itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
+        } else {
+          itemListHTML = dataMalam.items.reverse().map(item => `
+            <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; padding: 4px 0;">
+              <span style="color: #374151; font-weight: 500;">${escapeHtml(item.warga)}</span>
+              <span style="color: #059669; font-weight: bold;">Rp ${item.nominal.toLocaleString('id-ID')}</span>
+            </div>
+          `).join('');
+        }
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 8px;">
+            <span style="font-weight: bold; font-size: 12px; color: #065f46;">🌙 ${malam}</span>
+            <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+              Rp ${dataMalam.subtotal.toLocaleString('id-ID')}
+            </span>
+          </div>
+          <div style="max-height: 120px; overflow-y: auto; flex-grow: 1;">
+            ${itemListHTML}
+          </div>
+        `;
+
+        gridContainer.appendChild(card);
+      });
+
+      var totalElem = document.getElementById('total-jimpitan');
+      if (totalElem) totalElem.innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
     })
     .catch(err => console.error("Gagal muat data jimpitan:", err));
 }
