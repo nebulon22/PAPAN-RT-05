@@ -705,33 +705,20 @@ function sorotLokasi(lokasiEncoded) {
       pinRumahAktif = hasil.marker;
     }
 
-    map.flyTo([hasil.lat, hasil.lng], 19);
+    // Hitung offset koordinat & flyTo
+    var pointM = map.project([hasil.lat, hasil.lng], 19);
+    var pointC = L.point(pointM.x, pointM.y - 200);
+    var targetCenter = map.unproject(pointC, 19);
 
-    setTimeout(() => {
+    map.flyTo(targetCenter, 19);
+
+    map.once('moveend', function() {
       if (hasil.marker.getPopup()) {
         hasil.marker.getPopup().options.autoPan = false;
       }
       hasil.marker.openPopup();
-      map.panBy([0, -220]);
-    }, 800);
+    });
   }
-} // <--- KURUNG TUTUP DI SINI SEBELUMNYA HILANG
-
-function filterKategori(kat, btnElement) {
-  document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
-  btnElement.classList.add('active');
-
-  daftarPin.forEach(pin => {
-    map.removeLayer(pin.marker);
-
-    if (!pin.hidden) {
-      if (kat === 'semua') {
-        pin.marker.addTo(map);
-      } else if (pin.kategori === kat) {
-        pin.marker.addTo(map);
-      }
-    }
-  });
 }
 
 function cariLokasi() {
@@ -765,20 +752,40 @@ function cariLokasi() {
       pinRumahAktif = hasil.marker;
     }
 
-    map.flyTo([hasil.lat, hasil.lng], 19);
+    // Hitung offset koordinat & flyTo
+    var pointM = map.project([hasil.lat, hasil.lng], 19);
+    var pointC = L.point(pointM.x, pointM.y - 200);
+    var targetCenter = map.unproject(pointC, 19);
 
-    // DITERAPKAN JUGA DI SINI (Pencarian via Input Box):
-    setTimeout(() => {
+    map.flyTo(targetCenter, 19);
+
+    map.once('moveend', function() {
       if (hasil.marker.getPopup()) {
         hasil.marker.getPopup().options.autoPan = false;
       }
       hasil.marker.openPopup();
-      map.panBy([0, -220]);
-    }, 800);
+    });
 
   } else {
     alert("Nomor atau nama tempat tidak ditemukan.");
   }
+}
+
+function filterKategori(kat, btnElement) {
+  document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
+  btnElement.classList.add('active');
+
+  daftarPin.forEach(pin => {
+    map.removeLayer(pin.marker);
+
+    if (!pin.hidden) {
+      if (kat === 'semua') {
+        pin.marker.addTo(map);
+      } else if (pin.kategori === kat) {
+        pin.marker.addTo(map);
+      }
+    }
+  });
 }
 
     
