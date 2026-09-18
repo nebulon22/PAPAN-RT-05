@@ -1134,7 +1134,6 @@ async function kirimDataPendingJimpitan() {
   if (sedangMengirim) return;
 
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-
   if (antrean.length === 0) {
     perbaruiIndikatorSync();
     return;
@@ -1145,30 +1144,23 @@ async function kirimDataPendingJimpitan() {
 
   for (let item of antrean) {
     try {
-      // Gunakan mode: 'no-cors' untuk menembus aturan CORS Google Apps Script
       await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(item)
       });
-
-      // Jika fetch berhasil tanpa throw error koneksi, data dianggap terkirim
+      // Dengan mode 'no-cors', jika tidak masuk ke catch (error koneksi), 
+      // artinya request berhasil terdorong ke Google Script.
     } catch (err) {
-      console.warn("Koneksi belum stabil atau offline saat sinkronisasi:", err);
+      console.warn("Gagal terhubung ke jaringan:", err);
       sisaAntrean.push(item);
     }
   }
 
-  // Simpan sisa data yang benar-benar gagal (offline)
   localStorage.setItem('antrean_jimpitan', JSON.stringify(sisaAntrean));
   sedangMengirim = false;
-
   perbaruiIndikatorSync();
-
-  if (sisaAntrean.length === 0 && antrean.length > 0) {
-    alert("Semua data jimpitan offline berhasil terkirim ke server!");
-  }
 }
 
 // 1. FUNGSI UTAMA: Menyimpan Data Jimpitan
