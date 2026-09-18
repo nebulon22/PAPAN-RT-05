@@ -1102,7 +1102,7 @@ function bersihkanScanner() {
 function perbaruiIndikatorSync() {
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
 
-  // Update Badge warna (jika ada di HTML)
+  // Update Badge warna
   let badge = document.getElementById('status-sync');
   if (badge) {
     if (antrean.length === 0) {
@@ -1116,7 +1116,7 @@ function perbaruiIndikatorSync() {
     }
   }
 
-  // Update Teks Notif Pending (jika ada di HTML)
+  // Update Teks Notif Pending
   let elNotif = document.getElementById('notif-pending');
   if (elNotif) {
     if (antrean.length > 0) {
@@ -1128,9 +1128,9 @@ function perbaruiIndikatorSync() {
   }
 }
 
-// Eksekusi pengiriman data dari localStorage ke Google Sheets
+// Eksekusi pengiriman data dari localStorage ke Google Sheets (Web App)
 async function kirimDataPendingJimpitan() {
-  if (sedangMengirim) return;
+  if (sedangMengirim || !navigator.onLine) return;
 
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
 
@@ -1154,7 +1154,7 @@ async function kirimDataPendingJimpitan() {
         sisaAntrean.push(item);
       }
     } catch (err) {
-      console.warn("Koneksi belum stabil saat sinkronisasi:", err);
+      console.warn("Gagal mengirim data jimpitan ke server:", err);
       sisaAntrean.push(item);
     }
   }
@@ -1164,31 +1164,19 @@ async function kirimDataPendingJimpitan() {
   sedangMengirim = false;
 
   perbaruiIndikatorSync();
-
-  if (sisaAntrean.length === 0 && antrean.length > 0) {
-    alert("Semua data jimpitan offline berhasil terkirim ke server!");
-  }
 }
 
 // Event Listeners Otomatis
-window.addEventListener('online', () => {
-  console.log("Koneksi kembali terhubung. Mengirim data pending...");
+window.addEventListener('online', kirimDataPendingJimpitan);
+document.addEventListener('DOMContentLoaded', () => {
+  perbaruiIndikatorSync();
   kirimDataPendingJimpitan();
 });
 
-document.addEventListener('DOMContentLoaded', () => {
-  perbaruiIndikatorSync();
-  if (navigator.onLine) {
-    kirimDataPendingJimpitan();
-  }
-});
-
-
-// 1. FUNGSI UTAMA: Menyimpan Data Jimpitan
+// FUNGSI UTAMA: Menyimpan Data Jimpitan
 function simpanJimpitan(dataInput) {
   let dataBaru = null;
 
-  // Jika dataInput dipassing dari parameter (misal dari QR Scanner)
   if (dataInput && typeof dataInput === 'object') {
     dataBaru = {
       action: 'jimpitan',
@@ -1197,7 +1185,6 @@ function simpanJimpitan(dataInput) {
       nominal: parseInt(dataInput.nominal, 10) || 0
     };
   } else {
-    // Jika dipanggil dari tombol (onclick) tanpa parameter, ambil dari Form HTML
     let elNama = document.getElementById('jimpitanNamaWarga');
     let elNominal = document.getElementById('jimpitanNominal');
 
@@ -1222,86 +1209,22 @@ function simpanJimpitan(dataInput) {
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
 
-  // B. Respons Cepat UI (Notifikasi & Reset Form)
-  if (typeof tampilkanNotifikasiBerhasil === 'function') {
-    tampilkanNotifikasiBerhasil("Jimpitan berhasil dicatat!");
-  } else {
-    alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + " berhasil dicatat!");
-  }
+  // B. Notifikasi & Reset Form
+  alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + " berhasil dicatat!");
 
-  if (typeof resetFormScan === 'function') {
-    resetFormScan();
-  } else {
-    let modal = document.getElementById('modal-jimpitan');
-    if (modal) modal.style.display = 'none';
-    let elNama = document.getElementById('jimpitanNamaWarga');
-    let elNominal = document.getElementById('jimpitanNominal');
-    if (elNama) elNama.value = '';
-    if (elNominal) elNominal.value = '';
-  }
+  let modal = document.getElementById('modal-jimpitan');
+  if (modal) modal.style.display = 'none';
+  let elNama = document.getElementById('jimpitanNamaWarga');
+  let elNominal = document.getElementById('jimpitanNominal');
+  if (elNama) elNama.value = '';
+  if (elNominal) elNominal.value = '';
 
-  // C. Update indikator status
-  if (typeof perbaruiIndikatorSync === 'function') {
-    perbaruiIndikatorSync();
-  }
-
-  // D. Jalankan pengiriman antrean ke Google Sheets
-  prosesKirimAntrean();
+  // C. Update UI & langsung picu pengiriman
+  perbaruiIndikatorSync();
+  kirimDataPendingJimpitan();
 }
 
-// 2. FUNGSI SYNC: Mengirim Antrean ke Google Sheets
-function prosesKirimAntrean() {
-  if (sedangMengirim || !navigator.onLine) return;
 
-  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-  if (antrean.length === 0) return;
-
-  sedangMengirim = true;
-  let item = antrean[0];
-
-  fetch(JIMPITAN_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(item)
-  })
-  .then(res => {
-    if (!res.ok) throw new Error('HTTP Error: ' + res.status);
-    return res.text();
-  })
-  .then(responseText => {
-    if (!responseText.includes("SUCCESS")) {
-      throw new Error("Gagal dari Server: " + responseText);
-    }
-
-    // Hanya hapus data terdepan jika server merespons SUCCESS
-    let antreanTerbaru = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-    antreanTerbaru.shift();
-    localStorage.setItem('antrean_jimpitan', JSON.stringify(antreanTerbaru));
-
-    if (typeof perbaruiIndikatorSync === 'function') {
-      perbaruiIndikatorSync();
-    }
-
-    sedangMengirim = false;
-
-    // Kirim sisa antrean berikutnya jika ada
-    if (antreanTerbaru.length > 0) {
-      prosesKirimAntrean();
-    }
-  })
-  .catch(err => {
-    console.warn("Kirim data tertunda, tersimpan aman di HP:", err);
-    sedangMengirim = false;
-
-    if (typeof perbaruiIndikatorSync === 'function') {
-      perbaruiIndikatorSync();
-    }
-  });
-}
-
-// 3. EVENT LISTENERS: Pengiriman Otomatis
-window.addEventListener('online', prosesKirimAntrean);
-document.addEventListener('DOMContentLoaded', prosesKirimAntrean);
 
     
 // Ganti angka di bawah dengan GID tab Jimpitan Anda
