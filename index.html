@@ -705,17 +705,20 @@
           pinRumahAktif = hasil.marker;
         }
 
-       map.flyTo([hasil.lat, hasil.lng], 19);
+map.flyTo([hasil.lat, hasil.lng], 19);
 
-       setTimeout(() => {
-  map.panBy([0, -200]); // <--- TAMBAHKAN BARIS INI (menggeser peta ke atas agar pin turun)
+setTimeout(() => {
+  // 1. Matikan penyesuaian otomatis bawaan Leaflet agar panBy tidak dibatalkan
+  if (hasil.marker.getPopup()) {
+    hasil.marker.getPopup().options.autoPan = false;
+  }
+
+  // 2. Buka popup
   hasil.marker.openPopup();
-}, 800);
 
-} else {
-  alert("Lokasi '" + namaLokasi + "' tidak ditemukan.");
-}
-}
+  // 3. Geser peta ke atas agar pin & popup turun di bawah menu
+  map.panBy([0, -220]);
+}, 800);
 
     function filterKategori(kat, btnElement) {
       document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
