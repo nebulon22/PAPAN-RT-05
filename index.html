@@ -1052,45 +1052,75 @@ function perbaruiIndikatorSync() {
 // Panggil fungsi ini setiap kali aplikasi dibuka atau selesai scan
 window.addEventListener('load', perbaruiIndikatorSync);
     
-function simpanJimpitan(dataBaru) {
-  // Pastikan nominal disimpan sebagai angka (number)
-  if (dataBaru && dataBaru.nominal) {
-    dataBaru.nominal = parseInt(dataBaru.nominal, 10) || 0;
+// Variable Global & Status Sync
+let sedangMengirim = false;
+
+// 1. FUNGSI UTAMA: Menyimpan Data Jimpitan
+function simpanJimpitan(dataInput) {
+  let dataBaru = null;
+
+  // Jika dataInput dipassing dari parameter (misal dari QR Scanner)
+  if (dataInput && typeof dataInput === 'object') {
+    dataBaru = {
+      action: 'jimpitan',
+      tanggal: dataInput.tanggal || new Date().toLocaleString('id-ID'),
+      warga: dataInput.warga || dataInput.nama || '',
+      nominal: parseInt(dataInput.nominal, 10) || 0
+    };
+  } else {
+    // Jika dipanggil dari tombol (onclick) tanpa parameter, ambil dari Form HTML
+    let elNama = document.getElementById('jimpitanNamaWarga');
+    let elNominal = document.getElementById('jimpitanNominal');
+
+    let namaVal = elNama ? elNama.value.trim() : '';
+    let nominalVal = elNominal ? elNominal.value : 0;
+
+    if (!namaVal) {
+      alert("Nama warga / rumah belum terisi!");
+      return;
+    }
+
+    dataBaru = {
+      action: 'jimpitan',
+      tanggal: new Date().toLocaleString('id-ID'),
+      warga: namaVal,
+      nominal: parseInt(nominalVal, 10) || 0
+    };
   }
 
-  // 1. Simpan ke memori HP
+  // A. Simpan ke memori HP (localStorage)
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
 
-  // 2. Respon cepat ke UI
+  // B. Respons Cepat UI (Notifikasi & Reset Form)
   if (typeof tampilkanNotifikasiBerhasil === 'function') {
     tampilkanNotifikasiBerhasil("Jimpitan berhasil dicatat!");
-  }
-  if (typeof resetFormScan === 'function') {
-    resetFormScan();
+  } else {
+    alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + " berhasil dicatat!");
   }
 
-  // 3. Update indikator
+  if (typeof resetFormScan === 'function') {
+    resetFormScan();
+  } else {
+    let modal = document.getElementById('modal-jimpitan');
+    if (modal) modal.style.display = 'none';
+    let elNama = document.getElementById('jimpitanNamaWarga');
+    let elNominal = document.getElementById('jimpitanNominal');
+    if (elNama) elNama.value = '';
+    if (elNominal) elNominal.value = '';
+  }
+
+  // C. Update indikator status
   if (typeof perbaruiIndikatorSync === 'function') {
     perbaruiIndikatorSync();
   }
 
-  // 4. Kirim antrean
+  // D. Jalankan pengiriman antrean ke Google Sheets
   prosesKirimAntrean();
 }
 
-let sedangMengirim = false;
-
-// Saat membentuk dataBaru sebelum masuk simpanJimpitan():
-let dataBaru = {
-  action: 'jimpitan', // MANDATORI: Agar dibaca sebagai jimpitan di Apps Script
-  tanggal: new Date().toLocaleString('id-ID'),
-  warga: nama,        // Menggunakan properti 'warga'
-  nominal: parseInt(nominal, 10) || 0
-};
-
-// Update fungsi prosesKirimAntrean() untuk mengecek balasan "SUCCESS":
+// 2. FUNGSI SYNC: Mengirim Antrean ke Google Sheets
 function prosesKirimAntrean() {
   if (sedangMengirim || !navigator.onLine) return;
 
@@ -1110,12 +1140,11 @@ function prosesKirimAntrean() {
     return res.text();
   })
   .then(responseText => {
-    // Validasi respons teks dari Apps Script
     if (!responseText.includes("SUCCESS")) {
       throw new Error("Gagal dari Server: " + responseText);
     }
 
-    // HANYA hapus antrean jika server merespons "SUCCESS"
+    // Hanya hapus data terdepan jika server merespons SUCCESS
     let antreanTerbaru = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
     antreanTerbaru.shift();
     localStorage.setItem('antrean_jimpitan', JSON.stringify(antreanTerbaru));
@@ -1126,6 +1155,7 @@ function prosesKirimAntrean() {
 
     sedangMengirim = false;
 
+    // Kirim sisa antrean berikutnya jika ada
     if (antreanTerbaru.length > 0) {
       prosesKirimAntrean();
     }
@@ -1140,13 +1170,9 @@ function prosesKirimAntrean() {
   });
 }
 
-
-// Otomatis kirim saat koneksi terhubung kembali
+// 3. EVENT LISTENERS: Pengiriman Otomatis
 window.addEventListener('online', prosesKirimAntrean);
-
-// Otomatis kirim sisa antrean lama saat aplikasi/halaman baru pertama kali dibuka
 document.addEventListener('DOMContentLoaded', prosesKirimAntrean);
-
 
     
 // Ganti angka di bawah dengan GID tab Jimpitan Anda
