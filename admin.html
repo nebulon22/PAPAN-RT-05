@@ -192,21 +192,19 @@
       }
     });
 
-    function cekLogin() {
+   function cekLogin() {
       const input = document.getElementById('adminPin').value.trim();
       if(input.length !== 6) {
         alert("PIN harus berisi 6 digit angka!");
         return;
       }
       
-      if (input === "050505") {
-        sessionStorage.setItem('authAdmin', 'true');
-        sessionStorage.setItem('verifiedPin', input);
-        bukaAkses();
-      } else {
-        alert("PIN salah! Akses ditolak.");
-        document.getElementById('adminPin').value = "";
-      }
+      // Simpan PIN sementara di browser pengguna (tanpa ditulis nilainya di script)
+      sessionStorage.setItem('authAdmin', 'true');
+      sessionStorage.setItem('verifiedPin', input);
+      
+      // Buka tampilan admin (PIN akan diuji saat menekan tombol Simpan)
+      bukaAkses();
     }
 
     function bukaAkses() {
@@ -247,7 +245,14 @@
           tutupModalForm();
           location.reload();
         } else {
-          alert('❌ Gagal dari server: ' + result);
+          alert('❌ Gagal: ' + result);
+          
+          // Jika server menolak karena PIN salah, otomatis reset login
+          if(result.toLowerCase().includes('pin')) {
+            sessionStorage.removeItem('authAdmin');
+            sessionStorage.removeItem('verifiedPin');
+            location.reload();
+          }
         }
       })
       .catch(err => {
