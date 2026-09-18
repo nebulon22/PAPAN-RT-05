@@ -866,6 +866,7 @@
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
+// --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
 const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbygqnBkpRRLFLr1AyW5Si5R9tjOb9l4fUm0Yv2Cpq3kQln98R9ktEgzF1VgQofn4pTWxw/exec';
 
 let html5QrcodeScanner = null;
@@ -891,7 +892,7 @@ function mulaiScanJimpitan() {
 function onScanJimpitanSuccess(decodedText) {
   stopScanQR();
   document.getElementById('jimpitanNamaWarga').value = decodedText;
-  document.getElementById('jimpitanNominal').value = ''; // Kosongkan input sebelumnya
+  document.getElementById('jimpitanNominal').value = ''; 
   document.getElementById('modal-jimpitan').style.display = 'flex';
 }
 
@@ -920,6 +921,7 @@ function simpanJimpitan() {
   btn.innerText = '⏳ Menyimpan...';
   btn.disabled = true;
 
+  // Payload tanpa meminta PIN Admin karena ini di halaman publik warga
   const payload = {
     action: 'jimpitan',
     warga: document.getElementById('jimpitanNamaWarga').value,
@@ -948,61 +950,6 @@ function simpanJimpitan() {
     btn.disabled = false;
     alert('❌ Error koneksi: ' + err);
   });
-}
-    
-// Fungsi untuk membuka kamera scan jimpitan
-function mulaiScanJimpitan() {
-  // Tampilkan modal/overlay scanner
-  document.getElementById('qr-reader').style.display = 'block';
-  document.getElementById('btn-stop-qr').style.display = 'block';
-
-  html5QrcodeScanner = new Html5Qrcode("qr-reader");
-  
-  html5QrcodeScanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 250, height: 250 } },
-    onScanJimpitanSuccess
-  ).catch(err => alert("Gagal membuka kamera: " + err));
-}
-
-function simpanJimpitan() {
-  const payload = {
-    action: 'jimpitan', // Penanda aksi untuk Apps Script
-    pin: sessionStorage.getItem('verifiedPin'),
-    warga: document.getElementById('jimpitanNamaWarga').value,
-    nominal: document.getElementById('jimpitanNominal').value,
-    tanggal: new Date().toLocaleString('id-ID')
-  };
-
-  fetch(GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  })
-  .then(res => res.text())
-  .then(result => {
-    if(result.includes('SUCCESS')) {
-      alert('✅ Jimpitan berhasil dicatat!');
-      document.getElementById('modal-jimpitan').style.display = 'none';
-    } else {
-      alert('❌ Gagal mencatat: ' + result);
-    }
-  });
-}
-    
-function setNominal(nilai) {
-  document.getElementById('jimpitanNominal').value = nilai;
-}
-    
-// Ketika QR Rumah Warga Berhasil Terbaca
-function onScanJimpitanSuccess(decodedText) {
-  stopScanQR(); // Matikan kamera
-  
-  // Isi decodedText bisa berupa Nama Warga / No Rumah (misal: "Bapak Budi - No 12")
-  document.getElementById('jimpitanNamaWarga').value = decodedText;
-  
-  // Tampilkan Modal Form Input Jimpitan
-  document.getElementById('modal-jimpitan').style.display = 'flex';
 }
     
   </script>
