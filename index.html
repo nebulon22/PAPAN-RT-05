@@ -1058,15 +1058,29 @@ function simpanJimpitan(dataBaru) {
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
 
   // 2. Langsung beri respon cepat ke bapak ronda (Tanpa Menunggu Internet)
-  tampilkanNotifikasiBerhasil("Jimpitan berhasil dicatat!");
-  resetFormScan();
+  if (typeof tampilkanNotifikasiBerhasil === 'function') {
+    tampilkanNotifikasiBerhasil("Jimpitan berhasil dicatat!");
+  }
+  if (typeof resetFormScan === 'function') {
+    resetFormScan();
+  }
 
-  // 3. Coba kirim antrean data ke Google Sheets di latar belakang
+  // 3. Update indikator status di layar (Langsung jadi 🟡 Kuning jika offline)
+  if (typeof perbaruiIndikatorSync === 'function') {
+    perbaruiIndikatorSync();
+  }
+
+  // 4. Coba kirim antrean data ke Google Sheets di latar belakang
   prosesKirimAntrean();
 }
 
 function prosesKirimAntrean() {
-  // Jika tidak ada koneksi internet, hentikan dulu (nanti dicoba lagi otomatis)
+  // Update indikator lebih dulu
+  if (typeof perbaruiIndikatorSync === 'function') {
+    perbaruiIndikatorSync();
+  }
+
+  // Jika tidak ada koneksi internet, hentikan dulu (data aman di HP)
   if (!navigator.onLine) return;
 
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
@@ -1084,17 +1098,28 @@ function prosesKirimAntrean() {
     antrean.shift();
     localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
     
+    // Update indikator (Angka antrean berkurang / berubah jadi 🟢 Hijau)
+    if (typeof perbaruiIndikatorSync === 'function') {
+      perbaruiIndikatorSync();
+    }
+
     // Kirim item berikutnya jika masih ada sisa antrean
-    if (antrean.length > 0) prosesKirimAntrean();
+    if (antrean.length > 0) {
+      prosesKirimAntrean();
+    }
   })
   .catch(err => {
     console.log("Sinyal lemah/kuota habis. Data tersimpan di HP dan akan dikirim ulang nanti.");
+    if (typeof perbaruiIndikatorSync === 'function') {
+      perbaruiIndikatorSync();
+    }
   });
 }
 
 // Otomatis kirim ulang antrean saat HP mendapat sinyal/internet kembali
 window.addEventListener('online', prosesKirimAntrean);
 
+    
 // Ganti angka di bawah dengan GID tab Jimpitan Anda
 var GID_JIMPITAN = '515393252'; 
 var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
