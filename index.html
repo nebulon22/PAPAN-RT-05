@@ -1145,22 +1145,22 @@ async function kirimDataPendingJimpitan() {
 
   for (let item of antrean) {
     try {
-      let response = await fetch(GAS_WEB_APP_URL, {
+      // Gunakan mode: 'no-cors' untuk menembus aturan CORS Google Apps Script
+      await fetch(GAS_WEB_APP_URL, {
         method: 'POST',
+        mode: 'no-cors',
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(item)
       });
 
-      if (!response.ok) {
-        sisaAntrean.push(item);
-      }
+      // Jika fetch berhasil tanpa throw error koneksi, data dianggap terkirim
     } catch (err) {
-      console.warn("Koneksi belum stabil saat sinkronisasi:", err);
+      console.warn("Koneksi belum stabil atau offline saat sinkronisasi:", err);
       sisaAntrean.push(item);
     }
   }
 
-  // Simpan sisa data yang gagal terkirim
+  // Simpan sisa data yang benar-benar gagal (offline)
   localStorage.setItem('antrean_jimpitan', JSON.stringify(sisaAntrean));
   sedangMengirim = false;
 
