@@ -369,30 +369,20 @@
 
 <!-- Modal Riwayat Jimpitan -->
 <div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
-  <div class="modal-content" style="max-width: 500px;">
+  <div class="modal-content" style="max-width: 800px; width: 95%;">
     <div class="modal-header">
       <h3>🪙 Rekap Hasil Jimpitan Ronda</h3>
       <button class="close-btn" onclick="tutupModalRiwayatJimpitan()">&times;</button>
     </div>
     
-    <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:12px;">
+    <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
       <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Total Jimpitan Terkumpul</span>
       <div id="total-jimpitan" style="font-size:22px; font-weight:bold;">Rp 0</div>
     </div>
 
-    <div style="max-height: 50vh; overflow-y: auto;">
-      <table style="width:100%; font-size:12px; border-collapse:collapse;">
-        <thead>
-          <tr style="border-bottom: 2px solid #ddd; background: #f9f9f9; text-align: left;">
-            <th style="padding:8px;">Tanggal</th>
-            <th style="padding:8px;">Warga / Rumah</th>
-            <th style="padding:8px; text-align:right;">Nominal</th>
-          </tr>
-        </thead>
-        <tbody id="list-riwayat-jimpitan">
-          <tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Memuat data...</td></tr>
-        </tbody>
-      </table>
+    <!-- Container Grid 6 Kolom Kecil -->
+    <div id="grid-jimpitan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; max-height: 60vh; overflow-y: auto; padding: 4px;">
+      <!-- 6 Kotak Malam Ronda akan diisi otomatis via JS -->
     </div>
   </div>
 </div>
@@ -891,38 +881,19 @@
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
-function dapatkanLabelMalamRonda(dateObj) {
-  var jam = dateObj.getHours();
-
-  // 1. Jika di luar jam ronda (06.00 Pagi - 17.59 Sore)
-  if (jam >= 6 && jam < 18) {
-    var namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
-    var tgl = dateObj.getDate().toString().padStart(2, '0');
-    var bln = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-    var thn = dateObj.getFullYear();
-    return `${namaHari[dateObj.getDay()]} Siang (${tgl}/${bln}/${thn})`;
-  }
-
-  // 2. Untuk Jam Ronda (18.00 Sore - 05.59 Pagi)
-  // Geser waktu 6 jam ke belakang agar jam 00.00 - 05.59 pagi menyatu dengan malam sebelumnya
-  var adjustedDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
+function dapatkanNamaMalam(dateObj) {
+  // Pemetaan hari ke Nama Malam Ronda (Malam Minggu sengaja diabaikan)
+  var petaMalam = {
+    0: 'Malam Senin',  // Minggu
+    1: 'Malam Selasa', // Senin
+    2: 'Malam Rabu',   // Selasa
+    3: 'Malam Kamis',  // Rabu
+    4: 'Malam Jumat',  // Kamis
+    5: 'Malam Sabtu'   // Jumat
+  };
   
-  var mapMalam = [
-    'Malam Senin',  // Minggu malam
-    'Malam Selasa', // Senin malam
-    'Malam Rabu',   // Selasa malam
-    'Malam Kamis',  // Rabu malam
-    'Malam Jumat',  // Kamis malam
-    'Malam Sabtu',  // Jumat malam
-    'Malam Minggu'  // Sabtu malam
-  ];
-
-  var tglAdj = adjustedDate.getDate().toString().padStart(2, '0');
-  var blnAdj = (adjustedDate.getMonth() + 1).toString().padStart(2, '0');
-  var thnAdj = adjustedDate.getFullYear();
-  
-  var label = mapMalam[adjustedDate.getDay()];
-  return `${label} (${tglAdj}/${blnAdj}/${thnAdj})`;
+  var dayIdx = dateObj.getDay();
+  return petaMalam[dayIdx] || null;
 }
 
 function muatDataJimpitan() {
@@ -930,19 +901,26 @@ function muatDataJimpitan() {
     .then(response => response.text())
     .then(csvText => {
       var baris = parseCSV(csvText).slice(1);
-      var tbody = document.getElementById('list-riwayat-jimpitan');
-      tbody.innerHTML = '';
+      var gridContainer = document.getElementById('grid-jimpitan');
+      gridContainer.innerHTML = '';
       var grandTotal = 0;
 
-      if (baris.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Belum ada catatan jimpitan.</td></tr>';
-        document.getElementById('total-jimpitan').innerText = 'Rp 0';
-        return;
-      }
+      // Filter otomatis untuk bulan & tahun berjalan
+      var skrg = new Date();
+      var bulanSkrg = skrg.getMonth();
+      var tahunSkrg = skrg.getFullYear();
 
-      // Kelompokkan data berdasarkan Malam Ronda
-      var kelompok = {};
+      // Inisialisasi 6 Kotak Malam Ronda
+      var rekapMalam = {
+        'Malam Senin': { subtotal: 0, items: [] },
+        'Malam Selasa': { subtotal: 0, items: [] },
+        'Malam Rabu': { subtotal: 0, items: [] },
+        'Malam Kamis': { subtotal: 0, items: [] },
+        'Malam Jumat': { subtotal: 0, items: [] },
+        'Malam Sabtu': { subtotal: 0, items: [] }
+      };
 
+      // Kelompokkan data dari Google Sheets
       baris.forEach(kolom => {
         if (kolom.length >= 3 && kolom[0] !== '') {
           var tglStr = kolom[0];
@@ -950,65 +928,79 @@ function muatDataJimpitan() {
           var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
           var nominal = parseInt(nominalRaw, 10) || 0;
 
-          // Parsing string tanggal ke Objek Date
-          // Menangani format: "18/09/2026, 21.30.00" atau ISO string
+          // Parsing Tanggal
           var bagian = tglStr.split(',');
           var tglPart = bagian[0].trim().split('/');
           var timePart = bagian[1] ? bagian[1].trim().split('.') : [19, 0, 0];
           
           var dateObj = new Date(
-            tglPart[2] || 2026, 
+            tglPart[2] || tahunSkrg, 
             (tglPart[1] || 1) - 1, 
             tglPart[0] || 1, 
             timePart[0] || 19, 
             timePart[1] || 0
           );
 
-          var keyMalam = dapatkanLabelMalamRonda(dateObj);
+          // Hanya hitung data di bulan & tahun saat ini
+          if (dateObj.getMonth() === bulanSkrg && dateObj.getFullYear() === tahunSkrg) {
+            var namaMalam = dapatkanNamaMalam(dateObj);
 
-          if (!kelompok[keyMalam]) {
-            kelompok[keyMalam] = { items: [], subtotal: 0 };
+            if (namaMalam && rekapMalam[namaMalam]) {
+              rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+              rekapMalam[namaMalam].subtotal += nominal;
+              grandTotal += nominal;
+            }
           }
-
-          kelompok[keyMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-          kelompok[keyMalam].subtotal += nominal;
-          grandTotal += nominal;
         }
       });
 
-      // Tampilkan ke tabel (diurutkan dari grup malam terbaru)
-      Object.keys(kelompok).reverse().forEach(key => {
-        var grup = kelompok[key];
-
-        // Header Kelompok (Nama Malam & Subtotal)
-        var trHeader = document.createElement('tr');
-        trHeader.innerHTML = `
-          <td colspan="3" style="background:#e6f4ea; padding:8px; font-weight:bold; color:#047857; border-top:2px solid #a7f3d0;">
-            🌙 ${key} — <span style="float:right;">Total: Rp ${grup.subtotal.toLocaleString('id-ID')}</span>
-          </td>
+      // Render 6 Kotak Kecil ke Modal
+      Object.keys(rekapMalam).forEach(malam => {
+        var dataMalam = rekapMalam[malam];
+        
+        var card = document.createElement('div');
+        card.style.cssText = `
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 10px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          display: flex;
+          flex-direction: column;
         `;
-        tbody.appendChild(trHeader);
 
-        // Isi transaksi di malam tersebut
-        grup.items.reverse().forEach(item => {
-          var tr = document.createElement('tr');
-          tr.style.borderBottom = '1px solid #f0f0f0';
-          tr.innerHTML = `
-            <td style="padding:6px 12px; font-size:11px; color:#666;">${escapeHtml(item.waktu)}</td>
-            <td style="padding:6px 12px; color:#333;">${escapeHtml(item.wargs || item.warga)}</td>
-            <td style="padding:6px 12px; text-align:right; font-weight:bold; color:#059669;">
-              Rp ${item.nominal.toLocaleString('id-ID')}
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
+        var itemListHTML = '';
+        if (dataMalam.items.length === 0) {
+          itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
+        } else {
+          itemListHTML = dataMalam.items.reverse().map(item => `
+            <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; padding: 4px 0;">
+              <span style="color: #374151; font-weight: 500;">${escapeHtml(item.warga)}</span>
+              <span style="color: #059669; font-weight: bold;">Rp ${item.nominal.toLocaleString('id-ID')}</span>
+            </div>
+          `).join('');
+        }
+
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 8px;">
+            <span style="font-weight: bold; font-size: 12px; color: #065f46;">🌙 ${malam}</span>
+            <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+              Rp ${dataMalam.subtotal.toLocaleString('id-ID')}
+            </span>
+          </div>
+          <div style="max-height: 120px; overflow-y: auto; flex-grow: 1;">
+            ${itemListHTML}
+          </div>
+        `;
+
+        gridContainer.appendChild(card);
       });
 
       document.getElementById('total-jimpitan').innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
     })
     .catch(err => console.error("Gagal muat data jimpitan:", err));
 }
-
+    
 // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
 const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzLblHq-ECpLSC5XK4KgjnoNpnkVWm4bJyzPbLGep3Ux5C3LQH3jVOfQFXaKmvVd4bZgg/exec';
 
