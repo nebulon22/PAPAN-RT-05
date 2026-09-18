@@ -1088,13 +1088,58 @@ function simpanJimpitan() {
   });
 }
 
-// Fungsi Membuka Modal Rekap Jimpitan
+// Ganti angka di bawah dengan GID tab Jimpitan Anda
+var GID_JIMPITAN = '515393252'; 
+var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
+
+function muatDataJimpitan() {
+  fetch(JIMPITAN_URL)
+    .then(response => response.text())
+    .then(csvText => {
+      var baris = parseCSV(csvText).slice(1);
+      var tbody = document.getElementById('list-riwayat-jimpitan');
+      tbody.innerHTML = '';
+      var total = 0;
+
+      if (baris.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Belum ada catatan jimpitan.</td></tr>';
+        document.getElementById('total-jimpitan').innerText = 'Rp 0';
+        return;
+      }
+
+      // Urutkan dari catatan terbaru
+      baris.reverse().forEach(kolom => {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          var tgl = kolom[0] || '-';
+          var warga = kolom[1] || '-';
+          var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
+          var nominal = parseInt(nominalRaw, 10) || 0;
+          
+          total += nominal;
+
+          var tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid #eee';
+          tr.innerHTML = `
+            <td style="padding:8px 6px; font-size:11px; color:#666;">${escapeHtml(tgl)}</td>
+            <td style="padding:8px 6px; font-weight:bold; color:#333;">${escapeHtml(warga)}</td>
+            <td style="padding:8px 6px; text-align:right; color:#059669; font-weight:bold; white-space:nowrap;">
+              Rp ${nominal.toLocaleString('id-ID')}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+      });
+
+      document.getElementById('total-jimpitan').innerText = 'Rp ' + total.toLocaleString('id-ID');
+    })
+    .catch(err => console.error("Gagal muat data jimpitan:", err));
+}
+
 function bukaModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'flex';
   muatDataJimpitan();
 }
 
-// Fungsi Menutup Modal Rekap Jimpitan
 function tutupModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
 }
