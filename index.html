@@ -220,6 +220,49 @@
       object-fit: contain;
       box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
     }
+
+.btn-qr-floating {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1500;
+  width: 65px;
+  height: 65px;
+  background: #0288d1;
+  color: white;
+  border: 3px solid #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.btn-qr-floating span {
+  font-size: 10px;
+  font-weight: bold;
+  margin-top: 2px;
+}
+
+/* Modal Styling Sederhana */
+.modal-bg {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex; justify-content: center; align-items: center;
+}
+.modal-content {
+  background: white; padding: 20px; border-radius: 12px;
+  width: 90%; max-width: 400px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.close-btn { background: none; border: none; font-size: 24px; cursor: pointer; }
+    
   </style>
 </head>
 <body>
@@ -329,11 +372,41 @@
     <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
   </div>
 
-  <div class="form-group">
+<!-- Tombol Melayang Scan QR (Tengah Bawah) -->
+<button id="btn-scan-jimpitan" onclick="mulaiScanJimpitan()" class="btn-qr-floating">
+  📷<br><span>Scan QR</span>
+</button>
+
+<!-- Modal Kamera QR Scanner -->
+<div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
+  <div class="modal-content" style="max-width: 320px; text-align: center;">
+    <div class="modal-header">
+      <h3>📷 Scan QR Rumah Warga</h3>
+      <button class="close-btn" onclick="stopScanQR()">&times;</button>
+    </div>
+    <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
+    <button onclick="stopScanQR()" style="margin-top: 12px; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">❌ Batal</button>
+  </div>
+</div>
+
+<!-- Modal Form Input Jimpitan -->
+<div id="modal-jimpitan" class="modal-bg" style="display: none; z-index: 3000;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>🪙 Catat Jimpitan Ronda</h3>
+      <button class="close-btn" onclick="document.getElementById('modal-jimpitan').style.display='none'">&times;</button>
+    </div>
+    
+    <form id="formJimpitan">
+      <div class="form-group">
+        <label>Rumah / Warga:</label>
+        <input type="text" id="jimpitanNamaWarga" readonly style="background: #eee; width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
+      </div>
+      
+      <div class="form-group" style="margin-top: 10px;">
         <label>Nominal Jimpitan (Rp):</label>
-        <input type="number" id="jimpitanNominal" placeholder="Isi nominal atau pilih..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+        <input type="number" id="jimpitanNominal" placeholder="Isi nominal atau pilih..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
         
-        <!-- Tombol Cepat Nominal -->
         <div style="display: flex; gap: 6px; margin-top: 8px;">
           <button type="button" onclick="setNominal(500)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">500</button>
           <button type="button" onclick="setNominal(1000)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">1.000</button>
@@ -342,6 +415,13 @@
         </div>
       </div>
 
+      <button type="button" id="btnSimpanJimpitan" onclick="simpanJimpitan()" style="width:100%; margin-top:15px; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">💾 Simpan Jimpitan</button>
+    </form>
+  </div>
+</div>
+<!-- Library QR Code Scanner -->
+<script src="https://unpkg.com/html5-qrcode"></script>
+  
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // --- KODE PETA & DATA ---
@@ -786,6 +866,90 @@
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbygqnBkpRRLFLr1AyW5Si5R9tjOb9l4fUm0Yv2Cpq3kQln98R9ktEgzF1VgQofn4pTWxw/exec';
+
+let html5QrcodeScanner = null;
+
+function setNominal(nilai) {
+  document.getElementById('jimpitanNominal').value = nilai;
+}
+
+function mulaiScanJimpitan() {
+  document.getElementById('modal-qr-scanner').style.display = 'flex';
+  html5QrcodeScanner = new Html5Qrcode("qr-reader");
+  
+  html5QrcodeScanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 220, height: 220 } },
+    onScanJimpitanSuccess
+  ).catch(err => {
+    alert("Gagal membuka kamera: " + err);
+    stopScanQR();
+  });
+}
+
+function onScanJimpitanSuccess(decodedText) {
+  stopScanQR();
+  document.getElementById('jimpitanNamaWarga').value = decodedText;
+  document.getElementById('jimpitanNominal').value = ''; // Kosongkan input sebelumnya
+  document.getElementById('modal-jimpitan').style.display = 'flex';
+}
+
+function stopScanQR() {
+  if (html5QrcodeScanner) {
+    html5QrcodeScanner.stop().then(() => {
+      document.getElementById('modal-qr-scanner').style.display = 'none';
+      html5QrcodeScanner = null;
+    }).catch(() => {
+      document.getElementById('modal-qr-scanner').style.display = 'none';
+      html5QrcodeScanner = null;
+    });
+  } else {
+    document.getElementById('modal-qr-scanner').style.display = 'none';
+  }
+}
+
+function simpanJimpitan() {
+  const nominal = document.getElementById('jimpitanNominal').value;
+  if (nominal === '') {
+    alert("Harap masukkan nominal terlebih dahulu!");
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanJimpitan');
+  btn.innerText = '⏳ Menyimpan...';
+  btn.disabled = true;
+
+  const payload = {
+    action: 'jimpitan',
+    warga: document.getElementById('jimpitanNamaWarga').value,
+    nominal: nominal,
+    tanggal: new Date().toLocaleString('id-ID')
+  };
+
+  fetch(GAS_WEB_APP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.text())
+  .then(result => {
+    btn.innerText = '💾 Simpan Jimpitan';
+    btn.disabled = false;
+    if(result.includes('SUCCESS')) {
+      alert('✅ Jimpitan berhasil dicatat!');
+      document.getElementById('modal-jimpitan').style.display = 'none';
+    } else {
+      alert('❌ Gagal mencatat: ' + result);
+    }
+  })
+  .catch(err => {
+    btn.innerText = '💾 Simpan Jimpitan';
+    btn.disabled = false;
+    alert('❌ Error koneksi: ' + err);
+  });
+}
+    
 // Fungsi untuk membuka kamera scan jimpitan
 function mulaiScanJimpitan() {
   // Tampilkan modal/overlay scanner
