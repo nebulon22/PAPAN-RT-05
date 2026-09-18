@@ -329,6 +329,19 @@
     <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
   </div>
 
+  <div class="form-group">
+        <label>Nominal Jimpitan (Rp):</label>
+        <input type="number" id="jimpitanNominal" placeholder="Isi nominal atau pilih..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:14px;">
+        
+        <!-- Tombol Cepat Nominal -->
+        <div style="display: flex; gap: 6px; margin-top: 8px;">
+          <button type="button" onclick="setNominal(500)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">500</button>
+          <button type="button" onclick="setNominal(1000)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">1.000</button>
+          <button type="button" onclick="setNominal(2000)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">2.000</button>
+          <button type="button" onclick="setNominal(0)" style="flex:1; padding:6px; font-size:11px; background:#ffebee; color:#c62828; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">0 (Absen)</button>
+        </div>
+      </div>
+
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // --- KODE PETA & DATA ---
@@ -772,6 +785,62 @@
     function tutupModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'none';
     }
+
+// Fungsi untuk membuka kamera scan jimpitan
+function mulaiScanJimpitan() {
+  // Tampilkan modal/overlay scanner
+  document.getElementById('qr-reader').style.display = 'block';
+  document.getElementById('btn-stop-qr').style.display = 'block';
+
+  html5QrcodeScanner = new Html5Qrcode("qr-reader");
+  
+  html5QrcodeScanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: { width: 250, height: 250 } },
+    onScanJimpitanSuccess
+  ).catch(err => alert("Gagal membuka kamera: " + err));
+}
+
+function simpanJimpitan() {
+  const payload = {
+    action: 'jimpitan', // Penanda aksi untuk Apps Script
+    pin: sessionStorage.getItem('verifiedPin'),
+    warga: document.getElementById('jimpitanNamaWarga').value,
+    nominal: document.getElementById('jimpitanNominal').value,
+    tanggal: new Date().toLocaleString('id-ID')
+  };
+
+  fetch(GAS_WEB_APP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.text())
+  .then(result => {
+    if(result.includes('SUCCESS')) {
+      alert('✅ Jimpitan berhasil dicatat!');
+      document.getElementById('modal-jimpitan').style.display = 'none';
+    } else {
+      alert('❌ Gagal mencatat: ' + result);
+    }
+  });
+}
+    
+function setNominal(nilai) {
+  document.getElementById('jimpitanNominal').value = nilai;
+}
+    
+// Ketika QR Rumah Warga Berhasil Terbaca
+function onScanJimpitanSuccess(decodedText) {
+  stopScanQR(); // Matikan kamera
+  
+  // Isi decodedText bisa berupa Nama Warga / No Rumah (misal: "Bapak Budi - No 12")
+  document.getElementById('jimpitanNamaWarga').value = decodedText;
+  
+  // Tampilkan Modal Form Input Jimpitan
+  document.getElementById('modal-jimpitan').style.display = 'flex';
+}
+    
   </script>
 </body>
 </html>
