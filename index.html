@@ -1053,12 +1053,17 @@ function perbaruiIndikatorSync() {
 window.addEventListener('load', perbaruiIndikatorSync);
     
 function simpanJimpitan(dataBaru) {
-  // 1. Simpan ke memori HP (localStorage)
+  // Pastikan nominal disimpan sebagai angka (number)
+  if (dataBaru && dataBaru.nominal) {
+    dataBaru.nominal = parseInt(dataBaru.nominal, 10) || 0;
+  }
+
+  // 1. Simpan ke memori HP
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
 
-  // 2. Beri respon cepat di UI
+  // 2. Respon cepat ke UI
   if (typeof tampilkanNotifikasiBerhasil === 'function') {
     tampilkanNotifikasiBerhasil("Jimpitan berhasil dicatat!");
   }
@@ -1066,20 +1071,18 @@ function simpanJimpitan(dataBaru) {
     resetFormScan();
   }
 
-  // 3. Update indikator status di layar
+  // 3. Update indikator
   if (typeof perbaruiIndikatorSync === 'function') {
     perbaruiIndikatorSync();
   }
 
-  // 4. Coba kirim antrean data
+  // 4. Kirim antrean
   prosesKirimAntrean();
 }
 
-// Flag penanda agar proses pengiriman tidak bertabrakan
 let sedangMengirim = false;
 
 function prosesKirimAntrean() {
-  // Cegah jalan ganda jika proses kirim sedang berlangsung atau offline
   if (sedangMengirim || !navigator.onLine) return;
 
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
@@ -1090,16 +1093,20 @@ function prosesKirimAntrean() {
 
   fetch(JIMPITAN_URL, {
     method: 'POST',
-    // Header ini mencegah error CORS Preflight (OPTIONS) di Google Apps Script
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(item)
   })
   .then(res => {
-    // BACA ULANG localStorage agar data baru yang baru masuk tidak tertimpa!
+    // Validasi respons HTTP: Jika server error (bukan 2xx), lempar ke block .catch()
+    if (!res.ok) {
+      throw new Error('Server Google Apps Script bermasalah: ' + res.status);
+    }
+    return res.text();
+  })
+  .then(data => {
+    // Baca ulang storage untuk mencegah race-condition
     let antreanTerbaru = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-    
-    // Hapus data terdepan yang sudah berhasil terkirim
-    antreanTerbaru.shift(); 
+    antreanTerbaru.shift();
     localStorage.setItem('antrean_jimpitan', JSON.stringify(antreanTerbaru));
 
     if (typeof perbaruiIndikatorSync === 'function') {
@@ -1108,13 +1115,13 @@ function prosesKirimAntrean() {
 
     sedangMengirim = false;
 
-    // Kirim item berikutnya jika masih ada antrean tersisa
+    // Lanjut kirim sisa antrean jika ada
     if (antreanTerbaru.length > 0) {
       prosesKirimAntrean();
     }
   })
   .catch(err => {
-    console.log("Sinyal lemah/kuota habis. Data tersimpan di HP dan akan dikirim ulang nanti.");
+    console.warn("Gagal terkirim, data tetap aman di HP:", err);
     sedangMengirim = false;
 
     if (typeof perbaruiIndikatorSync === 'function') {
@@ -1123,8 +1130,13 @@ function prosesKirimAntrean() {
   });
 }
 
-// Otomatis kirim ulang antrean saat HP mendapat sinyal/internet kembali
+// Otomatis kirim saat koneksi terhubung kembali
 window.addEventListener('online', prosesKirimAntrean);
+
+// Otomatis kirim sisa antrean lama saat aplikasi/halaman baru pertama kali dibuka
+document.addEventListener('DOMContentLoaded', prosesKirimAntrean);
+
+
     
 // Ganti angka di bawah dengan GID tab Jimpitan Anda
 var GID_JIMPITAN = '515393252'; 
