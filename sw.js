@@ -4,7 +4,7 @@ self.addEventListener('install', (e) => {
       return cache.addAll([
         './',
         './index.html',
-        './kentongan.png'
+        './kentongan-slit-drum.png'
       ]);
     })
   );
