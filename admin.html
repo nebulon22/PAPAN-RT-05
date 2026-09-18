@@ -192,19 +192,53 @@
       }
     });
 
-   function cekLogin() {
+  function cekLogin() {
       const input = document.getElementById('adminPin').value.trim();
       if(input.length !== 6) {
         alert("PIN harus berisi 6 digit angka!");
         return;
       }
-      
-      // Simpan PIN sementara di browser pengguna (tanpa ditulis nilainya di script)
-      sessionStorage.setItem('authAdmin', 'true');
-      sessionStorage.setItem('verifiedPin', input);
-      
-      // Buka tampilan admin (PIN akan diuji saat menekan tombol Simpan)
-      bukaAkses();
+
+      const btnLogin = document.querySelector('.login-box button');
+      btnLogin.innerText = "⏳ Memeriksa...";
+      btnLogin.disabled = true;
+
+      // Kirim tes simpan data kosong hanya untuk memverifikasi PIN ke Apps Script
+      const payloadTes = {
+        pin: input,
+        nama: '',
+        lat: '',
+        lng: '',
+        kategori: '',
+        hidden: '',
+        foto: ''
+      };
+
+      fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payloadTes)
+      })
+      .then(res => res.text())
+      .then(result => {
+        btnLogin.innerText = "Buka Kunci";
+        btnLogin.disabled = false;
+
+        // Jika balasan dari server BUKAN "ERROR: PIN Admin Salah!"
+        if (!result.includes("PIN Admin Salah")) {
+          sessionStorage.setItem('authAdmin', 'true');
+          sessionStorage.setItem('verifiedPin', input);
+          bukaAkses();
+        } else {
+          alert("❌ PIN salah! Akses ditolak.");
+          document.getElementById('adminPin').value = "";
+        }
+      })
+      .catch(err => {
+        btnLogin.innerText = "Buka Kunci";
+        btnLogin.disabled = false;
+        alert("❌ Error koneksi: " + err);
+      });
     }
 
     function bukaAkses() {
