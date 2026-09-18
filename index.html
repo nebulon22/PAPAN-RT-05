@@ -1127,6 +1127,78 @@ window.addEventListener('load', perbaruiIndikatorSync);
 // Variable Global & Status Sync
 let sedangMengirim = false;
 
+// 1. Jalankan pengiriman otomatis saat HP kembali terhubung ke Internet
+window.addEventListener('online', () => {
+  console.log("Koneksi kembali terhubung. Mengirim data pending...");
+  kirimDataPendingJimpitan();
+});
+
+// 2. Periksa dan kirim antrean data setiap kali aplikasi PWA dibuka
+document.addEventListener('DOMContentLoaded', () => {
+  if (navigator.onLine) {
+    kirimDataPendingJimpitan();
+  } else {
+    updateNotifPending();
+  }
+});
+
+// 3. Fungsi untuk menyinkronkan data dari localStorage ke Server
+async function kirimDataPendingJimpitan() {
+  // Ambil data offline dari localStorage (Sesuaikan nama key-nya)
+  let dataPending = JSON.parse(localStorage.getItem('jimpitanPending') || '[]');
+
+  if (dataPending.length === 0) {
+    updateNotifPending();
+    return;
+  }
+
+  let sisaDataGagal = [];
+
+  for (let item of dataPending) {
+    try {
+      // Ganti URL_BACKEND_KAMU dengan URL Google Apps Script / Webhook kamu
+      let response = await fetch('URL_BACKEND_KAMU', {
+        method: 'POST',
+        body: JSON.stringify(item)
+      });
+
+      if (!response.ok) {
+        sisaDataGagal.push(item); // Masukkan kembali jika server menolak
+      }
+    } catch (err) {
+      // Jika fetch gagal (koneksi belum stabil), simpan lagi ke antrean
+      sisaDataGagal.push(item);
+    }
+  }
+
+  // Perbarui penyimpanan lokal dengan data yang belum/gagal terkirim
+  localStorage.setItem('jimpitanPending', JSON.stringify(sisaDataGagal));
+
+  // Perbarui tampilan notifikasi di UI
+  updateNotifPending();
+
+  // Jika semua berhasil dikirim
+  if (sisaDataGagal.length === 0 && dataPending.length > 0) {
+    alert("Semua data jimpitan offline berhasil terkirim ke server!");
+  }
+}
+
+// 4. Fungsi memperbarui teks notifikasi "X Data menunggu sinyal"
+function updateNotifPending() {
+  let dataPending = JSON.parse(localStorage.getItem('jimpitanPending') || '[]');
+  let elNotif = document.getElementById('notif-pending'); // Sesuaikan ID elemen teks notif kamu
+
+  if (elNotif) {
+    if (dataPending.length > 0) {
+      elNotif.innerText = `${dataPending.length} Data menunggu sinyal`;
+      elNotif.style.display = 'block';
+    } else {
+      elNotif.style.display = 'none'; // Sembunyikan notif jika antrean 0
+    }
+  }
+}
+
+
 // 1. FUNGSI UTAMA: Menyimpan Data Jimpitan
 function simpanJimpitan(dataInput) {
   let dataBaru = null;
