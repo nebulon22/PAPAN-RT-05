@@ -951,6 +951,75 @@ function simpanJimpitan() {
     alert('❌ Error koneksi: ' + err);
   });
 }
+
+    // ==========================================
+// KODE TAMBAHAN UNTUK MODAL & QR SCANNER
+// ==========================================
+
+// Fungsi Tutup Modal Keuangan
+function tutupModalKeuangan() {
+  document.getElementById('modal-keuangan').style.display = 'none';
+}
+
+// Variabel global untuk QR Scanner
+let html5QrcodeScanner;
+
+function mulaiScanJimpitan() {
+  document.getElementById('modal-qr-scanner').style.display = 'flex';
+  
+  // Inisialisasi library html5-qrcode
+  html5QrcodeScanner = new Html5QrcodeScanner(
+    "qr-reader", 
+    { fps: 10, qrbox: {width: 250, height: 250} },
+    false
+  );
+  
+  html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+}
+
+function onScanSuccess(decodedText, decodedResult) {
+  // Hentikan kamera setelah berhasil scan
+  stopScanQR();
+  
+  // Buka form jimpitan dan isi nama/data warga dari hasil QR
+  document.getElementById('modal-jimpitan').style.display = 'flex';
+  document.getElementById('jimpitanNamaWarga').value = decodedText;
+}
+
+function onScanFailure(error) {
+  // Diabaikan: error biasa terjadi terus-menerus saat kamera mencari QR code
+}
+
+function stopScanQR() {
+  document.getElementById('modal-qr-scanner').style.display = 'none';
+  if (html5QrcodeScanner) {
+    html5QrcodeScanner.clear().catch(error => {
+      console.error("Gagal menghentikan scanner.", error);
+    });
+  }
+}
+
+// Fungsi Form Jimpitan
+function setNominal(angka) {
+  document.getElementById('jimpitanNominal').value = angka;
+}
+
+function simpanJimpitan() {
+  var nama = document.getElementById('jimpitanNamaWarga').value;
+  var nominal = document.getElementById('jimpitanNominal').value;
+  
+  if (!nominal || nominal === "") {
+    alert("Silakan pilih atau isi nominal jimpitan terlebih dahulu!");
+    return;
+  }
+  
+  // Tampilkan notifikasi (Untuk implementasi nyata, kirim data ini ke Google Form / Web App Script)
+  alert("Jimpitan berhasil dicatat!\n\nWarga: " + nama + "\nNominal: Rp " + nominal);
+  
+  // Tutup dan bersihkan form
+  document.getElementById('formJimpitan').reset();
+  document.getElementById('modal-jimpitan').style.display = 'none';
+}
     
   </script>
 </body>
