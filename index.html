@@ -375,14 +375,23 @@
       <button class="close-btn" onclick="tutupModalRiwayatJimpitan()">&times;</button>
     </div>
     
+    <!-- DROPDOWN PILIH BULAN -->
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f9fafb; padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
+      <label for="select-bulan-jimpitan" style="font-size: 13px; font-weight: bold; color: #374151;">📅 Pilih Periode:</label>
+      <select id="select-bulan-jimpitan" onchange="muatDataJimpitan()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13px; font-weight: 500; outline: none; cursor: pointer;">
+        <!-- Pilihan bulan akan diisi otomatis oleh JavaScript -->
+      </select>
+    </div>
+
+    <!-- KOTAK TOTAL -->
     <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
-      <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Total Jimpitan Ronda Bulan Ini</span>
+      <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Total Jimpitan Bulan Ini</span>
       <div id="total-jimpitan" style="font-size:22px; font-weight:bold;">Rp 0</div>
     </div>
 
-    <!-- Container Grid 6 Kolom Kecil -->
-    <div id="grid-jimpitan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; max-height: 60vh; overflow-y: auto; padding: 4px;">
-      <!-- 6 Kotak Malam Ronda akan diisi otomatis via JS -->
+    <!-- Grid 6 Kolom -->
+    <div id="grid-jimpitan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; max-height: 55vh; overflow-y: auto; padding: 4px;">
+      <!-- 6 Kotak Malam Ronda diisi via JS -->
     </div>
   </div>
 </div>
@@ -988,25 +997,53 @@ function simpanJimpitan() {
 var GID_JIMPITAN = '515393252'; 
 var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
 
+// Fungsi pembantu untuk membuat daftar opsi bulan otomatis
+function inisialisasiSelectBulan() {
+  var select = document.getElementById('select-bulan-jimpitan');
+  if (!select || select.children.length > 0) return; // Jika sudah diisi, jangan isi ulang
+
+  var namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+  var skrg = new Date();
+
+  // Buat pilihan untuk bulan ini dan 5 bulan ke belakang
+  for (var i = 0; i < 6; i++) {
+    var d = new Date(skrg.getFullYear(), skrg.getMonth() - i, 1);
+    var bln = d.getMonth();
+    var thn = d.getFullYear();
+    
+    var option = document.createElement('option');
+    option.value = thn + '-' + bln; // Format value: YYYY-MM
+    option.text = (i === 0 ? "Bulan Ini (" : "") + namaBulan[bln] + " " + thn + (i === 0 ? ")" : "");
+    select.appendChild(option);
+  }
+}
+
 function muatDataJimpitan() {
+  // Isi dropdown periode jika belum terisi
+  inisialisasiSelectBulan();
+
+  var selectPeriode = document.getElementById('select-bulan-jimpitan');
+  var bulanDipilih, tahunDipilih;
+
+  if (selectPeriode && selectPeriode.value) {
+    var parts = selectPeriode.value.split('-');
+    tahunDipilih = parseInt(parts[0], 10);
+    bulanDipilih = parseInt(parts[1], 10);
+  } else {
+    var skrg = new Date();
+    bulanDipilih = skrg.getMonth();
+    tahunDipilih = skrg.getFullYear();
+  }
+
   fetch(JIMPITAN_URL)
     .then(response => response.text())
     .then(csvText => {
       var baris = parseCSV(csvText).slice(1);
       var gridContainer = document.getElementById('grid-jimpitan');
       
-      // Semakan keselamatan jika elemen grid wujud
-      if (!gridContainer) {
-        console.error("Elemen #grid-jimpitan tidak ditemui dalam HTML!");
-        return;
-      }
+      if (!gridContainer) return;
       gridContainer.innerHTML = '';
       var grandTotal = 0;
-
-      // Filter automatik untuk bulan & tahun semasa
-      var skrg = new Date();
-      var bulanSkrg = skrg.getMonth();
-      var tahunSkrg = skrg.getFullYear();
 
       // Inisialisasi 6 Kotak Malam Ronda
       var rekapMalam = {
@@ -1018,7 +1055,7 @@ function muatDataJimpitan() {
         'Malam Sabtu': { subtotal: 0, items: [] }
       };
 
-      // Kelompokkan data dari Google Sheets
+      // Kelompokkan data dari CSV
       baris.forEach(kolom => {
         if (kolom.length >= 3 && kolom[0] !== '') {
           var tglStr = kolom[0];
@@ -1026,21 +1063,21 @@ function muatDataJimpitan() {
           var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
           var nominal = parseInt(nominalRaw, 10) || 0;
 
-          // Parsing Tarikh
+          // Parsing Tanggal
           var bagian = tglStr.split(',');
           var tglPart = bagian[0].trim().split('/');
           var timePart = bagian[1] ? bagian[1].trim().split('.') : [19, 0, 0];
           
           var dateObj = new Date(
-            tglPart[2] || tahunSkrg, 
+            tglPart[2] || tahunDipilih, 
             (tglPart[1] || 1) - 1, 
             tglPart[0] || 1, 
             timePart[0] || 19, 
             timePart[1] || 0
           );
 
-          // Hanya kira data pada bulan & tahun semasa
-          if (dateObj.getMonth() === bulanSkrg && dateObj.getFullYear() === tahunSkrg) {
+          // Filter sesuai Bulan & Tahun yang dipilih di Dropdown
+          if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
             var namaMalam = dapatkanNamaMalam(dateObj);
 
             if (namaMalam && rekapMalam[namaMalam]) {
@@ -1052,10 +1089,9 @@ function muatDataJimpitan() {
         }
       });
 
-      // Render 6 Kad Malam Ronda ke dalam Grid
+      // Render 6 Kartu Malam Ronda
       Object.keys(rekapMalam).forEach(malam => {
         var dataMalam = rekapMalam[malam];
-        
         var card = document.createElement('div');
         card.style.cssText = `
           background: #ffffff;
