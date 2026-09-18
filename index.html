@@ -274,6 +274,7 @@
         <button class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1;" onclick="bukaModalKeuangan()">
           💰 Keuangan
         </button>
+        
       </div>
       <div class="filter-row">
         <!-- Tombol Google Form (Ganti Link href sesuai kebutuhan Anda) -->
@@ -281,6 +282,13 @@
           📝 Form Warga Baru
         </a>
       </div>
+      
+<div class="filter-row">
+  <button class="btn-filter" style="background: #10b981; color: white; border-color: #059669;" onclick="bukaModalRiwayatJimpitan()">
+    🪙 Rekap Jimpitan
+  </button>
+</div>
+      
       <div class="filter-row">
         <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
         <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
@@ -359,6 +367,36 @@
     <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
   </div>
 
+<!-- Modal Riwayat Jimpitan -->
+<div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
+  <div class="modal-content" style="max-width: 500px;">
+    <div class="modal-header">
+      <h3>🪙 Rekap Hasil Jimpitan Ronda</h3>
+      <button class="close-btn" onclick="tutupModalRiwayatJimpitan()">&times;</button>
+    </div>
+    
+    <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:12px;">
+      <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Total Jimpitan Terkumpul</span>
+      <div id="total-jimpitan" style="font-size:22px; font-weight:bold;">Rp 0</div>
+    </div>
+
+    <div style="max-height: 50vh; overflow-y: auto;">
+      <table style="width:100%; font-size:12px; border-collapse:collapse;">
+        <thead>
+          <tr style="border-bottom: 2px solid #ddd; background: #f9f9f9; text-align: left;">
+            <th style="padding:8px;">Tanggal</th>
+            <th style="padding:8px;">Warga / Rumah</th>
+            <th style="padding:8px; text-align:right;">Nominal</th>
+          </tr>
+        </thead>
+        <tbody id="list-riwayat-jimpitan">
+          <tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+  
 <!-- Tombol Melayang Scan QR (Tengah Bawah) -->
 <button id="btn-scan-jimpitan" onclick="mulaiScanJimpitan()" class="btn-qr-floating">
   📷<br><span>Scan QR</span>
@@ -852,6 +890,117 @@
     function tutupModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'none';
     }
+
+function dapatkanLabelMalamRonda(dateObj) {
+  var namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+  var namaHariDepan = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
+  
+  var jam = dateObj.getHours();
+  var tgl = dateObj.getDate().toString().padStart(2, '0');
+  var bln = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+  var thn = dateObj.getFullYear();
+
+  // Jika scan jam 18:00 - 23:59 -> Masuk Malam (Hari Esok)
+  // Jika scan jam 00:00 - 06:00 -> Tetap Malam (Hari Ini)
+  var hariIdx = dateObj.getDay();
+  var labelMalam = '';
+  var tanggalFormat = `${tgl}/${bln}/${thn}`;
+
+  if (jam >= 18) {
+    labelMalam = `Malam ${namaHariDepan[hariIdx]} (${tanggalFormat})`;
+  } else if (jam < 6) {
+    labelMalam = `Malam ${namaHari[hariIdx]} (${tanggalFormat})`;
+  } else {
+    // Jika diisi siang hari, dikelompokkan berdasarkan tanggalnya
+    labelMalam = `${namaHari[hariIdx]} Siang (${tanggalFormat})`;
+  }
+
+  return labelMalam;
+}
+
+function muatDataJimpitan() {
+  fetch(JIMPITAN_URL)
+    .then(response => response.text())
+    .then(csvText => {
+      var baris = parseCSV(csvText).slice(1);
+      var tbody = document.getElementById('list-riwayat-jimpitan');
+      tbody.innerHTML = '';
+      var grandTotal = 0;
+
+      if (baris.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Belum ada catatan jimpitan.</td></tr>';
+        document.getElementById('total-jimpitan').innerText = 'Rp 0';
+        return;
+      }
+
+      // Kelompokkan data berdasarkan Malam Ronda
+      var kelompok = {};
+
+      baris.forEach(kolom => {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          var tglStr = kolom[0];
+          var warga = kolom[1] || '-';
+          var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
+          var nominal = parseInt(nominalRaw, 10) || 0;
+
+          // Parsing string tanggal ke Objek Date
+          // Menangani format: "18/09/2026, 21.30.00" atau ISO string
+          var bagian = tglStr.split(',');
+          var tglPart = bagian[0].trim().split('/');
+          var timePart = bagian[1] ? bagian[1].trim().split('.') : [19, 0, 0];
+          
+          var dateObj = new Date(
+            tglPart[2] || 2026, 
+            (tglPart[1] || 1) - 1, 
+            tglPart[0] || 1, 
+            timePart[0] || 19, 
+            timePart[1] || 0
+          );
+
+          var keyMalam = dapatkanLabelMalamRonda(dateObj);
+
+          if (!kelompok[keyMalam]) {
+            kelompok[keyMalam] = { items: [], subtotal: 0 };
+          }
+
+          kelompok[keyMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+          kelompok[keyMalam].subtotal += nominal;
+          grandTotal += nominal;
+        }
+      });
+
+      // Tampilkan ke tabel (diurutkan dari grup malam terbaru)
+      Object.keys(kelompok).reverse().forEach(key => {
+        var grup = kelompok[key];
+
+        // Header Kelompok (Nama Malam & Subtotal)
+        var trHeader = document.createElement('tr');
+        trHeader.innerHTML = `
+          <td colspan="3" style="background:#e6f4ea; padding:8px; font-weight:bold; color:#047857; border-top:2px solid #a7f3d0;">
+            🌙 ${key} — <span style="float:right;">Total: Rp ${grup.subtotal.toLocaleString('id-ID')}</span>
+          </td>
+        `;
+        tbody.appendChild(trHeader);
+
+        // Isi transaksi di malam tersebut
+        grup.items.reverse().forEach(item => {
+          var tr = document.createElement('tr');
+          tr.style.borderBottom = '1px solid #f0f0f0';
+          tr.innerHTML = `
+            <td style="padding:6px 12px; font-size:11px; color:#666;">${escapeHtml(item.waktu)}</td>
+            <td style="padding:6px 12px; color:#333;">${escapeHtml(item.wargs || item.warga)}</td>
+            <td style="padding:6px 12px; text-align:right; font-weight:bold; color:#059669;">
+              Rp ${item.nominal.toLocaleString('id-ID')}
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      });
+
+      document.getElementById('total-jimpitan').innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
+    })
+    .catch(err => console.error("Gagal muat data jimpitan:", err));
+}
 
 // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
 const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzLblHq-ECpLSC5XK4KgjnoNpnkVWm4bJyzPbLGep3Ux5C3LQH3jVOfQFXaKmvVd4bZgg/exec';
