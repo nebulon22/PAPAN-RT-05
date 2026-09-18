@@ -291,7 +291,9 @@
   </style>
 </head>
 <body>
-
+<div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; display: inline-block; margin-bottom: 10px;">
+  🟢 Semua Data Ter-sinkron
+</div>
   <!-- Tombol Navigasi ke Halaman Admin (Ikon Gembok) -->
 <a href="admin.html" class="btn-back-floating">🔒 Admin</a>
   <!-- Peta Utama -->
@@ -1029,47 +1031,69 @@ function stopScanQR() {
   }
 }
 
-function simpanJimpitan() {
-  const nominal = document.getElementById('jimpitanNominal').value;
-  if (nominal === '') {
-    alert("Harap masukkan nominal terlebih dahulu!");
-    return;
+function perbaruiIndikatorSync() {
+  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
+  let badge = document.getElementById('status-sync');
+
+  if (!badge) return;
+
+  if (antrean.length === 0) {
+    badge.innerHTML = '🟢 Semua Data Ter-sinkron';
+    badge.style.backgroundColor = '#d1fae5';
+    badge.style.color = '#065f46';
+  } else {
+    badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
+    badge.style.backgroundColor = '#fef3c7';
+    badge.style.color = '#92400e';
   }
+}
 
-  const btn = document.getElementById('btnSimpanJimpitan');
-  btn.innerText = '⏳ Menyimpan...';
-  btn.disabled = true;
+// Panggil fungsi ini setiap kali aplikasi dibuka atau selesai scan
+window.addEventListener('load', perbaruiIndikatorSync);
+    
+function simpanJimpitan(dataBaru) {
+  // 1. Simpan dulu ke memori HP (localStorage)
+  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
+  antrean.push(dataBaru);
+  localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
 
-  // Payload tanpa meminta PIN Admin karena ini di halaman publik warga
-  const payload = {
-    action: 'jimpitan',
-    warga: document.getElementById('jimpitanNamaWarga').value,
-    nominal: nominal,
-    tanggal: new Date().toLocaleString('id-ID')
-  };
+  // 2. Langsung beri respon cepat ke bapak ronda (Tanpa Menunggu Internet)
+  tampilkanNotifikasiBerhasil("Jimpitan berhasil dicatat!");
+  resetFormScan();
 
-  fetch(GAS_WEB_APP_URL, {
+  // 3. Coba kirim antrean data ke Google Sheets di latar belakang
+  prosesKirimAntrean();
+}
+
+function prosesKirimAntrean() {
+  // Jika tidak ada koneksi internet, hentikan dulu (nanti dicoba lagi otomatis)
+  if (!navigator.onLine) return;
+
+  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
+  if (antrean.length === 0) return;
+
+  // Ambil data paling awal untuk dikirim
+  let item = antrean[0];
+
+  fetch(JIMPITAN_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(item)
   })
-  .then(res => res.text())
-  .then(result => {
-    btn.innerText = '💾 Simpan Jimpitan';
-    btn.disabled = false;
-    if(result.includes('SUCCESS')) {
-      alert('✅ Jimpitan berhasil dicatat!');
-      document.getElementById('modal-jimpitan').style.display = 'none';
-    } else {
-      alert('❌ Gagal mencatat: ' + result);
-    }
+  .then(res => {
+    // Jika berhasil terkirim ke Google Sheet, hapus dari antrean HP
+    antrean.shift();
+    localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
+    
+    // Kirim item berikutnya jika masih ada sisa antrean
+    if (antrean.length > 0) prosesKirimAntrean();
   })
   .catch(err => {
-    btn.innerText = '💾 Simpan Jimpitan';
-    btn.disabled = false;
-    alert('❌ Error koneksi: ' + err);
+    console.log("Sinyal lemah/kuota habis. Data tersimpan di HP dan akan dikirim ulang nanti.");
   });
 }
+
+// Otomatis kirim ulang antrean saat HP mendapat sinyal/internet kembali
+window.addEventListener('online', prosesKirimAntrean);
 
 // Ganti angka di bawah dengan GID tab Jimpitan Anda
 var GID_JIMPITAN = '515393252'; 
