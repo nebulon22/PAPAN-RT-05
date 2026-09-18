@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-app-v2';
+const CACHE_NAME = 'jimpitan-app-v3'; // Versi dinaikkan agar cache diperbarui
 
 self.addEventListener('install', (e) => {
   self.skipWaiting(); // Paksa Service Worker baru langsung aktif
@@ -7,7 +7,8 @@ self.addEventListener('install', (e) => {
       return cache.addAll([
         './',
         './index.html',
-        './kentongan-slit-drum.png'
+        './kentongan-slit-drum.png',
+        './html5-qrcode.min.js' // <-- Wajib ditambahkan di sini
       ]);
     })
   );
