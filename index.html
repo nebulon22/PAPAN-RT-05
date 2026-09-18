@@ -892,27 +892,37 @@
     }
 
 function dapatkanLabelMalamRonda(dateObj) {
-  // Pemetaan hari ke nama Malam Ronda
-  // Jumat = Malam Sabtu, Sabtu = Malam Minggu, dst.
-  var daftarMalam = [
-    'Malam Senin',  // Minggu (0)
-    'Malam Selasa', // Senin (1)
-    'Malam Rabu',   // Selasa (2)
-    'Malam Kamis',  // Rabu (3)
-    'Malam Jumat',  // Kamis (4)
-    'Malam Sabtu',  // Jumat (5)
-    'Malam Minggu'  // Sabtu (6)
-  ];
+  var jam = dateObj.getHours();
+
+  // 1. Jika di luar jam ronda (06.00 Pagi - 17.59 Sore)
+  if (jam >= 6 && jam < 18) {
+    var namaHari = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
+    var tgl = dateObj.getDate().toString().padStart(2, '0');
+    var bln = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+    var thn = dateObj.getFullYear();
+    return `${namaHari[dateObj.getDay()]} Siang (${tgl}/${bln}/${thn})`;
+  }
+
+  // 2. Untuk Jam Ronda (18.00 Sore - 05.59 Pagi)
+  // Geser waktu 6 jam ke belakang agar jam 00.00 - 05.59 pagi menyatu dengan malam sebelumnya
+  var adjustedDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
   
-  var tgl = dateObj.getDate().toString().padStart(2, '0');
-  var bln = (dateObj.getMonth() + 1).toString().padStart(2, '0');
-  var thn = dateObj.getFullYear();
-  var tanggalFormat = `${tgl}/${bln}/${thn}`;
+  var mapMalam = [
+    'Malam Senin',  // Minggu malam
+    'Malam Selasa', // Senin malam
+    'Malam Rabu',   // Selasa malam
+    'Malam Kamis',  // Rabu malam
+    'Malam Jumat',  // Kamis malam
+    'Malam Sabtu',  // Jumat malam
+    'Malam Minggu'  // Sabtu malam
+  ];
 
-  var hariIdx = dateObj.getDay();
-  var label = daftarMalam[hariIdx];
-
-  return `${label} (${tanggalFormat})`;
+  var tglAdj = adjustedDate.getDate().toString().padStart(2, '0');
+  var blnAdj = (adjustedDate.getMonth() + 1).toString().padStart(2, '0');
+  var thnAdj = adjustedDate.getFullYear();
+  
+  var label = mapMalam[adjustedDate.getDay()];
+  return `${label} (${tglAdj}/${blnAdj}/${thnAdj})`;
 }
 
 function muatDataJimpitan() {
