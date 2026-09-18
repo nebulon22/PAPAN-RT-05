@@ -998,21 +998,76 @@ function setNominal(nilai) {
   document.getElementById('jimpitanNominal').value = nilai;
 }
 
+// Variabel status global
+let html5QrcodeScanner = null;
+let sedangScanning = false;
+
 function mulaiScanJimpitan() {
+  // 1. Tampilkan modal scanner
   document.getElementById('modal-qr-scanner').style.display = 'flex';
-  html5QrcodeScanner = new Html5Qrcode("qr-reader");
-  
-  html5QrcodeScanner.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: { width: 220, height: 220 } },
-    onScanJimpitanSuccess
-  ).catch(err => {
-    alert("Gagal membuka kamera: " + err);
-    stopScanQR();
-  });
+
+  // 2. Bersihkan elem DOM qr-reader dari sisa scan sebelumnya
+  let qrElement = document.getElementById('qr-reader');
+  if (qrElement) qrElement.innerHTML = '';
+
+  // Fungsi internal untuk eksekusi buka kamera
+  const jalankanKamera = () => {
+    try {
+      html5QrcodeScanner = new Html5Qrcode("qr-reader");
+      let config = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+      // Coba pakai facingMode dulu (paling cocok untuk HP)
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        config,
+        onScanJimpitanSuccess
+      ).then(() => {
+        sedangScanning = true;
+      }).catch(err => {
+        console.warn("facingMode gagal, mencoba fallback ke daftar kamera...", err);
+
+        // FALLBACK: Cari kamera menggunakan getCameras() jika facingMode gagal
+        Html5Qrcode.getCameras().then(devices => {
+          if (devices && devices.length > 0) {
+            // Ambil kamera terakhir (biasanya kamera belakang di HP)
+            let selectedId = devices[devices.length - 1].id;
+
+            html5QrcodeScanner.start(
+              selectedId,
+              config,
+              onScanJimpitanSuccess
+            ).then(() => {
+              sedangScanning = true;
+            }).catch(err2 => {
+              alert("Gagal membuka kamera: " + err2);
+              tutupModalDanBersihkan();
+            });
+          } else {
+            alert("Tidak ada kamera yang terdeteksi.");
+            tutupModalDanBersihkan();
+          }
+        }).catch(err3 => {
+          alert("Izin kamera ditolak atau perangkat tidak mendukung: " + err3);
+          tutupModalDanBersihkan();
+        });
+      });
+    } catch (e) {
+      alert("Gagal inisialisasi scanner: " + e.message);
+      tutupModalDanBersihkan();
+    }
+  };
+
+  // 3. Jika scanner lama masih aktif, matikan dulu dengan aman
+  if (html5QrcodeScanner && sedangScanning) {
+    sedangScanning = false;
+    html5QrcodeScanner.stop().then(jalankanKamera).catch(jalankanKamera);
+  } else {
+    jalankanKamera();
+  }
 }
 
 function onScanJimpitanSuccess(decodedText) {
+  if (!sedangScanning) return;
   stopScanQR();
   document.getElementById('jimpitanNamaWarga').value = decodedText;
   document.getElementById('jimpitanNominal').value = ''; 
@@ -1020,17 +1075,33 @@ function onScanJimpitanSuccess(decodedText) {
 }
 
 function stopScanQR() {
-  if (html5QrcodeScanner) {
+  document.getElementById('modal-qr-scanner').style.display = 'none';
+
+  // HANYA panggil .stop() JIKA scanner terbukti sedang aktif berjalan
+  if (html5QrcodeScanner && sedangScanning) {
+    sedangScanning = false;
     html5QrcodeScanner.stop().then(() => {
-      document.getElementById('modal-qr-scanner').style.display = 'none';
-      html5QrcodeScanner = null;
-    }).catch(() => {
-      document.getElementById('modal-qr-scanner').style.display = 'none';
-      html5QrcodeScanner = null;
+      bersihkanScanner();
+    }).catch(err => {
+      console.warn("Gagal menghentikan scanner secara normal:", err);
+      bersihkanScanner();
     });
   } else {
-    document.getElementById('modal-qr-scanner').style.display = 'none';
+    bersihkanScanner();
   }
+}
+
+// Fungsi pembantu untuk pembersihan total
+function tutupModalDanBersihkan() {
+  document.getElementById('modal-qr-scanner').style.display = 'none';
+  bersihkanScanner();
+}
+
+function bersihkanScanner() {
+  html5QrcodeScanner = null;
+  sedangScanning = false;
+  let qrElement = document.getElementById('qr-reader');
+  if (qrElement) qrElement.innerHTML = ''; // Kosongkan elemen HTML
 }
 
 function perbaruiIndikatorSync() {
