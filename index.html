@@ -681,100 +681,107 @@
       if (e.target.id === 'modal-info') tutupModalInfo();
     }
 
-    function sorotLokasi(lokasiEncoded) {
-      var namaLokasi = decodeURIComponent(lokasiEncoded).trim();
-      tutupModalInfo();
+function sorotLokasi(lokasiEncoded) {
+  var namaLokasi = decodeURIComponent(lokasiEncoded).trim();
+  tutupModalInfo();
 
-      if (!namaLokasi) return;
+  if (!namaLokasi) return;
 
-      var kataKunci = namaLokasi.toLowerCase();
-      var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci);
+  var kataKunci = namaLokasi.toLowerCase();
+  var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci);
 
-      if (!hasil) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
-      }
-
-      if (hasil) {
-        if (pinRumahAktif) {
-          map.removeLayer(pinRumahAktif);
-          pinRumahAktif = null;
-        }
-
-        if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
-          hasil.marker.addTo(map);
-          pinRumahAktif = hasil.marker;
-        }
-
-map.flyTo([hasil.lat, hasil.lng], 19);
-
-setTimeout(() => {
-  // 1. Matikan penyesuaian otomatis bawaan Leaflet agar panBy tidak dibatalkan
-  if (hasil.marker.getPopup()) {
-    hasil.marker.getPopup().options.autoPan = false;
+  if (!hasil) {
+    hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
   }
 
-  // 2. Buka popup
-  hasil.marker.openPopup();
-
-  // 3. Geser peta ke atas agar pin & popup turun di bawah menu
-  map.panBy([0, -220]);
-}, 800);
-
-    function filterKategori(kat, btnElement) {
-      document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
-      btnElement.classList.add('active');
-
-      daftarPin.forEach(pin => {
-        map.removeLayer(pin.marker);
-
-        if (!pin.hidden) {
-          if (kat === 'semua') {
-            pin.marker.addTo(map);
-          } else if (pin.kategori === kat) {
-            pin.marker.addTo(map);
-          }
-        }
-      });
+  if (hasil) {
+    if (pinRumahAktif) {
+      map.removeLayer(pinRumahAktif);
+      pinRumahAktif = null;
     }
 
-    function cariLokasi() {
-      var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
-      if (!kataKunci) return;
-
-      var hasil = null;
-      hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
-
-      if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10);
-        
-        hasil = daftarPin.find(pin => {
-          var kataKata = pin.nama.split(/[\s,().-]+/);
-          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-        });
-      }
-
-      if (!hasil && !/^\d+$/.test(kataKunci)) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
-      }
-      
-      if (hasil) {
-        if (pinRumahAktif) {
-          map.removeLayer(pinRumahAktif);
-          pinRumahAktif = null;
-        }
-
-        if (!map.hasLayer(hasil.marker)) {
-          hasil.marker.addTo(map);
-          pinRumahAktif = hasil.marker;
-        }
-
-        map.flyTo([hasil.lat, hasil.lng], 19);
-        setTimeout(() => { hasil.marker.openPopup(); }, 800);
-      } else {
-        alert("Nomor atau nama tempat tidak ditemukan.");
-      }
+    if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
+      hasil.marker.addTo(map);
+      pinRumahAktif = hasil.marker;
     }
 
+    map.flyTo([hasil.lat, hasil.lng], 19);
+
+    setTimeout(() => {
+      if (hasil.marker.getPopup()) {
+        hasil.marker.getPopup().options.autoPan = false;
+      }
+      hasil.marker.openPopup();
+      map.panBy([0, -220]);
+    }, 800);
+  }
+} // <--- KURUNG TUTUP DI SINI SEBELUMNYA HILANG
+
+function filterKategori(kat, btnElement) {
+  document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
+  btnElement.classList.add('active');
+
+  daftarPin.forEach(pin => {
+    map.removeLayer(pin.marker);
+
+    if (!pin.hidden) {
+      if (kat === 'semua') {
+        pin.marker.addTo(map);
+      } else if (pin.kategori === kat) {
+        pin.marker.addTo(map);
+      }
+    }
+  });
+}
+
+function cariLokasi() {
+  var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
+  if (!kataKunci) return;
+
+  var hasil = null;
+  hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+
+  if (!hasil && /^\d+$/.test(kataKunci)) {
+    var angkaCari = parseInt(kataKunci, 10);
+    
+    hasil = daftarPin.find(pin => {
+      var kataKata = pin.nama.split(/[\s,().-]+/);
+      return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
+    });
+  }
+
+  if (!hasil && !/^\d+$/.test(kataKunci)) {
+    hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
+  }
+  
+  if (hasil) {
+    if (pinRumahAktif) {
+      map.removeLayer(pinRumahAktif);
+      pinRumahAktif = null;
+    }
+
+    if (!map.hasLayer(hasil.marker)) {
+      hasil.marker.addTo(map);
+      pinRumahAktif = hasil.marker;
+    }
+
+    map.flyTo([hasil.lat, hasil.lng], 19);
+
+    // DITERAPKAN JUGA DI SINI (Pencarian via Input Box):
+    setTimeout(() => {
+      if (hasil.marker.getPopup()) {
+        hasil.marker.getPopup().options.autoPan = false;
+      }
+      hasil.marker.openPopup();
+      map.panBy([0, -220]);
+    }, 800);
+
+  } else {
+    alert("Nomor atau nama tempat tidak ditemukan.");
+  }
+}
+
+    
     function bukaFotoBesar(src, e) {
       if (e) e.stopPropagation();
       var modal = document.getElementById('modal-foto');
