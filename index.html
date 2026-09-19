@@ -1306,38 +1306,38 @@ function muatDataJimpitan() {
         'Malam Sabtu': { subtotal: 0, items: [] }
       };
 
-      // Kelompokkan data dari CSV
-      baris.forEach(kolom => {
-        if (kolom.length >= 3 && kolom[0] !== '') {
-          var tglStr = kolom[0];
-          var warga = kolom[1] || '-';
-          var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
-          var nominal = parseInt(nominalRaw, 10) || 0;
+     // Kelompokkan data dari CSV
+baris.forEach(kolom => {
+  if (kolom.length >= 3 && kolom[0] !== '') {
+    var tglStr = kolom[0];
+    var warga = kolom[1] || '-';
+    var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
+    var nominal = parseInt(nominalRaw, 10) || 0;
 
-          // Parsing Tanggal
-          var bagian = tglStr.split(',');
-          var tglPart = bagian[0].trim().split('/');
-          var timePart = bagian[1] ? bagian[1].trim().split('.') : [19, 0, 0];
-          
-          var dateObj = new Date(
-            tglPart[2] || tahunDipilih, 
-            (tglPart[1] || 1) - 1, 
-            tglPart[0] || 1, 
-            timePart[0] || 19, 
-            timePart[1] || 0
-          );
+    // Parsing Tanggal Fleksibel (Mengambil semua angka tanpa peduli pemisah koma/titik/garis miring)
+    var angkaTanggal = tglStr.match(/\d+/g); 
+    if (angkaTanggal && angkaTanggal.length >= 3) {
+      var tgl = parseInt(angkaTanggal[0], 10);
+      var bln = parseInt(angkaTanggal[1], 10) - 1; // Bulan di JS dimulai dari 0
+      var thn = parseInt(angkaTanggal[2], 10);
+      var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+      var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
 
-          // Filter sesuai Bulan & Tahun yang dipilih di Dropdown
-          if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
-            var namaMalam = dapatkanNamaMalam(dateObj);
+      var dateObj = new Date(thn, bln, tgl, jam, menit);
 
-            if (namaMalam && rekapMalam[namaMalam]) {
-              rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-              rekapMalam[namaMalam].subtotal += nominal;
-              grandTotal += nominal;
-            }
-          }
+      // Filter sesuai Bulan & Tahun yang dipilih di Dropdown
+      if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
+        var namaMalam = dapatkanNamaMalam(dateObj);
+
+        if (namaMalam && rekapMalam[namaMalam]) {
+          rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+          rekapMalam[namaMalam].subtotal += nominal;
+          grandTotal += nominal;
         }
+      }
+    }
+  }
+});
       });
 
       // Render 6 Kartu Malam Ronda
