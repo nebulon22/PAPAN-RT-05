@@ -1038,7 +1038,71 @@ function mainkanSuaraBeep() {
   }
 }
 
-// --- FITUR SCANNER CAMERA ---
+// --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
+const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyM9_a_pLonArBto4ihuNkDkAuqYHvLEIuNwrsce99in8uNXJKDQF0TmhR94woGzZUeXw/exec';
+
+// Variable Global AudioContext
+let audioCtx = null;
+
+// Status Global Scanner & Sync
+let html5QrcodeScanner = null;
+let sedangScanning = false;
+let sedangMengirim = false;
+
+function setNominal(nilai) {
+  document.getElementById('jimpitanNominal').value = nilai;
+}
+
+// --- FUNGSI AUDIO BEEP (1000 Hz, Halus & Empuk) ---
+function mainkanSuaraBeep() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    // Frekuensi 1000 Hz (Nada "Beep" standar scanner kasir)
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1000, now);
+
+    // Mencegah bunyi "klik/pop" dengan fade-in & fade-out halus
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+    gain.gain.linearRampToValueAtTime(0, now + 0.15);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.15);
+  } catch (e) {
+    console.log("Audio error:", e);
+  }
+}
+
+// Pembuka Gembok Audio PWA pada sentuhan/klik pertama
+function bukaGembokAudioPWA() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  document.removeEventListener('touchstart', bukaGembokAudioPWA);
+  document.removeEventListener('click', bukaGembokAudioPWA);
+}
+
+document.addEventListener('touchstart', bukaGembokAudioPWA, { passive: true });
+document.addEventListener('click', bukaGembokAudioPWA, { passive: true });
+
+// --- 1. FITUR SCANNER CAMERA ---
 function mulaiScanJimpitan() {
   // Pancing izin audio saat tombol diklik pertama kali
   mainkanSuaraBeep();
@@ -1148,11 +1212,9 @@ function bersihkanScanner() {
 
 // --- 2. FITUR SINKRONISASI OFFLINE ---
 
-// Memperbarui semua elemen indikator status sync di UI
 function perbaruiIndikatorSync() {
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
 
-  // Update Badge warna (jika ada di HTML)
   let badge = document.getElementById('status-sync');
   if (badge) {
     if (antrean.length === 0) {
@@ -1166,7 +1228,6 @@ function perbaruiIndikatorSync() {
     }
   }
 
-  // Update Teks Notif Pending (jika ada di HTML)
   let elNotif = document.getElementById('notif-pending');
   if (elNotif) {
     if (antrean.length > 0) {
@@ -1178,7 +1239,6 @@ function perbaruiIndikatorSync() {
   }
 }
 
-// Eksekusi pengiriman data dari localStorage ke Google Sheets
 async function kirimDataPendingJimpitan() {
   if (sedangMengirim) return;
 
@@ -1210,7 +1270,6 @@ async function kirimDataPendingJimpitan() {
   perbaruiIndikatorSync();
 }
 
-// FUNGSI UTAMA: Menyimpan Data Jimpitan
 function simpanJimpitan(dataInput) {
   let dataBaru = null;
 
@@ -1241,12 +1300,10 @@ function simpanJimpitan(dataInput) {
     };
   }
 
-  // A. Simpan ke memori HP (localStorage)
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
 
-  // B. Respons Cepat UI (Notifikasi & Reset Form)
   if (typeof tampilkanNotifikasiBerhasil === 'function') {
     tampilkanNotifikasiBerhasil("Jimpitan berhasil dicatat!");
   } else {
@@ -1264,16 +1321,13 @@ function simpanJimpitan(dataInput) {
     if (elNominal) elNominal.value = '';
   }
 
-  // C. Update indikator status
   if (typeof perbaruiIndikatorSync === 'function') {
     perbaruiIndikatorSync();
   }
 
-  // D. Jalankan pengiriman antrean ke Google Sheets
   kirimDataPendingJimpitan();
 }
 
-// Event Listeners Otomatis
 window.addEventListener('online', () => {
   console.log("Koneksi kembali terhubung. Mengirim data pending...");
   kirimDataPendingJimpitan();
@@ -1285,7 +1339,6 @@ document.addEventListener('DOMContentLoaded', () => {
     kirimDataPendingJimpitan();
   }
 });
-
 
 // --- 3. FITUR REKAP & RIWAYAT JIMPITAN ---
 var GID_JIMPITAN = '515393252'; 
@@ -1345,7 +1398,6 @@ function muatDataJimpitan() {
         'Malam Sabtu': { subtotal: 0, items: [] }
       };
 
-      // Kelompokkan data dari CSV
       baris.forEach(kolom => {
         if (kolom.length >= 3 && kolom[0] !== '') {
           var tglStr = kolom[0];
@@ -1376,7 +1428,6 @@ function muatDataJimpitan() {
         }
       });
 
-      // Render 6 Kartu Malam Ronda
       Object.keys(rekapMalam).forEach(malam => {
         var dataMalam = rekapMalam[malam];
         var card = document.createElement('div');
@@ -1442,58 +1493,7 @@ function tutupModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
 }
 
-    // Variable audio global
-let audioCtx = null;
-
-// FUNGSI KHUSUS PWA: Membuka gembok audio pada sentuhan/klik pertama di aplikasi
-function bukaGembokAudioPWA() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-  // Lepas listener setelah berhasil diaktifkan sekali
-  document.removeEventListener('touchstart', bukaGembokAudioPWA);
-  document.removeEventListener('click', bukaGembokAudioPWA);
-}
-
-// Pasang pendeteksi sentuhan pertama begitu PWA dibuka
-document.addEventListener('touchstart', bukaGembokAudioPWA, { passive: true });
-document.addEventListener('click', bukaGembokAudioPWA, { passive: true });
-
-
-// FUNGSI SUARA BEEP "PiiiP"
-function mainkanSuaraBeep() {
-  try {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    // Nada tinggi 2200 Hz khas scanner kasir (PiiiP)
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(2200, audioCtx.currentTime);
-
-    // Envelope nada agar nyaring dan tidak ada bunyi klik
-    const durasi = 0.18; // 0,18 detik
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durasi);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start(audioCtx.currentTime);
-    osc.stop(audioCtx.currentTime + durasi);
-  } catch (e) {
-    console.log("Audio error:", e);
-  }
-}
+   
 </script>
 </body>
 </html>
