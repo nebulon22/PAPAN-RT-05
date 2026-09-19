@@ -988,8 +988,7 @@ function dapatkanNamaMalam(dateObj) {
 }
 
 
-    
-// --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
+
 // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
 const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyM9_a_pLonArBto4ihuNkDkAuqYHvLEIuNwrsce99in8uNXJKDQF0TmhR94woGzZUeXw/exec';
 
@@ -1004,6 +1003,9 @@ function setNominal(nilai) {
 
 // --- 1. FITUR SCANNER CAMERA ---
 function mulaiScanJimpitan() {
+  // 🔊 PANCING IZIN AUDIO: Dipanggil saat tombol diklik agar browser mengizinkan suara saat scan
+  mainkanSuaraBeep();
+
   document.getElementById('modal-qr-scanner').style.display = 'flex';
 
   let qrElement = document.getElementById('qr-reader');
@@ -1155,8 +1157,6 @@ async function kirimDataPendingJimpitan() {
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
         body: new URLSearchParams(item)
       });
-      // Dengan mode 'no-cors', jika tidak masuk ke catch (error koneksi), 
-      // artinya request berhasil terdorong ke Google Script.
     } catch (err) {
       console.warn("Gagal terhubung ke jaringan:", err);
       sisaAntrean.push(item);
@@ -1168,11 +1168,10 @@ async function kirimDataPendingJimpitan() {
   perbaruiIndikatorSync();
 }
 
-// 1. FUNGSI UTAMA: Menyimpan Data Jimpitan
+// FUNGSI UTAMA: Menyimpan Data Jimpitan
 function simpanJimpitan(dataInput) {
   let dataBaru = null;
 
-  // Jika dataInput dipassing dari parameter (misal dari QR Scanner)
   if (dataInput && typeof dataInput === 'object') {
     dataBaru = {
       action: 'jimpitan',
@@ -1181,7 +1180,6 @@ function simpanJimpitan(dataInput) {
       nominal: parseInt(dataInput.nominal, 10) || 0
     };
   } else {
-    // Jika dipanggil dari tombol (onclick) tanpa parameter, ambil dari Form HTML
     let elNama = document.getElementById('jimpitanNamaWarga');
     let elNominal = document.getElementById('jimpitanNominal');
 
@@ -1247,35 +1245,30 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
-
-    
-// Ganti angka di bawah dengan GID tab Jimpitan Anda
+// --- 3. FITUR REKAP & RIWAYAT JIMPITAN ---
 var GID_JIMPITAN = '515393252'; 
 var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
 
-// Fungsi pembantu untuk membuat daftar opsi bulan otomatis
 function inisialisasiSelectBulan() {
   var select = document.getElementById('select-bulan-jimpitan');
-  if (!select || select.children.length > 0) return; // Jika sudah diisi, jangan isi ulang
+  if (!select || select.children.length > 0) return;
 
   var namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
   var skrg = new Date();
 
-  // Buat pilihan untuk bulan ini dan 5 bulan ke belakang
   for (var i = 0; i < 6; i++) {
     var d = new Date(skrg.getFullYear(), skrg.getMonth() - i, 1);
     var bln = d.getMonth();
     var thn = d.getFullYear();
     
     var option = document.createElement('option');
-    option.value = thn + '-' + bln; // Format value: YYYY-MM
+    option.value = thn + '-' + bln;
     option.text = (i === 0 ? "Bulan Ini (" : "") + namaBulan[bln] + " " + thn + (i === 0 ? ")" : "");
     select.appendChild(option);
   }
 }
 
 function muatDataJimpitan() {
-  // Isi dropdown periode jika belum terisi
   inisialisasiSelectBulan();
 
   var selectPeriode = document.getElementById('select-bulan-jimpitan');
@@ -1301,7 +1294,6 @@ function muatDataJimpitan() {
       gridContainer.innerHTML = '';
       var grandTotal = 0;
 
-      // Inisialisasi 6 Kotak Malam Ronda
       var rekapMalam = {
         'Malam Senin': { subtotal: 0, items: [] },
         'Malam Selasa': { subtotal: 0, items: [] },
@@ -1311,39 +1303,36 @@ function muatDataJimpitan() {
         'Malam Sabtu': { subtotal: 0, items: [] }
       };
 
-     // Kelompokkan data dari CSV
-baris.forEach(kolom => {
-  if (kolom.length >= 3 && kolom[0] !== '') {
-    var tglStr = kolom[0];
-    var warga = kolom[1] || '-';
-    var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
-    var nominal = parseInt(nominalRaw, 10) || 0;
+      // Kelompokkan data dari CSV
+      baris.forEach(kolom => {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          var tglStr = kolom[0];
+          var warga = kolom[1] || '-';
+          var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
+          var nominal = parseInt(nominalRaw, 10) || 0;
 
-    // Parsing Tanggal Fleksibel (Mengambil semua angka tanpa peduli pemisah koma/titik/garis miring)
-    var angkaTanggal = tglStr.match(/\d+/g); 
-    if (angkaTanggal && angkaTanggal.length >= 3) {
-      var tgl = parseInt(angkaTanggal[0], 10);
-      var bln = parseInt(angkaTanggal[1], 10) - 1; // Bulan di JS dimulai dari 0
-      var thn = parseInt(angkaTanggal[2], 10);
-      var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-      var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+          var angkaTanggal = tglStr.match(/\d+/g); 
+          if (angkaTanggal && angkaTanggal.length >= 3) {
+            var tgl = parseInt(angkaTanggal[0], 10);
+            var bln = parseInt(angkaTanggal[1], 10) - 1;
+            var thn = parseInt(angkaTanggal[2], 10);
+            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
 
-      var dateObj = new Date(thn, bln, tgl, jam, menit);
+            var dateObj = new Date(thn, bln, tgl, jam, menit);
 
-      // Filter sesuai Bulan & Tahun yang dipilih di Dropdown
-      if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
-        var namaMalam = dapatkanNamaMalam(dateObj);
+            if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
+              var namaMalam = dapatkanNamaMalam(dateObj);
 
-        if (namaMalam && rekapMalam[namaMalam]) {
-          rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-          rekapMalam[namaMalam].subtotal += nominal;
-          grandTotal += nominal;
+              if (namaMalam && rekapMalam[namaMalam]) {
+                rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+                rekapMalam[namaMalam].subtotal += nominal;
+                grandTotal += nominal;
+              }
+            }
+          }
         }
-      }
-    }
-  }
-});
-     
+      });
 
       // Render 6 Kartu Malam Ronda
       Object.keys(rekapMalam).forEach(malam => {
@@ -1363,23 +1352,22 @@ baris.forEach(kolom => {
         if (dataMalam.items.length === 0) {
           itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
         } else {
-        itemListHTML = dataMalam.items.reverse().map(item => {
-  var isAbsen = item.nominal === 0;
+          itemListHTML = dataMalam.items.reverse().map(item => {
+            var isAbsen = item.nominal === 0;
+            var warnaNominal = isAbsen ? '#dc2626' : '#059669';
+            var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
 
-  var warnaNominal = isAbsen ? '#dc2626' : '#059669';
-  var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
-
-  return `
-    <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
-      <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">
-        ${escapeHtml(item.warga)}
-      </span>
-      <span style="color: ${warnaNominal}; font-weight: bold;">
-        Rp ${item.nominal.toLocaleString('id-ID')}
-      </span>
-    </div>
-  `;
-}).join('');
+            return `
+              <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
+                <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">
+                  ${escapeHtml(item.warga)}
+                </span>
+                <span style="color: ${warnaNominal}; font-weight: bold;">
+                  Rp ${item.nominal.toLocaleString('id-ID')}
+                </span>
+              </div>
+            `;
+          }).join('');
         }
 
         card.innerHTML = `
@@ -1412,24 +1400,18 @@ function tutupModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
 }
 
-    function mainkanSuaraBeep() {
-  try {
-    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-    
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-    
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-    
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.15);
-  } catch (e) {}
+function mainkanSuaraBeep() {
+  const audio = document.getElementById('sound-beep');
+  if (audio) {
+    audio.currentTime = 0;
+    audio.play().catch(function(err) {
+      console.log("Izin audio diblokir browser:", err);
+    });
+  }
 }
-  
-  </script>
+</script>
+
+<!-- Audio Beep Offline (Base64) -->
+<audio id="sound-beep" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFb3B1h4eGf4CChIOBhYSEhIWGh4iJi4yNj4+RkpSUlZaXmJmam5ydnp+goaKjpKWmp6ipqqutr62ur7CxsrO0tba3uLm6u7y9vr/AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==" preload="auto"></audio>
 </body>
 </html>
