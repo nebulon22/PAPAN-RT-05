@@ -76,11 +76,11 @@
           rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
         });
 
-        // Tampilkan kartu barang dengan rincian stok terpisah
+        // Tampilkan kartu barang dengan rumus yang sudah diperbaiki
         container.innerHTML = daftarPerkakas.map(item => {
-          const total = item.total || 0;
           const terpakai = rekapDipinjam[item.nama] || 0;
-          const sisaStok = total - terpakai;
+          const sisaStok = parseInt(item.total) || 0; // item.total dari GAS adalah sisa stok
+          const totalAwal = sisaStok + terpakai;      // Stok awal di Google Sheets
           
           const statusBadge = sisaStok > 0 
             ? `<span style="background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Tersedia</span>`
@@ -99,7 +99,7 @@
               <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f9fafb; padding: 8px; border-radius: 6px; font-size: 12px; text-align: center; border: 1px solid #f3f4f6;">
                 <div>
                   <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Total Stok</span>
-                  <strong style="color: #374151; font-size: 13px;">${total}</strong>
+                  <strong style="color: #374151; font-size: 13px;">${totalAwal}</strong>
                 </div>
                 <div>
                   <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Dipinjam</span>
