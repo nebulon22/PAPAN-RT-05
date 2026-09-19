@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.2.1'; // <--- Naikkan versinya tiap ada update!
+const CACHE_NAME = 'rt-kayen-v1.2.2'; // <--- Naikkan versinya tiap ada update!
 
 self.addEventListener('install', (e) => {
   self.skipWaiting(); // Paksa Service Worker baru langsung aktif
@@ -7,6 +7,7 @@ self.addEventListener('install', (e) => {
       return cache.addAll([
         './',
         './index.html',
+        './inventaris.html',
         './kentongan-slit-drum.png',
         './html5-qrcode.min.js'
       ]);
