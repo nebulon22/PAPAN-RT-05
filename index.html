@@ -1400,18 +1400,39 @@ function tutupModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
 }
 
+    // Deklarasikan variabel audio global
+let audioCtx = null;
+
 function mainkanSuaraBeep() {
-  const audio = document.getElementById('sound-beep');
-  if (audio) {
-    audio.currentTime = 0;
-    audio.play().catch(function(err) {
-      console.log("Izin audio diblokir browser:", err);
-    });
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    // Nada tinggi 2200 Hz khas scanner kasir (PiiiP)
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(2200, audioCtx.currentTime);
+
+    // Envelope nada agar nyaring dan tidak ada bunyi klik
+    const durasi = 0.18; // 0,18 detik
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durasi);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(audioCtx.currentTime);
+    osc.stop(audioCtx.currentTime + durasi);
+  } catch (e) {
+    console.log("Audio error:", e);
   }
 }
-</script>
-
-<!-- Audio Beep Offline (Base64) -->
-<audio id="sound-beep" src="data:audio/wav;base64,UklGRnoGAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQoGAACBhYqFb3B1h4eGf4CChIOBhYSEhIWGh4iJi4yNj4+RkpSUlZaXmJmam5ydnp+goaKjpKWmp6ipqqutr62ur7CxsrO0tba3uLm6u7y9vr/AwcLDxMXGx8jJysvMzc7P0NHS09TV1tfX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v8PHy8/T19vf4+fr7/P3+/w==" preload="auto"></audio>
+    
 </body>
 </html>
