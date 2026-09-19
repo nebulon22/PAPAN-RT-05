@@ -148,63 +148,7 @@
       </div>
     </div>
 
-  <!-- Section Kelola Inventaris & Peminjaman (Khusus Admin) -->
-<div style="background: white; border-radius: 8px; padding: 16px; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-  <h3 style="margin-top: 0; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
-    📦 Kelola Peminjaman Perkakas RT
-  </h3>
-
-  <!-- Form Input Peminjaman Baru -->
-  <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
-    <div>
-      <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah Warga:</label>
-      <input type="text" id="pinjamNamaWarga" placeholder="Contoh: Pak Budi (A-12)" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 12px;">
-    </div>
-
-    <div>
-      <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
-      <select id="pinjamPilihBarang" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 12px;">
-        <option value="">-- Pilih Barang --</option>
-        <option value="Tenda Hajatan (4x6m)">Tenda Hajatan (4x6m)</option>
-        <option value="Kursi Lipat Chitose">Kursi Lipat Chitose</option>
-        <option value="Meja Lipat Panjang">Meja Lipat Panjang</option>
-        <option value="Sound System Portable">Sound System Portable</option>
-        <option value="Terpal Plastik Besar">Terpal Plastik Besar</option>
-        <option value="Kompor Mawar & Dandang">Kompor Mawar & Dandang</option>
-      </select>
-    </div>
-
-    <div>
-      <label style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Dipinjam:</label>
-      <input type="number" id="pinjamJumlah" min="1" placeholder="Masukkan angka" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 12px;">
-    </div>
-
-    <div style="display: flex; align-items: flex-end;">
-      <button type="button" onclick="simpanPeminjamanAdmin()" style="width: 100%; padding: 9px; background: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">
-        ➕ Catat Peminjaman
-      </button>
-    </div>
-  </form>
-
-  <!-- Tabel Daftar Barang Sedang Dipinjam -->
-  <h4 style="margin: 10px 0 6px 0; font-size: 13px; color: #374151;">📋 Daftar Barang Belum Dikembalikan:</h4>
-  <div style="overflow-x: auto;">
-    <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
-      <thead>
-        <tr style="background: #111827; color: white;">
-          <th style="padding: 8px;">Peminjam</th>
-          <th style="padding: 8px;">Barang</th>
-          <th style="padding: 8px; text-align: center;">Jumlah</th>
-          <th style="padding: 8px; text-align: center;">Tgl Pinjam</th>
-          <th style="padding: 8px; text-align: center;">Aksi Pengembalian</th>
-        </tr>
-      </thead>
-      <tbody id="tabel-peminjaman-admin">
-        <!-- Diisi otomatis oleh JavaScript -->
-      </tbody>
-    </table>
-  </div>
-</div>  
+  
 
 
 
@@ -364,6 +308,7 @@
     function initMap() {
       map = L.map('map').setView([-7.7423, 110.3842], 17);
       L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
+      L.DomEvent.disableClickPropagation(document.getElementById('modal-admin-inventaris'));
       L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
 
       var batasRT05 = [
@@ -377,8 +322,7 @@
 
      map.on('click', function(e) {
   // 🟢 BARIS TAMBAHAN: Jika modal sedang terbuka, abaikan klik di peta
-  if (document.getElementById('modal-form').style.display === 'flex') return;
-
+if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex') return;
   document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
   document.getElementById('inputNama').value = "";
   document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
