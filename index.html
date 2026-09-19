@@ -1400,9 +1400,28 @@ function tutupModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
 }
 
-    // Deklarasikan variabel audio global
+    // Variable audio global
 let audioCtx = null;
 
+// FUNGSI KHUSUS PWA: Membuka gembok audio pada sentuhan/klik pertama di aplikasi
+function bukaGembokAudioPWA() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  // Lepas listener setelah berhasil diaktifkan sekali
+  document.removeEventListener('touchstart', bukaGembokAudioPWA);
+  document.removeEventListener('click', bukaGembokAudioPWA);
+}
+
+// Pasang pendeteksi sentuhan pertama begitu PWA dibuka
+document.addEventListener('touchstart', bukaGembokAudioPWA, { passive: true });
+document.addEventListener('click', bukaGembokAudioPWA, { passive: true });
+
+
+// FUNGSI SUARA BEEP "PiiiP"
 function mainkanSuaraBeep() {
   try {
     if (!audioCtx) {
