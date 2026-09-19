@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-app-v3'; // Versi dinaikkan agar cache diperbarui
+const CACHE_NAME = 'jimpitan-app-v4'; // Versi dinaikkan agar cache diperbarui
 
 self.addEventListener('install', (e) => {
   self.skipWaiting(); // Paksa Service Worker baru langsung aktif
