@@ -57,77 +57,81 @@
     💬 Ajukan Peminjaman via WA
   </a>
 
-  <script>
-  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbxCrth1qXpvzWznPDfaXiQUVYTHKRbHK0ePEy-45Td-aT_fnSy_oNC_vm7VjMEtWeJ5MQ/exec';
-
-  // Master Data Barang (Total awal inventaris RT)
-  const masterBarang = [
-    { nama: "Kursi Lipat Chitose", total: 100, foto: "https://via.placeholder.com/150" },
-    { nama: "Tenda Terpal 4x6m", total: 3, foto: "https://via.placeholder.com/150" },
-    { nama: "Sound System Portable", total: 2, foto: "https://via.placeholder.com/150" },
-    { nama: "Meja Lipat", total: 10, foto: "https://via.placeholder.com/150" }
-  ];
+ <script>
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyM9_a_pLonArBto4ihuNkDkAuqYHvLEIuNwrsce99in8uNXJKDQF0TmhR94woGzZUeXw/exec';
 
   document.addEventListener("DOMContentLoaded", () => {
     muatStokInventaris();
   });
 
   async function muatStokInventaris() {
-    const container = document.getElementById("daftar-inventaris"); // sesuaikan ID container card barang
+    // Pastikan ID ini sesuai dengan elemen HTML tempat nampilin daftar barang kamu
+    const container = document.getElementById("daftar-inventaris"); 
     if (!container) return;
 
-    container.innerHTML = `<div style="text-align:center; padding: 20px;">⏳ Memuat stok terbaru...</div>`;
+    container.innerHTML = `<div style="text-align:center; padding: 20px;">⏳ Memuat stok dari Google Sheets...</div>`;
 
     try {
-      // 1. Ambil data peminjaman aktif dari Google Sheets
+      // Fetch data dari doGet Apps Script
       const res = await fetch(GAS_WEB_APP_URL);
-      const dataPinjaman = await res.json();
-      
-      // Filter hanya transaksi dengan status 'Dipinjam'
+      const data = await res.json();
+
+      // Ambil array perkakas & peminjaman
+      const daftarPerkakas = data.perkakas || [];
+      const dataPinjaman = data.peminjaman || [];
+
+      if (daftarPerkakas.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Belum ada data barang di tab 'Perkakas'.</div>`;
+        return;
+      }
+
+      // Filter peminjaman aktif (Status 'Dipinjam' ada di kolom ke-6 / index 5)
       const dipinjamAktif = dataPinjaman.filter(row => row[5] === "Dipinjam");
 
-      // 2. Hitung total barang yang sedang keluar
+      // Hitung total tiap barang yang sedang dipinjam
       const rekapDipinjam = {};
       dipinjamAktif.forEach(row => {
-        const namaBarang = row[2];
-        const jumlah = parseInt(row[3]) || 0;
+        const namaBarang = row[2]; // Kolom Nama Barang
+        const jumlah = parseInt(row[3]) || 0; // Kolom Jumlah
         rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
       });
 
-      // 3. Render kartu barang dengan stok yang sudah dipotong
-      container.innerHTML = masterBarang.map(item => {
+      // Tampilkan daftar barang
+      container.innerHTML = daftarPerkakas.map(item => {
         const terpakai = rekapDipinjam[item.nama] || 0;
         const sisaStok = item.total - terpakai;
+        
         const statusBadge = sisaStok > 0 
-          ? `<span style="color: green; font-weight: bold;">Tersedia (${sisaStok})</span>`
-          : `<span style="color: red; font-weight: bold;">Habis Dipinjam</span>`;
+          ? `<span style="color: #00c853; font-weight: bold;">Tersedia (${sisaStok}/${item.total})</span>`
+          : `<span style="color: #d32f2f; font-weight: bold;">Habis Dipinjam</span>`;
 
         return `
-          <div class="card-barang" style="border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
-            <h3>${item.nama}</h3>
-            <p>Total Milik RT: ${item.total}</p>
-            <p>Status: ${statusBadge}</p>
+          <div class="card-barang" style="border: 1px solid #e5e7eb; padding: 14px; border-radius: 8px; margin-bottom: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+            ${item.foto ? `<img src="${item.foto}" style="width:100%; height:150px; object-fit:cover; border-radius:6px; margin-bottom:10px;" onError="this.style.display='none'">` : ''}
+            <h3 style="margin: 0 0 6px 0; font-size: 16px;">${item.nama}</h3>
+            <p style="margin: 0 0 12px 0; font-size: 13.5px;">Status: ${statusBadge}</p>
             <button 
               onclick="pinjamBarang('${item.nama}', ${sisaStok})" 
               ${sisaStok <= 0 ? 'disabled' : ''}
-              style="padding: 6px 12px; background: #00c853; color: white; border: none; border-radius: 4px; cursor: pointer;">
-              ${sisaStok > 0 ? 'Ajukan Pinjam' : 'Tidak Tersedia'}
+              style="padding: 8px 12px; width: 100%; background: ${sisaStok > 0 ? '#00c853' : '#ccc'}; color: white; border: none; border-radius: 6px; cursor: ${sisaStok > 0 ? 'pointer' : 'not-allowed'}; font-weight: bold;">
+              ${sisaStok > 0 ? 'Ajukan Pinjam (WA)' : 'Tidak Tersedia'}
             </button>
           </div>
         `;
       }).join('');
 
     } catch (err) {
-      container.innerHTML = `<div style="color: red; text-align:center;">Gagal memuat data inventaris.</div>`;
+      console.error(err);
+      container.innerHTML = `<div style="color: red; text-align:center; padding: 20px;">❌ Gagal memuat data dari Google Sheets.</div>`;
     }
   }
 
   function pinjamBarang(namaBarang, sisaStok) {
-    // Alur pengajuan oleh warga (misal redirect ke WhatsApp Admin)
-    const pesan = `Halo Admin RT, saya ingin meminjam *${namaBarang}*. Apakah masih ada stok ${sisaStok}?`;
-    const urlWA = `https://wa.me/6281234567890?text=${encodeURIComponent(pesan)}`;
+    const pesan = `Halo Admin RT, saya mau pinjam *${namaBarang}*. Apakah masih ada stok (${sisaStok})?`;
+    const urlWA = `https://wa.me/6281234567890?text=${encodeURIComponent(pesan)}`; // Ganti dengan nomor WA admin
     window.open(urlWA, '_blank');
   }
+
 </script>
 </body>
 </html>
