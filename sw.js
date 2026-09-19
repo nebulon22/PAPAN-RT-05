@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jimpitan-app-v4'; // Versi dinaikkan agar cache diperbarui
+const CACHE_NAME = 'rt-kayen-v1.2.0'; // <--- Naikkan versinya tiap ada update!
 
 self.addEventListener('install', (e) => {
   self.skipWaiting(); // Paksa Service Worker baru langsung aktif
@@ -8,24 +8,27 @@ self.addEventListener('install', (e) => {
         './',
         './index.html',
         './kentongan-slit-drum.png',
-        './html5-qrcode.min.js' // <-- Wajib ditambahkan di sini
+        './html5-qrcode.min.js'
       ]);
     })
   );
 });
 
-// Otomatis hapus cache versi lama di HP
+// Otomatis hapus cache versi lama di HP & ambil alih halaman aktif
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
-      );
-    })
+    Promise.all([
+      self.clients.claim(), // <--- Tambahan: Langsung kendalikan halaman yang aktif
+      caches.keys().then((cacheNames) => {
+        return Promise.all(
+          cacheNames.map((cache) => {
+            if (cache !== CACHE_NAME) {
+              return caches.delete(cache);
+            }
+          })
+        );
+      })
+    ])
   );
 });
 
