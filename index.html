@@ -520,31 +520,8 @@
       <span onclick="tutupModalChangelog()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
     </div>
 
-    <!-- Isi Riwayat Perubahan -->
-    <div style="font-size: 13px; color: #444; line-height: 1.5;">
-      
-      <!-- Versi Terbaru -->
-      <div style="margin-bottom: 12px; border-bottom: 1px dashed #e0e0e0; padding-bottom: 8px;">
-        <span style="background: #4CAF50; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">v1.2.0</span>
-        <span style="color: #888; font-size: 11px; margin-left: 5px;">Terbaru</span>
-        <ul style="margin: 6px 0 0 18px; padding: 0;">
-          <li>Penyesuaian rekap ronda harian (Malam Minggu libur/skip rekap).</li>
-          <li>Peningkatan aksesibilitas form (perbaikan atribut label).</li>
-          <li>Pembersihan & pemeliharaan struktur kode script.</li>
-        </ul>
-      </div>
-
-      <!-- Versi Sebelumnya -->
-      <div style="margin-bottom: 12px;">
-        <span style="background: #888; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">v1.0.0</span>
-        <ul style="margin: 6px 0 0 18px; padding: 0;">
-          <li>Rilis awal Sistem Jimpitan & Ronda Digital RT.</li>
-          <li>Fitur Scan QR Code & Input Manual.</li>
-          <li>Integrasi database Google Sheets.</li>
-        </ul>
-      </div>
-
-    </div>
+    <!-- Wadah ini akan diisi otomatis oleh JavaScript -->
+    <div id="konten-changelog" style="font-size: 13px; color: #444; line-height: 1.5;"></div>
 
     <button type="button" onclick="tutupModalChangelog()" style="width: 100%; margin-top: 15px; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Tutup</button>
   </div>
@@ -1508,12 +1485,54 @@ function tutupModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
 }
 
+// 1. Data Changelog (Tinggal tambah objek baru di paling atas jika ada update)
+const dataChangelog = [
+  {
+    versi: "v1.2.0",
+    status: "Terbaru",
+    warna: "#4CAF50",
+    fitur: [
+      "Penyesuaian rekap ronda harian (Malam Minggu libur/skip rekap).",
+      "Peningkatan aksesibilitas form (perbaikan atribut label).",
+      "Pembersihan & pemeliharaan struktur kode script."
+    ]
+  },
+  {
+    versi: "v1.0.0",
+    status: "",
+    warna: "#888",
+    fitur: [
+      "Rilis awal Sistem Jimpitan & Ronda Digital RT.",
+      "Fitur Scan QR Code & Input Manual.",
+      "Integrasi database Google Sheets."
+    ]
+  }
+];
+
+// 2. Fungsi untuk menampilkan data ke HTML
+function muatChangelog() {
+  const container = document.getElementById("konten-changelog");
+  if (!container) return;
+
+  container.innerHTML = dataChangelog.map(item => `
+    <div style="margin-bottom: 12px; border-bottom: 1px dashed #e0e0e0; padding-bottom: 8px;">
+      <span style="background: ${item.warna}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">${item.versi}</span>
+      ${item.status ? `<span style="color: #888; font-size: 11px; margin-left: 5px;">${item.status}</span>` : ''}
+      <ul style="margin: 6px 0 0 18px; padding: 0;">
+        ${item.fitur.map(f => `<li>${f}</li>`).join('')}
+      </ul>
+    </div>
+  `).join('');
+}
+
+// 3. Update fungsi buka modal kamu
 function bukaModalChangelog() {
-  document.getElementById('modal-changelog').style.display = 'flex';
+  muatChangelog(); // Render data terbaru
+  document.getElementById("modal-changelog").style.display = "flex";
 }
 
 function tutupModalChangelog() {
-  document.getElementById('modal-changelog').style.display = 'none';
+  document.getElementById("modal-changelog").style.display = "none";
 }
    
 </script>
