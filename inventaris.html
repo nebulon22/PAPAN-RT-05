@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Inventaris Perkakas RT 05</title>
+  <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
+  <style>
+    body { font-family: sans-serif; margin: 0; padding: 16px; background-color: #f9fafb; color: #333; }
+    .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 16px; }
+    .btn-back { background: #111827; color: #fff; text-decoration: none; padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+    .card-rules { background: #f3e8ff; border-left: 4px solid #8b5cf6; padding: 12px; border-radius: 6px; font-size: 12px; color: #4c1d95; line-height: 1.5; margin-bottom: 16px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+    th { background: #8b5cf6; color: white; padding: 10px; text-align: left; }
+    td { padding: 10px; border-bottom: 1px solid #f3f4f6; }
+    .badge-ada { background: #d1fae5; color: #065f46; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .badge-habis { background: #fee2e2; color: #991b1b; padding: 3px 8px; border-radius: 4px; font-weight: bold; font-size: 11px; }
+    .btn-wa { display: block; text-align: center; margin-top: 20px; padding: 12px; background: #25d366; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 13px; box-shadow: 0 4px 10px rgba(37,211,102,0.3); }
+  </style>
+</head>
+<body>
+
+  <!-- Header & Tombol Kembali ke Utama -->
+  <div class="header">
+    <h3 style="margin: 0; font-size: 16px; color: #111;">📦 Inventaris RT 05</h3>
+    <a href="index.html" class="btn-back">⬅️ Kembali</a>
+  </div>
+
+  <!-- Aturan Pinjam -->
+  <div class="card-rules">
+    <strong>📋 Syarat & Pengembalian:</strong>
+    <ol style="margin: 4px 0 0 16px; padding: 0;">
+      <li>Cek ketersediaan perkakas pada tabel di bawah.</li>
+      <li>Klik tombol WA untuk booking tanggal acara.</li>
+      <li>Pengambilan & pengembalian didampingi Seksi Perlengkapan.</li>
+      <li>Barang dikembalikan tepat waktu dalam kondisi bersih.</li>
+    </ol>
+  </div>
+
+  <!-- Tabel Inventaris -->
+  <div style="overflow-x: auto;">
+    <table>
+      <thead>
+        <tr>
+          <th>Barang</th>
+          <th style="text-align: center;">Total</th>
+          <th style="text-align: center;">Tersedia</th>
+          <th style="text-align: center;">Status</th>
+        </tr>
+      </thead>
+      <tbody id="tabel-inventaris"></tbody>
+    </table>
+  </div>
+
+  <!-- Tombol WhatsApp -->
+  <a href="https://wa.me/6281234567890?text=Halo%20Pengurus%20RT,%20saya%20ingin%20meminjam%20inventaris%20RT..." target="_blank" class="btn-wa">
+    💬 Ajukan Peminjaman via WA
+  </a>
+
+  <script>
+    const dataInventaris = [
+      { nama: "Tenda Hajatan (4x6m)", total: 2, dipinjam: 0, unit: "Unit" },
+      { nama: "Kursi Lipat Chitose", total: 100, dipinjam: 40, unit: "Buah" },
+      { nama: "Meja Lipat Panjang", total: 10, dipinjam: 0, unit: "Buah" },
+      { nama: "Sound System Portable", total: 1, dipinjam: 1, unit: "Set" },
+      { nama: "Terpal Plastik Besar", total: 4, dipinjam: 0, unit: "Lembar" },
+      { nama: "Kompor Mawar & Dandang", total: 2, dipinjam: 0, unit: "Set" },
+      { nama: "Piring & Sendok (1 Groti)", total: 5, dipinjam: 0, unit: "Box" }
+    ];
+
+    function muatInventaris() {
+      const container = document.getElementById("tabel-inventaris");
+      container.innerHTML = dataInventaris.map(item => {
+        const sisa = item.total - item.dipinjam;
+        const isTersedia = sisa > 0;
+        return `
+          <tr>
+            <td style="font-weight: bold;">${item.nama}</td>
+            <td style="text-align: center; color: #666;">${item.total}</td>
+            <td style="text-align: center; font-weight: bold; color: ${isTersedia ? '#10b981' : '#ef4444'};">${sisa} ${item.unit}</td>
+            <td style="text-align: center;">
+              ${isTersedia ? '<span class="badge-ada">Tersedia</span>' : '<span class="badge-habis">Habis</span>'}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    muatInventaris();
+  </script>
+</body>
+</html>
