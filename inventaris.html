@@ -27,7 +27,7 @@
     <strong>📋 Syarat & Pengembalian:</strong>
     <ol style="margin: 4px 0 0 16px; padding: 0;">
       <li>Cek ketersediaan perkakas pada daftar di bawah.</li>
-      <li>Klik tombol WA untuk booking tanggal acara.</li>
+      <li>Klik tombol WA di bawah untuk booking tanggal acara.</li>
       <li>Pengambilan & pengembalian didampingi Seksi Perlengkapan.</li>
       <li>Barang dikembalikan tepat waktu dalam kondisi bersih.</li>
     </ol>
@@ -36,14 +36,13 @@
   <!-- Container Tempat Daftar Barang Muncul -->
   <div id="daftar-inventaris"></div>
 
-  <!-- Tombol WhatsApp Umumm -->
+  <!-- Tombol WhatsApp Tunggal di Paling Bawah -->
   <a href="https://wa.me/6281234567890?text=Halo%20Pengurus%20RT,%20saya%20ingin%20meminjam%20inventaris%20RT..." target="_blank" class="btn-wa">
     💬 Hubungi Pengurus via WA
   </a>
 
   <script>
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec';
-    const NOMOR_WA_ADMIN = '6281234567890'; // GANTI dengan nomor WA RT kamu (format 628xxx)
 
     document.addEventListener("DOMContentLoaded", () => {
       muatStokInventaris();
@@ -77,26 +76,40 @@
           rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
         });
 
-        // Tampilkan kartu barang
+        // Tampilkan kartu barang dengan rincian stok terpisah
         container.innerHTML = daftarPerkakas.map(item => {
+          const total = item.total || 0;
           const terpakai = rekapDipinjam[item.nama] || 0;
-          const sisaStok = item.total - terpakai;
+          const sisaStok = total - terpakai;
           
           const statusBadge = sisaStok > 0 
-            ? `<span style="color: #059669; font-weight: bold;">Tersedia (${sisaStok}/${item.total})</span>`
-            : `<span style="color: #dc2626; font-weight: bold;">Habis Dipinjam</span>`;
+            ? `<span style="background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Tersedia</span>`
+            : `<span style="background: #fef2f2; color: #991b1b; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Habis Dipinjam</span>`;
 
           return `
             <div class="card-barang">
               ${item.foto ? `<img src="${item.foto}" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:10px;" onError="this.style.display='none'">` : ''}
-              <h3 style="margin: 0 0 6px 0; font-size: 16px;">${item.nama}</h3>
-              <p style="margin: 0 0 12px 0; font-size: 13.5px;">Status: ${statusBadge}</p>
-              <button 
-                onclick="pinjamBarang('${item.nama}', ${sisaStok})" 
-                ${sisaStok <= 0 ? 'disabled' : ''}
-                style="padding: 10px; width: 100%; background: ${sisaStok > 0 ? '#10b981' : '#ccc'}; color: white; border: none; border-radius: 6px; cursor: ${sisaStok > 0 ? 'pointer' : 'not-allowed'}; font-weight: bold;">
-                ${sisaStok > 0 ? 'Ajukan Pinjam (WA)' : 'Tidak Tersedia'}
-              </button>
+              
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; font-size: 15px; color: #111827;">${item.nama}</h3>
+                ${statusBadge}
+              </div>
+
+              <!-- Rincian Stok Terpisah -->
+              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f9fafb; padding: 8px; border-radius: 6px; font-size: 12px; text-align: center; border: 1px solid #f3f4f6;">
+                <div>
+                  <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Total Stok</span>
+                  <strong style="color: #374151; font-size: 13px;">${total}</strong>
+                </div>
+                <div>
+                  <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Dipinjam</span>
+                  <strong style="color: #dc2626; font-size: 13px;">${terpakai}</strong>
+                </div>
+                <div>
+                  <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Sisa Stok</span>
+                  <strong style="color: #059669; font-size: 13px;">${sisaStok}</strong>
+                </div>
+              </div>
             </div>
           `;
         }).join('');
@@ -105,12 +118,6 @@
         console.error(err);
         container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data dari Google Sheets.</div>`;
       }
-    }
-
-    function pinjamBarang(namaBarang, sisaStok) {
-      const pesan = `Halo Pengurus RT, saya ingin meminjam inventaris *${namaBarang}*. Apakah stok masih ada (${sisaStok} unit)?`;
-      const urlWA = `https://wa.me/${NOMOR_WA_ADMIN}?text=${encodeURIComponent(pesan)}`;
-      window.open(urlWA, '_blank');
     }
   </script>
 </body>
