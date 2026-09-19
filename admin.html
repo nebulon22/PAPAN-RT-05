@@ -591,14 +591,19 @@ async function simpanPeminjamanAdmin() {
   const peminjam = document.getElementById("pinjamNamaWarga").value;
   const barang = document.getElementById("pinjamPilihBarang").value;
   const jumlah = document.getElementById("pinjamJumlah").value;
+  const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
 
   if (!peminjam || !barang || !jumlah) {
     alert("Mohon lengkapi semua data!");
     return;
   }
 
+  const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
+  if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
+
   const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
   const payload = {
+    pin: pinAdmin, // PIN wajib dikirim agar lolos verifikasi GAS
     action: "pinjam",
     id: "ID-" + Date.now(),
     peminjam: peminjam,
@@ -608,34 +613,54 @@ async function simpanPeminjamanAdmin() {
   };
 
   try {
-    await fetch(GAS_WEB_APP_URL, {
+    const res = await fetch(GAS_WEB_APP_URL, {
       method: "POST",
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
     });
-    
-    alert("Peminjaman berhasil dicatat!");
-    document.getElementById("pinjamNamaWarga").value = "";
-    document.getElementById("pinjamPilihBarang").value = "";
-    document.getElementById("pinjamJumlah").value = "";
-    muatPeminjamanAdmin();
+    const text = await res.text();
+
+    if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+
+    if (text.includes("SUCCESS")) {
+      alert("✅ Peminjaman berhasil dicatat!");
+      document.getElementById("pinjamNamaWarga").value = "";
+      document.getElementById("pinjamPilihBarang").value = "";
+      document.getElementById("pinjamJumlah").value = "";
+      muatPeminjamanAdmin(); // Reload daftar peminjam di pop-up
+    } else {
+      alert("❌ Gagal menyimpan: " + text);
+    }
   } catch (err) {
-    alert("Gagal menyimpan data!");
+    if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+    alert("❌ Error koneksi: " + err);
   }
 }
 
-// 4. Update Pengembalian ke Google Sheets (TETAP DIPAKAI)
 async function prosesPengembalian(id) {
   if (confirm("Apakah barang ini sudah dikembalikan?")) {
+    const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+    
     try {
-      await fetch(GAS_WEB_APP_URL, {
+      const res = await fetch(GAS_WEB_APP_URL, {
         method: "POST",
-        body: JSON.stringify({ action: "kembali", id: id })
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          pin: pinAdmin, // PIN wajib dikirim
+          action: "kembali",
+          id: id
+        })
       });
+      const text = await res.text();
 
-      alert("Status barang berhasil diperbarui!");
-      muatPeminjamanAdmin();
+      if (text.includes("SUCCESS")) {
+        alert("✅ Status barang berhasil diperbarui!");
+        muatPeminjamanAdmin();
+      } else {
+        alert("❌ Gagal memperbarui: " + text);
+      }
     } catch (err) {
-      alert("Gagal memperbarui status!");
+      alert("❌ Error koneksi: " + err);
     }
   }
 }
