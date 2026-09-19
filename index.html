@@ -1065,10 +1065,15 @@ function mulaiScanJimpitan() {
 function onScanJimpitanSuccess(decodedText) {
   if (!sedangScanning) return;
 
-  // 🔊 EFEK INSTAN: HP Getar 0,2 detik & Bunyi Beep
-  if ('vibrate' in navigator) navigator.vibrate(200);
-  mainkanSuaraBeep();
+  // 🔊 EFEK INSTAN: HP Getar (Dibungkus try-catch agar aman jika diblokir Chrome)
+  try {
+    if ('vibrate' in navigator) navigator.vibrate(200);
+  } catch (e) {
+    console.log("Vibrate tidak diizinkan browser:", e);
+  }
 
+  // Bunyi Beep & Transisi Modal
+  mainkanSuaraBeep();
   stopScanQR();
   document.getElementById('jimpitanNamaWarga').value = decodedText;
   document.getElementById('jimpitanNominal').value = ''; 
