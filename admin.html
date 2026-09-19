@@ -144,7 +144,63 @@
       </div>
     </div>
 
-    
+  <!-- Section Kelola Inventaris & Peminjaman (Khusus Admin) -->
+<div style="background: white; border-radius: 8px; padding: 16px; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+  <h3 style="margin-top: 0; color: #111827; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px;">
+    📦 Kelola Peminjaman Perkakas RT
+  </h3>
+
+  <!-- Form Input Peminjaman Baru -->
+  <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 20px; background: #f9fafb; padding: 12px; border-radius: 6px; border: 1px solid #e5e7eb;">
+    <div>
+      <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah Warga:</label>
+      <input type="text" id="pinjamNamaWarga" placeholder="Contoh: Pak Budi (A-12)" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 12px;">
+    </div>
+
+    <div>
+      <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
+      <select id="pinjamPilihBarang" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 12px;">
+        <option value="">-- Pilih Barang --</option>
+        <option value="Tenda Hajatan (4x6m)">Tenda Hajatan (4x6m)</option>
+        <option value="Kursi Lipat Chitose">Kursi Lipat Chitose</option>
+        <option value="Meja Lipat Panjang">Meja Lipat Panjang</option>
+        <option value="Sound System Portable">Sound System Portable</option>
+        <option value="Terpal Plastik Besar">Terpal Plastik Besar</option>
+        <option value="Kompor Mawar & Dandang">Kompor Mawar & Dandang</option>
+      </select>
+    </div>
+
+    <div>
+      <label style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Dipinjam:</label>
+      <input type="number" id="pinjamJumlah" min="1" placeholder="Masukkan angka" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 12px;">
+    </div>
+
+    <div style="display: flex; align-items: flex-end;">
+      <button type="button" onclick="simpanPeminjamanAdmin()" style="width: 100%; padding: 9px; background: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">
+        ➕ Catat Peminjaman
+      </button>
+    </div>
+  </form>
+
+  <!-- Tabel Daftar Barang Sedang Dipinjam -->
+  <h4 style="margin: 10px 0 6px 0; font-size: 13px; color: #374151;">📋 Daftar Barang Belum Dikembalikan:</h4>
+  <div style="overflow-x: auto;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+      <thead>
+        <tr style="background: #111827; color: white;">
+          <th style="padding: 8px;">Peminjam</th>
+          <th style="padding: 8px;">Barang</th>
+          <th style="padding: 8px; text-align: center;">Jumlah</th>
+          <th style="padding: 8px; text-align: center;">Tgl Pinjam</th>
+          <th style="padding: 8px; text-align: center;">Aksi Pengembalian</th>
+        </tr>
+      </thead>
+      <tbody id="tabel-peminjaman-admin">
+        <!-- Diisi otomatis oleh JavaScript -->
+      </tbody>
+    </table>
+  </div>
+</div>  
 
 
 
@@ -447,7 +503,85 @@
     }
 
     
+    // Array penampung transaksi peminjaman aktif (Nanti bisa dihubungkan ke Google Sheets)
+let daftarPinjamanAktif = [
+  { id: 1, peminjam: "Pak Budi (A-12)", barang: "Kursi Lipat Chitose", jumlah: 40, tgl: "18 Sep 2026" },
+  { id: 2, peminjam: "Pak Agus (B-05)", barang: "Sound System Portable", jumlah: 1, tgl: "19 Sep 2026" }
+];
+
+// 1. Render Tabel Peminjaman di Halaman Admin
+function muatPeminjamanAdmin() {
+  const container = document.getElementById("tabel-peminjaman-admin");
+  if (!container) return;
+
+  if (daftarPinjamanAktif.length === 0) {
+    container.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
+    return;
+  }
+
+  container.innerHTML = daftarPinjamanAktif.map(item => `
+    <tr style="border-bottom: 1px solid #e5e7eb;">
+      <td style="padding: 8px; font-weight: bold;">${item.peminjam}</td>
+      <td style="padding: 8px;">${item.barang}</td>
+      <td style="padding: 8px; text-align: center; font-weight: bold;">${item.jumlah}</td>
+      <td style="padding: 8px; text-align: center; color: #666;">${item.tgl}</td>
+      <td style="padding: 8px; text-align: center;">
+        <button onclick="prosesPengembalian(${item.id})" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">
+          ↩️ Dikembalikan
+        </button>
+      </td>
+    </tr>
+  `).join('');
+}
+
+// 2. Simpan Catatan Pinjam Baru
+function simpanPeminjamanAdmin() {
+  const peminjam = document.getElementById("pinjamNamaWarga").value;
+  const barang = document.getElementById("pinjamPilihBarang").value;
+  const jumlah = document.getElementById("pinjamJumlah").value;
+
+  if (!peminjam || !barang || !jumlah) {
+    alert("Mohon lengkapi semua data!");
+    return;
+  }
+
+  const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  // Tambah ke daftar
+  daftarPinjamanAktif.push({
+    id: Date.now(),
+    peminjam: peminjam,
+    barang: barang,
+    jumlah: parseInt(jumlah),
+    tgl: hariIni
+  });
+
+  // Reset form
+  document.getElementById("pinjamNamaWarga").value = "";
+  document.getElementById("pinjamPilihBarang").value = "";
+  document.getElementById("pinjamJumlah").value = "";
+
+  alert("Peminjaman berhasil dicatat!");
+  muatPeminjamanAdmin();
+  
+  // (Optional) Panggil fungsi kirim data ke Google Sheets di sini jika ada
+}
+
+// 3. Proses Pengembalian Barang
+function prosesPengembalian(id) {
+  if (confirm("Apakah barang ini sudah dikembalikan dalam keadaan bersih dan utuh?")) {
+    daftarPinjamanAktif = daftarPinjamanAktif.filter(item => item.id !== id);
+    alert("Barang telah ditandai Selesai / Dikembalikan!");
+    muatPeminjamanAdmin();
     
+    // (Optional) Update status di Google Sheets di sini jika ada
+  }
+}
+
+// Jalankan saat halaman admin dibuka
+document.addEventListener("DOMContentLoaded", function() {
+  muatPeminjamanAdmin();
+});
   
     
     function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
