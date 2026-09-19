@@ -992,6 +992,9 @@ function dapatkanNamaMalam(dateObj) {
 // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
 const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyM9_a_pLonArBto4ihuNkDkAuqYHvLEIuNwrsce99in8uNXJKDQF0TmhR94woGzZUeXw/exec';
 
+// Variable Global AudioContext
+let audioCtx = null;
+
 // Status Global Scanner & Sync
 let html5QrcodeScanner = null;
 let sedangScanning = false;
@@ -1001,9 +1004,43 @@ function setNominal(nilai) {
   document.getElementById('jimpitanNominal').value = nilai;
 }
 
-// --- 1. FITUR SCANNER CAMERA ---
+// --- FUNGSI AUDIO BEEP ---
+function mainkanSuaraBeep() {
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+
+    const now = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    // Frekuensi 1000 Hz (Nada "Beep" standar scanner kasir)
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1000, now);
+
+    // Mencegah bunyi "klik/pop" dengan fade-in & fade-out halus
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+    gain.gain.linearRampToValueAtTime(0, now + 0.15);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.15);
+  } catch (e) {
+    console.log("Audio error:", e);
+  }
+}
+
+// --- FITUR SCANNER CAMERA ---
 function mulaiScanJimpitan() {
-  // 🔊 PANCING IZIN AUDIO: Dipanggil saat tombol diklik agar browser mengizinkan suara saat scan
+  // Pancing izin audio saat tombol diklik pertama kali
   mainkanSuaraBeep();
 
   document.getElementById('modal-qr-scanner').style.display = 'flex';
@@ -1065,15 +1102,16 @@ function mulaiScanJimpitan() {
 function onScanJimpitanSuccess(decodedText) {
   if (!sedangScanning) return;
 
-  // 🔊 EFEK INSTAN: HP Getar (Dibungkus try-catch agar aman jika diblokir Chrome)
-  try {
-    if ('vibrate' in navigator) navigator.vibrate(200);
-  } catch (e) {
-    console.log("Vibrate tidak diizinkan browser:", e);
-  }
-
-  // Bunyi Beep & Transisi Modal
+  // 1. Jalankan Suara Beep
   mainkanSuaraBeep();
+
+  // 2. Jalankan Getar HP (Aman jika diblokir browser)
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(200);
+    }
+  } catch (e) {}
+
   stopScanQR();
   document.getElementById('jimpitanNamaWarga').value = decodedText;
   document.getElementById('jimpitanNominal').value = ''; 
@@ -1107,7 +1145,6 @@ function bersihkanScanner() {
   let qrElement = document.getElementById('qr-reader');
   if (qrElement) qrElement.innerHTML = '';
 }
-
 
 // --- 2. FITUR SINKRONISASI OFFLINE ---
 
