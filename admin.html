@@ -550,7 +550,18 @@ async function muatPeminjamanAdmin() {
     const res = await fetch(GAS_WEB_APP_URL);
     const data = await res.json();
     
-    const pinjamanAktif = data.filter(row => row[5] === "Dipinjam");
+    // 1. Ambil array peminjaman dari respon JSON
+    const daftarPinjam = Array.isArray(data) ? data : (data.peminjaman || []);
+
+    // 2. Isi dropdown 'Pilih Barang' secara otomatis dari tab Perkakas
+    const selectBarang = document.getElementById("pinjamPilihBarang");
+    if (selectBarang && data.perkakas && data.perkakas.length > 0) {
+      selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
+        data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Stok: ${item.total})</option>`).join('');
+    }
+    
+    // 3. Filter transaksi yang statusnya 'Dipinjam' (kolom index 5)
+    const pinjamanAktif = daftarPinjam.filter(row => row[5] === "Dipinjam");
 
     if (pinjamanAktif.length === 0) {
       container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
@@ -570,6 +581,7 @@ async function muatPeminjamanAdmin() {
       </tr>
     `).join('');
   } catch (err) {
+    console.error("Error muatPeminjamanAdmin:", err);
     container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:12px;">Gagal memuat data.</td></tr>`;
   }
 }
