@@ -58,35 +58,76 @@
   </a>
 
   <script>
-    const dataInventaris = [
-      { nama: "Tenda Hajatan (4x6m)", total: 2, dipinjam: 0, unit: "Unit" },
-      { nama: "Kursi Lipat Chitose", total: 100, dipinjam: 40, unit: "Buah" },
-      { nama: "Meja Lipat Panjang", total: 10, dipinjam: 0, unit: "Buah" },
-      { nama: "Sound System Portable", total: 1, dipinjam: 1, unit: "Set" },
-      { nama: "Terpal Plastik Besar", total: 4, dipinjam: 0, unit: "Lembar" },
-      { nama: "Kompor Mawar & Dandang", total: 2, dipinjam: 0, unit: "Set" },
-      { nama: "Piring & Sendok (1 Groti)", total: 5, dipinjam: 0, unit: "Box" }
-    ];
+  const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyM9_a_pLonArBto4ihuNkDkAuqYHvLEIuNwrsce99in8uNXJKDQF0TmhR94woGzZUeXw/exec';
 
-    function muatInventaris() {
-      const container = document.getElementById("tabel-inventaris");
-      container.innerHTML = dataInventaris.map(item => {
-        const sisa = item.total - item.dipinjam;
-        const isTersedia = sisa > 0;
+  // Master Data Barang (Total awal inventaris RT)
+  const masterBarang = [
+    { nama: "Kursi Lipat Chitose", total: 100, foto: "https://via.placeholder.com/150" },
+    { nama: "Tenda Terpal 4x6m", total: 3, foto: "https://via.placeholder.com/150" },
+    { nama: "Sound System Portable", total: 2, foto: "https://via.placeholder.com/150" },
+    { nama: "Meja Lipat", total: 10, foto: "https://via.placeholder.com/150" }
+  ];
+
+  document.addEventListener("DOMContentLoaded", () => {
+    muatStokInventaris();
+  });
+
+  async function muatStokInventaris() {
+    const container = document.getElementById("daftar-inventaris"); // sesuaikan ID container card barang
+    if (!container) return;
+
+    container.innerHTML = `<div style="text-align:center; padding: 20px;">⏳ Memuat stok terbaru...</div>`;
+
+    try {
+      // 1. Ambil data peminjaman aktif dari Google Sheets
+      const res = await fetch(GAS_WEB_APP_URL);
+      const dataPinjaman = await res.json();
+      
+      // Filter hanya transaksi dengan status 'Dipinjam'
+      const dipinjamAktif = dataPinjaman.filter(row => row[5] === "Dipinjam");
+
+      // 2. Hitung total barang yang sedang keluar
+      const rekapDipinjam = {};
+      dipinjamAktif.forEach(row => {
+        const namaBarang = row[2];
+        const jumlah = parseInt(row[3]) || 0;
+        rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
+      });
+
+      // 3. Render kartu barang dengan stok yang sudah dipotong
+      container.innerHTML = masterBarang.map(item => {
+        const terpakai = rekapDipinjam[item.nama] || 0;
+        const sisaStok = item.total - terpakai;
+        const statusBadge = sisaStok > 0 
+          ? `<span style="color: green; font-weight: bold;">Tersedia (${sisaStok})</span>`
+          : `<span style="color: red; font-weight: bold;">Habis Dipinjam</span>`;
+
         return `
-          <tr>
-            <td style="font-weight: bold;">${item.nama}</td>
-            <td style="text-align: center; color: #666;">${item.total}</td>
-            <td style="text-align: center; font-weight: bold; color: ${isTersedia ? '#10b981' : '#ef4444'};">${sisa} ${item.unit}</td>
-            <td style="text-align: center;">
-              ${isTersedia ? '<span class="badge-ada">Tersedia</span>' : '<span class="badge-habis">Habis</span>'}
-            </td>
-          </tr>
+          <div class="card-barang" style="border: 1px solid #ddd; padding: 12px; border-radius: 8px; margin-bottom: 12px;">
+            <h3>${item.nama}</h3>
+            <p>Total Milik RT: ${item.total}</p>
+            <p>Status: ${statusBadge}</p>
+            <button 
+              onclick="pinjamBarang('${item.nama}', ${sisaStok})" 
+              ${sisaStok <= 0 ? 'disabled' : ''}
+              style="padding: 6px 12px; background: #00c853; color: white; border: none; border-radius: 4px; cursor: pointer;">
+              ${sisaStok > 0 ? 'Ajukan Pinjam' : 'Tidak Tersedia'}
+            </button>
+          </div>
         `;
       }).join('');
-    }
 
-    muatInventaris();
-  </script>
+    } catch (err) {
+      container.innerHTML = `<div style="color: red; text-align:center;">Gagal memuat data inventaris.</div>`;
+    }
+  }
+
+  function pinjamBarang(namaBarang, sisaStok) {
+    // Alur pengajuan oleh warga (misal redirect ke WhatsApp Admin)
+    const pesan = `Halo Admin RT, saya ingin meminjam *${namaBarang}*. Apakah masih ada stok ${sisaStok}?`;
+    const urlWA = `https://wa.me/6281234567890?text=${encodeURIComponent(pesan)}`;
+    window.open(urlWA, '_blank');
+  }
+</script>
 </body>
 </html>
