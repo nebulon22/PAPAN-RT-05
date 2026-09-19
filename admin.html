@@ -606,13 +606,105 @@ document.addEventListener("DOMContentLoaded", function() {
       } else alert("Lokasi atau nomor rumah tidak ditemukan.");
     }
 
+const URL_GAS = "https://script.google.com/macros/s/AKfycbyM9_a_pLonArBto4ihuNkDkAuqYHvLEIuNwrsce99in8uNXJKDQF0TmhR94woGzZUeXw/exec";
+
+// 1. Fungsi Buka & Tutup Modal (BARU)
 function bukaModalPinjamAdmin() {
-  muatPeminjamanAdmin(); // Otomatis ambil data terbaru dari Google Sheets
+  muatPeminjamanAdmin(); // Ambil data terbaru dari Google Sheets saat modal dibuka
   document.getElementById("modal-admin-inventaris").style.display = "flex";
 }
 
 function tutupModalPinjamAdmin() {
   document.getElementById("modal-admin-inventaris").style.display = "none";
+}
+
+// 2. Ambil Data Peminjaman dari Google Sheets (TETAP DIPAKAI)
+async function muatPeminjamanAdmin() {
+  const container = document.getElementById("tabel-peminjaman-admin");
+  if (!container) return;
+
+  container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
+
+  try {
+    const res = await fetch(URL_GAS);
+    const data = await res.json();
+    
+    const pinjamanAktif = data.filter(row => row[5] === "Dipinjam");
+
+    if (pinjamanAktif.length === 0) {
+      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
+      return;
+    }
+
+    container.innerHTML = pinjamanAktif.map(row => `
+      <tr style="border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
+        <td style="padding: 6px;">${row[2]}</td>
+        <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
+        <td style="padding: 6px; text-align: center;">
+          <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
+            ↩️ Dikembalikan
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:12px;">Gagal memuat data.</td></tr>`;
+  }
+}
+
+// 3. Simpan Pinjam Baru ke Google Sheets (TETAP DIPAKAI)
+async function simpanPeminjamanAdmin() {
+  const peminjam = document.getElementById("pinjamNamaWarga").value;
+  const barang = document.getElementById("pinjamPilihBarang").value;
+  const jumlah = document.getElementById("pinjamJumlah").value;
+
+  if (!peminjam || !barang || !jumlah) {
+    alert("Mohon lengkapi semua data!");
+    return;
+  }
+
+  const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  const payload = {
+    action: "pinjam",
+    id: "ID-" + Date.now(),
+    peminjam: peminjam,
+    barang: barang,
+    jumlah: parseInt(jumlah),
+    tgl: hariIni
+  };
+
+  try {
+    await fetch(URL_GAS, {
+      method: "POST",
+      body: JSON.stringify(payload)
+    });
+    
+    alert("Peminjaman berhasil dicatat!");
+    document.getElementById("pinjamNamaWarga").value = "";
+    document.getElementById("pinjamPilihBarang").value = "";
+    document.getElementById("pinjamJumlah").value = "";
+    muatPeminjamanAdmin();
+  } catch (err) {
+    alert("Gagal menyimpan data!");
+  }
+}
+
+// 4. Update Pengembalian ke Google Sheets (TETAP DIPAKAI)
+async function prosesPengembalian(id) {
+  if (confirm("Apakah barang ini sudah dikembalikan?")) {
+    try {
+      await fetch(URL_GAS, {
+        method: "POST",
+        body: JSON.stringify({ action: "kembali", id: id })
+      });
+
+      alert("Status barang berhasil diperbarui!");
+      muatPeminjamanAdmin();
+    } catch (err) {
+      alert("Gagal memperbarui status!");
+    }
+  }
 }
     
   </script>
