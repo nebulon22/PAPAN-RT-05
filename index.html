@@ -1306,27 +1306,17 @@ function simpanJimpitan(dataInput) {
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
+// Tampilkan notifikasi langsung
+  alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + " berhasil dicatat!");
 
-  if (typeof tampilkanNotifikasiBerhasil === 'function') {
-    tampilkanNotifikasiBerhasil("Jimpitan berhasil dicatat!");
-  } else {
-    alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + " berhasil dicatat!");
-  }
-
-  if (typeof resetFormScan === 'function') {
-    resetFormScan();
-  } else {
-    let modal = document.getElementById('modal-jimpitan');
-    if (modal) modal.style.display = 'none';
-    let elNama = document.getElementById('jimpitanNamaWarga');
-    let elNominal = document.getElementById('jimpitanNominal');
-    if (elNama) elNama.value = '';
-    if (elNominal) elNominal.value = '';
-  }
-
-  if (typeof perbaruiIndikatorSync === 'function') {
-    perbaruiIndikatorSync();
-  }
+  // Tutup modal dan reset input
+  let modal = document.getElementById('modal-jimpitan');
+  if (modal) modal.style.display = 'none';
+  
+  let elNama = document.getElementById('jimpitanNamaWarga');
+  let elNominal = document.getElementById('jimpitanNominal');
+  if (elNama) elNama.value = '';
+  if (elNominal) elNominal.value = '';
 
   kirimDataPendingJimpitan();
 }
