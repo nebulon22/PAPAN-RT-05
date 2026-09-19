@@ -1038,54 +1038,6 @@ function mainkanSuaraBeep() {
   }
 }
 
-// --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyM9_a_pLonArBto4ihuNkDkAuqYHvLEIuNwrsce99in8uNXJKDQF0TmhR94woGzZUeXw/exec';
-
-// Variable Global AudioContext
-let audioCtx = null;
-
-// Status Global Scanner & Sync
-let html5QrcodeScanner = null;
-let sedangScanning = false;
-let sedangMengirim = false;
-
-function setNominal(nilai) {
-  document.getElementById('jimpitanNominal').value = nilai;
-}
-
-// --- FUNGSI AUDIO BEEP (1000 Hz, Halus & Empuk) ---
-function mainkanSuaraBeep() {
-  try {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
-
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    // Frekuensi 1000 Hz (Nada "Beep" standar scanner kasir)
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1000, now);
-
-    // Mencegah bunyi "klik/pop" dengan fade-in & fade-out halus
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
-    gain.gain.linearRampToValueAtTime(0, now + 0.15);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.15);
-  } catch (e) {
-    console.log("Audio error:", e);
-  }
-}
 
 // Pembuka Gembok Audio PWA pada sentuhan/klik pertama
 function bukaGembokAudioPWA() {
