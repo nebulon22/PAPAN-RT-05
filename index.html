@@ -1004,37 +1004,113 @@ function setNominal(nilai) {
   document.getElementById('jimpitanNominal').value = nilai;
 }
 
-// --- FUNGSI AUDIO BEEP ---
+// --- FUNGSI AUDIO BEEP (Disesuaikan untuk Chrome Mobile) ---
 function mainkanSuaraBeep() {
   try {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
+    // Paksa resume AudioContext dan tunggu statusnya aktif (khusus Chrome)
+    const jalankanBeep = () => {
+      const now = audioCtx.currentTime;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(1000, now);
+
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+      gain.gain.linearRampToValueAtTime(0, now + 0.15);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start(now);
+      osc.stop(now + 0.15);
+    };
+
     if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
+      audioCtx.resume().then(() => jalankanBeep());
+    } else {
+      jalankanBeep();
     }
-
-    const now = audioCtx.currentTime;
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
-
-    // Frekuensi 1000 Hz (Nada "Beep" standar scanner kasir)
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(1000, now);
-
-    // Mencegah bunyi "klik/pop" dengan fade-in & fade-out halus
-    gain.gain.setValueAtTime(0, now);
-    gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
-    gain.gain.linearRampToValueAtTime(0, now + 0.15);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start(now);
-    osc.stop(now + 0.15);
   } catch (e) {
     console.log("Audio error:", e);
+  }
+}
+
+// --- FITUR SCANNER CAMERA ---
+function mulaiScanJimpitan() {
+  // 1. Pancing pembuka gembok audio Chrome saat tombol diklik
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  // 2. Pancing izin getar saat tombol diklik agar Chrome mengizinkan getar berikutnya
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10); // Getar super singkat sebagai pancingan izin
+    }
+  } catch (e) {}
+
+  document.getElementById('modal-qr-scanner').style.display = 'flex';
+
+  let qrElement = document.getElementById('qr-reader');
+  if (qrElement) qrElement.innerHTML = '';
+
+  const jalankanKamera = () => {
+    try {
+      html5QrcodeScanner = new Html5Qrcode("qr-reader");
+      let config = { fps: 10, qrbox: { width: 220, height: 220 } };
+
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        config,
+        onScanJimpitanSuccess
+      ).then(() => {
+        sedangScanning = true;
+      }).catch(err => {
+        console.warn("facingMode gagal, mencoba fallback ke daftar kamera...", err);
+
+        Html5Qrcode.getCameras().then(devices => {
+          if (devices && devices.length > 0) {
+            let selectedId = devices[devices.length - 1].id;
+
+            html5QrcodeScanner.start(
+              selectedId,
+              config,
+              onScanJimpitanSuccess
+            ).then(() => {
+              sedangScanning = true;
+            }).catch(err2 => {
+              alert("Gagal membuka kamera: " + err2);
+              tutupModalDanBersihkan();
+            });
+          } else {
+            alert("Tidak ada kamera yang terdeteksi.");
+            tutupModalDanBersihkan();
+          }
+        }).catch(err3 => {
+          alert("Izin kamera ditolak atau perangkat tidak mendukung: " + err3);
+          tutupModalDanBersihkan();
+        });
+      });
+    } catch (e) {
+      alert("Gagal inisialisasi scanner: " + e.message);
+      tutupModalDanBersihkan();
+    }
+  };
+
+  if (html5QrcodeScanner && sedangScanning) {
+    sedangScanning = false;
+    html5QrcodeScanner.stop().then(jalankanKamera).catch(jalankanKamera);
+  } else {
+    jalankanKamera();
   }
 }
 
@@ -1054,10 +1130,22 @@ function bukaGembokAudioPWA() {
 document.addEventListener('touchstart', bukaGembokAudioPWA, { passive: true });
 document.addEventListener('click', bukaGembokAudioPWA, { passive: true });
 
-// --- 1. FITUR SCANNER CAMERA ---
+// --- FITUR SCANNER CAMERA ---
 function mulaiScanJimpitan() {
-  // Pancing izin audio saat tombol diklik pertama kali
-  mainkanSuaraBeep();
+  // 1. Pancing pembuka gembok audio Chrome saat tombol diklik
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+
+  // 2. Pancing izin getar saat tombol diklik agar Chrome mengizinkan getar berikutnya
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10); // Getar super singkat sebagai pancingan izin
+    }
+  } catch (e) {}
 
   document.getElementById('modal-qr-scanner').style.display = 'flex';
 
