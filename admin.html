@@ -179,46 +179,53 @@
     </div>
   </div>
 
-  <!-- MODAL 2: Form Laporan Divisi -->
+ <!-- MODAL 2: Form Laporan Keuangan Divisi -->
   <div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
     <div class="modal-content" style="max-width: 360px;">
       <div class="modal-header">
-        <h3>📊 Laporan Divisi</h3>
+        <h3>💰 Laporan Keuangan Divisi</h3>
         <button class="close-btn" onclick="tutupModalLaporan()">&times;</button>
       </div>
       
       <form id="formLaporanDivisi">
         <div class="form-group">
-          <label for="laporanNamaDivisi" style="font-size: 12px; font-weight: bold; color: #333;">Pilih Divisi:</label>
+          <label style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
+          <input type="date" id="laporanTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+        </div>
+
+        <div class="form-group" style="margin-top: 10px;">
+          <label style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
           <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
-            <option value="">-- Pilih Divisi --</option>
-            <option value="Kerohanian">Sosial</option>
-               <option value="Humas">Tenda dan Perkakas</option>
-            <option value="Keamanan">Keamanan / Ronda Harian</option>
-            <option value="Pembangunan">Pondokan RT 05</option>
-            <option value="PKK / Kebersihan">Jimpitan Bulanan</option>
-            <option value="Humas">Pekerjaan Umum dan Kelistrikan</option>
-               <option value="Humas">Sound System</option>
+            <option value="">-- Pilih Divisi / Pos --</option>
+            <option value="Sosial">Sosial</option>
+            <option value="Tenda">Tenda dan Perkakas</option>
+            <option value="Sound System">Sound System</option>
+            <option value="Pondokan">Pondokan RT 05</option>
+            <option value="Ronda Bulanan">Ronda/Jimpitan Bulanan</option>
+            <option value="Pembangunan">Pekerjaan Umum dan Kelistrikan</option>
+            </select>
+        </div>
+
+        <div class="form-group" style="margin-top: 10px;">
+          <label style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
+          <select id="laporanJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+            <option value="Pemasukan">🟢 Pemasukan</option>
+            <option value="Pengeluaran">🔴 Pengeluaran</option>
           </select>
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanPelapor" style="font-size: 12px; font-weight: bold; color: #333;">Nama Pelapor:</label>
-          <input type="text" id="laporanPelapor" placeholder="Nama Anda" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+          <label style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
+          <input type="text" id="laporanKeterangan" placeholder="Contoh: Arisan / Bayar kost kamar A" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanJudul" style="font-size: 12px; font-weight: bold; color: #333;">Judul Kegiatan / Laporan:</label>
-          <input type="text" id="laporanJudul" placeholder="Contoh: Pembelian Lampu Pos" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
-        </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanDetail" style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Detail:</label>
-          <textarea id="laporanDetail" rows="3" placeholder="Tuliskan rincian laporan..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required></textarea>
+          <label style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
+          <input type="number" id="laporanNominal" placeholder="Contoh: 50000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
         </div>
 
         <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; margin-top: 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
-          📤 Kirim Laporan
+          📤 Kirim Laporan Keuangan
         </button>
       </form>
     </div>
@@ -715,7 +722,10 @@
       }
     }
 
-    function bukaModalLaporan() {
+function bukaModalLaporan() {
+      // Set otomatis tanggal hari ini di input date
+      const today = new Date().toISOString().split('T')[0];
+      document.getElementById('laporanTanggal').value = today;
       document.getElementById('modal-laporan').style.display = 'flex';
     }
 
@@ -725,16 +735,21 @@
     }
 
     function simpanLaporanDivisi() {
+      const tglInput = document.getElementById('laporanTanggal').value;
       const divisi = document.getElementById('laporanNamaDivisi').value;
-      const pelapor = document.getElementById('laporanPelapor').value;
-      const judul = document.getElementById('laporanJudul').value;
-      const detail = document.getElementById('laporanDetail').value;
+      const jenis = document.getElementById('laporanJenis').value;
+      const ket = document.getElementById('laporanKeterangan').value;
+      const nominal = document.getElementById('laporanNominal').value;
       const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
 
-      if (!divisi || !pelapor || !judul) {
-        alert('Harap isi semua kolom yang wajib!');
+      if (!divisi || !ket || !nominal || !tglInput) {
+        alert('Harap isi semua kolom!');
         return;
       }
+
+      // Format tanggal dari YYYY-MM-DD ke DD/MM/YYYY agar cocok dengan Sheet
+      const parts = tglInput.split('-');
+      const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
       const btnSimpan = document.getElementById('btnSimpanLaporan');
       btnSimpan.disabled = true;
@@ -742,11 +757,12 @@
 
       const payload = {
         pin: pinAdmin,
-        action: 'tambahLaporan',
+        action: 'tambahKeuangan',
+        tanggalInput: tglFormatted,
         divisi: divisi,
-        pelapor: pelapor,
-        judul: judul,
-        detail: detail
+        keterangan: ket,
+        jenisTransaksi: jenis,
+        nominal: parseInt(nominal)
       };
 
       fetch(GAS_WEB_APP_URL, {
@@ -757,19 +773,19 @@
       .then(res => res.text())
       .then(result => {
         if(result.includes('SUCCESS')) {
-          alert('✅ Laporan Divisi berhasil dikirim!');
+          alert('✅ Laporan Keuangan berhasil dicatat!');
           tutupModalLaporan();
         } else {
           alert('❌ Gagal mengirim: ' + result);
         }
       })
       .catch(err => {
-        alert('❌ Gagal mengirim laporan. Coba lagi.');
+        alert('❌ Error koneksi/pengiriman.');
         console.error(err);
       })
       .finally(() => {
         btnSimpan.disabled = false;
-        btnSimpan.innerText = '📤 Kirim Laporan';
+        btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
       });
     }
   </script>
