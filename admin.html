@@ -39,13 +39,12 @@
       display: flex; align-items: center; gap: 4px;
     }
 
-    .btn-rute, .btn-edit {
+    .btn-rute {
       display: inline-block; margin-top: 8px; padding: 6px 12px; border-radius: 4px;
       font-size: 12px; font-weight: bold; text-align: center; text-decoration: none;
       border: none; cursor: pointer; width: 100%; box-sizing: border-box;
+      background-color: #00c853; color: white !important;
     }
-    .btn-rute { background-color: #00c853; color: white !important; }
-    .btn-edit { background-color: #ff9800; color: white !important; margin-top: 4px; }
     
     .custom-pin { background: none; border: none; }
     .img-popup { width: 100%; max-height: 140px; object-fit: cover; border-radius: 6px; margin-top: 6px; border: 1px solid #ddd; }
@@ -78,8 +77,7 @@
     .modal-content {
       background: white; width: 90%; max-width: 400px; border-radius: 12px; padding: 16px;
       box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column;
-      max-height: 80vh; overflow-y: auto;
-      margin: auto;
+      max-height: 80vh; overflow-y: auto; margin: auto;
     }
     .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; }
     .modal-header h3 { margin: 0; font-size: 16px; color: #111; }
@@ -132,7 +130,6 @@
         <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
       </div>
 
-      <!-- Baris: Pinjam Perkakas & Laporan Divisi -->
       <div class="filter-row">
         <button type="button" class="btn-filter btn-purple" onclick="bukaModalPinjamAdmin()">
           📦 Pinjam Perkakas
@@ -141,8 +138,8 @@
           📊 Laporan Divisi
         </button>
       </div>
-    </div> <!-- Penutup .filter-container -->
-  </div> <!-- Penutup #top-panel -->
+    </div>
+  </div>
 
   <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
   <div id="modal-form" class="modal-bg" onclick="event.stopPropagation(); if(event.target === this) tutupModalForm();">
@@ -203,7 +200,7 @@
             <option value="Pondokan">Pondokan RT 05</option>
             <option value="Ronda Bulanan">Ronda/Jimpitan Bulanan</option>
             <option value="Pembangunan">Pekerjaan Umum dan Kelistrikan</option>
-            </select>
+          </select>
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
@@ -250,12 +247,6 @@
           <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
           <select id="pinjamPilihBarang" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
             <option value="">-- Pilih Barang --</option>
-            <option value="Tenda Hajatan (4x6m)">Tenda Hajatan (4x6m)</option>
-            <option value="Kursi Lipat Chitose">Kursi Lipat Chitose</option>
-            <option value="Meja Lipat Panjang">Meja Lipat Panjang</option>
-            <option value="Sound System Portable">Sound System Portable</option>
-            <option value="Terpal Plastik Besar">Terpal Plastik Besar</option>
-            <option value="Kompor Mawar & Dandang">Kompor Mawar & Dandang</option>
           </select>
         </div>
 
@@ -316,8 +307,7 @@
 
       const payloadTes = {
         action: 'cek_pin',
-        pin: input,
-        nama: '', lat: '', lng: '', kategori: '', hidden: '', foto: ''
+        pin: input
       };
 
       fetch(GAS_WEB_APP_URL, {
@@ -401,7 +391,8 @@
 
     var map, daftarPin = [], pinRumahAktif = null;
     var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
-    var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
+    // PERBAIKAN: Secara spesifik memanggil tab 'Peta' agar tidak tertukar dengan tab Keuangan/Jimpitan
+    var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Peta`;
 
     function initMap() {
       map = L.map('map').setView([-7.7423, 110.3842], 17);
@@ -616,10 +607,11 @@
         const selectBarang = document.getElementById("pinjamPilihBarang");
         if (selectBarang && data.perkakas && data.perkakas.length > 0) {
           selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-            data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Stok: ${item.total})</option>`).join('');
+            data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
         }
         
-        const pinjamanAktif = daftarPinjam.filter(row => row[5] === "Dipinjam");
+        // PERBAIKAN: Penanganan huruf besar/kecil pada status
+        const pinjamanAktif = daftarPinjam.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
 
         if (pinjamanAktif.length === 0) {
           container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
@@ -722,8 +714,7 @@
       }
     }
 
-function bukaModalLaporan() {
-      // Set otomatis tanggal hari ini di input date
+    function bukaModalLaporan() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('laporanTanggal').value = today;
       document.getElementById('modal-laporan').style.display = 'flex';
@@ -747,7 +738,6 @@ function bukaModalLaporan() {
         return;
       }
 
-      // Format tanggal dari YYYY-MM-DD ke DD/MM/YYYY agar cocok dengan Sheet
       const parts = tglInput.split('-');
       const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
