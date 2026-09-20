@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.3.0'; // <--- Naikkan versinya tiap ada update!
+const CACHE_NAME = 'rt-kayen-v1.3.1'; // <--- Naikkan versinya tiap ada update!
 
 self.addEventListener('install', (e) => {
   self.skipWaiting(); // Paksa Service Worker baru langsung aktif
