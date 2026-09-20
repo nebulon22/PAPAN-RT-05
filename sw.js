@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.3.2'; // <--- Naikkan versinya tiap ada update!
+const CACHE_NAME = 'rt-kayen-v1.3.3'; // <--- Naikkan versinya tiap ada update!
 
 self.addEventListener('install', (e) => {
   self.skipWaiting(); // Paksa Service Worker baru langsung aktif
@@ -34,9 +34,20 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  // KHUSUS MANIFEST: Selalu ambil dari internet (Network-First)
+  if (e.request.url.includes('manifest.json')) {
+    e.respondWith(
+      fetch(e.request)
+        .catch(() => caches.match(e.request)) // Cadangan jika benar-benar offline
+    );
+    return;
+  }
+
+  // Untuk aset lainnya, tetap gunakan strategi cache Anda yang sekarang
   e.respondWith(
     caches.match(e.request).then((response) => {
       return response || fetch(e.request);
     })
   );
 });
+
