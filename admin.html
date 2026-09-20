@@ -137,15 +137,9 @@
       </div>
 
      <!-- Baris: Pinjam Perkakas & Laporan Divisi -->
-<div class="filter-row">
-  <button type="button" class="btn-filter btn-purple" onclick="bukaModalPinjamAdmin()">
-    📦 Pinjam Perkakas
-  </button>
-  
-  <a href="https://forms.gle/vpfvQAwNqtJyKW6Q6" target="_blank" style="flex: 1; text-decoration: none; display: flex;">
-    <button type="button" class="btn-filter btn-purple" style="width: 100%;">📊 Laporan Divisi</button>
-  </a>
-</div>
+<button type="button" class="btn-filter btn-purple" onclick="bukaModalLaporan()">
+  📊 Laporan Divisi
+</button>
     </div>
 
   
@@ -186,6 +180,116 @@
     </div>
   </div>
 
+
+ <!-- Modal Form Laporan Divisi -->
+<div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
+  <div class="modal-content" style="max-width: 360px;">
+    <div class="modal-header">
+      <h3>📊 Laporan Divisi</h3>
+      <button class="close-btn" onclick="tutupModalLaporan()">&times;</button>
+    </div>
+    
+    <form id="formLaporanDivisi">
+      <div class="form-group">
+        <label for="laporanNamaDivisi" style="font-size: 12px; font-weight: bold; color: #333;">Pilih Divisi:</label>
+        <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+          <option value="">-- Pilih Divisi --</option>
+          <option value="Kerohanian">Kerohanian</option>
+          <option value="Keamanan">Keamanan / Ronda</option>
+          <option value="Pembangunan">Pembangunan</option>
+          <option value="PKK / Kebersihan">PKK / Kebersihan</option>
+          <option value="Humas">Humas & Pemuda</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="laporanPelapor" style="font-size: 12px; font-weight: bold; color: #333;">Nama Pelapor:</label>
+        <input type="text" id="laporanPelapor" placeholder="Nama Anda" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+      </div>
+
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="laporanJudul" style="font-size: 12px; font-weight: bold; color: #333;">Judul Kegiatan / Laporan:</label>
+        <input type="text" id="laporanJudul" placeholder="Contoh: Pembelian Lampu Pos" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+      </div>
+
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="laporanDetail" style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Detail:</label>
+        <textarea id="laporanDetail" rows="3" placeholder="Tuliskan rincian laporan..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required></textarea>
+      </div>
+
+      <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; margin-top: 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+        📤 Kirim Laporan
+      </button>
+    </form>
+  </div>
+</div>
+   
+   <!-- Modal Kelola Peminjaman Perkakas (Khusus Admin) -->
+<div id="modal-admin-inventaris" class="modal-bg" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; align-items: center; justify-content: center;">
+  <div class="modal-content" style="background: white; border-radius: 8px; max-width: 550px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 16px; box-sizing: border-box;">
+    
+    <!-- Header Modal -->
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+      <h3 style="margin: 0; font-size: 15px; color: #111;">📦 Kelola Peminjaman Perkakas</h3>
+      <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
+    </div>
+
+    <!-- Form Input Peminjaman Baru -->
+    <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+      <div>
+        <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah:</label>
+        <input type="text" id="pinjamNamaWarga" placeholder="Contoh: Pak Budi (A-12)" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+      </div>
+
+      <div>
+        <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
+        <select id="pinjamPilihBarang" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+          <option value="">-- Pilih Barang --</option>
+          <option value="Tenda Hajatan (4x6m)">Tenda Hajatan (4x6m)</option>
+          <option value="Kursi Lipat Chitose">Kursi Lipat Chitose</option>
+          <option value="Meja Lipat Panjang">Meja Lipat Panjang</option>
+          <option value="Sound System Portable">Sound System Portable</option>
+          <option value="Terpal Plastik Besar">Terpal Plastik Besar</option>
+          <option value="Kompor Mawar & Dandang">Kompor Mawar & Dandang</option>
+        </select>
+      </div>
+
+      <div>
+        <label style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Dipinjam:</label>
+        <input type="number" id="pinjamJumlah" min="1" placeholder="Masukkan angka" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+      </div>
+
+      <div style="display: flex; align-items: flex-end;">
+        <button type="button" onclick="simpanPeminjamanAdmin()" style="width: 100%; padding: 8px; background: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
+          ➕ Catat Pinjam
+        </button>
+      </div>
+    </form>
+
+    <!-- Tabel Barang Belum Dikembalikan -->
+    <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151;">📋 Daftar Belum Dikembalikan:</h4>
+    <div style="overflow-x: auto;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left;">
+        <thead>
+          <tr style="background: #111827; color: white;">
+            <th style="padding: 6px;">Peminjam</th>
+            <th style="padding: 6px;">Barang</th>
+            <th style="padding: 6px; text-align: center;">Jumlah</th>
+            <th style="padding: 6px; text-align: center;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="tabel-peminjaman-admin">
+          <!-- Diisi oleh JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Tombol Tutup Modal -->
+    <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
+  </div>
+</div>
+
+   
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     
@@ -664,73 +768,60 @@ async function prosesPengembalian(id) {
     }
   }
 }
+
+function bukaModalLaporan() {
+  document.getElementById('modal-laporan').style.display = 'flex';
+}
+
+function tutupModalLaporan() {
+  document.getElementById('modal-laporan').style.display = 'none';
+  document.getElementById('formLaporanDivisi').reset();
+}
+
+function simpanLaporanDivisi() {
+  const divisi = document.getElementById('laporanNamaDivisi').value;
+  const pelapor = document.getElementById('laporanPelapor').value;
+  const judul = document.getElementById('laporanJudul').value;
+  const detail = document.getElementById('laporanDetail').value;
+
+  if (!divisi || !pelapor || !judul) {
+    alert('Harap isi semua kolom yang wajib!');
+    return;
+  }
+
+  const btnSimpan = document.getElementById('btnSimpanLaporan');
+  btnSimpan.disabled = true;
+  btnSimpan.innerText = 'Mengirim...';
+
+  // URL Google Apps Script Web App kamu
+  const SCRIPT_URL = "URL_GOOGLE_APPS_SCRIPT_KAMU"; 
+
+  const formData = new FormData();
+  formData.append('aksi', 'tambahLaporan'); // Penanda aksi untuk Apps Script
+  formData.append('divisi', divisi);
+  formData.append('pelapor', pelapor);
+  formData.append('judul', judul);
+  formData.append('detail', detail);
+
+  fetch(SCRIPT_URL, { method: 'POST', body: formData })
+    .then(res => res.json())
+    .then(response => {
+      alert('✅ Laporan Divisi berhasil dikirim!');
+      tutupModalLaporan();
+    })
+    .catch(err => {
+      alert('❌ Gagal mengirim laporan. Coba lagi.');
+      console.error(err);
+    })
+    .finally(() => {
+      btnSimpan.disabled = false;
+      btnSimpan.innerText = '📤 Kirim Laporan';
+    });
+}
     
   </script>
 
-   <!-- Modal Kelola Peminjaman Perkakas (Khusus Admin) -->
-<div id="modal-admin-inventaris" class="modal-bg" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; align-items: center; justify-content: center;">
-  <div class="modal-content" style="background: white; border-radius: 8px; max-width: 550px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 16px; box-sizing: border-box;">
-    
-    <!-- Header Modal -->
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
-      <h3 style="margin: 0; font-size: 15px; color: #111;">📦 Kelola Peminjaman Perkakas</h3>
-      <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
-    </div>
-
-    <!-- Form Input Peminjaman Baru -->
-    <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
-      <div>
-        <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah:</label>
-        <input type="text" id="pinjamNamaWarga" placeholder="Contoh: Pak Budi (A-12)" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-      </div>
-
-      <div>
-        <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
-        <select id="pinjamPilihBarang" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-          <option value="">-- Pilih Barang --</option>
-          <option value="Tenda Hajatan (4x6m)">Tenda Hajatan (4x6m)</option>
-          <option value="Kursi Lipat Chitose">Kursi Lipat Chitose</option>
-          <option value="Meja Lipat Panjang">Meja Lipat Panjang</option>
-          <option value="Sound System Portable">Sound System Portable</option>
-          <option value="Terpal Plastik Besar">Terpal Plastik Besar</option>
-          <option value="Kompor Mawar & Dandang">Kompor Mawar & Dandang</option>
-        </select>
-      </div>
-
-      <div>
-        <label style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Dipinjam:</label>
-        <input type="number" id="pinjamJumlah" min="1" placeholder="Masukkan angka" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-      </div>
-
-      <div style="display: flex; align-items: flex-end;">
-        <button type="button" onclick="simpanPeminjamanAdmin()" style="width: 100%; padding: 8px; background: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
-          ➕ Catat Pinjam
-        </button>
-      </div>
-    </form>
-
-    <!-- Tabel Barang Belum Dikembalikan -->
-    <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151;">📋 Daftar Belum Dikembalikan:</h4>
-    <div style="overflow-x: auto;">
-      <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left;">
-        <thead>
-          <tr style="background: #111827; color: white;">
-            <th style="padding: 6px;">Peminjam</th>
-            <th style="padding: 6px;">Barang</th>
-            <th style="padding: 6px; text-align: center;">Jumlah</th>
-            <th style="padding: 6px; text-align: center;">Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="tabel-peminjaman-admin">
-          <!-- Diisi oleh JS -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Tombol Tutup Modal -->
-    <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
-  </div>
-</div>
+  
    
 </body>
 </html>
