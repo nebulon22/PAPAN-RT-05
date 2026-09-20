@@ -70,17 +70,17 @@
     .btn-filter.active { background: #00c853; color: white; border-color: #00c853; }
 
     .modal-bg {
-  display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.6); z-index: 2000;
-  align-items: center; justify-content: center;
-  padding: 20px 10px; box-sizing: border-box; /* Memberi jarak aman atas & bawah layar */
-}
-.modal-content {
-  background: white; width: 90%; max-width: 400px; border-radius: 12px; padding: 16px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column;
-  max-height: 80vh; overflow-y: auto; /* Membatasi tinggi agar tombol X dan header selalu muat */
-  margin: auto;
-}
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6); z-index: 2000;
+      align-items: center; justify-content: center;
+      padding: 20px 10px; box-sizing: border-box;
+    }
+    .modal-content {
+      background: white; width: 90%; max-width: 400px; border-radius: 12px; padding: 16px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3); display: flex; flex-direction: column;
+      max-height: 80vh; overflow-y: auto;
+      margin: auto;
+    }
     .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; }
     .modal-header h3 { margin: 0; font-size: 16px; color: #111; }
     .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #777; font-weight: bold; }
@@ -90,19 +90,14 @@
     .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
     .btn-submit { background: #00c853; color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%; }
 
-    .btn-admin-act { background: #111827; color: #ffffff; border: 1px solid #111827; }
-    .btn-admin-act:hover { background: #374151; }
-
-    /* Styling khusus tombol Laporan Divisi (Warna Ungu) */
-.btn-purple {
-  background: #8b5cf6 !important;
-  color: white !important;
-  border-color: #7c3aed !important;
-}
-.btn-purple:hover {
-  background: #7c3aed !important;
-}
-  
+    .btn-purple {
+      background: #8b5cf6 !important;
+      color: white !important;
+      border-color: #7c3aed !important;
+    }
+    .btn-purple:hover {
+      background: #7c3aed !important;
+    }
   </style>
 </head>
 <body>
@@ -119,13 +114,14 @@
   <a href="index.html" class="btn-back-floating">⬅️ Mode Warga</a>
   <div id="map"></div>
 
- <div id="top-panel">
+  <!-- PANEL ATAS -->
+  <div id="top-panel">
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
       <button onclick="cariLokasi()">Cari</button>
     </div>
 
-   <div class="filter-container">
+    <div class="filter-container">
       <div class="filter-row">
         <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
         <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
@@ -136,17 +132,20 @@
         <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
       </div>
 
-     <!-- Baris: Pinjam Perkakas & Laporan Divisi -->
-<button type="button" class="btn-filter btn-purple" onclick="bukaModalLaporan()">
-  📊 Laporan Divisi
-</button>
-    </div>
+      <!-- Baris: Pinjam Perkakas & Laporan Divisi -->
+      <div class="filter-row">
+        <button type="button" class="btn-filter btn-purple" onclick="bukaModalPinjamAdmin()">
+          📦 Pinjam Perkakas
+        </button>
+        <button type="button" class="btn-filter btn-purple" onclick="bukaModalLaporan()">
+          📊 Laporan Divisi
+        </button>
+      </div>
+    </div> <!-- Penutup .filter-container -->
+  </div> <!-- Penutup #top-panel -->
 
-  
-
-
-
-<div id="modal-form" class="modal-bg" onclick="event.stopPropagation(); if(event.target === this) tutupModalForm();">
+  <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
+  <div id="modal-form" class="modal-bg" onclick="event.stopPropagation(); if(event.target === this) tutupModalForm();">
     <div class="modal-content">
       <div class="modal-header">
         <h3 id="formTitle">📍 Tambah Data Baru</h3>
@@ -180,120 +179,114 @@
     </div>
   </div>
 
-
- <!-- Modal Form Laporan Divisi -->
-<div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
-  <div class="modal-content" style="max-width: 360px;">
-    <div class="modal-header">
-      <h3>📊 Laporan Divisi</h3>
-      <button class="close-btn" onclick="tutupModalLaporan()">&times;</button>
-    </div>
-    
-    <form id="formLaporanDivisi">
-      <div class="form-group">
-        <label for="laporanNamaDivisi" style="font-size: 12px; font-weight: bold; color: #333;">Pilih Divisi:</label>
-        <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
-          <option value="">-- Pilih Divisi --</option>
-          <option value="Kerohanian">Kerohanian</option>
-          <option value="Keamanan">Keamanan / Ronda</option>
-          <option value="Pembangunan">Pembangunan</option>
-          <option value="PKK / Kebersihan">PKK / Kebersihan</option>
-          <option value="Humas">Humas & Pemuda</option>
-        </select>
+  <!-- MODAL 2: Form Laporan Divisi -->
+  <div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
+    <div class="modal-content" style="max-width: 360px;">
+      <div class="modal-header">
+        <h3>📊 Laporan Divisi</h3>
+        <button class="close-btn" onclick="tutupModalLaporan()">&times;</button>
       </div>
+      
+      <form id="formLaporanDivisi">
+        <div class="form-group">
+          <label for="laporanNamaDivisi" style="font-size: 12px; font-weight: bold; color: #333;">Pilih Divisi:</label>
+          <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+            <option value="">-- Pilih Divisi --</option>
+            <option value="Kerohanian">Kerohanian</option>
+            <option value="Keamanan">Keamanan / Ronda</option>
+            <option value="Pembangunan">Pembangunan</option>
+            <option value="PKK / Kebersihan">PKK / Kebersihan</option>
+            <option value="Humas">Humas & Pemuda</option>
+          </select>
+        </div>
 
-      <div class="form-group" style="margin-top: 10px;">
-        <label for="laporanPelapor" style="font-size: 12px; font-weight: bold; color: #333;">Nama Pelapor:</label>
-        <input type="text" id="laporanPelapor" placeholder="Nama Anda" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
-      </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label for="laporanPelapor" style="font-size: 12px; font-weight: bold; color: #333;">Nama Pelapor:</label>
+          <input type="text" id="laporanPelapor" placeholder="Nama Anda" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+        </div>
 
-      <div class="form-group" style="margin-top: 10px;">
-        <label for="laporanJudul" style="font-size: 12px; font-weight: bold; color: #333;">Judul Kegiatan / Laporan:</label>
-        <input type="text" id="laporanJudul" placeholder="Contoh: Pembelian Lampu Pos" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
-      </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label for="laporanJudul" style="font-size: 12px; font-weight: bold; color: #333;">Judul Kegiatan / Laporan:</label>
+          <input type="text" id="laporanJudul" placeholder="Contoh: Pembelian Lampu Pos" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+        </div>
 
-      <div class="form-group" style="margin-top: 10px;">
-        <label for="laporanDetail" style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Detail:</label>
-        <textarea id="laporanDetail" rows="3" placeholder="Tuliskan rincian laporan..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required></textarea>
-      </div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label for="laporanDetail" style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Detail:</label>
+          <textarea id="laporanDetail" rows="3" placeholder="Tuliskan rincian laporan..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required></textarea>
+        </div>
 
-      <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; margin-top: 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
-        📤 Kirim Laporan
-      </button>
-    </form>
-  </div>
-</div>
-   
-   <!-- Modal Kelola Peminjaman Perkakas (Khusus Admin) -->
-<div id="modal-admin-inventaris" class="modal-bg" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 3000; align-items: center; justify-content: center;">
-  <div class="modal-content" style="background: white; border-radius: 8px; max-width: 550px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 16px; box-sizing: border-box;">
-    
-    <!-- Header Modal -->
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
-      <h3 style="margin: 0; font-size: 15px; color: #111;">📦 Kelola Peminjaman Perkakas</h3>
-      <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
-    </div>
-
-    <!-- Form Input Peminjaman Baru -->
-    <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
-      <div>
-        <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah:</label>
-        <input type="text" id="pinjamNamaWarga" placeholder="Contoh: Pak Budi (A-12)" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-      </div>
-
-      <div>
-        <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
-        <select id="pinjamPilihBarang" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-          <option value="">-- Pilih Barang --</option>
-          <option value="Tenda Hajatan (4x6m)">Tenda Hajatan (4x6m)</option>
-          <option value="Kursi Lipat Chitose">Kursi Lipat Chitose</option>
-          <option value="Meja Lipat Panjang">Meja Lipat Panjang</option>
-          <option value="Sound System Portable">Sound System Portable</option>
-          <option value="Terpal Plastik Besar">Terpal Plastik Besar</option>
-          <option value="Kompor Mawar & Dandang">Kompor Mawar & Dandang</option>
-        </select>
-      </div>
-
-      <div>
-        <label style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Dipinjam:</label>
-        <input type="number" id="pinjamJumlah" min="1" placeholder="Masukkan angka" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-      </div>
-
-      <div style="display: flex; align-items: flex-end;">
-        <button type="button" onclick="simpanPeminjamanAdmin()" style="width: 100%; padding: 8px; background: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
-          ➕ Catat Pinjam
+        <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; margin-top: 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+          📤 Kirim Laporan
         </button>
-      </div>
-    </form>
-
-    <!-- Tabel Barang Belum Dikembalikan -->
-    <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151;">📋 Daftar Belum Dikembalikan:</h4>
-    <div style="overflow-x: auto;">
-      <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left;">
-        <thead>
-          <tr style="background: #111827; color: white;">
-            <th style="padding: 6px;">Peminjam</th>
-            <th style="padding: 6px;">Barang</th>
-            <th style="padding: 6px; text-align: center;">Jumlah</th>
-            <th style="padding: 6px; text-align: center;">Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="tabel-peminjaman-admin">
-          <!-- Diisi oleh JS -->
-        </tbody>
-      </table>
+      </form>
     </div>
-
-    <!-- Tombol Tutup Modal -->
-    <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
   </div>
-</div>
-
    
+  <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
+  <div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
+    <div class="modal-content" style="max-width: 550px; width: 92%;">
+      
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 15px; color: #111;">📦 Kelola Peminjaman Perkakas</h3>
+        <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
+      </div>
+
+      <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+        <div>
+          <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah:</label>
+          <input type="text" id="pinjamNamaWarga" placeholder="Contoh: Pak Budi (A-12)" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
+          <select id="pinjamPilihBarang" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+            <option value="">-- Pilih Barang --</option>
+            <option value="Tenda Hajatan (4x6m)">Tenda Hajatan (4x6m)</option>
+            <option value="Kursi Lipat Chitose">Kursi Lipat Chitose</option>
+            <option value="Meja Lipat Panjang">Meja Lipat Panjang</option>
+            <option value="Sound System Portable">Sound System Portable</option>
+            <option value="Terpal Plastik Besar">Terpal Plastik Besar</option>
+            <option value="Kompor Mawar & Dandang">Kompor Mawar & Dandang</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Dipinjam:</label>
+          <input type="number" id="pinjamJumlah" min="1" placeholder="Masukkan angka" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+        </div>
+
+        <div style="display: flex; align-items: flex-end;">
+          <button type="button" onclick="simpanPeminjamanAdmin()" style="width: 100%; padding: 8px; background: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
+            ➕ Catat Pinjam
+          </button>
+        </div>
+      </form>
+
+      <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151;">📋 Daftar Belum Dikembalikan:</h4>
+      <div style="overflow-x: auto;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left;">
+          <thead>
+            <tr style="background: #111827; color: white;">
+              <th style="padding: 6px;">Peminjam</th>
+              <th style="padding: 6px;">Barang</th>
+              <th style="padding: 6px; text-align: center;">Jumlah</th>
+              <th style="padding: 6px; text-align: center;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-peminjaman-admin">
+            <!-- Diisi oleh JS -->
+          </tbody>
+        </table>
+      </div>
+
+      <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
+    </div>
+  </div>
+
+  <!-- JAVASCRIPT LOGIC -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec";
+    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec";
 
     document.addEventListener("DOMContentLoaded", () => {
       if(sessionStorage.getItem('authAdmin') === 'true') {
@@ -301,7 +294,7 @@ const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqw
       }
     });
 
-  function cekLogin() {
+    function cekLogin() {
       const input = document.getElementById('adminPin').value.trim();
       if(input.length !== 6) {
         alert("PIN harus berisi 6 digit angka!");
@@ -312,16 +305,10 @@ const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqw
       btnLogin.innerText = "⏳ Memeriksa...";
       btnLogin.disabled = true;
 
-      // Kirim tes simpan data kosong hanya untuk memverifikasi PIN ke Apps Script
       const payloadTes = {
-        action: 'cek_pin', // 👈 Tambahkan ini
+        action: 'cek_pin',
         pin: input,
-        nama: '',
-        lat: '',
-        lng: '',
-        kategori: '',
-        hidden: '',
-        foto: ''
+        nama: '', lat: '', lng: '', kategori: '', hidden: '', foto: ''
       };
 
       fetch(GAS_WEB_APP_URL, {
@@ -334,7 +321,6 @@ const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqw
         btnLogin.innerText = "Buka Kunci";
         btnLogin.disabled = false;
 
-        // Jika balasan dari server BUKAN "ERROR: PIN Admin Salah!"
         if (!result.includes("PIN Admin Salah")) {
           sessionStorage.setItem('authAdmin', 'true');
           sessionStorage.setItem('verifiedPin', input);
@@ -390,8 +376,6 @@ const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqw
           location.reload();
         } else {
           alert('❌ Gagal: ' + result);
-          
-          // Jika server menolak karena PIN salah, otomatis reset login
           if(result.toLowerCase().includes('pin')) {
             sessionStorage.removeItem('authAdmin');
             sessionStorage.removeItem('verifiedPin');
@@ -425,19 +409,18 @@ const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqw
       ];
       L.polygon(batasRT05, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-     map.on('click', function(e) {
-  // 🟢 BARIS TAMBAHAN: Jika modal sedang terbuka, abaikan klik di peta
-if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex') return;
-  document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
-  document.getElementById('inputNama').value = "";
-  document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
-  document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
-  document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
-  document.getElementById('inputFoto').value = "";
-  document.getElementById('modal-form').style.display = 'flex';
-});
+      map.on('click', function(e) {
+        if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex') return;
+        document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
+        document.getElementById('inputNama').value = "";
+        document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+        document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
+        document.getElementById('inputFoto').value = "";
+        document.getElementById('modal-form').style.display = 'flex';
+      });
 
-          fetch(SHEET_URL)
+      fetch(SHEET_URL)
       .then(response => response.text())
       .then(csvText => {
         var baris = parseCSV(csvText).slice(1);
@@ -451,10 +434,8 @@ if (document.getElementById('modal-form').style.display === 'flex' || document.g
             var urlFoto = kolom[5] ? kolom[5].trim() : '';
 
             var namaAsli = kolom[0].trim();
-            var namaTampil = namaAsli;
-
             var item = {
-              name: namaTampil,
+              name: namaAsli,
               nameAsli: namaAsli,
               lat: parseFloat(latClean),
               lng: parseFloat(lngClean),
@@ -465,13 +446,12 @@ if (document.getElementById('modal-form').style.display === 'flex' || document.g
             if (isNaN(item.lat) || isNaN(item.lng)) return;
 
             var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
             let emoji = '🏠'; 
             let kategori = 'rumah';
             let namaUpper = item.nameAsli.toUpperCase();
-
             let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
 
             if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
@@ -500,7 +480,7 @@ if (document.getElementById('modal-form').style.display === 'flex' || document.g
 
             var customIcon = L.divIcon({
               className: 'custom-pin',
-              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
+              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${emoji}</div>`,
               iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
             });
             
@@ -555,57 +535,28 @@ if (document.getElementById('modal-form').style.display === 'flex' || document.g
       return str;
     }
 
-    
-
-    
     function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
-      
-    window.editDataByIdx = function(idx) {
-      var item = daftarPin[idx];
-      if (!item) return;
-
-      document.getElementById('formTitle').innerText = "✏️ Edit: " + item.namaRaw;
-      document.getElementById('inputNama').value = item.namaRaw; 
-      document.getElementById('inputLat').value = item.lat; 
-      document.getElementById('inputLng').value = item.lng;
-      document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
-      
-      var formK = document.getElementById('inputKategori');
-      if (item.kategori === 'kuliner') formK.value = 'Kuliner'; 
-      else if (item.kategori === 'kost') formK.value = 'Kost'; 
-      else if (item.kategori === 'fasum') formK.value = 'Fasum'; 
-      else if (item.kategori === 'minimarket') formK.value = 'Minimarket'; 
-      else formK.value = 'Rumah';
-
-      document.getElementById('inputHidden').value = item.hidden ? 'TRUE' : 'FALSE'; 
-      document.getElementById('inputFoto').value = item.foto || '';
-      document.getElementById('modal-form').style.display = 'flex';
-    };
 
     function filterKategori(kat, btnElement) {
-  // Otomatis ambil tombol yang diklik
-  var btn = btnElement || (window.event ? window.event.currentTarget : null);
+      var btn = btnElement || (window.event ? window.event.currentTarget : null);
 
-  // 1. Lepas warna hijau dari semua tombol
-  document.querySelectorAll('.btn-filter').forEach(function(b) {
-    b.classList.remove('active');
-  });
+      document.querySelectorAll('.btn-filter').forEach(function(b) {
+        b.classList.remove('active');
+      });
 
-  // 2. Pasang warna hijau ke tombol yang baru diklik
-  if (btn && btn.classList) {
-    btn.classList.add('active');
-  }
-
-  // 3. Tampilkan pin sesuai kategori
-  daftarPin.forEach(function(pin) {
-    map.removeLayer(pin.marker);
-    if (!pin.hidden) {
-      if (kat === 'semua' || pin.kategori === kat) {
-        pin.marker.addTo(map);
+      if (btn && btn.classList) {
+        btn.classList.add('active');
       }
+
+      daftarPin.forEach(function(pin) {
+        map.removeLayer(pin.marker);
+        if (!pin.hidden) {
+          if (kat === 'semua' || pin.kategori === kat) {
+            pin.marker.addTo(map);
+          }
+        }
+      });
     }
-  });
-}
 
     function cariLokasi() {
       var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
@@ -632,196 +583,193 @@ if (document.getElementById('modal-form').style.display === 'flex' || document.g
       } else alert("Lokasi atau nomor rumah tidak ditemukan.");
     }
 
-
-// 1. Fungsi Buka & Tutup Modal (BARU)
-function bukaModalPinjamAdmin() {
-  muatPeminjamanAdmin(); // Ambil data terbaru dari Google Sheets saat modal dibuka
-  document.getElementById("modal-admin-inventaris").style.display = "flex";
-}
-
-function tutupModalPinjamAdmin() {
-  document.getElementById("modal-admin-inventaris").style.display = "none";
-}
-
-// 2. Ambil Data Peminjaman dari Google Sheets (TETAP DIPAKAI)
-async function muatPeminjamanAdmin() {
-  const container = document.getElementById("tabel-peminjaman-admin");
-  if (!container) return;
-
-  container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
-
-  try {
-    const res = await fetch(GAS_WEB_APP_URL);
-    const data = await res.json();
-    
-    // 1. Ambil array peminjaman dari respon JSON
-    const daftarPinjam = Array.isArray(data) ? data : (data.peminjaman || []);
-
-    // 2. Isi dropdown 'Pilih Barang' secara otomatis dari tab Perkakas
-    const selectBarang = document.getElementById("pinjamPilihBarang");
-    if (selectBarang && data.perkakas && data.perkakas.length > 0) {
-      selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-        data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Stok: ${item.total})</option>`).join('');
-    }
-    
-    // 3. Filter transaksi yang statusnya 'Dipinjam' (kolom index 5)
-    const pinjamanAktif = daftarPinjam.filter(row => row[5] === "Dipinjam");
-
-    if (pinjamanAktif.length === 0) {
-      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
-      return;
+    function bukaModalPinjamAdmin() {
+      muatPeminjamanAdmin();
+      document.getElementById("modal-admin-inventaris").style.display = "flex";
     }
 
-    container.innerHTML = pinjamanAktif.map(row => `
-      <tr style="border-bottom: 1px solid #e5e7eb;">
-        <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
-        <td style="padding: 6px;">${row[2]}</td>
-        <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
-        <td style="padding: 6px; text-align: center;">
-          <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
-            ↩️ Dikembalikan
-          </button>
-        </td>
-      </tr>
-    `).join('');
-  } catch (err) {
-    console.error("Error muatPeminjamanAdmin:", err);
-    container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:12px;">Gagal memuat data.</td></tr>`;
-  }
-}
-
-// 3. Simpan Pinjam Baru ke Google Sheets (TETAP DIPAKAI)
-async function simpanPeminjamanAdmin() {
-  const peminjam = document.getElementById("pinjamNamaWarga").value;
-  const barang = document.getElementById("pinjamPilihBarang").value;
-  const jumlah = document.getElementById("pinjamJumlah").value;
-  const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
-
-  if (!peminjam || !barang || !jumlah) {
-    alert("Mohon lengkapi semua data!");
-    return;
-  }
-
-  const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
-  if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
-
-  const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-  const payload = {
-    pin: pinAdmin, // PIN wajib dikirim agar lolos verifikasi GAS
-    action: "pinjam",
-    id: "ID-" + Date.now(),
-    peminjam: peminjam,
-    barang: barang,
-    jumlah: parseInt(jumlah),
-    tgl: hariIni
-  };
-
-  try {
-    const res = await fetch(GAS_WEB_APP_URL, {
-      method: "POST",
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
-
-    if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-
-    if (text.includes("SUCCESS")) {
-      alert("✅ Peminjaman berhasil dicatat!");
-      document.getElementById("pinjamNamaWarga").value = "";
-      document.getElementById("pinjamPilihBarang").value = "";
-      document.getElementById("pinjamJumlah").value = "";
-      muatPeminjamanAdmin(); // Reload daftar peminjam di pop-up
-    } else {
-      alert("❌ Gagal menyimpan: " + text);
+    function tutupModalPinjamAdmin() {
+      document.getElementById("modal-admin-inventaris").style.display = "none";
     }
-  } catch (err) {
-    if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-    alert("❌ Error koneksi: " + err);
-  }
-}
 
-async function prosesPengembalian(id) {
-  if (confirm("Apakah barang ini sudah dikembalikan?")) {
-    const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
-    
-    try {
-      const res = await fetch(GAS_WEB_APP_URL, {
-        method: "POST",
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({
-          pin: pinAdmin, // PIN wajib dikirim
-          action: "kembali",
-          id: id
-        })
-      });
-      const text = await res.text();
+    async function muatPeminjamanAdmin() {
+      const container = document.getElementById("tabel-peminjaman-admin");
+      if (!container) return;
 
-      if (text.includes("SUCCESS")) {
-        alert("✅ Status barang berhasil diperbarui!");
-        muatPeminjamanAdmin();
-      } else {
-        alert("❌ Gagal memperbarui: " + text);
+      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
+
+      try {
+        const res = await fetch(GAS_WEB_APP_URL);
+        const data = await res.json();
+        
+        const daftarPinjam = Array.isArray(data) ? data : (data.peminjaman || []);
+
+        const selectBarang = document.getElementById("pinjamPilihBarang");
+        if (selectBarang && data.perkakas && data.perkakas.length > 0) {
+          selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
+            data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Stok: ${item.total})</option>`).join('');
+        }
+        
+        const pinjamanAktif = daftarPinjam.filter(row => row[5] === "Dipinjam");
+
+        if (pinjamanAktif.length === 0) {
+          container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
+          return;
+        }
+
+        container.innerHTML = pinjamanAktif.map(row => `
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
+            <td style="padding: 6px;">${row[2]}</td>
+            <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
+            <td style="padding: 6px; text-align: center;">
+              <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
+                ↩️ Dikembalikan
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error("Error muatPeminjamanAdmin:", err);
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:12px;">Gagal memuat data.</td></tr>`;
       }
-    } catch (err) {
-      alert("❌ Error koneksi: " + err);
     }
-  }
-}
 
-function bukaModalLaporan() {
-  document.getElementById('modal-laporan').style.display = 'flex';
-}
+    async function simpanPeminjamanAdmin() {
+      const peminjam = document.getElementById("pinjamNamaWarga").value;
+      const barang = document.getElementById("pinjamPilihBarang").value;
+      const jumlah = document.getElementById("pinjamJumlah").value;
+      const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
 
-function tutupModalLaporan() {
-  document.getElementById('modal-laporan').style.display = 'none';
-  document.getElementById('formLaporanDivisi').reset();
-}
+      if (!peminjam || !barang || !jumlah) {
+        alert("Mohon lengkapi semua data!");
+        return;
+      }
 
-function simpanLaporanDivisi() {
-  const divisi = document.getElementById('laporanNamaDivisi').value;
-  const pelapor = document.getElementById('laporanPelapor').value;
-  const judul = document.getElementById('laporanJudul').value;
-  const detail = document.getElementById('laporanDetail').value;
+      const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
+      if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
 
-  if (!divisi || !pelapor || !judul) {
-    alert('Harap isi semua kolom yang wajib!');
-    return;
-  }
+      const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      const payload = {
+        pin: pinAdmin,
+        action: "pinjam",
+        id: "ID-" + Date.now(),
+        peminjam: peminjam,
+        barang: barang,
+        jumlah: parseInt(jumlah),
+        tgl: hariIni
+      };
 
-  const btnSimpan = document.getElementById('btnSimpanLaporan');
-  btnSimpan.disabled = true;
-  btnSimpan.innerText = 'Mengirim...';
+      try {
+        const res = await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        const text = await res.text();
 
-  // URL Google Apps Script Web App kamu
-  const SCRIPT_URL = "URL_GOOGLE_APPS_SCRIPT_KAMU"; 
+        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
 
-  const formData = new FormData();
-  formData.append('aksi', 'tambahLaporan'); // Penanda aksi untuk Apps Script
-  formData.append('divisi', divisi);
-  formData.append('pelapor', pelapor);
-  formData.append('judul', judul);
-  formData.append('detail', detail);
+        if (text.includes("SUCCESS")) {
+          alert("✅ Peminjaman berhasil dicatat!");
+          document.getElementById("pinjamNamaWarga").value = "";
+          document.getElementById("pinjamPilihBarang").value = "";
+          document.getElementById("pinjamJumlah").value = "";
+          muatPeminjamanAdmin();
+        } else {
+          alert("❌ Gagal menyimpan: " + text);
+        }
+      } catch (err) {
+        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+        alert("❌ Error koneksi: " + err);
+      }
+    }
 
-  fetch(SCRIPT_URL, { method: 'POST', body: formData })
-    .then(res => res.json())
-    .then(response => {
-      alert('✅ Laporan Divisi berhasil dikirim!');
-      tutupModalLaporan();
-    })
-    .catch(err => {
-      alert('❌ Gagal mengirim laporan. Coba lagi.');
-      console.error(err);
-    })
-    .finally(() => {
-      btnSimpan.disabled = false;
-      btnSimpan.innerText = '📤 Kirim Laporan';
-    });
-}
-    
+    async function prosesPengembalian(id) {
+      if (confirm("Apakah barang ini sudah dikembalikan?")) {
+        const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+        
+        try {
+          const res = await fetch(GAS_WEB_APP_URL, {
+            method: "POST",
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({
+              pin: pinAdmin,
+              action: "kembali",
+              id: id
+            })
+          });
+          const text = await res.text();
+
+          if (text.includes("SUCCESS")) {
+            alert("✅ Status barang berhasil diperbarui!");
+            muatPeminjamanAdmin();
+          } else {
+            alert("❌ Gagal memperbarui: " + text);
+          }
+        } catch (err) {
+          alert("❌ Error koneksi: " + err);
+        }
+      }
+    }
+
+    function bukaModalLaporan() {
+      document.getElementById('modal-laporan').style.display = 'flex';
+    }
+
+    function tutupModalLaporan() {
+      document.getElementById('modal-laporan').style.display = 'none';
+      document.getElementById('formLaporanDivisi').reset();
+    }
+
+    function simpanLaporanDivisi() {
+      const divisi = document.getElementById('laporanNamaDivisi').value;
+      const pelapor = document.getElementById('laporanPelapor').value;
+      const judul = document.getElementById('laporanJudul').value;
+      const detail = document.getElementById('laporanDetail').value;
+      const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+
+      if (!divisi || !pelapor || !judul) {
+        alert('Harap isi semua kolom yang wajib!');
+        return;
+      }
+
+      const btnSimpan = document.getElementById('btnSimpanLaporan');
+      btnSimpan.disabled = true;
+      btnSimpan.innerText = 'Mengirim...';
+
+      const payload = {
+        pin: pinAdmin,
+        action: 'tambahLaporan',
+        divisi: divisi,
+        pelapor: pelapor,
+        judul: judul,
+        detail: detail
+      };
+
+      fetch(GAS_WEB_APP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      })
+      .then(res => res.text())
+      .then(result => {
+        if(result.includes('SUCCESS')) {
+          alert('✅ Laporan Divisi berhasil dikirim!');
+          tutupModalLaporan();
+        } else {
+          alert('❌ Gagal mengirim: ' + result);
+        }
+      })
+      .catch(err => {
+        alert('❌ Gagal mengirim laporan. Coba lagi.');
+        console.error(err);
+      })
+      .finally(() => {
+        btnSimpan.disabled = false;
+        btnSimpan.innerText = '📤 Kirim Laporan';
+      });
+    }
   </script>
-
-  
-   
 </body>
 </html>
