@@ -1527,17 +1527,21 @@ function muatDataJimpitan() {
 
             var dateObj = new Date(thn, bln, tgl, jam, menit);
 
-            if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
-              // PERBAIKAN: Ambil properti .kelompokMalam dari objek kembalian
-              var infoMalam = getInfoMalamRonda(dateObj);
-              var namaMalam = infoMalam.kelompokMalam;
+           if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
+  var infoMalam = getInfoMalamRonda(dateObj);
+  var namaMalam = infoMalam.kelompokMalam;
 
-              if (namaMalam && rekapMalam[namaMalam]) {
-                rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-                rekapMalam[namaMalam].subtotal += nominal;
-                grandTotal += nominal;
-              }
-            }
+  if (namaMalam && rekapMalam[namaMalam]) {
+    // 1. Simpan item & tambahkan ke subtotal malam tersebut
+    rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+    rekapMalam[namaMalam].subtotal += nominal;
+
+    // 2. Hanya tambahkan ke Grand Total JIKA BUKAN Malam Minggu
+    if (namaMalam !== 'Malam Minggu') {
+      grandTotal += nominal;
+    }
+  }
+}
           }
         }
       });
