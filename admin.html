@@ -104,7 +104,6 @@
  <div id="login-overlay">
     <div class="login-box">
       <h2>🔒 Akses Admin</h2>
-      <!-- Ubah tag <p> menjadi <label for="adminPin"> -->
       <label for="adminPin" class="subtitle" style="display: block; cursor: pointer;">Masukkan 6 Digit PIN Pengurus</label>
       <input type="password" id="adminPin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••" onkeypress="if(event.key === 'Enter') cekLogin()">
       <button onclick="cekLogin()">Buka Kunci</button>
@@ -116,6 +115,10 @@
 
   <!-- PANEL ATAS -->
   <div id="top-panel">
+    <div id="status-sync-admin" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-align: center; background-color: #d1fae5; color: #065f46;">
+      🟢 Semua Data Ter-sinkron
+    </div>
+
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
       <button onclick="cariLokasi()">Cari</button>
@@ -259,7 +262,6 @@
         <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
       </div>
 
-   <!-- Header & Tombol Switch Mode -->
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
         <span style="font-size: 12px; font-weight: bold; color: #374151;">📋 Kelola Inventaris:</span>
         <button type="button" id="btnToggleStok" onclick="toggleFormStok()" style="background: #2563eb; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
@@ -267,8 +269,6 @@
         </button>
       </div>
 
- 
-     <!-- Form 1: Master Data & Stok Barang (Awalnya Tersembunyi) -->
       <form id="formStokBarang" style="display: none; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
         <div style="font-weight: bold; font-size: 11.5px; color: #1e40af; margin-bottom: 8px;">
           📦 Master Data & Stok Barang
@@ -304,7 +304,6 @@
         </button>
       </form>
 
-      <!-- Form 2: Input Peminjaman Warga (Default Tampil) -->
       <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
         <div>
           <label for="pinjamNamaWarga" style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah:</label>
@@ -348,16 +347,78 @@
       </div>
 
       <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
+    </div>
+  </div>
+
   <!-- JAVASCRIPT LOGIC -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
- <!-- JAVASCRIPT LOGIC -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec";
 
-    // Fungsi untuk memformat angka dengan titik ribuan secara otomatis saat diketik
+    // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
+    let sedangMengirimAdmin = false;
+
+    function perbaruiIndikatorSyncAdmin() {
+      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+      let badge = document.getElementById('status-sync-admin');
+      if (badge) {
+        if (antrean.length === 0) {
+          badge.innerHTML = '🟢 Semua Data Ter-sinkron';
+          badge.style.backgroundColor = '#d1fae5';
+          badge.style.color = '#065f46';
+        } else {
+          badge.innerHTML = `🟡 ${antrean.length} Data Admin Menunggu Sinyal`;
+          badge.style.backgroundColor = '#fef3c7';
+          badge.style.color = '#92400e';
+        }
+      }
+    }
+
+    async function kirimDataPendingAdmin() {
+      if (sedangMengirimAdmin) return;
+      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+      if (antrean.length === 0) {
+        perbaruiIndikatorSyncAdmin();
+        return;
+      }
+
+      sedangMengirimAdmin = true;
+      let sisaAntrean = [];
+
+      for (let item of antrean) {
+        try {
+          const res = await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify(item.payload)
+          });
+          const text = await res.text();
+          if (!text.includes("SUCCESS")) {
+            sisaAntrean.push(item);
+          }
+        } catch (err) {
+          console.warn("Gagal terhubung ke jaringan:", err);
+          sisaAntrean.push(item);
+        }
+      }
+
+      localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
+      sedangMengirimAdmin = false;
+      perbaruiIndikatorSyncAdmin();
+    }
+
+    function simpanPayloadKeAntrean(label, payload) {
+      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+      antrean.push({ label: label, payload: payload, time: Date.now() });
+      localStorage.setItem('antrean_admin', JSON.stringify(antrean));
+      perbaruiIndikatorSyncAdmin();
+      alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
+      kirimDataPendingAdmin();
+    }
+
+    // Format angka ribuan otomatis saat diketik
     function formatRibuanInput(el) {
-      let val = el.value.replace(/\D/g, ''); // Hapus semua karakter selain angka
+      let val = el.value.replace(/\D/g, '');
       if (!val) {
         el.value = '';
         return;
@@ -375,6 +436,16 @@
       const btnLogin = document.querySelector('.login-box button');
       btnLogin.innerText = "⏳ Memeriksa...";
       btnLogin.disabled = true;
+
+      // Mode Offline Check
+      if (!navigator.onLine) {
+        btnLogin.innerText = "Buka Kunci";
+        btnLogin.disabled = false;
+        sessionStorage.setItem('authAdmin', 'true');
+        sessionStorage.setItem('verifiedPin', input);
+        bukaAkses();
+        return;
+      }
 
       const payloadTes = {
         action: 'cek_pin',
@@ -403,7 +474,10 @@
       .catch(err => {
         btnLogin.innerText = "Buka Kunci";
         btnLogin.disabled = false;
-        alert("❌ Error koneksi: " + err);
+        // Offline Fallback Login
+        sessionStorage.setItem('authAdmin', 'true');
+        sessionStorage.setItem('verifiedPin', input);
+        bukaAkses();
       });
     }
 
@@ -415,6 +489,7 @@
       setTimeout(() => { if(map) map.invalidateSize(); }, 300);
     }
 
+    // Submit Peta (Modal 1)
     document.getElementById('dataForm').addEventListener('submit', function(e) {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitForm');
@@ -431,6 +506,14 @@
         foto: document.getElementById('inputFoto').value
       };
 
+      if (!navigator.onLine) {
+        btn.innerText = '💾 Simpan ke Google Sheet';
+        btn.disabled = false;
+        simpanPayloadKeAntrean('Data Peta Lokasi', payload);
+        tutupModalForm();
+        return;
+      }
+
       fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -446,17 +529,13 @@
           location.reload();
         } else {
           alert('❌ Gagal: ' + result);
-          if(result.toLowerCase().includes('pin')) {
-            sessionStorage.removeItem('authAdmin');
-            sessionStorage.removeItem('verifiedPin');
-            location.reload();
-          }
         }
       })
       .catch(err => {
         btn.innerText = '💾 Simpan ke Google Sheet';
         btn.disabled = false;
-        alert('❌ Error koneksi: ' + err);
+        simpanPayloadKeAntrean('Data Peta Lokasi', payload);
+        tutupModalForm();
       });
     });
 
@@ -465,7 +544,6 @@
     var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Peta`;
 
     function initMap() {
-      // Pencegah map terinisialisasi ganda
       if (map) return;
 
       map = L.map('map').setView([-7.7423, 110.3842], 17);
@@ -658,12 +736,9 @@
 
     function bukaModalPinjamAdmin() {
       muatPeminjamanAdmin();
-      
-      // Reset Tampilan: Tampilkan Form Pinjam, Sembunyikan Form Stok
       document.getElementById('formStokBarang').style.display = 'none';
       document.getElementById('formPinjamBarang').style.display = 'grid';
       document.getElementById('btnToggleStok').innerText = '➕/✏️ Tambah & Edit Stok Barang';
-      
       document.getElementById("modal-admin-inventaris").style.display = "flex";
     }
 
@@ -677,13 +752,11 @@
       const btnToggle = document.getElementById('btnToggleStok');
 
       if (formStok.style.display === 'none' || !formStok.style.display) {
-        // Mode Kelola Stok
         formStok.style.display = 'block';
         formPinjam.style.display = 'none';
         btnToggle.innerText = '📝 Kembali ke Form Pinjam';
         btnToggle.style.background = '#4b5563';
       } else {
-        // Mode Catat Pinjam
         formStok.style.display = 'none';
         formPinjam.style.display = 'grid';
         btnToggle.innerText = '➕/✏️ Tambah & Edit Stok Barang';
@@ -750,11 +823,11 @@
           </tr>
         `).join('');
       } catch (err) {
-        console.error("Error muatPeminjamanAdmin:", err);
-        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:12px;">Gagal memuat data.</td></tr>`;
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#6b7280; padding:12px;">Mode Offline (Gagal memuat data online).</td></tr>`;
       }
     }
 
+    // Catat Pinjam (Modal 3 - Offline Supported)
     async function simpanPeminjamanAdmin() {
       const peminjam = document.getElementById("pinjamNamaWarga").value;
       const barang = document.getElementById("pinjamPilihBarang").value;
@@ -780,6 +853,15 @@
         tgl: hariIni
       };
 
+      if (!navigator.onLine) {
+        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+        simpanPayloadKeAntrean('Peminjaman Inventaris', payload);
+        document.getElementById("pinjamNamaWarga").value = "";
+        document.getElementById("pinjamPilihBarang").value = "";
+        document.getElementById("pinjamJumlah").value = "";
+        return;
+      }
+
       try {
         const res = await fetch(GAS_WEB_APP_URL, {
           method: "POST",
@@ -801,10 +883,14 @@
         }
       } catch (err) {
         if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-        alert("❌ Error koneksi: " + err);
+        simpanPayloadKeAntrean('Peminjaman Inventaris', payload);
+        document.getElementById("pinjamNamaWarga").value = "";
+        document.getElementById("pinjamPilihBarang").value = "";
+        document.getElementById("pinjamJumlah").value = "";
       }
     }
 
+    // Simpan Stok (Modal 3 - Offline Supported)
     async function simpanBarangStokAdmin() {
       const pilihPilihan = document.getElementById('stokPilihBarang').value;
       const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
@@ -830,6 +916,17 @@
         jumlahUnit: parseInt(jumlahUnit)
       };
 
+      if (!navigator.onLine) {
+        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+        simpanPayloadKeAntrean('Perubahan Stok Inventaris', payload);
+        document.getElementById('stokPilihBarang').value = '';
+        document.getElementById('stokNamaBarangBaru').value = '';
+        document.getElementById('stokNamaBarangBaru').style.display = 'none';
+        document.getElementById('stokJumlahTotal').value = '';
+        toggleFormStok();
+        return;
+      }
+
       try {
         const res = await fetch(GAS_WEB_APP_URL, {
           method: 'POST',
@@ -853,23 +950,36 @@
         }
       } catch (err) {
         if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-        alert('❌ Error koneksi: ' + err);
+        simpanPayloadKeAntrean('Perubahan Stok Inventaris', payload);
+        document.getElementById('stokPilihBarang').value = '';
+        document.getElementById('stokNamaBarangBaru').value = '';
+        document.getElementById('stokNamaBarangBaru').style.display = 'none';
+        document.getElementById('stokJumlahTotal').value = '';
+        toggleFormStok();
       }
     }
 
+    // Kembalikan Barang (Offline Supported)
     async function prosesPengembalian(id) {
       if (confirm("Apakah barang ini sudah dikembalikan?")) {
         const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
-        
+        const payload = {
+          pin: pinAdmin,
+          action: "kembali",
+          id: id
+        };
+
+        if (!navigator.onLine) {
+          simpanPayloadKeAntrean('Pengembalian Barang', payload);
+          muatPeminjamanAdmin();
+          return;
+        }
+
         try {
           const res = await fetch(GAS_WEB_APP_URL, {
             method: "POST",
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({
-              pin: pinAdmin,
-              action: "kembali",
-              id: id
-            })
+            body: JSON.stringify(payload)
           });
           const text = await res.text();
 
@@ -880,7 +990,8 @@
             alert("❌ Gagal memperbarui: " + text);
           }
         } catch (err) {
-          alert("❌ Error koneksi: " + err);
+          simpanPayloadKeAntrean('Pengembalian Barang', payload);
+          muatPeminjamanAdmin();
         }
       }
     }
@@ -896,6 +1007,7 @@
       document.getElementById('formLaporanDivisi').reset();
     }
 
+    // Simpan Keuangan Divisi (Modal 2 - Offline Supported)
     function simpanLaporanDivisi() {
       const tglInput = document.getElementById('laporanTanggal').value;
       const divisi = document.getElementById('laporanNamaDivisi').value;
@@ -929,6 +1041,14 @@
         nominal: parseInt(nominal)
       };
 
+      if (!navigator.onLine) {
+        btnSimpan.disabled = false;
+        btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
+        simpanPayloadKeAntrean('Laporan Keuangan', payload);
+        tutupModalLaporan();
+        return;
+      }
+
       fetch(GAS_WEB_APP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -944,8 +1064,8 @@
         }
       })
       .catch(err => {
-        alert('❌ Error koneksi/pengiriman.');
-        console.error(err);
+        simpanPayloadKeAntrean('Laporan Keuangan', payload);
+        tutupModalLaporan();
       })
       .finally(() => {
         btnSimpan.disabled = false;
@@ -953,8 +1073,18 @@
       });
     }
 
-    // Inisialisasi Utama saat Halaman Dimuat
+    // Event Online Listener & Auto Sync
+    window.addEventListener('online', () => {
+      console.log("Jaringan online kembali. Mengirim data admin pending...");
+      kirimDataPendingAdmin();
+    });
+
     document.addEventListener("DOMContentLoaded", () => {
+      perbaruiIndikatorSyncAdmin();
+      if (navigator.onLine) {
+        kirimDataPendingAdmin();
+      }
+
       if(sessionStorage.getItem('authAdmin') === 'true') {
         bukaAkses();
       } else {
