@@ -355,13 +355,35 @@
   <script>
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec";
 
-    // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
+  // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
     let sedangMengirimAdmin = false;
 
     function perbaruiIndikatorSyncAdmin() {
       let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
       let badge = document.getElementById('status-sync-admin');
-      if (badge) {
+      
+      if (!badge) return;
+
+      // 1. Jika Sedang Proses Pengiriman (Biru)
+      if (sedangMengirimAdmin) {
+        badge.innerHTML = `🔵 Sedang Menyinkronkan Data...`;
+        badge.style.backgroundColor = '#dbeafe';
+        badge.style.color = '#1e40af';
+      } 
+      // 2. Jika HP Sedang Offline (Merah / Kuning)
+      else if (!navigator.onLine) {
+        if (antrean.length > 0) {
+          badge.innerHTML = `🟡 ${antrean.length} Data Admin Menunggu Sinyal`;
+          badge.style.backgroundColor = '#fef3c7';
+          badge.style.color = '#92400e';
+        } else {
+          badge.innerHTML = '🔴 Anda Sedang Offline';
+          badge.style.backgroundColor = '#fee2e2';
+          badge.style.color = '#991b1b';
+        }
+      } 
+      // 3. Jika HP Online (Hijau / Kuning)
+      else {
         if (antrean.length === 0) {
           badge.innerHTML = '🟢 Semua Data Ter-sinkron';
           badge.style.backgroundColor = '#d1fae5';
@@ -383,6 +405,8 @@
       }
 
       sedangMengirimAdmin = true;
+      perbaruiIndikatorSyncAdmin(); // Ubah ke indikator Biru saat mulai kirim
+
       let sisaAntrean = [];
 
       for (let item of antrean) {
@@ -404,7 +428,7 @@
 
       localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
       sedangMengirimAdmin = false;
-      perbaruiIndikatorSyncAdmin();
+      perbaruiIndikatorSyncAdmin(); // Kembalikan ke Hijau/Kuning/Merah
     }
 
     function simpanPayloadKeAntrean(label, payload) {
@@ -415,6 +439,17 @@
       alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
       kirimDataPendingAdmin();
     }
+
+    // Deteksi Otomatis Saat Sinyal Hilang / Muncul Tiba-tiba
+    window.addEventListener('online', () => {
+      console.log("Jaringan online kembali. Mengirim data admin pending...");
+      perbaruiIndikatorSyncAdmin();
+      kirimDataPendingAdmin();
+    });
+
+    window.addEventListener('offline', () => {
+      perbaruiIndikatorSyncAdmin();
+    });
 
     // Format angka ribuan otomatis saat diketik
     function formatRibuanInput(el) {
