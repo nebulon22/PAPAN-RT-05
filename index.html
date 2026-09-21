@@ -1067,19 +1067,31 @@ function filterKategori(kat, btnElement) {
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
-function dapatkanNamaMalam(dateObj) {
-  // Pemetaan hari ke Nama Malam Ronda (Malam Minggu sengaja diabaikan)
-  var petaMalam = {
-    0: 'Malam Senin',  // Minggu
-    1: 'Malam Selasa', // Senin
-    2: 'Malam Rabu',   // Selasa
-    3: 'Malam Kamis',  // Rabu
-    4: 'Malam Jumat',  // Kamis
-    5: 'Malam Sabtu'   // Jumat
+    // --- FITUR MALAM RONDA/JIMPITAN RONDA (PUBLIK) ---
+function getInfoMalamRonda(dateObj = new Date()) {
+  let d = new Date(dateObj);
+  let hour = d.getHours();
+  
+  // Jam 00.00 - 08.59 masuk shift malam hari sebelumnya (grace window)
+  if (hour < 9) {
+    d.setDate(d.getDate() - 1);
+  }
+  
+  let effectiveDay = d.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
+  const mapMalam = {
+    6: 'Malam Minggu', // Masuk catatan khusus sheet
+    0: 'Malam Senin',
+    1: 'Malam Selasa',
+    2: 'Malam Rabu',
+    3: 'Malam Kamis',
+    4: 'Malam Jumat',
+    5: 'Malam Sabtu'
   };
   
-  var dayIdx = dateObj.getDay();
-  return petaMalam[dayIdx] || null;
+  return {
+    kelompokMalam: mapMalam[effectiveDay],
+    masukTabel: effectiveDay !== 6 // false khusus Malam Minggu
+  };
 }
 
 
@@ -1342,42 +1354,71 @@ async function kirimDataPendingJimpitan() {
   perbaruiIndikatorSync(); // Kembalikan ke Hijau/Kuning/Merah
 }
 
+// Tambahkan fungsi penentu shift ini di atas simpanJimpitan
+function getInfoMalamRonda(dateObj = new Date()) {
+  let d = new Date(dateObj);
+  let hour = d.getHours();
+  
+  // Jam 00.00 - 08.59 masuk shift malam hari sebelumnya (grace window)
+  if (hour < 9) {
+    d.setDate(d.getDate() - 1);
+  }
+  
+  let effectiveDay = d.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
+  const mapMalam = {
+    6: 'Malam Minggu', // Masuk catatan khusus sheet
+    0: 'Malam Senin',
+    1: 'Malam Selasa',
+    2: 'Malam Rabu',
+    3: 'Malam Kamis',
+    4: 'Malam Jumat',
+    5: 'Malam Sabtu'
+  };
+  
+  return {
+    kelompokMalam: mapMalam[effectiveDay],
+    masukTabel: effectiveDay !== 6 // false khusus Malam Minggu
+  };
+}
+
 function simpanJimpitan(dataInput) {
-  let dataBaru = null;
+  let rawWarga = '';
+  let rawNominal = 0;
 
   if (dataInput && typeof dataInput === 'object') {
-    dataBaru = {
-      action: 'jimpitan',
-      tanggal: dataInput.tanggal || new Date().toLocaleString('id-ID'),
-      warga: dataInput.warga || dataInput.nama || '',
-      nominal: parseInt(dataInput.nominal, 10) || 0
-    };
+    rawWarga = dataInput.warga || dataInput.nama || '';
+    rawNominal = parseInt(dataInput.nominal, 10) || 0;
   } else {
     let elNama = document.getElementById('jimpitanNamaWarga');
     let elNominal = document.getElementById('jimpitanNominal');
 
-    let namaVal = elNama ? elNama.value.trim() : '';
-    let nominalVal = elNominal ? elNominal.value : 0;
+    rawWarga = elNama ? elNama.value.trim() : '';
+    rawNominal = parseInt(elNominal ? elNominal.value : 0, 10);
 
-    if (!namaVal) {
+    if (!rawWarga) {
       alert("Nama warga / rumah belum terisi!");
       return;
     }
-
-    dataBaru = {
-      action: 'jimpitan',
-      tanggal: new Date().toLocaleString('id-ID'),
-      warga: namaVal,
-      nominal: parseInt(nominalVal, 10) || 0
-    };
   }
+
+  let infoMalam = getInfoMalamRonda(new Date());
+
+  let dataBaru = {
+    action: infoMalam.masukTabel ? 'jimpitan' : 'jimpitan_catatan',
+    kelompokMalam: infoMalam.kelompokMalam,
+    masukTabel: infoMalam.masukTabel,
+    tanggal: new Date().toLocaleString('id-ID'),
+    warga: rawWarga,
+    nominal: rawNominal
+  };
 
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
 
   // Tampilkan notifikasi langsung
-  alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + " berhasil dicatat!");
+  let infoTeks = infoMalam.masukTabel ? `masuk ${infoMalam.kelompokMalam}` : 'Masuk Catatan Ronda (Malam Minggu)';
+  alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + ` berhasil dicatat (${infoTeks})!`);
 
   // Tutup modal dan reset input
   let modal = document.getElementById('modal-jimpitan');
