@@ -228,7 +228,7 @@
     </div>
   </div>
    
-  <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
+ <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
   <div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
     <div class="modal-content" style="max-width: 550px; width: 92%;">
       
@@ -237,6 +237,35 @@
         <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
       </div>
 
+      <!-- Header & Tombol Toggle Tambah Barang Baru -->
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: bold; color: #374151;">📝 Form Catat Pinjam:</span>
+        <button type="button" onclick="toggleFormStok()" style="background: #2563eb; color: white; border: none; padding: 4px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+          ➕/✏️ Tambah & Edit Stok Barang
+        </button>
+      </div>
+
+      <!-- Form Tambah / Update Stok Barang (Muncul saat tombol diklik) -->
+      <form id="formStokBarang" style="display: none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
+        <div style="grid-column: 1 / -1; font-weight: bold; font-size: 11.5px; color: #1e40af;">
+          📦 Master Data Barang (Tambah Baru / Update Total Stok)
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama Barang:</label>
+          <input type="text" id="stokNamaBarang" placeholder="Contoh: Gelas Kaca / Tenda" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+        </div>
+        <div>
+          <label style="font-size: 11px; font-weight: bold; color: #374151;">Total Stok Dimiliki:</label>
+          <input type="number" id="stokJumlahTotal" min="0" placeholder="Contoh: 50" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+        </div>
+        <div style="display: flex; align-items: flex-end;">
+          <button type="button" onclick="simpanBarangStokAdmin()" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
+            💾 Simpan Barang
+          </button>
+        </div>
+      </form>
+
+      <!-- Form Input Peminjaman Baru -->
       <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
         <div>
           <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah:</label>
@@ -294,6 +323,58 @@
       }
     });
 
+// Toggle tampilkan/sembunyikan form tambah barang
+function toggleFormStok() {
+  const form = document.getElementById('formStokBarang');
+  form.style.display = form.style.display === 'none' ? 'grid' : 'none';
+}
+
+// Simpan barang baru / update stok ke Google Sheets
+async function simpanBarangStokAdmin() {
+  const nama = document.getElementById('stokNamaBarang').value.trim();
+  const total = document.getElementById('stokJumlahTotal').value;
+  const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+
+  if (!nama || total === '') {
+    alert('Mohon isi nama barang dan jumlah total stok!');
+    return;
+  }
+
+  const btn = document.querySelector('#formStokBarang button');
+  if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
+
+  const payload = {
+    pin: pinAdmin,
+    action: 'tambahBarangPerkakas',
+    namaBarang: nama,
+    jumlahTotal: parseInt(total)
+  };
+
+  try {
+    const res = await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+
+    if (btn) { btn.innerText = '💾 Simpan Barang'; btn.disabled = false; }
+
+    if (text.includes('SUCCESS')) {
+      alert('✅ Stok barang berhasil disimpan!');
+      document.getElementById('stokNamaBarang').value = '';
+      document.getElementById('stokJumlahTotal').value = '';
+      toggleFormStok();
+      muatPeminjamanAdmin(); // Muat ulang data agar barang baru langsung muncul di pilihan dropdown
+    } else {
+      alert('❌ Gagal menyimpan: ' + text);
+    }
+  } catch (err) {
+    if (btn) { btn.innerText = '💾 Simpan Barang'; btn.disabled = false; }
+    alert('❌ Error koneksi: ' + err);
+  }
+}
+    
     // Fungsi untuk memformat angka dengan titik ribuan secara otomatis saat diketik
 function formatRibuanInput(el) {
   let val = el.value.replace(/\D/g, ''); // Hapus semua karakter selain angka
