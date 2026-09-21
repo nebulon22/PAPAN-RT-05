@@ -15,6 +15,15 @@
 <script>
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js');
+
+    // Memicu auto-refresh otomatis tanpa campur tangan warga
+    let sedangRefresh = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!sedangRefresh) {
+        sedangRefresh = true;
+        window.location.reload();
+      }
+    });
   }
 </script>
   <style>
