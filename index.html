@@ -1482,7 +1482,7 @@ function muatDataJimpitan() {
   if (selectPeriode && selectPeriode.value) {
     var parts = selectPeriode.value.split('-');
     tahunDipilih = parseInt(parts[0], 10);
-    bulanDipilih = parseInt(parts[1], 10);
+    bulanDipilih = parseInt(parts, 10);
   } else {
     var skrg = new Date();
     bulanDipilih = skrg.getMonth();
@@ -1499,7 +1499,9 @@ function muatDataJimpitan() {
       gridContainer.innerHTML = '';
       var grandTotal = 0;
 
+      // Masukkan juga 'Malam Minggu' agar tampil lengkap
       var rekapMalam = {
+        'Malam Minggu': { subtotal: 0, items: [] },
         'Malam Senin': { subtotal: 0, items: [] },
         'Malam Selasa': { subtotal: 0, items: [] },
         'Malam Rabu': { subtotal: 0, items: [] },
@@ -1511,22 +1513,24 @@ function muatDataJimpitan() {
       baris.forEach(kolom => {
         if (kolom.length >= 3 && kolom[0] !== '') {
           var tglStr = kolom[0];
-          var warga = kolom[1] || '-';
-          var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
+          var warga = kolom || '-';
+          var nominalRaw = kolom ? kolom.replace(/[^0-9]/g, '') : '0';
           var nominal = parseInt(nominalRaw, 10) || 0;
 
           var angkaTanggal = tglStr.match(/\d+/g); 
           if (angkaTanggal && angkaTanggal.length >= 3) {
             var tgl = parseInt(angkaTanggal[0], 10);
-            var bln = parseInt(angkaTanggal[1], 10) - 1;
-            var thn = parseInt(angkaTanggal[2], 10);
-            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+            var bln = parseInt(angkaTanggal, 10) - 1;
+            var thn = parseInt(angkaTanggal, 10);
+            var jam = angkaTanggal ? parseInt(angkaTanggal, 10) : 19;
+            var menit = angkaTanggal ? parseInt(angkaTanggal, 10) : 0;
 
             var dateObj = new Date(thn, bln, tgl, jam, menit);
 
             if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
-              var namaMalam = getInfoMalamRonda(dateObj);
+              // PERBAIKAN: Ambil properti .kelompokMalam dari objek kembalian
+              var infoMalam = getInfoMalamRonda(dateObj);
+              var namaMalam = infoMalam.kelompokMalam;
 
               if (namaMalam && rekapMalam[namaMalam]) {
                 rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
@@ -1594,6 +1598,7 @@ function muatDataJimpitan() {
     .catch(err => console.error("Gagal muat data jimpitan:", err));
 }
 
+    
 function bukaModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'flex';
   muatDataJimpitan();
