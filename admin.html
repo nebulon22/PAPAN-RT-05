@@ -693,18 +693,40 @@ function formatRibuanInput(el) {
     }
 
     function bukaModalPinjamAdmin() {
-      muatPeminjamanAdmin();
-      document.getElementById("modal-admin-inventaris").style.display = "flex";
-    }
+  muatPeminjamanAdmin();
+  
+  // Reset Tampilan: Tampilkan Form Pinjam, Sembunyikan Form Stok
+  document.getElementById('formStokBarang').style.display = 'none';
+  document.getElementById('formPinjamBarang').style.display = 'grid';
+  document.getElementById('btnToggleStok').innerText = '➕/✏️ Tambah & Edit Stok Barang';
+  
+  document.getElementById("modal-admin-inventaris").style.display = "flex";
+}
 
     function tutupModalPinjamAdmin() {
       document.getElementById("modal-admin-inventaris").style.display = "none";
     }
 
   // 1. Toggle tampil/sembunyi form master stok
+// Toggle Bergantian Antara Form Pinjam dan Form Stok
 function toggleFormStok() {
-  const form = document.getElementById('formStokBarang');
-  form.style.display = (form.style.display === 'none' || !form.style.display) ? 'block' : 'none';
+  const formStok = document.getElementById('formStokBarang');
+  const formPinjam = document.getElementById('formPinjamBarang');
+  const btnToggle = document.getElementById('btnToggleStok');
+
+  if (formStok.style.display === 'none' || !formStok.style.display) {
+    // Mode Kelola Stok
+    formStok.style.display = 'block';
+    formPinjam.style.display = 'none';
+    btnToggle.innerText = '📝 Kembali ke Form Pinjam';
+    btnToggle.style.background = '#4b5563'; // Ubah warna ke abu-abu saat mode kembali
+  } else {
+    // Mode Catat Pinjam
+    formStok.style.display = 'none';
+    formPinjam.style.display = 'grid';
+    btnToggle.innerText = '➕/✏️ Tambah & Edit Stok Barang';
+    btnToggle.style.background = '#2563eb'; // Kembalikan ke warna biru
+  }
 }
 
 // 2. Cek jika admin memilih 'Ketik Nama Barang Baru'
