@@ -101,10 +101,11 @@
 </head>
 <body>
 
-  <div id="login-overlay">
+ <div id="login-overlay">
     <div class="login-box">
       <h2>🔒 Akses Admin</h2>
-      <p class="subtitle">Masukkan 6 Digit PIN Pengurus</p>
+      <!-- Ubah tag <p> menjadi <label for="adminPin"> -->
+      <label for="adminPin" class="subtitle" style="display: block; cursor: pointer;">Masukkan 6 Digit PIN Pengurus</label>
       <input type="password" id="adminPin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••" onkeypress="if(event.key === 'Enter') cekLogin()">
       <button onclick="cekLogin()">Buka Kunci</button>
     </div>
@@ -142,7 +143,7 @@
     </div>
   </div>
 
-  <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
+ <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
   <div id="modal-form" class="modal-bg" onclick="event.stopPropagation(); if(event.target === this) tutupModalForm();">
     <div class="modal-content">
       <div class="modal-header">
@@ -152,13 +153,24 @@
       <form id="dataForm">
         <input type="hidden" name="pin" id="inputPinForm">
         
-        <div class="form-group"><label>Nama / No. Rumah / Tempat:</label><input type="text" name="nama" id="inputNama" required></div>
-        <div style="display: flex; gap: 10px;">
-          <div class="form-group" style="flex: 1;"><label>Latitude:</label><input type="text" name="lat" id="inputLat" required></div>
-          <div class="form-group" style="flex: 1;"><label>Longitude:</label><input type="text" name="lng" id="inputLng" required></div>
-        </div>
         <div class="form-group">
-          <label>Kategori:</label>
+          <label for="inputNama">Nama / No. Rumah / Tempat:</label>
+          <input type="text" name="nama" id="inputNama" required>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+          <div class="form-group" style="flex: 1;">
+            <label for="inputLat">Latitude:</label>
+            <input type="text" name="lat" id="inputLat" required>
+          </div>
+          <div class="form-group" style="flex: 1;">
+            <label for="inputLng">Longitude:</label>
+            <input type="text" name="lng" id="inputLng" required>
+          </div>
+        </div>
+        
+        <div class="form-group">
+          <label for="inputKategori">Kategori:</label>
           <select name="kategori" id="inputKategori">
             <option value="Rumah">🏠 Rumah</option>
             <option value="Kost">🛏️ Kost</option>
@@ -167,17 +179,26 @@
             <option value="Minimarket">🏪 Minimarket</option>
           </select>
         </div>
+        
         <div class="form-group">
-          <label>Sembunyikan dari Peta?</label>
-          <select name="hidden" id="inputHidden"><option value="FALSE">Tidak (Tampil)</option><option value="TRUE">Ya (Sembunyikan)</option></select>
+          <label for="inputHidden">Sembunyikan dari Peta?</label>
+          <select name="hidden" id="inputHidden">
+            <option value="FALSE">Tidak (Tampil)</option>
+            <option value="TRUE">Ya (Sembunyikan)</option>
+          </select>
         </div>
-        <div class="form-group"><label>URL Foto Depan (Opsional):</label><input type="url" name="foto" id="inputFoto"></div>
+        
+        <div class="form-group">
+          <label for="inputFoto">URL Foto Depan (Opsional):</label>
+          <input type="url" name="foto" id="inputFoto">
+        </div>
+        
         <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan ke Google Sheet</button>
       </form>
     </div>
   </div>
 
- <!-- MODAL 2: Form Laporan Keuangan Divisi -->
+  <!-- MODAL 2: Form Laporan Keuangan Divisi -->
   <div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
     <div class="modal-content" style="max-width: 360px;">
       <div class="modal-header">
@@ -187,12 +208,12 @@
       
       <form id="formLaporanDivisi">
         <div class="form-group">
-          <label style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
+          <label for="laporanTanggal" style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
           <input type="date" id="laporanTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-          <label style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
+          <label for="laporanNamaDivisi" style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
           <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
             <option value="">-- Pilih Divisi / Pos --</option>
             <option value="Sosial">Sosial</option>
@@ -205,7 +226,7 @@
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-          <label style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
+          <label for="laporanJenis" style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
           <select id="laporanJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
             <option value="Pemasukan">🟢 Pemasukan</option>
             <option value="Pengeluaran">🔴 Pengeluaran</option>
@@ -213,14 +234,15 @@
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
-          <label style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
+          <label for="laporanKeterangan" style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
           <input type="text" id="laporanKeterangan" placeholder="Contoh: Arisan / Bayar kost kamar A" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
         </div>
 
-       <div class="form-group" style="margin-top: 10px;">
-          <label style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
+        <div class="form-group" style="margin-top: 10px;">
+          <label for="laporanNominal" style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
           <input type="text" id="laporanNominal" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" oninput="formatRibuanInput(this)" required>
-      </div>
+        </div>
+
         <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; margin-top: 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
           📤 Kirim Laporan Keuangan
         </button>
@@ -245,25 +267,26 @@
         </button>
       </div>
 
-      <!-- Form 1: Master Data & Stok Barang (Awalnya Tersembunyi) -->
+ 
+     <!-- Form 1: Master Data & Stok Barang (Awalnya Tersembunyi) -->
       <form id="formStokBarang" style="display: none; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
         <div style="font-weight: bold; font-size: 11.5px; color: #1e40af; margin-bottom: 8px;">
           📦 Master Data & Stok Barang
         </div>
 
         <div style="margin-bottom: 8px;">
-          <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih / Nama Barang:</label>
+          <label for="stokPilihBarang" style="font-size: 11px; font-weight: bold; color: #374151;">Pilih / Nama Barang:</label>
           <select id="stokPilihBarang" onchange="cekPilihBarangStok(this)" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px; margin-bottom: 4px;">
             <option value="">-- Pilih Barang Terdaftar --</option>
             <option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>
           </select>
 
-          <input type="text" id="stokNamaBarangBaru" placeholder="Masukkan nama barang baru..." style="display: none; width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+          <input type="text" id="stokNamaBarangBaru" aria-label="Nama Barang Baru" placeholder="Masukkan nama barang baru..." style="display: none; width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
           <div>
-            <label style="font-size: 11px; font-weight: bold; color: #374151;">Aksi Stok:</label>
+            <label for="stokJenisAksi" style="font-size: 11px; font-weight: bold; color: #374151;">Aksi Stok:</label>
             <select id="stokJenisAksi" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
               <option value="tambah">➕ Tambah (Beli Baru)</option>
               <option value="kurang">➖ Kurangi (Rusak/Hilang)</option>
@@ -271,7 +294,7 @@
             </select>
           </div>
           <div>
-            <label style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Unit:</label>
+            <label for="stokJumlahTotal" style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Unit:</label>
             <input type="number" id="stokJumlahTotal" min="1" placeholder="Contoh: 5" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
           </div>
         </div>
@@ -284,19 +307,19 @@
       <!-- Form 2: Input Peminjaman Warga (Default Tampil) -->
       <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
         <div>
-          <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah:</label>
+          <label for="pinjamNamaWarga" style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah:</label>
           <input type="text" id="pinjamNamaWarga" placeholder="Contoh: Pak Budi (A-12)" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
         </div>
 
         <div>
-          <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
+          <label for="pinjamPilihBarang" style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
           <select id="pinjamPilihBarang" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
             <option value="">-- Pilih Barang --</option>
           </select>
         </div>
 
         <div>
-          <label style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Dipinjam:</label>
+          <label for="pinjamJumlah" style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Dipinjam:</label>
           <input type="number" id="pinjamJumlah" min="1" placeholder="Masukkan angka" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
         </div>
 
@@ -325,7 +348,6 @@
       </div>
 
       <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
-
   <!-- JAVASCRIPT LOGIC -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
@@ -992,6 +1014,18 @@ async function simpanBarangStokAdmin() {
         btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
       });
     }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      if(sessionStorage.getItem('authAdmin') === 'true') {
+        bukaAkses();
+      } else {
+        // Otomatis arahkan kursor ke input PIN begitu halaman admin dibuka
+        setTimeout(() => {
+          const inputPin = document.getElementById('adminPin');
+          if (inputPin) inputPin.focus();
+        }, 300);
+      }
+    });
   </script>
 </body>
 </html>
