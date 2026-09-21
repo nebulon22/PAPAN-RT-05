@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.3.7'; // <--- Versi dinaikkan
+const CACHE_NAME = 'rt-kayen-v1.3.8'; // <--- Versi dinaikkan
 
 self.addEventListener('install', (e) => {
   self.skipWaiting();
