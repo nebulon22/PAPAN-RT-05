@@ -1254,9 +1254,30 @@ function bersihkanScanner() {
 
 function perbaruiIndikatorSync() {
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-
   let badge = document.getElementById('status-sync');
-  if (badge) {
+  
+  if (!badge) return;
+
+  // 1. Jika Sedang Proses Pengiriman (Biru)
+  if (sedangMengirim) {
+    badge.innerHTML = `🔵 Sedang Menyinkronkan Data...`;
+    badge.style.backgroundColor = '#dbeafe';
+    badge.style.color = '#1e40af';
+  } 
+  // 2. Jika HP Sedang Offline (Merah / Kuning)
+  else if (!navigator.onLine) {
+    if (antrean.length > 0) {
+      badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
+      badge.style.backgroundColor = '#fef3c7';
+      badge.style.color = '#92400e';
+    } else {
+      badge.innerHTML = '🔴 Anda Sedang Offline';
+      badge.style.backgroundColor = '#fee2e2';
+      badge.style.color = '#991b1b';
+    }
+  } 
+  // 3. Jika HP Online (Hijau / Kuning)
+  else {
     if (antrean.length === 0) {
       badge.innerHTML = '🟢 Semua Data Ter-sinkron';
       badge.style.backgroundColor = '#d1fae5';
@@ -1289,6 +1310,8 @@ async function kirimDataPendingJimpitan() {
   }
 
   sedangMengirim = true;
+  perbaruiIndikatorSync(); // Ubah ke indikator Biru saat mulai kirim
+
   let sisaAntrean = [];
 
   for (let item of antrean) {
@@ -1307,7 +1330,7 @@ async function kirimDataPendingJimpitan() {
 
   localStorage.setItem('antrean_jimpitan', JSON.stringify(sisaAntrean));
   sedangMengirim = false;
-  perbaruiIndikatorSync();
+  perbaruiIndikatorSync(); // Kembalikan ke Hijau/Kuning/Merah
 }
 
 function simpanJimpitan(dataInput) {
@@ -1343,7 +1366,8 @@ function simpanJimpitan(dataInput) {
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
-// Tampilkan notifikasi langsung
+
+  // Tampilkan notifikasi langsung
   alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + " berhasil dicatat!");
 
   // Tutup modal dan reset input
@@ -1355,12 +1379,18 @@ function simpanJimpitan(dataInput) {
   if (elNama) elNama.value = '';
   if (elNominal) elNominal.value = '';
 
+  perbaruiIndikatorSync();
   kirimDataPendingJimpitan();
 }
 
 window.addEventListener('online', () => {
   console.log("Koneksi kembali terhubung. Mengirim data pending...");
+  perbaruiIndikatorSync();
   kirimDataPendingJimpitan();
+});
+
+window.addEventListener('offline', () => {
+  perbaruiIndikatorSync();
 });
 
 document.addEventListener('DOMContentLoaded', () => {
