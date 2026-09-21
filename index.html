@@ -1509,40 +1509,43 @@ function muatDataJimpitan() {
         'Malam Sabtu': { subtotal: 0, items: [] }
       };
 
-      baris.forEach(kolom => {
-        if (kolom.length >= 3 && kolom[0] !== '') {
-          var tglStr = kolom[0];
-          var warga = kolom[1] || '-'; // PERBAIKAN: kolom[1]
-          var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0'; // PERBAIKAN: kolom[2]
-          var nominal = parseInt(nominalRaw, 10) || 0;
+   baris.forEach(kolom => {
+  // Dipastikan kolom memiliki minimal 4 data (Tanggal, Kelompok Malam, Nama Warga, Nominal)
+  if (kolom.length >= 3 && kolom[0] !== '') {
+    var tglStr = kolom[0];
+    
+    // SESUAIKAN INDEX KOLOM DENGAN GOOGLE SHEETS BARU:
+    // Jika kolom B di sheet sudah diisi Kelompok Malam, nama warga ada di kolom C (index 2) dan nominal di kolom D (index 3)
+    var warga = kolom[2] || kolom[1] || '-'; 
+    var nominalRaw = kolom[3] ? kolom[3].replace(/[^0-9]/g, '') : (kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0');
+    var nominal = parseInt(nominalRaw, 10) || 0;
 
-          var angkaTanggal = tglStr.match(/\d+/g); 
-          if (angkaTanggal && angkaTanggal.length >= 3) {
-            var tgl = parseInt(angkaTanggal[0], 10);
-            var bln = parseInt(angkaTanggal[1], 10) - 1;
-            var thn = parseInt(angkaTanggal[2], 10);
-            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+    var angkaTanggal = tglStr.match(/\d+/g); 
+    if (angkaTanggal && angkaTanggal.length >= 3) {
+      var tgl = parseInt(angkaTanggal[0], 10);
+      var bln = parseInt(angkaTanggal[1], 10) - 1;
+      var thn = parseInt(angkaTanggal[2], 10);
+      var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+      var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
 
-            var dateObj = new Date(thn, bln, tgl, jam, menit);
+      var dateObj = new Date(thn, bln, tgl, jam, menit);
 
-            if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
-              var infoMalam = getInfoMalamRonda(dateObj);
-              var namaMalam = infoMalam.kelompokMalam;
+      if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
+        var infoMalam = getInfoMalamRonda(dateObj);
+        var namaMalam = infoMalam.kelompokMalam;
 
-              if (namaMalam && rekapMalam[namaMalam]) {
-                rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-                rekapMalam[namaMalam].subtotal += nominal;
+        if (namaMalam && rekapMalam[namaMalam]) {
+          rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+          rekapMalam[namaMalam].subtotal += nominal;
 
-                // Malam Minggu diisi ke kartu UI tapi dilewati dari Grand Total
-                if (namaMalam !== 'Malam Minggu') {
-                  grandTotal += nominal;
-                }
-              }
-            }
+          if (namaMalam !== 'Malam Minggu') {
+            grandTotal += nominal;
           }
         }
-      });
+      }
+    }
+  }
+});
 
       Object.keys(rekapMalam).forEach(malam => {
         var dataMalam = rekapMalam[malam];
