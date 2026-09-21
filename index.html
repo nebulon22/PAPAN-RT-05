@@ -5,32 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Denah Interaktif & Keuangan RT 05 Kayen</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
   <!-- PWA Settings -->
-<!-- Tambahkan parameter versi seperti ?v=1.1 setelah nama file -->
-<link rel="manifest" href="manifest.json?v=1.3.6">
-
-<meta name="theme-color" content="#0288d1">
+  <link rel="manifest" href="manifest.json?v=1.3.6">
+  <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
 
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
 
-    // Memicu auto-refresh otomatis tanpa campur tangan warga
-    let sedangRefresh = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!sedangRefresh) {
-        sedangRefresh = true;
-        window.location.reload();
-      }
-    });
-  }
-</script>
+      let sedangRefresh = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!sedangRefresh) {
+          sedangRefresh = true;
+          window.location.reload();
+        }
+      });
+    }
+  </script>
+
   <style>
     html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
     #map { width: 100%; height: 100vh; }
     
-    /* Tombol Floating Navigasi Ke Admin (Ikon Gembok) */
     .btn-back-floating {
       position: absolute;
       top: 12px;
@@ -242,81 +240,68 @@
       box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
     }
 
-.btn-qr-floating {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%); /* Presisi tepat di tengah */
-  z-index: 1500;
-  width: 65px;
-  height: 65px;
-  background-color: #0288d1;
-  color: white;
-  border: none;
-  border-radius: 16px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-}
-    
-/* BINGKAI GARIS SIKU SCANNER DI BAGIAN DALAM */
-.btn-qr-floating::before {
-  content: '';
-  position: absolute;
-  top: 8px;    /* Jarak garis dari pinggir atas */
-  left: 8px;   /* Jarak garis dari pinggir kiri */
-  right: 8px;  /* Jarak garis dari pinggir kanan */
-  bottom: 8px; /* Jarak garis dari pinggir bawah */
-  pointer-events: none;
+    .btn-qr-floating {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1500;
+      width: 65px;
+      height: 65px;
+      background-color: #0288d1;
+      color: white;
+      border: none;
+      border-radius: 16px;
+      box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 4px;
+    }
 
-  /* Formasi 4 sudut garis putih */
-  background-image: 
-    linear-gradient(to right, #ffffff 3px, transparent 3px),
-    linear-gradient(to bottom, #ffffff 3px, transparent 3px),
-    linear-gradient(to left, #ffffff 3px, transparent 3px),
-    linear-gradient(to bottom, #ffffff 3px, transparent 3px),
-    linear-gradient(to right, #ffffff 3px, transparent 3px),
-    linear-gradient(to top, #ffffff 3px, transparent 3px),
-    linear-gradient(to left, #ffffff 3px, transparent 3px),
-    linear-gradient(to top, #ffffff 3px, transparent 3px);
-  background-position: 
-    0 0, 0 0, 
-    100% 0, 100% 0, 
-    0 100%, 0 100%, 
-    100% 100%, 100% 100%;
-  background-size: 10px 10px; /* Panjang kaki garis siku */
-  background-repeat: no-repeat;
-}
+    .btn-qr-floating::before {
+      content: '';
+      position: absolute;
+      top: 8px; left: 8px; right: 8px; bottom: 8px;
+      pointer-events: none;
+      background-image: 
+        linear-gradient(to right, #ffffff 3px, transparent 3px),
+        linear-gradient(to bottom, #ffffff 3px, transparent 3px),
+        linear-gradient(to left, #ffffff 3px, transparent 3px),
+        linear-gradient(to bottom, #ffffff 3px, transparent 3px),
+        linear-gradient(to right, #ffffff 3px, transparent 3px),
+        linear-gradient(to top, #ffffff 3px, transparent 3px),
+        linear-gradient(to left, #ffffff 3px, transparent 3px),
+        linear-gradient(to top, #ffffff 3px, transparent 3px);
+      background-position: 
+        0 0, 0 0, 
+        100% 0, 100% 0, 
+        0 100%, 0 100%, 
+        100% 100%, 100% 100%;
+      background-size: 10px 10px;
+      background-repeat: no-repeat;
+    }
 
-.btn-qr-floating span {
-  font-size: 9px;
-  font-weight: bold;
-  line-height: 1;
-  margin-top: 2px;
-}
-
-    
+    .btn-qr-floating span {
+      font-size: 9px;
+      font-weight: bold;
+      line-height: 1;
+      margin-top: 2px;
+    }
   </style>
 </head>
 <body>
-  <!-- Container Navigasi Pojok Kanan Atas (Sejajar & Bebas Bentrok) -->
-<div style="position: fixed; top: 12px; right: 12px; z-index: 2000; display: flex; align-items: center; gap: 8px;">
-  
-  <!-- Tombol Navigasi ke Halaman Admin (Ikon Gembok) -->
-  <a href="admin.html" class="btn-back-floating" style="position: static;">🔒 Admin</a>
-
-  <!-- Tombol Info (i) - Ukuran Lebih Kecil & Sejajar -->
-  <button type="button" onclick="bukaModalChangelog()" 
-    style="background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; font-weight: bold; font-family: serif; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
-    title="Informasi Aplikasi & Changelog">
-    i
-  </button>
-
-</div>
+  <!-- Container Navigasi Pojok Kanan Atas -->
+  <div style="position: fixed; top: 12px; right: 12px; z-index: 2000; display: flex; align-items: center; gap: 8px;">
+    <a href="admin.html" class="btn-back-floating" style="position: static;">🔒 Admin</a>
+    <button type="button" onclick="bukaModalChangelog()" 
+      style="background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; font-weight: bold; font-family: serif; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
+      title="Informasi Aplikasi & Changelog">
+      i
+    </button>
+  </div>
 
   <!-- Peta Utama -->
   <div id="map"></div>
@@ -324,15 +309,14 @@
   <!-- Panel pencarian dan filter melayang -->
   <div id="top-panel">
     <div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-align: center; background-color: #d1fae5; color: #065f46;">
-    🟢 Semua Data Ter-sinkron
-  </div>
+      🟢 Semua Data Ter-sinkron
+    </div>
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
       <button onclick="cariLokasi()">Cari</button>
     </div>
     
-  <div class="filter-container">
-      <!-- Baris 1: Info RT & Keuangan -->
+    <div class="filter-container">
       <div class="filter-row">
         <button class="btn-filter btn-info-rt" onclick="bukaModalInfo()">
           📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
@@ -342,8 +326,6 @@
         </button>
       </div>
 
-
-      <!-- Baris 2: Inventaris Perkakas & Form Warga Baru -->
       <div class="filter-row">
         <a href="inventaris.html" class="btn-filter" style="background: #8b5cf6; color: white; border-color: #7c3aed; text-decoration: none; font-size: 11px; padding: 6px 4px;">
           📦 Inventaris Perkakas
@@ -353,7 +335,6 @@
         </button>
       </div>
 
-      <!-- Baris 3: Rekap Jimpitan & Minimarket -->
       <div class="filter-row">
         <button class="btn-filter" style="background: #10b981; color: white; border-color: #059669;" onclick="bukaModalRiwayatJimpitan()">
           🪙 Rekap Jimpitan
@@ -361,66 +342,63 @@
         <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
       </div>
 
-      <!-- Baris 4: Filter Semua & Kost -->
       <div class="filter-row">
         <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
         <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
       </div>
 
-      <!-- Baris 5: Filter Fasum & Kuliner -->
       <div class="filter-row">
         <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
         <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
       </div>
     </div>
-    </div>
+  </div>
 
-<!-- Modal Rekening Koran -->
-<div id="modal-keuangan" class="modal-bg" onclick="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
-  <!-- Perbaikan: Ditambahkan max-height, overflow-y, dan box-sizing -->
-  <div class="modal-content" style="max-width: 650px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;">
-    <div class="modal-header">
-      <h3>📜 Rekening Koran Divisi</h3>
-      <button class="close-btn" onclick="tutupModalKeuangan()">&times;</button>
-    </div>
-    
-    <div style="margin-bottom: 12px;">
-      <label for="filterDivisi" style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
-      <select id="filterDivisi" onchange="tampilkanRekeningKoran()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
-        <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
-      </select>
-    </div>
-
-    <div style="background:#0288d1; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
-      <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Saldo Saat Ini</span>
-      <div id="saldo-kas" style="font-size:22px; font-weight:bold;">Rp 0</div>
-    </div>
-
-    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-      <div style="flex: 1; min-width: 260px; background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px;">
-        <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 13px; border-bottom: 2px solid #a5d6a7; padding-bottom: 4px;">
-          📥 5 Pemasukan Terakhir
-        </h4>
-        <table style="width:100%; font-size:11px; border-collapse:collapse;">
-          <tbody id="list-pemasukan">
-            <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
-          </tbody>
-        </table>
+  <!-- Modal Rekening Koran -->
+  <div id="modal-keuangan" class="modal-bg" onclick="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
+    <div class="modal-content" style="max-width: 650px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;">
+      <div class="modal-header">
+        <h3>📜 Rekening Koran Divisi</h3>
+        <button class="close-btn" onclick="tutupModalKeuangan()">&times;</button>
+      </div>
+      
+      <div style="margin-bottom: 12px;">
+        <label for="filterDivisi" style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
+        <select id="filterDivisi" onchange="tampilkanRekeningKoran()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
+          <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
+        </select>
       </div>
 
-      <div style="flex: 1; min-width: 260px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 8px; padding: 10px;">
-        <h4 style="margin: 0 0 8px 0; color: #c62828; font-size: 13px; border-bottom: 2px solid #ef9a9a; padding-bottom: 4px;">
-          📤 5 Pengeluaran Terakhir
-        </h4>
-        <table style="width:100%; font-size:11px; border-collapse:collapse;">
-          <tbody id="list-pengeluaran">
-            <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
-          </tbody>
-        </table>
+      <div style="background:#0288d1; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
+        <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Saldo Saat Ini</span>
+        <div id="saldo-kas" style="font-size:22px; font-weight:bold;">Rp 0</div>
+      </div>
+
+      <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 260px; background: #f1f8e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 10px;">
+          <h4 style="margin: 0 0 8px 0; color: #2e7d32; font-size: 13px; border-bottom: 2px solid #a5d6a7; padding-bottom: 4px;">
+            📥 5 Pemasukan Terakhir
+          </h4>
+          <table style="width:100%; font-size:11px; border-collapse:collapse;">
+            <tbody id="list-pemasukan">
+              <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="flex: 1; min-width: 260px; background: #ffebee; border: 1px solid #ffcdd2; border-radius: 8px; padding: 10px;">
+          <h4 style="margin: 0 0 8px 0; color: #c62828; font-size: 13px; border-bottom: 2px solid #ef9a9a; padding-bottom: 4px;">
+            📤 5 Pengeluaran Terakhir
+          </h4>
+          <table style="width:100%; font-size:11px; border-collapse:collapse;">
+            <tbody id="list-pengeluaran">
+              <tr><td style="text-align:center; padding:10px; color:#888;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
-</div>
 
   <!-- Modal Pengumuman -->
   <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
@@ -440,84 +418,74 @@
     <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
   </div>
 
-<!-- Modal Riwayat Jimpitan -->
-<div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
-  <div class="modal-content" style="max-width: 800px; width: 95%;">
-    <div class="modal-header">
-      <h3>🪙 Rekap Hasil Jimpitan Ronda</h3>
-      <button class="close-btn" onclick="tutupModalRiwayatJimpitan()">&times;</button>
-    </div>
-    
-    <!-- DROPDOWN PILIH BULAN -->
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f9fafb; padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
-      <label for="select-bulan-jimpitan" style="font-size: 13px; font-weight: bold; color: #374151;">📅 Pilih Periode:</label>
-      <select id="select-bulan-jimpitan" onchange="muatDataJimpitan()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13px; font-weight: 500; outline: none; cursor: pointer;">
-        <!-- Pilihan bulan akan diisi otomatis oleh JavaScript -->
-      </select>
-    </div>
-
-    <!-- KOTAK TOTAL -->
-    <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
-      <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Total Jimpitan Bulan Ini</span>
-      <div id="total-jimpitan" style="font-size:22px; font-weight:bold;">Rp 0</div>
-    </div>
-
-    <!-- Grid 6 Kolom -->
-    <div id="grid-jimpitan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; max-height: 55vh; overflow-y: auto; padding: 4px;">
-      <!-- 6 Kotak Malam Ronda diisi via JS -->
-    </div>
-  </div>
-</div>
-  
-
-
-  
-
-
-<!-- Modal Kamera QR Scanner -->
-<div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
-  <div class="modal-content" style="max-width: 320px; text-align: center;">
-    <div class="modal-header">
-      <h3>📷 Scan QR Rumah Warga</h3>
-      <button class="close-btn" onclick="stopScanQR()">&times;</button>
-    </div>
-    <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
-    <button onclick="stopScanQR()" style="margin-top: 12px; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">❌ Batal</button>
-  </div>
-</div>
-
-<!-- Modal Form Input Jimpitan -->
-<div id="modal-jimpitan" class="modal-bg" style="display: none; z-index: 3000;">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>🪙 Catat Jimpitan Ronda</h3>
-      <button class="close-btn" onclick="document.getElementById('modal-jimpitan').style.display='none'">&times;</button>
-    </div>
-    
-   <form id="formJimpitan">
-  <div class="form-group">
-    <label for="jimpitanNamaWarga">Rumah / Warga:</label>
-    <input type="text" id="jimpitanNamaWarga" readonly style="background: #eee; width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
-  </div>
+  <!-- Modal Riwayat Jimpitan -->
+  <div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
+    <div class="modal-content" style="max-width: 800px; width: 95%;">
+      <div class="modal-header">
+        <h3>🪙 Rekap Hasil Jimpitan Ronda</h3>
+        <button class="close-btn" onclick="tutupModalRiwayatJimpitan()">&times;</button>
+      </div>
       
-      <div class="form-group" style="margin-top: 10px;">
-    <label for="jimpitanNominal">Nominal Jimpitan (Rp):</label>
-    <input type="number" id="jimpitanNominal" placeholder="Isi nominal atau pilih..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
-        
-        <div style="display: flex; gap: 6px; margin-top: 8px;">
-          <button type="button" onclick="setNominal(500)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">500</button>
-          <button type="button" onclick="setNominal(1000)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">1.000</button>
-          <button type="button" onclick="setNominal(2000)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">2.000</button>
-          <button type="button" onclick="setNominal(0)" style="flex:1; padding:6px; font-size:11px; background:#ffebee; color:#c62828; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">0 (Absen)</button>
-        </div>
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f9fafb; padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
+        <label for="select-bulan-jimpitan" style="font-size: 13px; font-weight: bold; color: #374151;">📅 Pilih Periode:</label>
+        <select id="select-bulan-jimpitan" onchange="muatDataJimpitan()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13px; font-weight: 500; outline: none; cursor: pointer;">
+        </select>
       </div>
 
-      <button type="button" id="btnSimpanJimpitan" onclick="simpanJimpitan()" style="width:100%; margin-top:15px; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">💾 Simpan Jimpitan</button>
-    </form>
-  </div>
-</div>
+      <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
+        <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Total Jimpitan Bulan Ini</span>
+        <div id="total-jimpitan" style="font-size:22px; font-weight:bold;">Rp 0</div>
+      </div>
 
-<!-- MODAL: Form Pendataan Warga Baru -->
+      <div id="grid-jimpitan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; max-height: 55vh; overflow-y: auto; padding: 4px;">
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Kamera QR Scanner -->
+  <div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
+    <div class="modal-content" style="max-width: 320px; text-align: center;">
+      <div class="modal-header">
+        <h3>📷 Scan QR Rumah Warga</h3>
+        <button class="close-btn" onclick="stopScanQR()">&times;</button>
+      </div>
+      <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
+      <button onclick="stopScanQR()" style="margin-top: 12px; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">❌ Batal</button>
+    </div>
+  </div>
+
+  <!-- Modal Form Input Jimpitan -->
+  <div id="modal-jimpitan" class="modal-bg" style="display: none; z-index: 3000;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>🪙 Catat Jimpitan Ronda</h3>
+        <button class="close-btn" onclick="document.getElementById('modal-jimpitan').style.display='none'">&times;</button>
+      </div>
+      
+      <form id="formJimpitan">
+        <div class="form-group">
+          <label for="jimpitanNamaWarga">Rumah / Warga:</label>
+          <input type="text" id="jimpitanNamaWarga" readonly style="background: #eee; width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
+        </div>
+        
+        <div class="form-group" style="margin-top: 10px;">
+          <label for="jimpitanNominal">Nominal Jimpitan (Rp):</label>
+          <input type="number" id="jimpitanNominal" placeholder="Isi nominal atau pilih..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
+          
+          <div style="display: flex; gap: 6px; margin-top: 8px;">
+            <button type="button" onclick="setNominal(500)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">500</button>
+            <button type="button" onclick="setNominal(1000)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">1.000</button>
+            <button type="button" onclick="setNominal(2000)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">2.000</button>
+            <button type="button" onclick="setNominal(0)" style="flex:1; padding:6px; font-size:11px; background:#ffebee; color:#c62828; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">0 (Absen)</button>
+          </div>
+        </div>
+
+        <button type="button" id="btnSimpanJimpitan" onclick="simpanJimpitan()" style="width:100%; margin-top:15px; padding:10px; background:#10b981; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">💾 Simpan Jimpitan</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal Form Pendataan Warga Baru -->
   <div id="modal-warga-baru" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-warga-baru') tutupModalWargaBaru()">
     <div class="modal-content" style="max-width: 400px; width: 90%;">
       <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
@@ -562,45 +530,39 @@
     </div>
   </div>
   
-<!-- Modal Info / Changelog -->
-<div id="modal-changelog" class="modal-bg" style="display: none; z-index: 3000;">
-  <div class="modal-content" style="max-width: 400px; max-height: 80vh; overflow-y: auto; text-align: left;">
-    
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
-      <h3 style="margin: 0; font-size: 16px; color: #333;">ℹ️ Informasi & Catatan Perubahan</h3>
-      <span onclick="tutupModalChangelog()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
+  <!-- Modal Info / Changelog -->
+  <div id="modal-changelog" class="modal-bg" style="display: none; z-index: 3000;">
+    <div class="modal-content" style="max-width: 400px; max-height: 80vh; overflow-y: auto; text-align: left;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 16px; color: #333;">ℹ️ Informasi & Catatan Perubahan</h3>
+        <span onclick="tutupModalChangelog()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
+      </div>
+
+      <div id="konten-changelog" style="font-size: 13px; color: #444; line-height: 1.5;"></div>
+
+      <button type="button" onclick="tutupModalChangelog()" style="width: 100%; margin-top: 15px; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Tutup</button>
     </div>
-
-    <!-- Wadah ini akan diisi otomatis oleh JavaScript -->
-    <div id="konten-changelog" style="font-size: 13px; color: #444; line-height: 1.5;"></div>
-
-    <button type="button" onclick="tutupModalChangelog()" style="width: 100%; margin-top: 15px; padding: 8px; background: #4CAF50; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">Tutup</button>
   </div>
-</div>
 
-<!-- Tombol Melayang Scan QR (Tengah Bawah) -->
-<button id="btn-scan-jimpitan" onclick="mulaiScanJimpitan()" class="btn-qr-floating">
-  <!-- Gambar Kentongan: Dibuat 28px + Efek Tebal Menyala -->
-  <img src="kentongan-slit-drum.png" alt="Kentongan" style="
-    width: 28px; 
-    height: 28px; 
-    object-fit: contain; 
-    margin-bottom: 2px; 
-    filter: brightness(0) invert(1) drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
-  ">
-  
- <span style="
-    font-size: 8px; 
-    font-weight: bold; 
-    line-height: 1; 
-    color: #ffffff; 
-    text-shadow: 0 0 2px #ffffff, 0 0 6px rgba(255, 255, 255, 0.9);
-  ">Ronda Broo</span>
-</button>
+  <!-- Tombol Melayang Scan QR -->
+  <button id="btn-scan-jimpitan" onclick="mulaiScanJimpitan()" class="btn-qr-floating">
+    <img src="kentongan-slit-drum.png" alt="Kentongan" style="
+      width: 28px; 
+      height: 28px; 
+      object-fit: contain; 
+      margin-bottom: 2px; 
+      filter: brightness(0) invert(1) drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
+    ">
+    <span style="
+      font-size: 8px; 
+      font-weight: bold; 
+      line-height: 1; 
+      color: #ffffff; 
+      text-shadow: 0 0 2px #ffffff, 0 0 6px rgba(255, 255, 255, 0.9);
+    ">Ronda Broo</span>
+  </button>
     
-<!-- Library QR Code Scanner -->
   <script src="html5-qrcode.min.js"></script>
-  
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // --- KODE PETA & DATA ---
@@ -836,114 +798,111 @@
       if (e.target.id === 'modal-info') tutupModalInfo();
     }
 
-function sorotLokasi(lokasiEncoded) {
-  var namaLokasi = decodeURIComponent(lokasiEncoded).trim();
-  tutupModalInfo();
+    function sorotLokasi(lokasiEncoded) {
+      var namaLokasi = decodeURIComponent(lokasiEncoded).trim();
+      tutupModalInfo();
 
-  if (!namaLokasi) return;
+      if (!namaLokasi) return;
 
-  var kataKunci = namaLokasi.toLowerCase();
-  var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci);
+      var kataKunci = namaLokasi.toLowerCase();
+      var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci);
 
-  if (!hasil) {
-    hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
-  }
-
-  if (hasil) {
-    if (pinRumahAktif) {
-      map.removeLayer(pinRumahAktif);
-      pinRumahAktif = null;
-    }
-
-    if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
-      hasil.marker.addTo(map);
-      pinRumahAktif = hasil.marker;
-    }
-
-    // Hitung offset koordinat & flyTo
-    var pointM = map.project([hasil.lat, hasil.lng], 19);
-    var pointC = L.point(pointM.x, pointM.y - 200);
-    var targetCenter = map.unproject(pointC, 19);
-
-    map.flyTo(targetCenter, 19);
-
-    map.once('moveend', function() {
-      if (hasil.marker.getPopup()) {
-        hasil.marker.getPopup().options.autoPan = false;
+      if (!hasil) {
+        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
       }
-      hasil.marker.openPopup();
-    });
-  }
-}
 
-function cariLokasi() {
-  var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
-  if (!kataKunci) return;
+      if (hasil) {
+        if (pinRumahAktif) {
+          map.removeLayer(pinRumahAktif);
+          pinRumahAktif = null;
+        }
 
-  var hasil = null;
-  hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+        if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
+          hasil.marker.addTo(map);
+          pinRumahAktif = hasil.marker;
+        }
 
-  if (!hasil && /^\d+$/.test(kataKunci)) {
-    var angkaCari = parseInt(kataKunci, 10);
-    
-    hasil = daftarPin.find(pin => {
-      var kataKata = pin.nama.split(/[\s,().-]+/);
-      return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-    });
-  }
+        var pointM = map.project([hasil.lat, hasil.lng], 19);
+        var pointC = L.point(pointM.x, pointM.y - 200);
+        var targetCenter = map.unproject(pointC, 19);
 
-  if (!hasil && !/^\d+$/.test(kataKunci)) {
-    hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
-  }
-  
-  if (hasil) {
-    if (pinRumahAktif) {
-      map.removeLayer(pinRumahAktif);
-      pinRumahAktif = null;
-    }
+        map.flyTo(targetCenter, 19);
 
-    if (!map.hasLayer(hasil.marker)) {
-      hasil.marker.addTo(map);
-      pinRumahAktif = hasil.marker;
-    }
-
-    // Hitung offset koordinat & flyTo
-    var pointM = map.project([hasil.lat, hasil.lng], 19);
-    var pointC = L.point(pointM.x, pointM.y - 200);
-    var targetCenter = map.unproject(pointC, 19);
-
-    map.flyTo(targetCenter, 19);
-
-    map.once('moveend', function() {
-      if (hasil.marker.getPopup()) {
-        hasil.marker.getPopup().options.autoPan = false;
-      }
-      hasil.marker.openPopup();
-    });
-
-  } else {
-    alert("Nomor atau nama tempat tidak ditemukan.");
-  }
-}
-
-function filterKategori(kat, btnElement) {
-  document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
-  btnElement.classList.add('active');
-
-  daftarPin.forEach(pin => {
-    map.removeLayer(pin.marker);
-
-    if (!pin.hidden) {
-      if (kat === 'semua') {
-        pin.marker.addTo(map);
-      } else if (pin.kategori === kat) {
-        pin.marker.addTo(map);
+        map.once('moveend', function() {
+          if (hasil.marker.getPopup()) {
+            hasil.marker.getPopup().options.autoPan = false;
+          }
+          hasil.marker.openPopup();
+        });
       }
     }
-  });
-}
 
-    
+    function cariLokasi() {
+      var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
+      if (!kataKunci) return;
+
+      var hasil = null;
+      hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+
+      if (!hasil && /^\d+$/.test(kataKunci)) {
+        var angkaCari = parseInt(kataKunci, 10);
+        
+        hasil = daftarPin.find(pin => {
+          var kataKata = pin.nama.split(/[\s,().-]+/);
+          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
+        });
+      }
+
+      if (!hasil && !/^\d+$/.test(kataKunci)) {
+        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
+      }
+      
+      if (hasil) {
+        if (pinRumahAktif) {
+          map.removeLayer(pinRumahAktif);
+          pinRumahAktif = null;
+        }
+
+        if (!map.hasLayer(hasil.marker)) {
+          hasil.marker.addTo(map);
+          pinRumahAktif = hasil.marker;
+        }
+
+        var pointM = map.project([hasil.lat, hasil.lng], 19);
+        var pointC = L.point(pointM.x, pointM.y - 200);
+        var targetCenter = map.unproject(pointC, 19);
+
+        map.flyTo(targetCenter, 19);
+
+        map.once('moveend', function() {
+          if (hasil.marker.getPopup()) {
+            hasil.marker.getPopup().options.autoPan = false;
+          }
+          hasil.marker.openPopup();
+        });
+
+      } else {
+        alert("Nomor atau nama tempat tidak ditemukan.");
+      }
+    }
+
+    function filterKategori(kat, btnElement) {
+      document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
+      btnElement.classList.add('active');
+
+      daftarPin.forEach(pin => {
+        map.removeLayer(pin.marker);
+
+        if (!pin.hidden) {
+          if (kat === 'semua') {
+            pin.marker.addTo(map);
+          } else if (pin.kategori === kat) {
+            pin.marker.addTo(map);
+          }
+        }
+      });
+    }
+
     function bukaFotoBesar(src, e) {
       if (e) e.stopPropagation();
       var modal = document.getElementById('modal-foto');
@@ -960,7 +919,7 @@ function filterKategori(kat, btnElement) {
       document.getElementById('modal-foto').style.display = 'none';
     }
 
-    // --- FITUR KEUANGAN (SHEET 3) ---
+    // --- FITUR KEUANGAN ---
     function muatDataKeuangan() {
       fetch(KEUANGAN_URL)
         .then(response => response.text())
@@ -1067,651 +1026,639 @@ function filterKategori(kat, btnElement) {
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
-  // --- FITUR MALAM RONDA/JIMPITAN RONDA (PUBLIK) ---
-function getInfoMalamRonda(dateObj = new Date()) {
-  let d = new Date(dateObj);
-  let hour = d.getHours();
-  
-  // Jam 00.00 - 08.59 masuk shift malam hari sebelumnya (grace window)
-  if (hour < 9) {
-    d.setDate(d.getDate() - 1);
-  }
-  
-  let effectiveDay = d.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
-  const mapMalam = {
-    6: 'Malam Minggu', // Masuk catatan khusus sheet
-    0: 'Malam Senin',
-    1: 'Malam Selasa',
-    2: 'Malam Rabu',
-    3: 'Malam Kamis',
-    4: 'Malam Jumat',
-    5: 'Malam Sabtu'
-  };
-  
-  return {
-    kelompokMalam: mapMalam[effectiveDay],
-    masukTabel: effectiveDay !== 6 // false khusus Malam Minggu
-  };
-}
-
-// --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
-const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec';
-
-// Variable Global AudioContext
-let audioCtx = null;
-
-// Status Global Scanner & Sync
-let html5QrcodeScanner = null;
-let sedangScanning = false;
-let sedangMengirim = false;
-
-function setNominal(nilai) {
-  document.getElementById('jimpitanNominal').value = nilai;
-}
-
-// --- FUNGSI AUDIO BEEP ---
-function mainkanSuaraBeep() {
-  try {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // --- FITUR MALAM RONDA / JIMPITAN RONDA (PUBLIK) ---
+    function getInfoMalamRonda(dateObj = new Date()) {
+      let d = new Date(dateObj);
+      let hour = d.getHours();
+      
+      // Jam 00.00 - 08.59 masuk shift malam hari sebelumnya (grace window)
+      if (hour < 9) {
+        d.setDate(d.getDate() - 1);
+      }
+      
+      let effectiveDay = d.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
+      const mapMalam = {
+        6: 'Malam Minggu',
+        0: 'Malam Senin',
+        1: 'Malam Selasa',
+        2: 'Malam Rabu',
+        3: 'Malam Kamis',
+        4: 'Malam Jumat',
+        5: 'Malam Sabtu'
+      };
+      
+      return {
+        kelompokMalam: mapMalam[effectiveDay],
+        masukTabel: effectiveDay !== 6 // false khusus Malam Minggu
+      };
     }
 
-    const jalankanBeep = () => {
-      const now = audioCtx.currentTime;
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+    // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
+    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec';
 
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(1000, now);
+    let audioCtx = null;
+    let html5QrcodeScanner = null;
+    let sedangScanning = false;
+    let sedangMengirim = false;
 
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
-      gain.gain.linearRampToValueAtTime(0, now + 0.15);
-
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
-
-      osc.start(now);
-      osc.stop(now + 0.15);
-    };
-
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume().then(() => jalankanBeep());
-    } else {
-      jalankanBeep();
+    function setNominal(nilai) {
+      document.getElementById('jimpitanNominal').value = nilai;
     }
-  } catch (e) {
-    console.log("Audio error:", e);
-  }
-}
 
-// --- FITUR SCANNER CAMERA ---
-function mulaiScanJimpitan() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
+    function mainkanSuaraBeep() {
+      try {
+        if (!audioCtx) {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
 
-  try {
-    if ('vibrate' in navigator) {
-      navigator.vibrate(10);
+        const jalankanBeep = () => {
+          const now = audioCtx.currentTime;
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(1000, now);
+
+          gain.gain.setValueAtTime(0, now);
+          gain.gain.linearRampToValueAtTime(0.3, now + 0.02);
+          gain.gain.linearRampToValueAtTime(0, now + 0.15);
+
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+
+          osc.start(now);
+          osc.stop(now + 0.15);
+        };
+
+        if (audioCtx.state === 'suspended') {
+          audioCtx.resume().then(() => jalankanBeep());
+        } else {
+          jalankanBeep();
+        }
+      } catch (e) {
+        console.log("Audio error:", e);
+      }
     }
-  } catch (e) {}
 
-  document.getElementById('modal-qr-scanner').style.display = 'flex';
+    function mulaiScanJimpitan() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
 
-  let qrElement = document.getElementById('qr-reader');
-  if (qrElement) qrElement.innerHTML = '';
+      try {
+        if ('vibrate' in navigator) {
+          navigator.vibrate(10);
+        }
+      } catch (e) {}
 
-  const jalankanKamera = () => {
-    try {
-      html5QrcodeScanner = new Html5Qrcode("qr-reader");
-      let config = { fps: 10, qrbox: { width: 220, height: 220 } };
+      document.getElementById('modal-qr-scanner').style.display = 'flex';
 
-      html5QrcodeScanner.start(
-        { facingMode: "environment" },
-        config,
-        onScanJimpitanSuccess
-      ).then(() => {
-        sedangScanning = true;
-      }).catch(err => {
-        console.warn("facingMode gagal, mencoba fallback ke daftar kamera...", err);
+      let qrElement = document.getElementById('qr-reader');
+      if (qrElement) qrElement.innerHTML = '';
 
-        Html5Qrcode.getCameras().then(devices => {
-          if (devices && devices.length > 0) {
-            let selectedId = devices[devices.length - 1].id;
+      const jalankanKamera = () => {
+        try {
+          html5QrcodeScanner = new Html5Qrcode("qr-reader");
+          let config = { fps: 10, qrbox: { width: 220, height: 220 } };
 
-            html5QrcodeScanner.start(
-              selectedId,
-              config,
-              onScanJimpitanSuccess
-            ).then(() => {
-              sedangScanning = true;
-            }).catch(err2 => {
-              alert("Gagal membuka kamera: " + err2);
+          html5QrcodeScanner.start(
+            { facingMode: "environment" },
+            config,
+            onScanJimpitanSuccess
+          ).then(() => {
+            sedangScanning = true;
+          }).catch(err => {
+            console.warn("facingMode gagal, mencoba fallback ke daftar kamera...", err);
+
+            Html5Qrcode.getCameras().then(devices => {
+              if (devices && devices.length > 0) {
+                let selectedId = devices[devices.length - 1].id;
+
+                html5QrcodeScanner.start(
+                  selectedId,
+                  config,
+                  onScanJimpitanSuccess
+                ).then(() => {
+                  sedangScanning = true;
+                }).catch(err2 => {
+                  alert("Gagal membuka kamera: " + err2);
+                  tutupModalDanBersihkan();
+                });
+              } else {
+                alert("Tidak ada kamera yang terdeteksi.");
+                tutupModalDanBersihkan();
+              }
+            }).catch(err3 => {
+              alert("Izin kamera ditolak atau perangkat tidak mendukung: " + err3);
               tutupModalDanBersihkan();
             });
-          } else {
-            alert("Tidak ada kamera yang terdeteksi.");
-            tutupModalDanBersihkan();
-          }
-        }).catch(err3 => {
-          alert("Izin kamera ditolak atau perangkat tidak mendukung: " + err3);
+          });
+        } catch (e) {
+          alert("Gagal inisialisasi scanner: " + e.message);
           tutupModalDanBersihkan();
-        });
-      });
-    } catch (e) {
-      alert("Gagal inisialisasi scanner: " + e.message);
-      tutupModalDanBersihkan();
-    }
-  };
-
-  if (html5QrcodeScanner && sedangScanning) {
-    sedangScanning = false;
-    html5QrcodeScanner.stop().then(jalankanKamera).catch(jalankanKamera);
-  } else {
-    jalankanKamera();
-  }
-}
-
-function onScanJimpitanSuccess(decodedText) {
-  if (!sedangScanning) return;
-
-  mainkanSuaraBeep();
-
-  try {
-    if ('vibrate' in navigator) {
-      navigator.vibrate(200);
-    }
-  } catch (e) {}
-
-  stopScanQR();
-  document.getElementById('jimpitanNamaWarga').value = decodedText;
-  document.getElementById('jimpitanNominal').value = ''; 
-  document.getElementById('modal-jimpitan').style.display = 'flex';
-}
-
-function stopScanQR() {
-  document.getElementById('modal-qr-scanner').style.display = 'none';
-
-  if (html5QrcodeScanner && sedangScanning) {
-    sedangScanning = false;
-    html5QrcodeScanner.stop().then(() => {
-      bersihkanScanner();
-    }).catch(err => {
-      console.warn("Gagal menghentikan scanner secara normal:", err);
-      bersihkanScanner();
-    });
-  } else {
-    bersihkanScanner();
-  }
-}
-
-function tutupModalDanBersihkan() {
-  document.getElementById('modal-qr-scanner').style.display = 'none';
-  bersihkanScanner();
-}
-
-function bersihkanScanner() {
-  html5QrcodeScanner = null;
-  sedangScanning = false;
-  let qrElement = document.getElementById('qr-reader');
-  if (qrElement) qrElement.innerHTML = '';
-}
-
-// --- 2. FITUR SINKRONISASI OFFLINE ---
-function perbaruiIndikatorSync() {
-  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-  let badge = document.getElementById('status-sync');
-  
-  if (!badge) return;
-
-  if (sedangMengirim) {
-    badge.innerHTML = `🔵 Sedang Menyinkronkan Data...`;
-    badge.style.backgroundColor = '#dbeafe';
-    badge.style.color = '#1e40af';
-  } else if (!navigator.onLine) {
-    if (antrean.length > 0) {
-      badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-      badge.style.backgroundColor = '#fef3c7';
-      badge.style.color = '#92400e';
-    } else {
-      badge.innerHTML = '🔴 Anda Sedang Offline';
-      badge.style.backgroundColor = '#fee2e2';
-      badge.style.color = '#991b1b';
-    }
-  } else {
-    if (antrean.length === 0) {
-      badge.innerHTML = '🟢 Semua Data Ter-sinkron';
-      badge.style.backgroundColor = '#d1fae5';
-      badge.style.color = '#065f46';
-    } else {
-      badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-      badge.style.backgroundColor = '#fef3c7';
-      badge.style.color = '#92400e';
-    }
-  }
-
-  let elNotif = document.getElementById('notif-pending');
-  if (elNotif) {
-    if (antrean.length > 0) {
-      elNotif.innerText = `${antrean.length} Data menunggu sinyal`;
-      elNotif.style.display = 'block';
-    } else {
-      elNotif.style.display = 'none';
-    }
-  }
-}
-
-async function kirimDataPendingJimpitan() {
-  if (sedangMengirim) return;
-
-  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-  if (antrean.length === 0) {
-    perbaruiIndikatorSync();
-    return;
-  }
-
-  sedangMengirim = true;
-  perbaruiIndikatorSync();
-
-  let sisaAntrean = [];
-
-  for (let item of antrean) {
-    try {
-      await fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        mode: 'no-cors',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams(item)
-      });
-    } catch (err) {
-      console.warn("Gagal terhubung ke jaringan:", err);
-      sisaAntrean.push(item);
-    }
-  }
-
-  localStorage.setItem('antrean_jimpitan', JSON.stringify(sisaAntrean));
-  sedangMengirim = false;
-  perbaruiIndikatorSync();
-}
-
-function simpanJimpitan(dataInput) {
-  let rawWarga = '';
-  let rawNominal = 0;
-
-  if (dataInput && typeof dataInput === 'object') {
-    rawWarga = dataInput.warga || dataInput.nama || '';
-    rawNominal = parseInt(dataInput.nominal, 10) || 0;
-  } else {
-    let elNama = document.getElementById('jimpitanNamaWarga');
-    let elNominal = document.getElementById('jimpitanNominal');
-
-    rawWarga = elNama ? elNama.value.trim() : '';
-    rawNominal = parseInt(elNominal ? elNominal.value : 0, 10);
-
-    if (!rawWarga) {
-      alert("Nama warga / rumah belum terisi!");
-      return;
-    }
-  }
-
-  let infoMalam = getInfoMalamRonda(new Date());
-
-  let dataBaru = {
-    action: infoMalam.masukTabel ? 'jimpitan' : 'jimpitan_catatan',
-    kelompokMalam: infoMalam.kelompokMalam,
-    masukTabel: infoMalam.masukTabel,
-    tanggal: new Date().toLocaleString('id-ID'),
-    warga: rawWarga,
-    nominal: rawNominal
-  };
-
-  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-  antrean.push(dataBaru);
-  localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
-
-  let infoTeks = infoMalam.masukTabel ? `masuk ${infoMalam.kelompokMalam}` : 'Masuk Catatan Ronda (Malam Minggu)';
-  alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + ` berhasil dicatat (${infoTeks})!`);
-
-  let modal = document.getElementById('modal-jimpitan');
-  if (modal) modal.style.display = 'none';
-  
-  let elNama = document.getElementById('jimpitanNamaWarga');
-  let elNominal = document.getElementById('jimpitanNominal');
-  if (elNama) elNama.value = '';
-  if (elNominal) elNominal.value = '';
-
-  perbaruiIndikatorSync();
-  kirimDataPendingJimpitan();
-}
-
-window.addEventListener('online', () => {
-  console.log("Koneksi kembali terhubung. Mengirim data pending...");
-  perbaruiIndikatorSync();
-  kirimDataPendingJimpitan();
-});
-
-window.addEventListener('offline', () => {
-  perbaruiIndikatorSync();
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  perbaruiIndikatorSync();
-  if (navigator.onLine) {
-    kirimDataPendingJimpitan();
-  }
-});
-
-// --- 3. FITUR REKAP & RIWAYAT JIMPITAN ---
-var GID_JIMPITAN = '515393252'; 
-var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
-
-function inisialisasiSelectBulan() {
-  var select = document.getElementById('select-bulan-jimpitan');
-  if (!select || select.children.length > 0) return;
-
-  var namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-  var skrg = new Date();
-
-  for (var i = 0; i < 6; i++) {
-    var d = new Date(skrg.getFullYear(), skrg.getMonth() - i, 1);
-    var bln = d.getMonth();
-    var thn = d.getFullYear();
-    
-    var option = document.createElement('option');
-    option.value = thn + '-' + bln;
-    option.text = (i === 0 ? "Bulan Ini (" : "") + namaBulan[bln] + " " + thn + (i === 0 ? ")" : "");
-    select.appendChild(option);
-  }
-}
-
-function muatDataJimpitan() {
-  inisialisasiSelectBulan();
-
-  var selectPeriode = document.getElementById('select-bulan-jimpitan');
-  var bulanDipilih, tahunDipilih;
-
-  if (selectPeriode && selectPeriode.value) {
-    var parts = selectPeriode.value.split('-');
-    tahunDipilih = parseInt(parts[0], 10);
-    bulanDipilih = parseInt(parts[1], 10);
-  } else {
-    var skrg = new Date();
-    bulanDipilih = skrg.getMonth();
-    tahunDipilih = skrg.getFullYear();
-  }
-
-  fetch(JIMPITAN_URL)
-    .then(response => response.text())
-    .then(csvText => {
-      var baris = parseCSV(csvText).slice(1);
-      var gridContainer = document.getElementById('grid-jimpitan');
-      
-      if (!gridContainer) return;
-      gridContainer.innerHTML = '';
-      var grandTotal = 0;
-
-      // HANYA 6 HARI RONDA UTAMA (Malam Minggu otomatis terbuang dari UI)
-      var rekapMalam = {
-        'Malam Senin': { subtotal: 0, items: [] },
-        'Malam Selasa': { subtotal: 0, items: [] },
-        'Malam Rabu': { subtotal: 0, items: [] },
-        'Malam Kamis': { subtotal: 0, items: [] },
-        'Malam Jumat': { subtotal: 0, items: [] },
-        'Malam Sabtu': { subtotal: 0, items: [] }
+        }
       };
 
-      baris.forEach(kolom => {
-        if (kolom.length >= 3 && kolom[0] !== '') {
-          var tglStr = kolom[0];
-          var warga = '-';
-          var nominal = 0;
+      if (html5QrcodeScanner && sedangScanning) {
+        sedangScanning = false;
+        html5QrcodeScanner.stop().then(jalankanKamera).catch(jalankanKamera);
+      } else {
+        jalankanKamera();
+      }
+    }
 
-          // Deteksi otomatis format lama (3 kolom) vs baru (4 kolom)
-          if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
-            warga = kolom[2] || '-';
-            var nominalRaw = kolom[3] ? kolom[3].replace(/[^0-9]/g, '') : '0';
-            nominal = parseInt(nominalRaw, 10) || 0;
-          } else {
-            warga = kolom[1] || '-';
-            var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
-            nominal = parseInt(nominalRaw, 10) || 0;
-          }
+    function onScanJimpitanSuccess(decodedText) {
+      if (!sedangScanning) return;
 
-          var angkaTanggal = tglStr.match(/\d+/g); 
-          if (angkaTanggal && angkaTanggal.length >= 3) {
-            var tgl = parseInt(angkaTanggal[0], 10);
-            var bln = parseInt(angkaTanggal[1], 10) - 1;
-            var thn = parseInt(angkaTanggal[2], 10);
-            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+      mainkanSuaraBeep();
 
-            var dateObj = new Date(thn, bln, tgl, jam, menit);
+      try {
+        if ('vibrate' in navigator) {
+          navigator.vibrate(200);
+        }
+      } catch (e) {}
 
-            if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
-              var infoMalam = getInfoMalamRonda(dateObj);
-              var namaMalam = infoMalam.kelompokMalam;
+      stopScanQR();
+      document.getElementById('jimpitanNamaWarga').value = decodedText;
+      document.getElementById('jimpitanNominal').value = ''; 
+      document.getElementById('modal-jimpitan').style.display = 'flex';
+    }
 
-              // Data Malam Minggu otomatis terabaikan karena tidak ada di rekapMalam
-              if (namaMalam && rekapMalam[namaMalam]) {
-                rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-                rekapMalam[namaMalam].subtotal += nominal;
-                grandTotal += nominal;
+    function stopScanQR() {
+      document.getElementById('modal-qr-scanner').style.display = 'none';
+
+      if (html5QrcodeScanner && sedangScanning) {
+        sedangScanning = false;
+        html5QrcodeScanner.stop().then(() => {
+          bersihkanScanner();
+        }).catch(err => {
+          console.warn("Gagal menghentikan scanner secara normal:", err);
+          bersihkanScanner();
+        });
+      } else {
+        bersihkanScanner();
+      }
+    }
+
+    function tutupModalDanBersihkan() {
+      document.getElementById('modal-qr-scanner').style.display = 'none';
+      bersihkanScanner();
+    }
+
+    function bersihkanScanner() {
+      html5QrcodeScanner = null;
+      sedangScanning = false;
+      let qrElement = document.getElementById('qr-reader');
+      if (qrElement) qrElement.innerHTML = '';
+    }
+
+    // --- SINKRONISASI OFFLINE ---
+    function perbaruiIndikatorSync() {
+      let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
+      let badge = document.getElementById('status-sync');
+      
+      if (!badge) return;
+
+      if (sedangMengirim) {
+        badge.innerHTML = `🔵 Sedang Menyinkronkan Data...`;
+        badge.style.backgroundColor = '#dbeafe';
+        badge.style.color = '#1e40af';
+      } else if (!navigator.onLine) {
+        if (antrean.length > 0) {
+          badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
+          badge.style.backgroundColor = '#fef3c7';
+          badge.style.color = '#92400e';
+        } else {
+          badge.innerHTML = '🔴 Anda Sedang Offline';
+          badge.style.backgroundColor = '#fee2e2';
+          badge.style.color = '#991b1b';
+        }
+      } else {
+        if (antrean.length === 0) {
+          badge.innerHTML = '🟢 Semua Data Ter-sinkron';
+          badge.style.backgroundColor = '#d1fae5';
+          badge.style.color = '#065f46';
+        } else {
+          badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
+          badge.style.backgroundColor = '#fef3c7';
+          badge.style.color = '#92400e';
+        }
+      }
+
+      let elNotif = document.getElementById('notif-pending');
+      if (elNotif) {
+        if (antrean.length > 0) {
+          elNotif.innerText = `${antrean.length} Data menunggu sinyal`;
+          elNotif.style.display = 'block';
+        } else {
+          elNotif.style.display = 'none';
+        }
+      }
+    }
+
+    async function kirimDataPendingJimpitan() {
+      if (sedangMengirim) return;
+
+      let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
+      if (antrean.length === 0) {
+        perbaruiIndikatorSync();
+        return;
+      }
+
+      sedangMengirim = true;
+      perbaruiIndikatorSync();
+
+      let sisaAntrean = [];
+
+      for (let item of antrean) {
+        try {
+          await fetch(GAS_WEB_APP_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams(item)
+          });
+        } catch (err) {
+          console.warn("Gagal terhubung ke jaringan:", err);
+          sisaAntrean.push(item);
+        }
+      }
+
+      localStorage.setItem('antrean_jimpitan', JSON.stringify(sisaAntrean));
+      sedangMengirim = false;
+      perbaruiIndikatorSync();
+    }
+
+    function simpanJimpitan(dataInput) {
+      let rawWarga = '';
+      let rawNominal = 0;
+
+      if (dataInput && typeof dataInput === 'object') {
+        rawWarga = dataInput.warga || dataInput.nama || '';
+        rawNominal = parseInt(dataInput.nominal, 10) || 0;
+      } else {
+        let elNama = document.getElementById('jimpitanNamaWarga');
+        let elNominal = document.getElementById('jimpitanNominal');
+
+        rawWarga = elNama ? elNama.value.trim() : '';
+        rawNominal = parseInt(elNominal ? elNominal.value : 0, 10);
+
+        if (!rawWarga) {
+          alert("Nama warga / rumah belum terisi!");
+          return;
+        }
+      }
+
+      let infoMalam = getInfoMalamRonda(new Date());
+
+      let dataBaru = {
+        action: infoMalam.masukTabel ? 'jimpitan' : 'jimpitan_catatan',
+        kelompokMalam: infoMalam.kelompokMalam,
+        masukTabel: infoMalam.masukTabel,
+        tanggal: new Date().toLocaleString('id-ID'),
+        warga: rawWarga,
+        nominal: rawNominal
+      };
+
+      let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
+      antrean.push(dataBaru);
+      localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
+
+      let infoTeks = infoMalam.masukTabel ? `masuk ${infoMalam.kelompokMalam}` : 'Masuk Catatan Ronda (Malam Minggu)';
+      alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + ` berhasil dicatat (${infoTeks})!`);
+
+      let modal = document.getElementById('modal-jimpitan');
+      if (modal) modal.style.display = 'none';
+      
+      let elNama = document.getElementById('jimpitanNamaWarga');
+      let elNominal = document.getElementById('jimpitanNominal');
+      if (elNama) elNama.value = '';
+      if (elNominal) elNominal.value = '';
+
+      perbaruiIndikatorSync();
+      kirimDataPendingJimpitan();
+    }
+
+    window.addEventListener('online', () => {
+      console.log("Koneksi kembali terhubung. Mengirim data pending...");
+      perbaruiIndikatorSync();
+      kirimDataPendingJimpitan();
+    });
+
+    window.addEventListener('offline', () => {
+      perbaruiIndikatorSync();
+    });
+
+    document.addEventListener('DOMContentLoaded', () => {
+      perbaruiIndikatorSync();
+      if (navigator.onLine) {
+        kirimDataPendingJimpitan();
+      }
+    });
+
+    // --- FITUR REKAP & RIWAYAT JIMPITAN ---
+    var GID_JIMPITAN = '515393252'; 
+    var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
+
+    function inisialisasiSelectBulan() {
+      var select = document.getElementById('select-bulan-jimpitan');
+      if (!select || select.children.length > 0) return;
+
+      var namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+      var skrg = new Date();
+
+      for (var i = 0; i < 6; i++) {
+        var d = new Date(skrg.getFullYear(), skrg.getMonth() - i, 1);
+        var bln = d.getMonth();
+        var thn = d.getFullYear();
+        
+        var option = document.createElement('option');
+        option.value = thn + '-' + bln;
+        option.text = (i === 0 ? "Bulan Ini (" : "") + namaBulan[bln] + " " + thn + (i === 0 ? ")" : "");
+        select.appendChild(option);
+      }
+    }
+
+    function muatDataJimpitan() {
+      inisialisasiSelectBulan();
+
+      var selectPeriode = document.getElementById('select-bulan-jimpitan');
+      var bulanDipilih, tahunDipilih;
+
+      if (selectPeriode && selectPeriode.value) {
+        var parts = selectPeriode.value.split('-');
+        tahunDipilih = parseInt(parts[0], 10);
+        bulanDipilih = parseInt(parts[1], 10);
+      } else {
+        var skrg = new Date();
+        bulanDipilih = skrg.getMonth();
+        tahunDipilih = skrg.getFullYear();
+      }
+
+      fetch(JIMPITAN_URL)
+        .then(response => response.text())
+        .then(csvText => {
+          var baris = parseCSV(csvText).slice(1);
+          var gridContainer = document.getElementById('grid-jimpitan');
+          
+          if (!gridContainer) return;
+          gridContainer.innerHTML = '';
+          var grandTotal = 0;
+
+          // HANYA 6 HARI RONDA UTAMA (Malam Minggu otomatis terbuang dari UI Modal)
+          var rekapMalam = {
+            'Malam Senin': { subtotal: 0, items: [] },
+            'Malam Selasa': { subtotal: 0, items: [] },
+            'Malam Rabu': { subtotal: 0, items: [] },
+            'Malam Kamis': { subtotal: 0, items: [] },
+            'Malam Jumat': { subtotal: 0, items: [] },
+            'Malam Sabtu': { subtotal: 0, items: [] }
+          };
+
+          baris.forEach(kolom => {
+            if (kolom.length >= 3 && kolom[0] !== '') {
+              var tglStr = kolom[0];
+              var warga = '-';
+              var nominal = 0;
+
+              // Deteksi otomatis format lama (3 kolom) vs baru (4 kolom)
+              if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
+                warga = kolom[2] || '-';
+                var nominalRaw = kolom[3] ? kolom[3].replace(/[^0-9]/g, '') : '0';
+                nominal = parseInt(nominalRaw, 10) || 0;
+              } else {
+                warga = kolom[1] || '-';
+                var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
+                nominal = parseInt(nominalRaw, 10) || 0;
+              }
+
+              var angkaTanggal = tglStr.match(/\d+/g); 
+              if (angkaTanggal && angkaTanggal.length >= 3) {
+                var tgl = parseInt(angkaTanggal[0], 10);
+                var bln = parseInt(angkaTanggal[1], 10) - 1;
+                var thn = parseInt(angkaTanggal[2], 10);
+                var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+                var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+
+                var dateObj = new Date(thn, bln, tgl, jam, menit);
+
+                if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
+                  var infoMalam = getInfoMalamRonda(dateObj);
+                  var namaMalam = infoMalam.kelompokMalam;
+
+                  if (namaMalam && rekapMalam[namaMalam]) {
+                    rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+                    rekapMalam[namaMalam].subtotal += nominal;
+                    grandTotal += nominal;
+                  }
+                }
               }
             }
-          }
-        }
-      });
+          });
 
-      Object.keys(rekapMalam).forEach(malam => {
-        var dataMalam = rekapMalam[malam];
-        var card = document.createElement('div');
-        card.style.cssText = `
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 10px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-          display: flex;
-          flex-direction: column;
-        `;
+          Object.keys(rekapMalam).forEach(malam => {
+            var dataMalam = rekapMalam[malam];
+            var card = document.createElement('div');
+            card.style.cssText = `
+              background: #ffffff;
+              border: 1px solid #e5e7eb;
+              border-radius: 8px;
+              padding: 10px;
+              box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+              display: flex;
+              flex-direction: column;
+            `;
 
-        var itemListHTML = '';
-        if (dataMalam.items.length === 0) {
-          itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
-        } else {
-          itemListHTML = dataMalam.items.reverse().map(item => {
-            var isAbsen = item.nominal === 0;
-            var warnaNominal = isAbsen ? '#dc2626' : '#059669';
-            var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
+            var itemListHTML = '';
+            if (dataMalam.items.length === 0) {
+              itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
+            } else {
+              itemListHTML = dataMalam.items.reverse().map(item => {
+                var isAbsen = item.nominal === 0;
+                var warnaNominal = isAbsen ? '#dc2626' : '#059669';
+                var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
 
-            return `
-              <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
-                <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">
-                  ${escapeHtml(item.warga)}
-                </span>
-                <span style="color: ${warnaNominal}; font-weight: bold;">
-                  Rp ${item.nominal.toLocaleString('id-ID')}
+                return `
+                  <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
+                    <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">
+                      ${escapeHtml(item.warga)}
+                    </span>
+                    <span style="color: ${warnaNominal}; font-weight: bold;">
+                      Rp ${item.nominal.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                `;
+              }).join('');
+            }
+
+            card.innerHTML = `
+              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 8px;">
+                <span style="font-weight: bold; font-size: 12px; color: #065f46;">🌙 ${malam}</span>
+                <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+                  Rp ${dataMalam.subtotal.toLocaleString('id-ID')}
                 </span>
               </div>
+              <div style="max-height: 120px; overflow-y: auto; flex-grow: 1;">
+                ${itemListHTML}
+              </div>
             `;
-          }).join('');
-        }
 
-        card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 8px;">
-            <span style="font-weight: bold; font-size: 12px; color: #065f46;">🌙 ${malam}</span>
-            <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
-              Rp ${dataMalam.subtotal.toLocaleString('id-ID')}
-            </span>
+            gridContainer.appendChild(card);
+          });
+
+          var totalElem = document.getElementById('total-jimpitan');
+          if (totalElem) totalElem.innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
+        })
+        .catch(err => console.error("Gagal muat data jimpitan:", err));
+    }
+
+    function bukaModalRiwayatJimpitan() {
+      document.getElementById('modal-riwayat-jimpitan').style.display = 'flex';
+      muatDataJimpitan();
+    }
+
+    function tutupModalRiwayatJimpitan() {
+      document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
+    }
+
+    // --- CHANGELOG ---
+    const dataChangelog = [
+      {
+        versi: "v1.3.6",
+        tanggal: "21 Sep 2026",
+        status: "Terbaru",
+        warna: "#4CAF50",
+        fitur: [
+          "Perbaikan fitur inventaris",
+          "Perbaikan halaman Admin/Pengurus RT",
+          "Perbaikan fitur Lapor Warga Baru"
+        ]
+      },
+      {
+        versi: "v1.3.3",
+        tanggal: "20 Sep 2026",
+        status: "",
+        warna: "#888",
+        fitur: [
+          "Penambahan Fitur Inventaris/Perkakas",
+          "Penambahan Fitur Pinjam Inventaris/Perkakas"
+        ]
+      },
+      {
+        versi: "v1.2.2",
+        tanggal: "19 Sep 2026",
+        status: "",
+        warna: "#888",
+        fitur: [
+          "Penambahan Fitur Filter lokasi Kost/Kuliner/Minimarket/Resto/Fasum",
+          "Penambahan Fitur Laporan Keuangan All Divisi Terpadu",
+          "Penambahan Fitur Lapor Warga Baru",
+          "Penambahan Fitur Ronda Jimpitan Harian"
+        ]
+      },
+      {
+        versi: "v1.0.0",
+        tanggal: "12 Sep 2026",
+        status: "",
+        warna: "#888",
+        fitur: [
+          "Rilis awal PAPAN INFORMASI DIGITAL RT 05.",
+          "Fitur Cari nomor rumah warga",
+          "Fitur Informasi Kegiatan/Pengumuman"
+        ]
+      }
+    ];
+
+    function muatChangelog() {
+      const container = document.getElementById("konten-changelog");
+      if (!container) return;
+
+      container.innerHTML = dataChangelog.map(item => `
+        <div style="margin-bottom: 12px; border-bottom: 1px dashed #e0e0e0; padding-bottom: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+            <div>
+              <span style="background: ${item.warna}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">${item.versi}</span>
+              ${item.status ? `<span style="color: #888; font-size: 11px; margin-left: 5px;">${item.status}</span>` : ''}
+            </div>
+            <span style="color: #888; font-size: 11px;">📅 ${item.tanggal}</span>
           </div>
-          <div style="max-height: 120px; overflow-y: auto; flex-grow: 1;">
-            ${itemListHTML}
-          </div>
-        `;
 
-        gridContainer.appendChild(card);
-      });
-
-      var totalElem = document.getElementById('total-jimpitan');
-      if (totalElem) totalElem.innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
-    })
-    .catch(err => console.error("Gagal muat data jimpitan:", err));
-}
-
-function bukaModalRiwayatJimpitan() {
-  document.getElementById('modal-riwayat-jimpitan').style.display = 'flex';
-  muatDataJimpitan();
-}
-
-function tutupModalRiwayatJimpitan() {
-  document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
-}
-// 1. Data Changelog (Tinggal tambah objek baru di paling atas jika ada update)
-const dataChangelog = [
-  {
-    versi: "v1.3.6",
-    tanggal: "21 Sep 2026",
-    status: "Terbaru", // <-- Hanya versi paling atas yang pakai "Terbaru"
-    warna: "#4CAF50",
-    fitur: [
-      "Perbaikan fitur inventaris",
-      "Perbaikan halaman Admin/Pengurus RT",
-      "Perbaikan fitur Lapor Warga Baru"
-    ]
-  },
-  {
-    versi: "v1.3.3",
-    tanggal: "20 Sep 2026",
-    status: "", // <-- Kosongkan status versi lama
-    warna: "#888",
-    fitur: [
-      "Penambahan Fitur Inventaris/Perkakas",
-      "Penambahan Fitur Pinjam Inventaris/Perkakas"
-    ]
-  },
-  {
-    versi: "v1.2.2",
-    tanggal: "19 Sep 2026",
-    status: "",
-    warna: "#888",
-    fitur: [
-      "Penambahan Fitur Filter lokasi Kost/Kuliner/Minimarket/Resto/Fasum",
-      "Penambahan Fitur Laporan Keuangan All Divisi Terpadu",
-      "Penambahan Fitur Lapor Warga Baru",
-      "Penambahan Fitur Ronda Jimpitan Harian"
-    ]
-  },
-  {
-    versi: "v1.0.0",
-    tanggal: "12 Sep 2026",
-    status: "",
-    warna: "#888",
-    fitur: [
-      "Rilis awal PAPAN INFORMASI DIGITAL RT 05.",
-      "Fitur Cari nomor rumah warga",
-      "Fitur Informasi Kegiatan/Pengumuman"
-    ]
-  }
-];
-
-// 2. Fungsi untuk menampilkan data ke HTML
-function muatChangelog() {
-  const container = document.getElementById("konten-changelog");
-  if (!container) return;
-
-  container.innerHTML = dataChangelog.map(item => `
-    <div style="margin-bottom: 12px; border-bottom: 1px dashed #e0e0e0; padding-bottom: 8px;">
-      
-      <!-- Baris Atas: Versi, Status, dan Tanggal -->
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-        <div>
-          <span style="background: ${item.warna}; color: white; padding: 2px 6px; border-radius: 4px; font-size: 11px; font-weight: bold;">${item.versi}</span>
-          ${item.status ? `<span style="color: #888; font-size: 11px; margin-left: 5px;">${item.status}</span>` : ''}
+          <ul style="margin: 6px 0 0 18px; padding: 0;">
+            ${item.fitur.map(f => `<li>${f}</li>`).join('')}
+          </ul>
         </div>
-        <!-- Tampilan Tanggal Rilis -->
-        <span style="color: #888; font-size: 11px;">📅 ${item.tanggal}</span>
-      </div>
+      `).join('');
+    }
 
-      <!-- Daftar Fitur -->
-      <ul style="margin: 6px 0 0 18px; padding: 0;">
-        ${item.fitur.map(f => `<li>${f}</li>`).join('')}
-      </ul>
+    function bukaModalChangelog() {
+      muatChangelog();
+      document.getElementById("modal-changelog").style.display = "flex";
+    }
 
-    </div>
-  `).join('');
-}
-
-// 3. Update fungsi buka modal kamu
-function bukaModalChangelog() {
-  muatChangelog(); // Render data terbaru
-  document.getElementById("modal-changelog").style.display = "flex";
-}
-
-function tutupModalChangelog() {
-  document.getElementById("modal-changelog").style.display = "none";
-}
+    function tutupModalChangelog() {
+      document.getElementById("modal-changelog").style.display = "none";
+    }
 
     function bukaModalWargaBaru() {
-  document.getElementById('modal-warga-baru').style.display = 'flex';
-}
-
-   function tutupModalWargaBaru() {
-  document.getElementById('modal-warga-baru').style.display = 'none';
-  document.getElementById('formWargaBaru').reset();
-}
-
-async function simpanWargaBaru() {
-  const nama = document.getElementById('wargaNama').value.trim();
-  const noRumah = document.getElementById('wargaNoRumah').value.trim();
-  const hp = document.getElementById('wargaHp').value.trim();
-  const status = document.getElementById('wargaStatus').value;
-  const cerita = document.getElementById('wargaCerita').value.trim();
-
-  if (!nama || !noRumah || !hp) {
-    alert('Mohon isi nama, nama kost/rumah, dan no HP dengan lengkap!');
-    return;
-  }
-
-  const btn = document.getElementById('btnSimpanWarga');
-  btn.disabled = true;
-  btn.innerText = '⏳ Mengirim...';
-
-  const payload = {
-    action: 'tambahWargaBaru',
-    nama: nama,
-    noRumah: noRumah,
-    hp: hp,
-    status: status,
-    cerita: cerita
-  };
-
-  try {
-    const res = await fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
-
-    btn.disabled = false;
-    btn.innerText = '📤 Kirim Data Warga Baru';
-
-    if (text.includes('SUCCESS')) {
-      alert('✅ Data Warga Baru berhasil terdaftar!');
-      tutupModalWargaBaru();
-    } else {
-      alert('❌ Gagal mengirim: ' + text);
+      document.getElementById('modal-warga-baru').style.display = 'flex';
     }
-  } catch (err) {
-    btn.disabled = false;
-    btn.innerText = '📤 Kirim Data Warga Baru';
-    alert('❌ Error koneksi: ' + err);
-  }
-}
-</script>
+
+    function tutupModalWargaBaru() {
+      document.getElementById('modal-warga-baru').style.display = 'none';
+      document.getElementById('formWargaBaru').reset();
+    }
+
+    async function simpanWargaBaru() {
+      const nama = document.getElementById('wargaNama').value.trim();
+      const noRumah = document.getElementById('wargaNoRumah').value.trim();
+      const hp = document.getElementById('wargaHp').value.trim();
+      const status = document.getElementById('wargaStatus').value;
+      const cerita = document.getElementById('wargaCerita').value.trim();
+
+      if (!nama || !noRumah || !hp) {
+        alert('Mohon isi nama, nama kost/rumah, dan no HP dengan lengkap!');
+        return;
+      }
+
+      const btn = document.getElementById('btnSimpanWarga');
+      btn.disabled = true;
+      btn.innerText = '⏳ Mengirim...';
+
+      const payload = {
+        action: 'tambahWargaBaru',
+        nama: nama,
+        noRumah: noRumah,
+        hp: hp,
+        status: status,
+        cerita: cerita
+      };
+
+      try {
+        const res = await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        const text = await res.text();
+
+        btn.disabled = false;
+        btn.innerText = '📤 Kirim Data Warga Baru';
+
+        if (text.includes('SUCCESS')) {
+          alert('✅ Data Warga Baru berhasil terdaftar!');
+          tutupModalWargaBaru();
+        } else {
+          alert('❌ Gagal mengirim: ' + text);
+        }
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = '📤 Kirim Data Warga Baru';
+        alert('❌ Error koneksi: ' + err);
+      }
+    }
+  </script>
 </body>
 </html>
