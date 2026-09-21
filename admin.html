@@ -245,24 +245,43 @@
         </button>
       </div>
 
-      <!-- Form Tambah / Update Stok Barang (Muncul saat tombol diklik) -->
-      <form id="formStokBarang" style="display: none; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
-        <div style="grid-column: 1 / -1; font-weight: bold; font-size: 11.5px; color: #1e40af;">
-          📦 Master Data Barang (Tambah Baru / Update Total Stok)
+    <!-- Form Tambah / Update Stok Barang -->
+      <form id="formStokBarang" style="display: none; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
+        <div style="font-weight: bold; font-size: 11.5px; color: #1e40af; margin-bottom: 8px;">
+          📦 Master Data & Stok Barang
         </div>
-        <div>
-          <label style="font-size: 11px; font-weight: bold; color: #374151;">Nama Barang:</label>
-          <input type="text" id="stokNamaBarang" placeholder="Contoh: Gelas Kaca / Tenda" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+
+        <!-- Pilih Barang Terdaftar atau Baru -->
+        <div style="margin-bottom: 8px;">
+          <label style="font-size: 11px; font-weight: bold; color: #374151;">Pilih / Nama Barang:</label>
+          <select id="stokPilihBarang" onchange="cekPilihBarangStok(this)" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px; margin-bottom: 4px;">
+            <option value="">-- Pilih Barang Terdaftar --</option>
+            <option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>
+          </select>
+
+          <!-- Input teks ini hanya muncul jika pilih 'Barang Baru' -->
+          <input type="text" id="stokNamaBarangBaru" placeholder="Masukkan nama barang baru..." style="display: none; width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
         </div>
-        <div>
-          <label style="font-size: 11px; font-weight: bold; color: #374151;">Total Stok Dimiliki:</label>
-          <input type="number" id="stokJumlahTotal" min="0" placeholder="Contoh: 50" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+
+        <!-- Jenis Aksi dan Jumlah -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+          <div>
+            <label style="font-size: 11px; font-weight: bold; color: #374151;">Aksi Stok:</label>
+            <select id="stokJenisAksi" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+              <option value="tambah">➕ Tambah (Beli Baru)</option>
+              <option value="kurang">➖ Kurangi (Rusak/Hilang)</option>
+              <option value="set">✏️ Set Total Stok</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Unit:</label>
+            <input type="number" id="stokJumlahTotal" min="1" placeholder="Contoh: 5" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+          </div>
         </div>
-        <div style="display: flex; align-items: flex-end;">
-          <button type="button" onclick="simpanBarangStokAdmin()" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
-            💾 Simpan Barang
-          </button>
-        </div>
+
+        <button type="button" onclick="simpanBarangStokAdmin()" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
+          💾 Simpan Perubahan Stok
+        </button>
       </form>
 
       <!-- Form Input Peminjaman Baru -->
@@ -682,99 +701,183 @@ function formatRibuanInput(el) {
       document.getElementById("modal-admin-inventaris").style.display = "none";
     }
 
-    async function muatPeminjamanAdmin() {
-      const container = document.getElementById("tabel-peminjaman-admin");
-      if (!container) return;
+  // 1. Toggle tampil/sembunyi form master stok
+function toggleFormStok() {
+  const form = document.getElementById('formStokBarang');
+  form.style.display = (form.style.display === 'none' || !form.style.display) ? 'block' : 'none';
+}
 
-      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
+// 2. Cek jika admin memilih 'Ketik Nama Barang Baru'
+function cekPilihBarangStok(el) {
+  const inputBaru = document.getElementById('stokNamaBarangBaru');
+  if (el.value === 'BARU') {
+    inputBaru.style.display = 'block';
+    inputBaru.focus();
+  } else {
+    inputBaru.style.display = 'none';
+    inputBaru.value = '';
+  }
+}
 
-      try {
-        const res = await fetch(GAS_WEB_APP_URL);
-        const data = await res.json();
-        
-        const daftarPinjam = Array.isArray(data) ? data : (data.peminjaman || []);
+// 3. Fungsi Muat Peminjaman & Mengisi Dropdown Barang (DIPERBARUI)
+async function muatPeminjamanAdmin() {
+  const container = document.getElementById("tabel-peminjaman-admin");
+  if (!container) return;
 
-        const selectBarang = document.getElementById("pinjamPilihBarang");
-        if (selectBarang && data.perkakas && data.perkakas.length > 0) {
-          selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-            data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
-        }
-        
-        // PERBAIKAN: Penanganan huruf besar/kecil pada status
-        const pinjamanAktif = daftarPinjam.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
+  container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
 
-        if (pinjamanAktif.length === 0) {
-          container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
-          return;
-        }
+  try {
+    const res = await fetch(GAS_WEB_APP_URL);
+    const data = await res.json();
+    
+    const daftarPinjam = Array.isArray(data) ? data : (data.peminjaman || []);
 
-        container.innerHTML = pinjamanAktif.map(row => `
-          <tr style="border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
-            <td style="padding: 6px;">${row[2]}</td>
-            <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
-            <td style="padding: 6px; text-align: center;">
-              <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
-                ↩️ Dikembalikan
-              </button>
-            </td>
-          </tr>
-        `).join('');
-      } catch (err) {
-        console.error("Error muatPeminjamanAdmin:", err);
-        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:12px;">Gagal memuat data.</td></tr>`;
+    const selectBarang = document.getElementById("pinjamPilihBarang");
+    const selectBarangStok = document.getElementById("stokPilihBarang");
+
+    if (data.perkakas && data.perkakas.length > 0) {
+      // Isi Dropdown Pinjam Warga
+      if (selectBarang) {
+        selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
+          data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
+      }
+
+      // Isi Dropdown Master Stok Admin
+      if (selectBarangStok) {
+        selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
+          `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
+          data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa Stok: ${item.total})</option>`).join('');
       }
     }
+    
+    const pinjamanAktif = daftarPinjam.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
 
-    async function simpanPeminjamanAdmin() {
-      const peminjam = document.getElementById("pinjamNamaWarga").value;
-      const barang = document.getElementById("pinjamPilihBarang").value;
-      const jumlah = document.getElementById("pinjamJumlah").value;
-      const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
-
-      if (!peminjam || !barang || !jumlah) {
-        alert("Mohon lengkapi semua data!");
-        return;
-      }
-
-      const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
-      if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
-
-      const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-      const payload = {
-        pin: pinAdmin,
-        action: "pinjam",
-        id: "ID-" + Date.now(),
-        peminjam: peminjam,
-        barang: barang,
-        jumlah: parseInt(jumlah),
-        tgl: hariIni
-      };
-
-      try {
-        const res = await fetch(GAS_WEB_APP_URL, {
-          method: "POST",
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-        const text = await res.text();
-
-        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-
-        if (text.includes("SUCCESS")) {
-          alert("✅ Peminjaman berhasil dicatat!");
-          document.getElementById("pinjamNamaWarga").value = "";
-          document.getElementById("pinjamPilihBarang").value = "";
-          document.getElementById("pinjamJumlah").value = "";
-          muatPeminjamanAdmin();
-        } else {
-          alert("❌ Gagal menyimpan: " + text);
-        }
-      } catch (err) {
-        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-        alert("❌ Error koneksi: " + err);
-      }
+    if (pinjamanAktif.length === 0) {
+      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
+      return;
     }
+
+    container.innerHTML = pinjamanAktif.map(row => `
+      <tr style="border-bottom: 1px solid #e5e7eb;">
+        <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
+        <td style="padding: 6px;">${row[2]}</td>
+        <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
+        <td style="padding: 6px; text-align: center;">
+          <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
+            ↩️ Dikembalikan
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  } catch (err) {
+    console.error("Error muatPeminjamanAdmin:", err);
+    container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:12px;">Gagal memuat data.</td></tr>`;
+  }
+}
+
+// 4. Catat Peminjaman Warga Baru
+async function simpanPeminjamanAdmin() {
+  const peminjam = document.getElementById("pinjamNamaWarga").value;
+  const barang = document.getElementById("pinjamPilihBarang").value;
+  const jumlah = document.getElementById("pinjamJumlah").value;
+  const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+
+  if (!peminjam || !barang || !jumlah) {
+    alert("Mohon lengkapi semua data!");
+    return;
+  }
+
+  const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
+  if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
+
+  const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  const payload = {
+    pin: pinAdmin,
+    action: "pinjam",
+    id: "ID-" + Date.now(),
+    peminjam: peminjam,
+    barang: barang,
+    jumlah: parseInt(jumlah),
+    tgl: hariIni
+  };
+
+  try {
+    const res = await fetch(GAS_WEB_APP_URL, {
+      method: "POST",
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+
+    if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+
+    if (text.includes("SUCCESS")) {
+      alert("✅ Peminjaman berhasil dicatat!");
+      document.getElementById("pinjamNamaWarga").value = "";
+      document.getElementById("pinjamPilihBarang").value = "";
+      document.getElementById("pinjamJumlah").value = "";
+      muatPeminjamanAdmin();
+    } else {
+      alert("❌ Gagal menyimpan: " + text);
+    }
+  } catch (err) {
+    if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+    alert("❌ Error koneksi: " + err);
+  }
+}
+
+// 5. Simpan Perubahan Stok Barang Master (BARU)
+async function simpanBarangStokAdmin() {
+  const pilihPilihan = document.getElementById('stokPilihBarang').value;
+  const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
+  const jenisAksi = document.getElementById('stokJenisAksi').value;
+  const jumlahUnit = document.getElementById('stokJumlahTotal').value;
+  const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+
+  let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
+
+  if (!namaBarang || !jumlahUnit || parseInt(jumlahUnit) <= 0) {
+    alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
+    return;
+  }
+
+  const btn = document.querySelector('#formStokBarang button');
+  if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
+
+  const payload = {
+    pin: pinAdmin,
+    action: 'tambahBarangPerkakas',
+    namaBarang: namaBarang,
+    jenisAksi: jenisAksi,
+    jumlahUnit: parseInt(jumlahUnit)
+  };
+
+  try {
+    const res = await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+
+    if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+
+    if (text.includes('SUCCESS')) {
+      alert('✅ Data stok barang berhasil diperbarui!');
+      document.getElementById('stokPilihBarang').value = '';
+      document.getElementById('stokNamaBarangBaru').value = '';
+      document.getElementById('stokNamaBarangBaru').style.display = 'none';
+      document.getElementById('stokJumlahTotal').value = '';
+      toggleFormStok();
+      muatPeminjamanAdmin(); // Reload dropdown & tabel
+    } else {
+      alert('❌ Gagal menyimpan: ' + text);
+    }
+  } catch (err) {
+    if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+    alert('❌ Error koneksi: ' + err);
+  }
+}
 
     async function prosesPengembalian(id) {
       if (confirm("Apakah barang ini sudah dikembalikan?")) {
