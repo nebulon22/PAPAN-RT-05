@@ -1383,138 +1383,142 @@
     }
 
     function muatDataJimpitan() {
-      inisialisasiSelectBulan();
+  inisialisasiSelectBulan();
 
-      var selectPeriode = document.getElementById('select-bulan-jimpitan');
-      var bulanDipilih, tahunDipilih;
+  var selectPeriode = document.getElementById('select-bulan-jimpitan');
+  var bulanDipilih, tahunDipilih;
 
-      if (selectPeriode && selectPeriode.value) {
-        var parts = selectPeriode.value.split('-');
-        tahunDipilih = parseInt(parts[0], 10);
-        bulanDipilih = parseInt(parts[1], 10);
-      } else {
-        var skrg = new Date();
-        bulanDipilih = skrg.getMonth();
-        tahunDipilih = skrg.getFullYear();
-      }
+  if (selectPeriode && selectPeriode.value) {
+    var parts = selectPeriode.value.split('-');
+    tahunDipilih = parseInt(parts[0], 10);
+    bulanDipilih = parseInt(parts[1], 10);
+  } else {
+    var skrg = new Date();
+    bulanDipilih = skrg.getMonth();
+    tahunDipilih = skrg.getFullYear();
+  }
 
-      fetch(JIMPITAN_URL)
-        .then(response => response.text())
-        .then(csvText => {
-          var baris = parseCSV(csvText).slice(1);
-          var gridContainer = document.getElementById('grid-jimpitan');
-          
-          if (!gridContainer) return;
-          gridContainer.innerHTML = '';
-          var grandTotal = 0;
+  fetch(JIMPITAN_URL)
+    .then(response => response.text())
+    .then(csvText => {
+      var baris = parseCSV(csvText).slice(1);
+      var gridContainer = document.getElementById('grid-jimpitan');
+      
+      if (!gridContainer) return;
+      gridContainer.innerHTML = '';
+      var grandTotal = 0;
 
-          // HANYA 6 HARI RONDA UTAMA (Malam Minggu otomatis terbuang dari UI Modal)
-          var rekapMalam = {
-            'Malam Senin': { subtotal: 0, items: [] },
-            'Malam Selasa': { subtotal: 0, items: [] },
-            'Malam Rabu': { subtotal: 0, items: [] },
-            'Malam Kamis': { subtotal: 0, items: [] },
-            'Malam Jumat': { subtotal: 0, items: [] },
-            'Malam Sabtu': { subtotal: 0, items: [] }
-          };
+      // 6 Hari Ronda Utama
+      var rekapMalam = {
+        'Malam Senin': { subtotal: 0, items: [] },
+        'Malam Selasa': { subtotal: 0, items: [] },
+        'Malam Rabu': { subtotal: 0, items: [] },
+        'Malam Kamis': { subtotal: 0, items: [] },
+        'Malam Jumat': { subtotal: 0, items: [] },
+        'Malam Sabtu': { subtotal: 0, items: [] }
+      };
 
-          baris.forEach(kolom => {
-            if (kolom.length >= 3 && kolom[0] !== '') {
-              var tglStr = kolom[0];
-              var warga = '-';
-              var nominal = 0;
+      baris.forEach(kolom => {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          var tglStr = kolom[0];
+          var malamManual = '';
+          var warga = '-';
+          var nominal = 0;
 
-              // Deteksi otomatis format lama (3 kolom) vs baru (4 kolom)
-              if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
-                warga = kolom[2] || '-';
-                var nominalRaw = kolom[3] ? kolom[3].replace(/[^0-9]/g, '') : '0';
-                nominal = parseInt(nominalRaw, 10) || 0;
-              } else {
-                warga = kolom[1] || '-';
-                var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
-                nominal = parseInt(nominalRaw, 10) || 0;
-              }
+          // Deteksi otomatis format kolom
+          if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
+            malamManual = kolom[1].trim(); // Membaca teks Kolom B hasil editan Google Sheet
+            warga = kolom[2] || '-';
+            var nominalRaw = kolom[3] ? kolom[3].replace(/[^0-9]/g, '') : '0';
+            nominal = parseInt(nominalRaw, 10) || 0;
+          } else {
+            warga = kolom[1] || '-';
+            var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
+            nominal = parseInt(nominalRaw, 10) || 0;
+          }
 
-              var angkaTanggal = tglStr.match(/\d+/g); 
-              if (angkaTanggal && angkaTanggal.length >= 3) {
-                var tgl = parseInt(angkaTanggal[0], 10);
-                var bln = parseInt(angkaTanggal[1], 10) - 1;
-                var thn = parseInt(angkaTanggal[2], 10);
-                var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-                var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+          var angkaTanggal = tglStr.match(/\d+/g); 
+          if (angkaTanggal && angkaTanggal.length >= 3) {
+            var tgl = parseInt(angkaTanggal[0], 10);
+            var bln = parseInt(angkaTanggal[1], 10) - 1;
+            var thn = parseInt(angkaTanggal[2], 10);
+            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
 
-                var dateObj = new Date(thn, bln, tgl, jam, menit);
+            var dateObj = new Date(thn, bln, tgl, jam, menit);
 
-                if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
-                  var infoMalam = getInfoMalamRonda(dateObj);
-                  var namaMalam = infoMalam.kelompokMalam;
+            // Filter Periode Bulan & Tahun dari Kolom A
+            if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
+              
+              // LOGIKA HYBRID: Gunakan Kolom B dulu, jika kosong baru hitung otomatis
+              var namaMalam = malamManual ? malamManual : getInfoMalamRonda(dateObj).kelompokMalam;
 
-                  if (namaMalam && rekapMalam[namaMalam]) {
-                    rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-                    rekapMalam[namaMalam].subtotal += nominal;
-                    grandTotal += nominal;
-                  }
-                }
+              if (namaMalam && rekapMalam[namaMalam]) {
+                rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+                rekapMalam[namaMalam].subtotal += nominal;
+                grandTotal += nominal;
               }
             }
-          });
+          }
+        }
+      });
 
-          Object.keys(rekapMalam).forEach(malam => {
-            var dataMalam = rekapMalam[malam];
-            var card = document.createElement('div');
-            card.style.cssText = `
-              background: #ffffff;
-              border: 1px solid #e5e7eb;
-              border-radius: 8px;
-              padding: 10px;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-              display: flex;
-              flex-direction: column;
-            `;
+      Object.keys(rekapMalam).forEach(malam => {
+        var dataMalam = rekapMalam[malam];
+        var card = document.createElement('div');
+        card.style.cssText = `
+          background: #ffffff;
+          border: 1px solid #e5e7eb;
+          border-radius: 8px;
+          padding: 10px;
+          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+          display: flex;
+          flex-direction: column;
+        `;
 
-            var itemListHTML = '';
-            if (dataMalam.items.length === 0) {
-              itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
-            } else {
-              itemListHTML = dataMalam.items.reverse().map(item => {
-                var isAbsen = item.nominal === 0;
-                var warnaNominal = isAbsen ? '#dc2626' : '#059669';
-                var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
+        var itemListHTML = '';
+        if (dataMalam.items.length === 0) {
+          itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
+        } else {
+          itemListHTML = dataMalam.items.reverse().map(item => {
+            var isAbsen = item.nominal === 0;
+            var warnaNominal = isAbsen ? '#dc2626' : '#059669';
+            var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
 
-                return `
-                  <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
-                    <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">
-                      ${escapeHtml(item.warga)}
-                    </span>
-                    <span style="color: ${warnaNominal}; font-weight: bold;">
-                      Rp ${item.nominal.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                `;
-              }).join('');
-            }
-
-            card.innerHTML = `
-              <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 8px;">
-                <span style="font-weight: bold; font-size: 12px; color: #065f46;">🌙 ${malam}</span>
-                <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
-                  Rp ${dataMalam.subtotal.toLocaleString('id-ID')}
+            return `
+              <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
+                <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">
+                  ${escapeHtml(item.warga)}
+                </span>
+                <span style="color: ${warnaNominal}; font-weight: bold;">
+                  Rp ${item.nominal.toLocaleString('id-ID')}
                 </span>
               </div>
-              <div style="max-height: 120px; overflow-y: auto; flex-grow: 1;">
-                ${itemListHTML}
-              </div>
             `;
+          }).join('');
+        }
 
-            gridContainer.appendChild(card);
-          });
+        card.innerHTML = `
+          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 8px;">
+            <span style="font-weight: bold; font-size: 12px; color: #065f46;">🌙 ${malam}</span>
+            <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
+              Rp ${dataMalam.subtotal.toLocaleString('id-ID')}
+            </span>
+          </div>
+          <div style="max-height: 120px; overflow-y: auto; flex-grow: 1;">
+            ${itemListHTML}
+          </div>
+        `;
 
-          var totalElem = document.getElementById('total-jimpitan');
-          if (totalElem) totalElem.innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
-        })
-        .catch(err => console.error("Gagal muat data jimpitan:", err));
-    }
+        gridContainer.appendChild(card);
+      });
 
+      var totalElem = document.getElementById('total-jimpitan');
+      if (totalElem) totalElem.innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
+    })
+    .catch(err => console.error("Gagal muat data jimpitan:", err));
+}
+    
     function bukaModalRiwayatJimpitan() {
       document.getElementById('modal-riwayat-jimpitan').style.display = 'flex';
       muatDataJimpitan();
