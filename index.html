@@ -1067,7 +1067,7 @@ function filterKategori(kat, btnElement) {
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
-    // --- FITUR MALAM RONDA/JIMPITAN RONDA (PUBLIK) ---
+  // --- FITUR MALAM RONDA/JIMPITAN RONDA (PUBLIK) ---
 function getInfoMalamRonda(dateObj = new Date()) {
   let d = new Date(dateObj);
   let hour = d.getHours();
@@ -1078,23 +1078,21 @@ function getInfoMalamRonda(dateObj = new Date()) {
   }
   
   let effectiveDay = d.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
- const mapMalam = {
-  6: '1. Malam Minggu',
-  0: '2. Malam Senin',
-  1: '3. Malam Selasa',
-  2: '4. Malam Rabu',
-  3: '5. Malam Kamis',
-  4: '6. Malam Jumat',
-  5: '7. Malam Sabtu'
-};
+  const mapMalam = {
+    6: 'Malam Minggu', // Masuk catatan khusus sheet
+    0: 'Malam Senin',
+    1: 'Malam Selasa',
+    2: 'Malam Rabu',
+    3: 'Malam Kamis',
+    4: 'Malam Jumat',
+    5: 'Malam Sabtu'
+  };
   
   return {
     kelompokMalam: mapMalam[effectiveDay],
     masukTabel: effectiveDay !== 6 // false khusus Malam Minggu
   };
 }
-
-
 
 // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
 const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec';
@@ -1111,14 +1109,13 @@ function setNominal(nilai) {
   document.getElementById('jimpitanNominal').value = nilai;
 }
 
-// --- FUNGSI AUDIO BEEP (Disesuaikan untuk Chrome Mobile) ---
+// --- FUNGSI AUDIO BEEP ---
 function mainkanSuaraBeep() {
   try {
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
 
-    // Paksa resume AudioContext dan tunggu statusnya aktif (khusus Chrome)
     const jalankanBeep = () => {
       const now = audioCtx.currentTime;
       const osc = audioCtx.createOscillator();
@@ -1150,7 +1147,6 @@ function mainkanSuaraBeep() {
 
 // --- FITUR SCANNER CAMERA ---
 function mulaiScanJimpitan() {
-  // 1. Pancing pembuka gembok audio Chrome saat tombol diklik
   if (!audioCtx) {
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
@@ -1158,10 +1154,9 @@ function mulaiScanJimpitan() {
     audioCtx.resume();
   }
 
-  // 2. Pancing izin getar saat tombol diklik agar Chrome mengizinkan getar berikutnya
   try {
     if ('vibrate' in navigator) {
-      navigator.vibrate(10); // Getar super singkat sebagai pancingan izin
+      navigator.vibrate(10);
     }
   } catch (e) {}
 
@@ -1221,16 +1216,11 @@ function mulaiScanJimpitan() {
   }
 }
 
-
-
-
 function onScanJimpitanSuccess(decodedText) {
   if (!sedangScanning) return;
 
-  // 1. Jalankan Suara Beep
   mainkanSuaraBeep();
 
-  // 2. Jalankan Getar HP (Aman jika diblokir browser)
   try {
     if ('vibrate' in navigator) {
       navigator.vibrate(200);
@@ -1272,21 +1262,17 @@ function bersihkanScanner() {
 }
 
 // --- 2. FITUR SINKRONISASI OFFLINE ---
-
 function perbaruiIndikatorSync() {
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
   let badge = document.getElementById('status-sync');
   
   if (!badge) return;
 
-  // 1. Jika Sedang Proses Pengiriman (Biru)
   if (sedangMengirim) {
     badge.innerHTML = `🔵 Sedang Menyinkronkan Data...`;
     badge.style.backgroundColor = '#dbeafe';
     badge.style.color = '#1e40af';
-  } 
-  // 2. Jika HP Sedang Offline (Merah / Kuning)
-  else if (!navigator.onLine) {
+  } else if (!navigator.onLine) {
     if (antrean.length > 0) {
       badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
       badge.style.backgroundColor = '#fef3c7';
@@ -1296,9 +1282,7 @@ function perbaruiIndikatorSync() {
       badge.style.backgroundColor = '#fee2e2';
       badge.style.color = '#991b1b';
     }
-  } 
-  // 3. Jika HP Online (Hijau / Kuning)
-  else {
+  } else {
     if (antrean.length === 0) {
       badge.innerHTML = '🟢 Semua Data Ter-sinkron';
       badge.style.backgroundColor = '#d1fae5';
@@ -1331,7 +1315,7 @@ async function kirimDataPendingJimpitan() {
   }
 
   sedangMengirim = true;
-  perbaruiIndikatorSync(); // Ubah ke indikator Biru saat mulai kirim
+  perbaruiIndikatorSync();
 
   let sisaAntrean = [];
 
@@ -1351,34 +1335,7 @@ async function kirimDataPendingJimpitan() {
 
   localStorage.setItem('antrean_jimpitan', JSON.stringify(sisaAntrean));
   sedangMengirim = false;
-  perbaruiIndikatorSync(); // Kembalikan ke Hijau/Kuning/Merah
-}
-
-// Tambahkan fungsi penentu shift ini di atas simpanJimpitan
-function getInfoMalamRonda(dateObj = new Date()) {
-  let d = new Date(dateObj);
-  let hour = d.getHours();
-  
-  // Jam 00.00 - 08.59 masuk shift malam hari sebelumnya (grace window)
-  if (hour < 9) {
-    d.setDate(d.getDate() - 1);
-  }
-  
-  let effectiveDay = d.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
-  const mapMalam = {
-    6: 'Malam Minggu', // Masuk catatan khusus sheet
-    0: 'Malam Senin',
-    1: 'Malam Selasa',
-    2: 'Malam Rabu',
-    3: 'Malam Kamis',
-    4: 'Malam Jumat',
-    5: 'Malam Sabtu'
-  };
-  
-  return {
-    kelompokMalam: mapMalam[effectiveDay],
-    masukTabel: effectiveDay !== 6 // false khusus Malam Minggu
-  };
+  perbaruiIndikatorSync();
 }
 
 function simpanJimpitan(dataInput) {
@@ -1416,11 +1373,9 @@ function simpanJimpitan(dataInput) {
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
 
-  // Tampilkan notifikasi langsung
   let infoTeks = infoMalam.masukTabel ? `masuk ${infoMalam.kelompokMalam}` : 'Masuk Catatan Ronda (Malam Minggu)';
   alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + ` berhasil dicatat (${infoTeks})!`);
 
-  // Tutup modal dan reset input
   let modal = document.getElementById('modal-jimpitan');
   if (modal) modal.style.display = 'none';
   
@@ -1482,7 +1437,7 @@ function muatDataJimpitan() {
   if (selectPeriode && selectPeriode.value) {
     var parts = selectPeriode.value.split('-');
     tahunDipilih = parseInt(parts[0], 10);
-    bulanDipilih = parseInt(parts[1], 10); // PERBAIKAN: parts[1]
+    bulanDipilih = parseInt(parts[1], 10);
   } else {
     var skrg = new Date();
     bulanDipilih = skrg.getMonth();
@@ -1499,8 +1454,8 @@ function muatDataJimpitan() {
       gridContainer.innerHTML = '';
       var grandTotal = 0;
 
+      // HANYA 6 HARI RONDA UTAMA (Malam Minggu otomatis terbuang dari UI)
       var rekapMalam = {
-        'Malam Minggu': { subtotal: 0, items: [] },
         'Malam Senin': { subtotal: 0, items: [] },
         'Malam Selasa': { subtotal: 0, items: [] },
         'Malam Rabu': { subtotal: 0, items: [] },
@@ -1509,43 +1464,47 @@ function muatDataJimpitan() {
         'Malam Sabtu': { subtotal: 0, items: [] }
       };
 
-   baris.forEach(kolom => {
-  // Dipastikan kolom memiliki minimal 4 data (Tanggal, Kelompok Malam, Nama Warga, Nominal)
-  if (kolom.length >= 3 && kolom[0] !== '') {
-    var tglStr = kolom[0];
-    
-    // SESUAIKAN INDEX KOLOM DENGAN GOOGLE SHEETS BARU:
-    // Jika kolom B di sheet sudah diisi Kelompok Malam, nama warga ada di kolom C (index 2) dan nominal di kolom D (index 3)
-    var warga = kolom[2] || kolom[1] || '-'; 
-    var nominalRaw = kolom[3] ? kolom[3].replace(/[^0-9]/g, '') : (kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0');
-    var nominal = parseInt(nominalRaw, 10) || 0;
+      baris.forEach(kolom => {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          var tglStr = kolom[0];
+          var warga = '-';
+          var nominal = 0;
 
-    var angkaTanggal = tglStr.match(/\d+/g); 
-    if (angkaTanggal && angkaTanggal.length >= 3) {
-      var tgl = parseInt(angkaTanggal[0], 10);
-      var bln = parseInt(angkaTanggal[1], 10) - 1;
-      var thn = parseInt(angkaTanggal[2], 10);
-      var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-      var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+          // Deteksi otomatis format lama (3 kolom) vs baru (4 kolom)
+          if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
+            warga = kolom[2] || '-';
+            var nominalRaw = kolom[3] ? kolom[3].replace(/[^0-9]/g, '') : '0';
+            nominal = parseInt(nominalRaw, 10) || 0;
+          } else {
+            warga = kolom[1] || '-';
+            var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
+            nominal = parseInt(nominalRaw, 10) || 0;
+          }
 
-      var dateObj = new Date(thn, bln, tgl, jam, menit);
+          var angkaTanggal = tglStr.match(/\d+/g); 
+          if (angkaTanggal && angkaTanggal.length >= 3) {
+            var tgl = parseInt(angkaTanggal[0], 10);
+            var bln = parseInt(angkaTanggal[1], 10) - 1;
+            var thn = parseInt(angkaTanggal[2], 10);
+            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
 
-      if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
-        var infoMalam = getInfoMalamRonda(dateObj);
-        var namaMalam = infoMalam.kelompokMalam;
+            var dateObj = new Date(thn, bln, tgl, jam, menit);
 
-        if (namaMalam && rekapMalam[namaMalam]) {
-          rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-          rekapMalam[namaMalam].subtotal += nominal;
+            if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
+              var infoMalam = getInfoMalamRonda(dateObj);
+              var namaMalam = infoMalam.kelompokMalam;
 
-          if (namaMalam !== 'Malam Minggu') {
-            grandTotal += nominal;
+              // Data Malam Minggu otomatis terabaikan karena tidak ada di rekapMalam
+              if (namaMalam && rekapMalam[namaMalam]) {
+                rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
+                rekapMalam[namaMalam].subtotal += nominal;
+                grandTotal += nominal;
+              }
+            }
           }
         }
-      }
-    }
-  }
-});
+      });
 
       Object.keys(rekapMalam).forEach(malam => {
         var dataMalam = rekapMalam[malam];
@@ -1611,7 +1570,6 @@ function bukaModalRiwayatJimpitan() {
 function tutupModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
 }
-
 // 1. Data Changelog (Tinggal tambah objek baru di paling atas jika ada update)
 const dataChangelog = [
   {
