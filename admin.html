@@ -350,76 +350,21 @@
       <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
   <!-- JAVASCRIPT LOGIC -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+ <!-- JAVASCRIPT LOGIC -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec";
 
-    document.addEventListener("DOMContentLoaded", () => {
-      if(sessionStorage.getItem('authAdmin') === 'true') {
-        bukaAkses();
-      }
-    });
-
-// Toggle tampilkan/sembunyikan form tambah barang
-function toggleFormStok() {
-  const form = document.getElementById('formStokBarang');
-  form.style.display = form.style.display === 'none' ? 'grid' : 'none';
-}
-
-// Simpan barang baru / update stok ke Google Sheets
-async function simpanBarangStokAdmin() {
-  const nama = document.getElementById('stokNamaBarang').value.trim();
-  const total = document.getElementById('stokJumlahTotal').value;
-  const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
-
-  if (!nama || total === '') {
-    alert('Mohon isi nama barang dan jumlah total stok!');
-    return;
-  }
-
-  const btn = document.querySelector('#formStokBarang button');
-  if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
-
-  const payload = {
-    pin: pinAdmin,
-    action: 'tambahBarangPerkakas',
-    namaBarang: nama,
-    jumlahTotal: parseInt(total)
-  };
-
-  try {
-    const res = await fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
-
-    if (btn) { btn.innerText = '💾 Simpan Barang'; btn.disabled = false; }
-
-    if (text.includes('SUCCESS')) {
-      alert('✅ Stok barang berhasil disimpan!');
-      document.getElementById('stokNamaBarang').value = '';
-      document.getElementById('stokJumlahTotal').value = '';
-      toggleFormStok();
-      muatPeminjamanAdmin(); // Muat ulang data agar barang baru langsung muncul di pilihan dropdown
-    } else {
-      alert('❌ Gagal menyimpan: ' + text);
-    }
-  } catch (err) {
-    if (btn) { btn.innerText = '💾 Simpan Barang'; btn.disabled = false; }
-    alert('❌ Error koneksi: ' + err);
-  }
-}
-    
     // Fungsi untuk memformat angka dengan titik ribuan secara otomatis saat diketik
-function formatRibuanInput(el) {
-  let val = el.value.replace(/\D/g, ''); // Hapus semua karakter selain angka
-  if (!val) {
-    el.value = '';
-    return;
-  }
-  el.value = new Intl.NumberFormat('id-ID').format(val);
-}
+    function formatRibuanInput(el) {
+      let val = el.value.replace(/\D/g, ''); // Hapus semua karakter selain angka
+      if (!val) {
+        el.value = '';
+        return;
+      }
+      el.value = new Intl.NumberFormat('id-ID').format(val);
+    }
+
     function cekLogin() {
       const input = document.getElementById('adminPin').value.trim();
       if(input.length !== 6) {
@@ -517,10 +462,12 @@ function formatRibuanInput(el) {
 
     var map, daftarPin = [], pinRumahAktif = null;
     var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
-    // PERBAIKAN: Secara spesifik memanggil tab 'Peta' agar tidak tertukar dengan tab Keuangan/Jimpitan
     var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Peta`;
 
     function initMap() {
+      // Pencegah map terinisialisasi ganda
+      if (map) return;
+
       map = L.map('map').setView([-7.7423, 110.3842], 17);
       L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
       L.DomEvent.disableClickPropagation(document.getElementById('modal-admin-inventaris'));
@@ -710,213 +657,205 @@ function formatRibuanInput(el) {
     }
 
     function bukaModalPinjamAdmin() {
-  muatPeminjamanAdmin();
-  
-  // Reset Tampilan: Tampilkan Form Pinjam, Sembunyikan Form Stok
-  document.getElementById('formStokBarang').style.display = 'none';
-  document.getElementById('formPinjamBarang').style.display = 'grid';
-  document.getElementById('btnToggleStok').innerText = '➕/✏️ Tambah & Edit Stok Barang';
-  
-  document.getElementById("modal-admin-inventaris").style.display = "flex";
-}
+      muatPeminjamanAdmin();
+      
+      // Reset Tampilan: Tampilkan Form Pinjam, Sembunyikan Form Stok
+      document.getElementById('formStokBarang').style.display = 'none';
+      document.getElementById('formPinjamBarang').style.display = 'grid';
+      document.getElementById('btnToggleStok').innerText = '➕/✏️ Tambah & Edit Stok Barang';
+      
+      document.getElementById("modal-admin-inventaris").style.display = "flex";
+    }
 
     function tutupModalPinjamAdmin() {
       document.getElementById("modal-admin-inventaris").style.display = "none";
     }
 
-  // 1. Toggle tampil/sembunyi form master stok
-// Toggle Bergantian Antara Form Pinjam dan Form Stok
-function toggleFormStok() {
-  const formStok = document.getElementById('formStokBarang');
-  const formPinjam = document.getElementById('formPinjamBarang');
-  const btnToggle = document.getElementById('btnToggleStok');
+    function toggleFormStok() {
+      const formStok = document.getElementById('formStokBarang');
+      const formPinjam = document.getElementById('formPinjamBarang');
+      const btnToggle = document.getElementById('btnToggleStok');
 
-  if (formStok.style.display === 'none' || !formStok.style.display) {
-    // Mode Kelola Stok
-    formStok.style.display = 'block';
-    formPinjam.style.display = 'none';
-    btnToggle.innerText = '📝 Kembali ke Form Pinjam';
-    btnToggle.style.background = '#4b5563'; // Ubah warna ke abu-abu saat mode kembali
-  } else {
-    // Mode Catat Pinjam
-    formStok.style.display = 'none';
-    formPinjam.style.display = 'grid';
-    btnToggle.innerText = '➕/✏️ Tambah & Edit Stok Barang';
-    btnToggle.style.background = '#2563eb'; // Kembalikan ke warna biru
-  }
-}
-
-// 2. Cek jika admin memilih 'Ketik Nama Barang Baru'
-function cekPilihBarangStok(el) {
-  const inputBaru = document.getElementById('stokNamaBarangBaru');
-  if (el.value === 'BARU') {
-    inputBaru.style.display = 'block';
-    inputBaru.focus();
-  } else {
-    inputBaru.style.display = 'none';
-    inputBaru.value = '';
-  }
-}
-
-// 3. Fungsi Muat Peminjaman & Mengisi Dropdown Barang (DIPERBARUI)
-async function muatPeminjamanAdmin() {
-  const container = document.getElementById("tabel-peminjaman-admin");
-  if (!container) return;
-
-  container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
-
-  try {
-    const res = await fetch(GAS_WEB_APP_URL);
-    const data = await res.json();
-    
-    const daftarPinjam = Array.isArray(data) ? data : (data.peminjaman || []);
-
-    const selectBarang = document.getElementById("pinjamPilihBarang");
-    const selectBarangStok = document.getElementById("stokPilihBarang");
-
-    if (data.perkakas && data.perkakas.length > 0) {
-      // Isi Dropdown Pinjam Warga
-      if (selectBarang) {
-        selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-          data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
-      }
-
-      // Isi Dropdown Master Stok Admin
-      if (selectBarangStok) {
-        selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
-          `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
-          data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa Stok: ${item.total})</option>`).join('');
+      if (formStok.style.display === 'none' || !formStok.style.display) {
+        // Mode Kelola Stok
+        formStok.style.display = 'block';
+        formPinjam.style.display = 'none';
+        btnToggle.innerText = '📝 Kembali ke Form Pinjam';
+        btnToggle.style.background = '#4b5563';
+      } else {
+        // Mode Catat Pinjam
+        formStok.style.display = 'none';
+        formPinjam.style.display = 'grid';
+        btnToggle.innerText = '➕/✏️ Tambah & Edit Stok Barang';
+        btnToggle.style.background = '#2563eb';
       }
     }
-    
-    const pinjamanAktif = daftarPinjam.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
 
-    if (pinjamanAktif.length === 0) {
-      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
-      return;
+    function cekPilihBarangStok(el) {
+      const inputBaru = document.getElementById('stokNamaBarangBaru');
+      if (el.value === 'BARU') {
+        inputBaru.style.display = 'block';
+        inputBaru.focus();
+      } else {
+        inputBaru.style.display = 'none';
+        inputBaru.value = '';
+      }
     }
 
-    container.innerHTML = pinjamanAktif.map(row => `
-      <tr style="border-bottom: 1px solid #e5e7eb;">
-        <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
-        <td style="padding: 6px;">${row[2]}</td>
-        <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
-        <td style="padding: 6px; text-align: center;">
-          <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
-            ↩️ Dikembalikan
-          </button>
-        </td>
-      </tr>
-    `).join('');
-  } catch (err) {
-    console.error("Error muatPeminjamanAdmin:", err);
-    container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:12px;">Gagal memuat data.</td></tr>`;
-  }
-}
+    async function muatPeminjamanAdmin() {
+      const container = document.getElementById("tabel-peminjaman-admin");
+      if (!container) return;
 
-// 4. Catat Peminjaman Warga Baru
-async function simpanPeminjamanAdmin() {
-  const peminjam = document.getElementById("pinjamNamaWarga").value;
-  const barang = document.getElementById("pinjamPilihBarang").value;
-  const jumlah = document.getElementById("pinjamJumlah").value;
-  const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
 
-  if (!peminjam || !barang || !jumlah) {
-    alert("Mohon lengkapi semua data!");
-    return;
-  }
+      try {
+        const res = await fetch(GAS_WEB_APP_URL);
+        const data = await res.json();
+        
+        const daftarPinjam = Array.isArray(data) ? data : (data.peminjaman || []);
 
-  const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
-  if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
+        const selectBarang = document.getElementById("pinjamPilihBarang");
+        const selectBarangStok = document.getElementById("stokPilihBarang");
 
-  const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-  const payload = {
-    pin: pinAdmin,
-    action: "pinjam",
-    id: "ID-" + Date.now(),
-    peminjam: peminjam,
-    barang: barang,
-    jumlah: parseInt(jumlah),
-    tgl: hariIni
-  };
+        if (data.perkakas && data.perkakas.length > 0) {
+          if (selectBarang) {
+            selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
+              data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
+          }
 
-  try {
-    const res = await fetch(GAS_WEB_APP_URL, {
-      method: "POST",
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
+          if (selectBarangStok) {
+            selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
+              `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
+              data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa Stok: ${item.total})</option>`).join('');
+          }
+        }
+        
+        const pinjamanAktif = daftarPinjam.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
 
-    if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+        if (pinjamanAktif.length === 0) {
+          container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
+          return;
+        }
 
-    if (text.includes("SUCCESS")) {
-      alert("✅ Peminjaman berhasil dicatat!");
-      document.getElementById("pinjamNamaWarga").value = "";
-      document.getElementById("pinjamPilihBarang").value = "";
-      document.getElementById("pinjamJumlah").value = "";
-      muatPeminjamanAdmin();
-    } else {
-      alert("❌ Gagal menyimpan: " + text);
+        container.innerHTML = pinjamanAktif.map(row => `
+          <tr style="border-bottom: 1px solid #e5e7eb;">
+            <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
+            <td style="padding: 6px;">${row[2]}</td>
+            <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
+            <td style="padding: 6px; text-align: center;">
+              <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
+                ↩️ Dikembalikan
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      } catch (err) {
+        console.error("Error muatPeminjamanAdmin:", err);
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:red; padding:12px;">Gagal memuat data.</td></tr>`;
+      }
     }
-  } catch (err) {
-    if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-    alert("❌ Error koneksi: " + err);
-  }
-}
 
-// 5. Simpan Perubahan Stok Barang Master (BARU)
-async function simpanBarangStokAdmin() {
-  const pilihPilihan = document.getElementById('stokPilihBarang').value;
-  const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
-  const jenisAksi = document.getElementById('stokJenisAksi').value;
-  const jumlahUnit = document.getElementById('stokJumlahTotal').value;
-  const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+    async function simpanPeminjamanAdmin() {
+      const peminjam = document.getElementById("pinjamNamaWarga").value;
+      const barang = document.getElementById("pinjamPilihBarang").value;
+      const jumlah = document.getElementById("pinjamJumlah").value;
+      const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
 
-  let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
+      if (!peminjam || !barang || !jumlah) {
+        alert("Mohon lengkapi semua data!");
+        return;
+      }
 
-  if (!namaBarang || !jumlahUnit || parseInt(jumlahUnit) <= 0) {
-    alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
-    return;
-  }
+      const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
+      if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
 
-  const btn = document.querySelector('#formStokBarang button');
-  if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
+      const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      const payload = {
+        pin: pinAdmin,
+        action: "pinjam",
+        id: "ID-" + Date.now(),
+        peminjam: peminjam,
+        barang: barang,
+        jumlah: parseInt(jumlah),
+        tgl: hariIni
+      };
 
-  const payload = {
-    pin: pinAdmin,
-    action: 'tambahBarangPerkakas',
-    namaBarang: namaBarang,
-    jenisAksi: jenisAksi,
-    jumlahUnit: parseInt(jumlahUnit)
-  };
+      try {
+        const res = await fetch(GAS_WEB_APP_URL, {
+          method: "POST",
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        const text = await res.text();
 
-  try {
-    const res = await fetch(GAS_WEB_APP_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
+        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
 
-    if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-
-    if (text.includes('SUCCESS')) {
-      alert('✅ Data stok barang berhasil diperbarui!');
-      document.getElementById('stokPilihBarang').value = '';
-      document.getElementById('stokNamaBarangBaru').value = '';
-      document.getElementById('stokNamaBarangBaru').style.display = 'none';
-      document.getElementById('stokJumlahTotal').value = '';
-      toggleFormStok();
-      muatPeminjamanAdmin(); // Reload dropdown & tabel
-    } else {
-      alert('❌ Gagal menyimpan: ' + text);
+        if (text.includes("SUCCESS")) {
+          alert("✅ Peminjaman berhasil dicatat!");
+          document.getElementById("pinjamNamaWarga").value = "";
+          document.getElementById("pinjamPilihBarang").value = "";
+          document.getElementById("pinjamJumlah").value = "";
+          muatPeminjamanAdmin();
+        } else {
+          alert("❌ Gagal menyimpan: " + text);
+        }
+      } catch (err) {
+        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+        alert("❌ Error koneksi: " + err);
+      }
     }
-  } catch (err) {
-    if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-    alert('❌ Error koneksi: ' + err);
-  }
-}
+
+    async function simpanBarangStokAdmin() {
+      const pilihPilihan = document.getElementById('stokPilihBarang').value;
+      const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
+      const jenisAksi = document.getElementById('stokJenisAksi').value;
+      const jumlahUnit = document.getElementById('stokJumlahTotal').value;
+      const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+
+      let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
+
+      if (!namaBarang || !jumlahUnit || parseInt(jumlahUnit) <= 0) {
+        alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
+        return;
+      }
+
+      const btn = document.querySelector('#formStokBarang button');
+      if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
+
+      const payload = {
+        pin: pinAdmin,
+        action: 'tambahBarangPerkakas',
+        namaBarang: namaBarang,
+        jenisAksi: jenisAksi,
+        jumlahUnit: parseInt(jumlahUnit)
+      };
+
+      try {
+        const res = await fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload)
+        });
+        const text = await res.text();
+
+        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+
+        if (text.includes('SUCCESS')) {
+          alert('✅ Data stok barang berhasil diperbarui!');
+          document.getElementById('stokPilihBarang').value = '';
+          document.getElementById('stokNamaBarangBaru').value = '';
+          document.getElementById('stokNamaBarangBaru').style.display = 'none';
+          document.getElementById('stokJumlahTotal').value = '';
+          toggleFormStok();
+          muatPeminjamanAdmin();
+        } else {
+          alert('❌ Gagal menyimpan: ' + text);
+        }
+      } catch (err) {
+        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+        alert('❌ Error koneksi: ' + err);
+      }
+    }
 
     async function prosesPengembalian(id) {
       if (confirm("Apakah barang ini sudah dikembalikan?")) {
@@ -958,21 +897,20 @@ async function simpanBarangStokAdmin() {
     }
 
     function simpanLaporanDivisi() {
-  const tglInput = document.getElementById('laporanTanggal').value;
-  const divisi = document.getElementById('laporanNamaDivisi').value;
-  const jenis = document.getElementById('laporanJenis').value;
-  const ket = document.getElementById('laporanKeterangan').value;
-  
-  // Hapus semua tanda titik sebelum diubah ke angka integer
-  const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
-  const nominal = parseInt(rawNominal, 10);
+      const tglInput = document.getElementById('laporanTanggal').value;
+      const divisi = document.getElementById('laporanNamaDivisi').value;
+      const jenis = document.getElementById('laporanJenis').value;
+      const ket = document.getElementById('laporanKeterangan').value;
+      
+      const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
+      const nominal = parseInt(rawNominal, 10);
 
-  const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
+      const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
 
-  if (!divisi || !ket || isNaN(nominal) || !tglInput) {
-    alert('Harap isi semua kolom dengan benar!');
-    return;
-  }
+      if (!divisi || !ket || isNaN(nominal) || !tglInput) {
+        alert('Harap isi semua kolom dengan benar!');
+        return;
+      }
 
       const parts = tglInput.split('-');
       const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
@@ -1015,11 +953,11 @@ async function simpanBarangStokAdmin() {
       });
     }
 
+    // Inisialisasi Utama saat Halaman Dimuat
     document.addEventListener("DOMContentLoaded", () => {
       if(sessionStorage.getItem('authAdmin') === 'true') {
         bukaAkses();
       } else {
-        // Otomatis arahkan kursor ke input PIN begitu halaman admin dibuka
         setTimeout(() => {
           const inputPin = document.getElementById('adminPin');
           if (inputPin) inputPin.focus();
