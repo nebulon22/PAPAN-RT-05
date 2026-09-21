@@ -508,6 +508,46 @@
   </div>
 </div>
 
+<!-- MODAL: Form Pendataan Warga Baru -->
+  <div id="modal-warga-baru" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-warga-baru') tutupModalWargaBaru()">
+    <div class="modal-content" style="max-width: 380px; width: 90%;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+        <h3 style="margin: 0; font-size: 15px; color: #111;">📝 Pendataan Warga Baru RT 05</h3>
+        <button class="close-btn" onclick="tutupModalWargaBaru()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
+      </div>
+
+      <form id="formWargaBaru">
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label for="wargaNama" style="font-size: 12px; font-weight: bold; color: #374151;">Nama Lengkap:</label>
+          <input type="text" id="wargaNama" placeholder="Contoh: Budi Santoso" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label for="wargaNoRumah" style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah / Blok / Alamat:</label>
+          <input type="text" id="wargaNoRumah" placeholder="Contoh: Blok A No. 12" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label for="wargaHp" style="font-size: 12px; font-weight: bold; color: #374151;">No. HP / WhatsApp:</label>
+          <input type="tel" id="wargaHp" inputmode="numeric" placeholder="Contoh: 08123456789" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 15px;">
+          <label for="wargaStatus" style="font-size: 12px; font-weight: bold; color: #374151;">Status Tempat Tinggal:</label>
+          <select id="wargaStatus" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+            <option value="Warga Tetap (Pemilik)">🏠 Warga Tetap (Pemilik)</option>
+            <option value="Warga Kontrak / Sewa">🔑 Warga Kontrak / Sewa</option>
+            <option value="Anak Kost">🛏️ Penghuni Kost</option>
+          </select>
+        </div>
+
+        <button type="button" id="btnSimpanWarga" onclick="simpanWargaBaru()" style="width: 100%; padding: 10px; background: #0000FF; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          📤 Kirim Data Warga Baru
+        </button>
+      </form>
+    </div>
+  </div>
+  
 <!-- Modal Info / Changelog -->
 <div id="modal-changelog" class="modal-bg" style="display: none; z-index: 3000;">
   <div class="modal-content" style="max-width: 400px; max-height: 80vh; overflow-y: auto; text-align: left;">
@@ -1565,7 +1605,62 @@ function bukaModalChangelog() {
 function tutupModalChangelog() {
   document.getElementById("modal-changelog").style.display = "none";
 }
-   
+
+    function bukaModalWargaBaru() {
+  document.getElementById('modal-warga-baru').style.display = 'flex';
+}
+
+   function tutupModalWargaBaru() {
+  document.getElementById('modal-warga-baru').style.display = 'none';
+  document.getElementById('formWargaBaru').reset();
+}
+
+async function simpanWargaBaru() {
+  const nama = document.getElementById('wargaNama').value.trim();
+  const noRumah = document.getElementById('wargaNoRumah').value.trim();
+  const hp = document.getElementById('wargaHp').value.trim();
+  const status = document.getElementById('wargaStatus').value;
+
+  if (!nama || !noRumah || !hp) {
+    alert('Mohon isi semua data pendaftaran dengan lengkap!');
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanWarga');
+  btn.disabled = true;
+  btn.innerText = '⏳ Mengirim...';
+
+  const payload = {
+    action: 'tambahWargaBaru',
+    nama: nama,
+    noRumah: noRumah,
+    hp: hp,
+    status: status
+  };
+
+  try {
+    const res = await fetch(GAS_WEB_APP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+
+    btn.disabled = false;
+    btn.innerText = '📤 Kirim Data Warga Baru';
+
+    if (text.includes('SUCCESS')) {
+      alert('✅ Data Warga Baru berhasil terdaftar!');
+      tutupModalWargaBaru();
+    } else {
+      alert('❌ Gagal mengirim: ' + text);
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerText = '📤 Kirim Data Warga Baru';
+    alert('❌ Error koneksi: ' + err);
+  }
+}
 </script>
 </body>
 </html>
