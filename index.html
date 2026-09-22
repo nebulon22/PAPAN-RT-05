@@ -44,18 +44,21 @@
     });
   }
 
-  function tampilkanLoncengUpdate() {
+ // Fungsi untuk memunculkan lonceng + teks "Ada update nih!"
+function tampilkanLoncengUpdate() {
   var container = document.getElementById('container-update-pwa');
   if (container) container.style.display = 'flex';
 }
 
-  function perbaruiAplikasiSekarang() {
-    if (serviceWorkerMenunggu) {
-      serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
-    } else {
-      window.location.reload(true);
-    }
+// Fungsi yang dipicu saat lonceng/teks diklik warga
+function perbaruiAplikasiSekarang() {
+  if (serviceWorkerMenunggu) {
+    serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
+  } else {
+    window.location.reload(true);
   }
+}
+   
 </script>
 
   <style>
@@ -335,29 +338,52 @@
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
 }
+    @keyframes floatPulse {
+  0% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0.7));
+  }
+  50% {
+    transform: scale(1.08);
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+  }
+  100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
+  }
+}
     
   </style>
 </head>
 <body>
-  <!-- Container Navigasi Pojok Kanan Atas -->
+ <!-- Container Navigasi Pojok Kanan Atas -->
 <div style="position: fixed; top: 12px; right: 12px; z-index: 2000; display: flex; align-items: center; gap: 8px;">
   
-  <!-- Wrapper Update PWA (Sembunyi secara default, muncul jika ada update) -->
-  <div id="container-update-pwa" style="display: none; flex-direction: column; align-items: center; position: relative;">
+  <!-- Wrapper Update PWA (Melayang & Berkedip Bersama) -->
+  <div id="container-update-pwa" onclick="perbaruiAplikasiSekarang()" 
+    style="display: none; flex-direction: column; align-items: center; cursor: pointer; animation: floatPulse 1.5s infinite; position: relative;" 
+    title="Versi baru tersedia! Klik untuk memperbarui">
     
-    <!-- Tombol Lonceng Update -->
-    <button id="btn-update-pwa" type="button" onclick="perbaruiAplikasiSekarang()" 
-      style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(239,68,68,0.5); display: flex; align-items: center; justify-content: center; padding: 0; outline: none; animation: pulse 1.5s infinite;" 
-      title="Versi baru tersedia! Klik untuk memperbarui">
+    <!-- Tombol Lonceng -->
+    <button id="btn-update-pwa" type="button" 
+      style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(239,68,68,0.5); display: flex; align-items: center; justify-content: center; padding: 0; outline: none; pointer-events: none;">
       🔔
     </button>
 
-    <!-- Teks Peringatan Kecil di Bawah Lonceng -->
-    <span onclick="perbaruiAplikasiSekarang()" 
-      style="position: absolute; top: 32px; right: 0; white-space: nowrap; background: #ef4444; color: #ffffff; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); cursor: pointer; animation: pulseText 1.5s infinite;">
+    <!-- Teks Peringatan Kecil Melayang Tepat di Bawah Lonceng -->
+    <span style="white-space: nowrap; background: #ef4444; color: #ffffff; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin-top: 3px; pointer-events: none;">
       Ada update nih!
     </span>
   </div>
+
+  <a href="admin.html" class="btn-back-floating" style="position: static;">🔒 Admin</a>
+  
+  <button type="button" onclick="bukaModalChangelog()" 
+    style="background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; font-weight: bold; font-family: serif; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
+    title="Informasi Aplikasi & Changelog">
+    i
+  </button>
+</div>
 
   <a href="admin.html" class="btn-back-floating" style="position: static;">🔒 Admin</a>
   
