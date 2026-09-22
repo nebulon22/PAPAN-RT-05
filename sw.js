@@ -47,3 +47,10 @@ self.addEventListener('fetch', (e) => {
     })
   );
 });
+
+// Listener untuk merespons klik tombol lonceng dari index.html
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
