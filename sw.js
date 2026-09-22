@@ -1,13 +1,14 @@
-const CACHE_NAME = 'rt-kayen-v1.3.9'; // <--- Versi dinaikkan
+const CACHE_NAME = 'rt-kayen-v1.3.9'; // <--- Naikkan versi di sini saat update
 
 self.addEventListener('install', (e) => {
-  self.skipWaiting();
+  // CATATAN: self.skipWaiting() Sengaja DIHAPUS dari sini 
+  // agar lonceng tidak hilang otomatis sebelum diklik warga.
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
         './',
         './index.html',
-        './admin.html', // <--- DITAMBAHKAN AGAR ADMIN BISA DIBUKA OFFLINE
+        './admin.html',
         './inventaris.html',
         './kentongan-slit-drum.png',
         './html5-qrcode.min.js'
@@ -48,7 +49,7 @@ self.addEventListener('fetch', (e) => {
   );
 });
 
-// Listener untuk merespons klik tombol lonceng dari index.html
+// Perintah skipWaiting HANYA berjalan saat warga klik tombol lonceng
 self.addEventListener('message', (event) => {
   if (event.data && event.data.action === 'skipWaiting') {
     self.skipWaiting();
