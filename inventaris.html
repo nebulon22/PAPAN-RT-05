@@ -6,21 +6,19 @@
   <title>Inventaris Perkakas RT 05</title>
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
 
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
-
-    // Memicu auto-refresh otomatis tanpa campur tangan warga
-    let sedangRefresh = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!sedangRefresh) {
-        sedangRefresh = true;
-        window.location.reload();
-      }
-    });
-  }
-</script>
-  
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js');
+      let sedangRefresh = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!sedangRefresh) {
+          sedangRefresh = true;
+          window.location.reload();
+        }
+      });
+    }
+  </script>
+    
   <style>
     body { font-family: sans-serif; margin: 0; padding: 16px; background-color: #f9fafb; color: #333; }
     .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 16px; }
@@ -52,18 +50,17 @@
   <!-- Container Tempat Daftar Barang Muncul -->
   <div id="daftar-inventaris"></div>
 
-
-  <!-- Tombol WhatsApp dengan Logo SVG khas WhatsApp -->
+  <!-- Tombol WhatsApp -->
   <a href="https://wa.me/6281234567890?text=Halo%20Pengurus%20RT,%20saya%20ingin%20meminjam%20inventaris%20RT..." target="_blank" class="btn-wa">
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="vertical-align: middle; margin-right: 6px;">
       <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.572-.085 1.758-.719 2.006-1.413.248-.695.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.99c-.002 5.45-4.437 9.887-9.885 9.887m0-18.181c-6.19 0-11.223 5.033-11.226 11.227 0 1.978.515 3.908 1.493 5.604l-1.587 5.798 5.933-1.556a11.225 11.225 0 005.382 1.381h.005c6.19 0 11.223-5.033 11.226-11.227.001-2.999-1.166-5.821-3.288-7.943A11.162 11.162 0 0012.051 3.6z"/>
     </svg>
     Klik untuk pinjam via WA
   </a>
 
-
   <script>
     const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec';
+    const CACHE_KEY = 'cache_inventaris_rt05';
 
     document.addEventListener("DOMContentLoaded", () => {
       muatStokInventaris();
@@ -73,72 +70,94 @@
       const container = document.getElementById("daftar-inventaris"); 
       if (!container) return;
 
-      container.innerHTML = `<div style="text-align:center; padding: 20px; color:#666;">⏳ Memuat data stok</div>`;
+      // 1. TAMPILKAN DATA SEMENTARA DARI LOCALSTORAGE (INSTAN 0.01 DETIK)
+      const cachedData = localStorage.getItem(CACHE_KEY);
+      if (cachedData) {
+        try {
+          renderHTML(JSON.parse(cachedData));
+        } catch (e) {
+          console.error("Cache error", e);
+        }
+      } else {
+        container.innerHTML = `<div style="text-align:center; padding: 20px; color:#666;">⏳ Memuat data stok...</div>`;
+      }
 
+      // 2. AMBIL DATA TERBARU DARI GOOGLE SHEETS DI BELAKANG LAYAR
       try {
         const res = await fetch(GAS_WEB_APP_URL);
         const data = await res.json();
 
-        const daftarPerkakas = data.perkakas || [];
-        const dataPinjaman = data.peminjaman || [];
-
-        if (daftarPerkakas.length === 0) {
-          container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Belum ada data barang di tab 'Perkakas'.</div>`;
-          return;
+        if (data && data.perkakas) {
+          // Simpan data terbaru ke penyimpanan browser
+          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
+          // Update tampilan secara mulus
+          renderHTML(data);
         }
-
-        // Filter peminjaman aktif
-        const dipinjamAktif = dataPinjaman.filter(row => row[5] === "Dipinjam");
-
-        const rekapDipinjam = {};
-        dipinjamAktif.forEach(row => {
-          const namaBarang = row[2];
-          const jumlah = parseInt(row[3]) || 0;
-          rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
-        });
-
-        // Tampilkan kartu barang dengan rumus yang sudah diperbaiki
-        container.innerHTML = daftarPerkakas.map(item => {
-          const terpakai = rekapDipinjam[item.nama] || 0;
-          const sisaStok = parseInt(item.total) || 0; // item.total dari GAS adalah sisa stok
-          const totalAwal = sisaStok + terpakai;      // Stok awal di Google Sheets
-          
-          const statusBadge = sisaStok > 0 
-            ? `<span style="background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Tersedia</span>`
-            : `<span style="background: #fef2f2; color: #991b1b; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Habis Dipinjam</span>`;
-
-          return `
-            <div class="card-barang">
-              ${item.foto ? `<img src="${item.foto}" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:10px;" onError="this.style.display='none'">` : ''}
-              
-              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin: 0; font-size: 15px; color: #111827;">${item.nama}</h3>
-                ${statusBadge}
-              </div>
-
-              <!-- Rincian Stok Terpisah -->
-              <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f9fafb; padding: 8px; border-radius: 6px; font-size: 12px; text-align: center; border: 1px solid #f3f4f6;">
-                <div>
-                  <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Total Stok</span>
-                  <strong style="color: #374151; font-size: 13px;">${totalAwal}</strong>
-                </div>
-                <div>
-                  <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Dipinjam</span>
-                  <strong style="color: #dc2626; font-size: 13px;">${terpakai}</strong>
-                </div>
-                <div>
-                  <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Sisa Stok</span>
-                  <strong style="color: #059669; font-size: 13px;">${sisaStok}</strong>
-                </div>
-              </div>
-            </div>
-          `;
-        }).join('');
-
       } catch (err) {
         console.error(err);
-        container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data.</div>`;
+        // Jika jaringan gagal tapi ada data cache, jangan tampilkan pesan error
+        if (!cachedData) {
+          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data. Periksa koneksi internet Anda.</div>`;
+        }
       }
+    }
+
+    // Fungsi Render Tampilan
+    function renderHTML(data) {
+      const container = document.getElementById("daftar-inventaris");
+      const daftarPerkakas = data.perkakas || [];
+      const dataPinjaman = data.peminjaman || [];
+
+      if (daftarPerkakas.length === 0) {
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Belum ada data barang di tab 'Perkakas'.</div>`;
+        return;
+      }
+
+      // Filter peminjaman aktif
+      const dipinjamAktif = dataPinjaman.filter(row => row[5] === "Dipinjam");
+      const rekapDipinjam = {};
+      dipinjamAktif.forEach(row => {
+        const namaBarang = row[2];
+        const jumlah = parseInt(row[3]) || 0;
+        rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
+      });
+
+      // Render Kartu Barang
+      container.innerHTML = daftarPerkakas.map(item => {
+        const terpakai = rekapDipinjam[item.nama] || 0;
+        const sisaStok = parseInt(item.total) || 0;
+        const totalAwal = sisaStok + terpakai; 
+        
+        const statusBadge = sisaStok > 0 
+          ? `<span style="background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Tersedia</span>`
+          : `<span style="background: #fef2f2; color: #991b1b; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Habis Dipinjam</span>`;
+
+        return `
+          <div class="card-barang">
+            ${item.foto ? `<img src="${item.foto}" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:10px;" onError="this.style.display='none'">` : ''}
+            
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+              <h3 style="margin: 0; font-size: 15px; color: #111827;">${item.nama}</h3>
+              ${statusBadge}
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f9fafb; padding: 8px; border-radius: 6px; font-size: 12px; text-align: center; border: 1px solid #f3f4f6;">
+              <div>
+                <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Total Stok</span>
+                <strong style="color: #374151; font-size: 13px;">${totalAwal}</strong>
+              </div>
+              <div>
+                <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Dipinjam</span>
+                <strong style="color: #dc2626; font-size: 13px;">${terpakai}</strong>
+              </div>
+              <div>
+                <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Sisa Stok</span>
+                <strong style="color: #059669; font-size: 13px;">${sisaStok}</strong>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
     }
   </script>
 </body>
