@@ -11,19 +11,52 @@
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
 
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js');
+ <script>
+  var serviceWorkerMenunggu = null;
 
-      let sedangRefresh = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!sedangRefresh) {
-          sedangRefresh = true;
-          window.location.reload();
-        }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      // 1. Cek jika sudah ada file update yang siap dipasang
+      if (reg.waiting) {
+        serviceWorkerMenunggu = reg.waiting;
+        tampilkanLoncengUpdate();
+      }
+
+      // 2. Deteksi saat ada update baru yang terunduh
+      reg.addEventListener('updatefound', () => {
+        var workerBaru = reg.installing;
+        workerBaru.addEventListener('statechange', () => {
+          if (workerBaru.state === 'installed' && navigator.serviceWorker.controller) {
+            serviceWorkerMenunggu = workerBaru;
+            tampilkanLoncengUpdate();
+          }
+        });
       });
+    });
+
+    // Auto-reload saat controller berpindah ke SW baru
+    let sedangRefresh = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!sedangRefresh) {
+        sedangRefresh = true;
+        window.location.reload();
+      }
+    });
+  }
+
+  function tampilkanLoncengUpdate() {
+    var btn = document.getElementById('btn-update-pwa');
+    if (btn) btn.style.display = 'flex';
+  }
+
+  function perbaruiAplikasiSekarang() {
+    if (serviceWorkerMenunggu) {
+      serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
+    } else {
+      window.location.reload(true);
     }
-  </script>
+  }
+</script>
 
   <style>
     html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
@@ -290,18 +323,34 @@
       line-height: 1;
       margin-top: 2px;
     }
+
+@keyframes pulse {
+  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+  70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+    
   </style>
 </head>
 <body>
   <!-- Container Navigasi Pojok Kanan Atas -->
-  <div style="position: fixed; top: 12px; right: 12px; z-index: 2000; display: flex; align-items: center; gap: 8px;">
-    <a href="admin.html" class="btn-back-floating" style="position: static;">🔒 Admin</a>
-    <button type="button" onclick="bukaModalChangelog()" 
-      style="background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; font-weight: bold; font-family: serif; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
-      title="Informasi Aplikasi & Changelog">
-      i
-    </button>
-  </div>
+<div style="position: fixed; top: 12px; right: 12px; z-index: 2000; display: flex; align-items: center; gap: 8px;">
+  
+  <!-- Tombol Lonceng Update PWA (Otomatis Sembunyi, Hanya Muncul Jika Ada Update Kode) -->
+  <button id="btn-update-pwa" type="button" onclick="perbaruiAplikasiSekarang()" 
+    style="display: none; background: #ef4444; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(239,68,68,0.5); align-items: center; justify-content: center; padding: 0; outline: none; animation: pulse 1.5s infinite;" 
+    title="Versi baru tersedia! Klik untuk memperbarui">
+    🔔
+  </button>
+
+  <a href="admin.html" class="btn-back-floating" style="position: static;">🔒 Admin</a>
+  
+  <button type="button" onclick="bukaModalChangelog()" 
+    style="background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; font-weight: bold; font-family: serif; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
+    title="Informasi Aplikasi & Changelog">
+    i
+  </button>
+</div>
 
   <!-- Peta Utama -->
   <div id="map"></div>
