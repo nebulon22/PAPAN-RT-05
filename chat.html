@@ -116,9 +116,9 @@
   </footer>
 
   <!-- MODAL 1: Form Registration & Login dengan PIN -->
-  <div id="reg-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
-      
+  <div id="reg-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 overflow-y-auto hidden">
+  <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl my-auto max-h-[90vh] overflow-y-auto">
+    
       <!-- FORM REGISTRASI -->
       <div id="section-register">
         <div class="text-center mb-5">
@@ -315,24 +315,26 @@
 };
         
     window.addEventListener('DOMContentLoaded', () => {
-      checkUserStatus();
-      loadLoginUserOptions();
+  checkUserStatus();
+  loadLoginUserOptions();
 
-      // === FITUR ANTI-TEMBUS MAP / LEAFLET ===
-      const chatStream = document.getElementById('chat-stream');
-      if (chatStream) {
-        if (typeof L !== 'undefined') {
-          L.DomEvent.disableClickPropagation(chatStream);
-          L.DomEvent.disableScrollPropagation(chatStream);
-        }
-
-        ['touchstart', 'touchmove', 'touchend', 'wheel'].forEach(eventType => {
-          chatStream.addEventListener(eventType, (e) => {
-            e.stopPropagation();
-          }, { passive: true });
-        });
-      }
+  // === PROTEKSI SCROLL MODAL REGISTRASI DI HP ===
+  const regModal = document.getElementById('reg-modal');
+  if (regModal) {
+    if (typeof L !== 'undefined') {
+      L.DomEvent.disableClickPropagation(regModal);
+      L.DomEvent.disableScrollPropagation(regModal);
+    }
+    ['touchstart', 'touchmove', 'wheel'].forEach(eventType => {
+      regModal.addEventListener(eventType, (e) => {
+        e.stopPropagation();
+      }, { passive: true });
     });
+  }
+
+  // Proteksi chatStream...
+});
+  
 
     function checkUserStatus() {
   if (!currentUser) {
