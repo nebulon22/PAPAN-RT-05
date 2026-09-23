@@ -9,9 +9,12 @@
   
 <script>
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js').catch(err => {
+        console.warn('ServiceWorker gagal terdaftar:', err);
+      });
+    });
 
-    // Memicu auto-refresh otomatis tanpa campur tangan warga
     let sedangRefresh = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!sedangRefresh) {
