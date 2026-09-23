@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Obrolan Warga - RT 05 Kayen</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    /* Styling scrollbar ala game dark mode */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
+
+  <!-- Header Chat -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0 shadow-lg">
+    <div class="flex items-center gap-3">
+      <a href="index.html" class="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg transition">
+        <i class="fa-solid fa-arrow-left"></i>
+      </a>
+      <div>
+        <h1 class="font-bold text-base text-white flex items-center gap-2">
+          <i class="fa-solid fa-comments text-sky-400"></i> Live Chat RT 05
+        </h1>
+        <p id="user-info-text" class="text-xs text-slate-400">Memuat profil...</p>
+      </div>
+    </div>
+    <div class="flex items-center gap-2">
+      <!-- Tombol Ganti Username -->
+      <button onclick="openChangeNameModal()" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" title="Ganti Username">
+        <i class="fa-solid fa-pen-to-square"></i> <span class="hidden sm:inline">Ubah Nama</span>
+      </button>
+      <!-- Tombol Toggle Sidebar Warga -->
+      <button onclick="toggleSidebar()" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-users"></i>
+        <span id="online-count-badge" class="bg-sky-500 text-slate-950 font-bold px-1.5 py-0.5 rounded-full text-[10px]">0</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Container Utama (Chat Stream + Sidebar Warga) -->
+  <div class="flex-1 flex overflow-hidden relative">
+    
+    <!-- Stream Obrolan Utama (Horizontal Style Game) -->
+    <main class="flex-1 flex flex-col bg-slate-950 p-3 overflow-y-auto space-y-2 font-mono text-sm leading-relaxed" id="chat-stream">
+      <div class="text-center py-4 text-xs text-slate-500 font-sans italic" id="loading-chat">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke ruang chat...
+      </div>
+    </main>
+
+    <!-- Sidebar Warga (Online / Semua) -->
+    <aside id="sidebar-warga" class="absolute right-0 top-0 bottom-0 w-72 bg-slate-900 border-l border-slate-800 flex flex-col transition-transform duration-300 translate-x-full md:translate-x-0 z-20 shadow-2xl md:shadow-none">
+      <!-- Tab Header Sidebar -->
+      <div class="flex border-b border-slate-800 text-xs font-semibold bg-slate-900/50">
+        <button id="tab-aktif-btn" onclick="switchTab('aktif')" class="flex-1 py-3 text-sky-400 border-b-2 border-sky-400 flex items-center justify-center gap-1">
+          <i class="fa-solid fa-circle text-[8px] text-emerald-400"></i> Aktif (<span id="count-aktif">0</span>)
+        </button>
+        <button id="tab-semua-btn" onclick="switchTab('semua')" class="flex-1 py-3 text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center justify-center gap-1">
+          <i class="fa-solid fa-address-book"></i> Semua (<span id="count-semua">0</span>)
+        </button>
+      </div>
+
+      <!-- Search Box (Hanya Muncul di Tab Semua) -->
+      <div id="search-box-container" class="p-2 border-b border-slate-800 hidden">
+        <input type="text" id="search-warga" onkeyup="filterWarga()" placeholder="Cari nama / no rumah..." class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
+      </div>
+
+      <!-- Daftar Warga -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-1 text-xs" id="warga-list">
+        <!-- Item Warga di-generate via JS -->
+      </div>
+    </aside>
+
+  </div>
+
+  <!-- Footer / Input Form Chat -->
+  <footer class="bg-slate-900 border-t border-slate-800 p-3 shrink-0">
+    <form id="chat-form" onsubmit="sendChatMessage(event)" class="flex gap-2 items-center max-w-5xl mx-auto">
+      <input type="text" id="chat-input" placeholder="Ketik pesan obrolan di sini..." autocomplete="off" maxlength="300" class="flex-1 bg-slate-950 border border-slate-700 rounded-lg px-3 py-2.5 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 transition">
+      <button type="submit" class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-4 py-2.5 rounded-lg transition flex items-center justify-center gap-1">
+        <i class="fa-solid fa-paper-plane"></i> <span class="hidden sm:inline">Kirim</span>
+      </button>
+    </form>
+  </footer>
+
+  <!-- MODAL 1: Form Registration (Pengunjung Pertama) -->
+  <div id="reg-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
+      <div class="text-center mb-6">
+        <div class="w-12 h-12 bg-sky-500/10 text-sky-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+          <i class="fa-solid fa-user-plus"></i>
+        </div>
+        <h2 class="text-lg font-bold text-white">Pendaftaran Chat Warga</h2>
+        <p class="text-xs text-slate-400 mt-1">Masukkan data diri untuk bergabung di ruang obrolan RT 05.</p>
+      </div>
+
+      <form onsubmit="handleRegistration(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">Nama Lengkap / Panggilan *</label>
+          <input type="text" id="reg-nama" required placeholder="Contoh: Pak Budi / Nebu" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1">No. Rumah / Kost / Kontrakan *</label>
+          <input type="text" id="reg-hunian" required placeholder="Contoh: No. 12 / Kost Kenanga" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+        </div>
+        <button type="submit" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
+          Daftar & Minta ACC Admin
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL 2: Status Pending ACC Admin -->
+  <div id="pending-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-amber-500/30 rounded-xl max-w-md w-full p-6 text-center shadow-2xl">
+      <div class="w-14 h-14 bg-amber-500/10 text-amber-400 rounded-full flex items-center justify-center mx-auto mb-3 text-2xl animate-pulse">
+        <i class="fa-solid fa-clock-rotate-left"></i>
+      </div>
+      <h2 class="text-lg font-bold text-white">Menunggu Verifikasi Admin</h2>
+      <p class="text-xs text-slate-400 mt-2 leading-relaxed">
+        Pendaftaran kamu sudah terkirim! Admin RT 05 sedang memverifikasi akun kamu. Halaman ini akan otomatis masuk ke obrolan begitu di-ACC.
+      </p>
+      <div class="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-500">
+        <span id="pending-user-name">...</span>
+        <button onclick="resetAccountData()" class="text-rose-400 hover:underline">Batalkan / Daftar Ulang</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL 3: Ganti Username -->
+  <div id="changename-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-sm w-full p-5 shadow-2xl">
+      <h3 class="font-bold text-white text-sm mb-3"><i class="fa-solid fa-pen"></i> Ubah Username Tampilan</h3>
+      <input type="text" id="new-username-input" placeholder="Username baru..." class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500 mb-4">
+      <div class="flex justify-end gap-2 text-xs">
+        <button onclick="closeChangeNameModal()" class="px-3 py-2 bg-slate-800 text-slate-300 rounded-lg hover:bg-slate-700">Batal</button>
+        <button onclick="saveNewUsername()" class="px-3 py-2 bg-sky-500 text-slate-950 font-bold rounded-lg hover:bg-sky-400">Simpan</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDK Modular (v9+) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    // KONEKSI FIREBASE KAMU
+    const firebaseConfig = {
+      apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
+      authDomain: "papan05-21a56.firebaseapp.com",
+      databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "papan05-21a56",
+      storageBucket: "papan05-21a56.firebasestorage.app",
+      messagingSenderId: "1068108426437",
+      appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Global State
+    let currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
+    let allUsersCache = {};
+    let activeTab = 'aktif';
+
+    // 1. Inisialisasi Aplikasi Chat
+    window.addEventListener('DOMContentLoaded', () => {
+      checkUserStatus();
+    });
+
+    // 2. Cek Status Akun
+    function checkUserStatus() {
+      if (!currentUser) {
+        document.getElementById('reg-modal').classList.remove('hidden');
+        return;
+      }
+
+      // Pantau status akun di database
+      const userRef = ref(db, `users/${currentUser.uid}`);
+      onValue(userRef, (snapshot) => {
+        const val = snapshot.val();
+        if (!val) {
+          // Jika terhapus di DB, reset lokal
+          localStorage.removeItem('rt05_chat_user');
+          location.reload();
+          return;
+        }
+
+        currentUser.status = val.status;
+        currentUser.role = val.role || 'warga';
+        currentUser.username = val.username || val.nama;
+        localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
+
+        if (val.status === 'pending') {
+          document.getElementById('pending-user-name').innerText = `${val.nama} (${val.hunian})`;
+          document.getElementById('pending-modal').classList.remove('hidden');
+          document.getElementById('reg-modal').classList.add('hidden');
+        } else if (val.status === 'aktif') {
+          document.getElementById('pending-modal').classList.add('hidden');
+          document.getElementById('reg-modal').classList.add('hidden');
+          document.getElementById('user-info-text').innerText = `${currentUser.username} • ${val.hunian}`;
+          
+          // Jalankan Presence & Load Chat
+          setupPresenceSystem();
+          loadChatStream();
+          loadUsersList();
+        }
+      });
+    }
+
+    // 3. Handle Registrasi Warga Baru
+    window.handleRegistration = (e) => {
+      e.preventDefault();
+      const nama = document.getElementById('reg-nama').value.trim();
+      const hunian = document.getElementById('reg-hunian').value.trim();
+      
+      if (!nama || !hunian) return;
+
+      const uid = 'USR-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+      const userData = {
+        uid: uid,
+        nama: nama,
+        username: nama,
+        hunian: hunian,
+        role: 'warga',
+        status: 'pending',
+        state: 'offline',
+        registeredAt: serverTimestamp()
+      };
+
+      set(ref(db, `users/${uid}`), userData).then(() => {
+        localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
+        currentUser = userData;
+        checkUserStatus();
+      });
+    };
+
+    // 4. Sistem Kehadiran (Presence System)
+    function setupPresenceSystem() {
+      const myPresenceRef = ref(db, `users/${currentUser.uid}/state`);
+      const connectedRef = ref(db, '.info/connected');
+
+      onValue(connectedRef, (snap) => {
+        if (snap.val() === true) {
+          // Ketika koneksi terputus, ubah otomatis jadi offline
+          onDisconnect(myPresenceRef).set('offline');
+          // Set status online saat aktif
+          set(myPresenceRef, 'online');
+        }
+      });
+
+      // Deteksi jika browser di-minimize / idle
+      document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+          set(myPresenceRef, 'idle');
+        } else {
+          set(myPresenceRef, 'online');
+        }
+      });
+    }
+
+    // 5. Memuat Stream Chat (Horizontal Game Style)
+    function loadChatStream() {
+      const chatRef = query(ref(db, 'chats'), limitToLast(80));
+      const chatStream = document.getElementById('chat-stream');
+
+      onValue(chatRef, (snapshot) => {
+        chatStream.innerHTML = '';
+        if (!snapshot.exists()) {
+          chatStream.innerHTML = '<div class="text-center py-4 text-xs text-slate-500 italic">Belum ada obrolan. Mulai obrolan pertama!</div>';
+          return;
+        }
+
+        snapshot.forEach((childSnap) => {
+          const msg = childSnap.val();
+          renderSingleMessage(msg);
+        });
+
+        // Auto Scroll ke Paling Bawah
+        chatStream.scrollTop = chatStream.scrollHeight;
+      });
+    }
+
+    // 6. Format Tampilan Pesan Chat
+    function renderSingleMessage(msg) {
+      const chatStream = document.getElementById('chat-stream');
+      const div = document.createElement('div');
+      div.className = "break-words leading-snug hover:bg-slate-900/40 px-1 py-0.5 rounded transition";
+
+      // Cek Format Warna
+      let nameColorClass = "text-white";
+      let msgColorClass = "text-slate-200";
+
+      if (msg.role === 'admin') {
+        nameColorClass = "text-sky-400 font-bold";
+        msgColorClass = "text-sky-200 font-medium";
+      } else if (msg.uid === currentUser.uid) {
+        nameColorClass = "text-yellow-400 font-bold";
+        msgColorClass = "text-yellow-100";
+      }
+
+      // Time formatting
+      const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
+
+      div.innerHTML = `
+        <span class="text-[10px] text-slate-500 font-sans select-none mr-1">[${timeStr}]</span>
+        <span class="${nameColorClass} select-none">${escapeHTML(msg.sender)}:</span>
+        <span class="${msgColorClass} ml-1">${escapeHTML(msg.text)}</span>
+      `;
+
+      chatStream.appendChild(div);
+    }
+
+    // 7. Kirim Pesan Chat
+    window.sendChatMessage = (e) => {
+      e.preventDefault();
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
+
+      if (!text || currentUser.status !== 'aktif') return;
+
+      const newMsgRef = push(ref(db, 'chats'));
+      set(newMsgRef, {
+        uid: currentUser.uid,
+        sender: currentUser.username,
+        role: currentUser.role || 'warga',
+        text: text,
+        timestamp: serverTimestamp()
+      }).then(() => {
+        input.value = '';
+      });
+    };
+
+    // 8. Memuat Daftar Warga & Status (Sidebar)
+    function loadUsersList() {
+      const usersRef = ref(db, 'users');
+      onValue(usersRef, (snapshot) => {
+        if (!snapshot.exists()) return;
+        allUsersCache = snapshot.val();
+        renderWargaSidebar();
+      });
+    }
+
+    window.renderWargaSidebar = () => {
+      const listContainer = document.getElementById('warga-list');
+      listContainer.innerHTML = '';
+
+      let activeCount = 0;
+      let totalCount = 0;
+      const filterText = (document.getElementById('search-warga').value || '').toLowerCase();
+
+      Object.values(allUsersCache).forEach(u => {
+        if (u.status !== 'aktif') return; // Hanya yang sudah di-ACC
+        
+        totalCount++;
+        const isOnline = u.state === 'online';
+        const isIdle = u.state === 'idle';
+
+        if (isOnline || isIdle) activeCount++;
+
+        // Filter berdasarkan Tab
+        if (activeTab === 'aktif' && !(isOnline || isIdle)) return;
+
+        // Filter Search
+        if (activeTab === 'semua' && filterText) {
+          const matchNama = u.nama.toLowerCase().includes(filterText);
+          const matchUsername = (u.username || '').toLowerCase().includes(filterText);
+          const matchHunian = u.hunian.toLowerCase().includes(filterText);
+          if (!matchNama && !matchUsername && !matchHunian) return;
+        }
+
+        // Color badge status
+        let statusDot = '<span class="w-2 h-2 rounded-full bg-slate-600"></span>';
+        if (isOnline) statusDot = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>';
+        if (isIdle) statusDot = '<span class="w-2 h-2 rounded-full bg-amber-400"></span>';
+
+        let roleBadge = '';
+        if (u.role === 'admin') roleBadge = '<span class="text-[9px] bg-sky-500/20 text-sky-400 font-bold px-1 rounded ml-1">ADMIN</span>';
+
+        const item = document.createElement('div');
+        item.className = "flex items-center justify-between p-2 rounded bg-slate-950/50 border border-slate-800/50";
+        item.innerHTML = `
+          <div class="flex items-center gap-2 truncate">
+            ${statusDot}
+            <div class="truncate">
+              <div class="font-medium text-slate-200 truncate flex items-center">
+                ${escapeHTML(u.username || u.nama)} ${roleBadge}
+              </div>
+              <div class="text-[10px] text-slate-500 truncate">${escapeHTML(u.hunian)}</div>
+            </div>
+          </div>
+        `;
+        listContainer.appendChild(item);
+      });
+
+      // Update badge counts
+      document.getElementById('count-aktif').innerText = activeCount;
+      document.getElementById('count-semua').innerText = totalCount;
+      document.getElementById('online-count-badge').innerText = activeCount;
+    };
+
+    // Switch Tab Sidebar
+    window.switchTab = (tab) => {
+      activeTab = tab;
+      const tabAktif = document.getElementById('tab-aktif-btn');
+      const tabSemua = document.getElementById('tab-semua-btn');
+      const searchBox = document.getElementById('search-box-container');
+
+      if (tab === 'aktif') {
+        tabAktif.className = "flex-1 py-3 text-sky-400 border-b-2 border-sky-400 flex items-center justify-center gap-1";
+        tabSemua.className = "flex-1 py-3 text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center justify-center gap-1";
+        searchBox.classList.add('hidden');
+      } else {
+        tabSemua.className = "flex-1 py-3 text-sky-400 border-b-2 border-sky-400 flex items-center justify-center gap-1";
+        tabAktif.className = "flex-1 py-3 text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center justify-center gap-1";
+        searchBox.classList.remove('hidden');
+      }
+      renderWargaSidebar();
+    };
+
+    // Modal Ubah Username
+    window.openChangeNameModal = () => {
+      if (!currentUser) return;
+      document.getElementById('new-username-input').value = currentUser.username || currentUser.nama;
+      document.getElementById('changename-modal').classList.remove('hidden');
+    };
+
+    window.closeChangeNameModal = () => {
+      document.getElementById('changename-modal').classList.add('hidden');
+    };
+
+    window.saveNewUsername = () => {
+      const newName = document.getElementById('new-username-input').value.trim();
+      if (!newName) return;
+
+      // Blokir kata ADMIN untuk warga biasa
+      if (newName.toUpperCase().includes('ADMIN') && currentUser.role !== 'admin') {
+        alert("Username tidak boleh mengandung kata 'ADMIN'!");
+        return;
+      }
+
+      set(ref(db, `users/${currentUser.uid}/username`), newName).then(() => {
+        currentUser.username = newName;
+        localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
+        closeChangeNameModal();
+      });
+    };
+
+    // Helper: Reset akun jika mau daftar ulang
+    window.resetAccountData = () => {
+      if (confirm("Hapus pendaftaran saat ini dan daftar ulang?")) {
+        localStorage.removeItem('rt05_chat_user');
+        location.reload();
+      }
+    };
+
+    // Helper: Toggle Sidebar HP
+    window.toggleSidebar = () => {
+      document.getElementById('sidebar-warga').classList.toggle('translate-x-full');
+    };
+
+    // Helper: Security Escape HTML
+    function escapeHTML(str) {
+      return str ? str.replace(/[&<>'"]/g, 
+        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+      ) : '';
+    }
+
+    window.filterWarga = () => renderWargaSidebar();
+  </script>
+</body>
+</html>
