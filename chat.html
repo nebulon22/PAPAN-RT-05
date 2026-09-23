@@ -428,32 +428,7 @@
       }
     });
 
-// Fungsi Suara Notifikasi Ringan (Web Audio API)
-function playNotifSound() {
-  try {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContext) return;
-    
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
 
-    osc.type = 'sine'; // Nada halus
-    osc.frequency.setValueAtTime(587.33, ctx.currentTime); // Frekuensi D5
-    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // Naik ke A5 (efek 'ping!')
-
-    gain.gain.setValueAtTime(0.15, ctx.currentTime); // Volume lembut (15%)
-    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
-
-    osc.connect(gain);
-    gain.connect(ctx.destination);
-
-    osc.start();
-    osc.stop(ctx.currentTime + 0.2);
-  } catch (e) {
-    console.log("Audio autoplays blocked or not supported:", e);
-  }
-}
     
     function checkUserStatus() {
       const chatContainer = document.getElementById('chat-container');
@@ -627,35 +602,25 @@ function playNotifSound() {
       });
     }
 
-    let initialLoadComplete = false; // Flag penanda muat awal
+   function loadChatStream() {
+  const chatRef = query(ref(db, 'chats'), limitToLast(80));
+  const chatStream = document.getElementById('chat-stream');
 
-    function loadChatStream() {
-      const chatRef = query(ref(db, 'chats'), limitToLast(80));
-      const chatStream = document.getElementById('chat-stream');
-
-      onValue(chatRef, (snapshot) => {
-        if (!chatStream) return;
-        chatStream.innerHTML = '';
-        if (!snapshot.exists()) {
-          chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
-          return;
-        }
-
-        let lastMsg = null;
-        snapshot.forEach((childSnap) => {
-          lastMsg = childSnap.val();
-          renderSingleMessage(lastMsg);
-        });
-
-        // Bunyikan suara HANYA jika ada pesan baru masuk (setelah muat awal selesai)
-        if (initialLoadComplete && lastMsg && lastMsg.uid !== currentUser?.uid) {
-          playNotifSound();
-        }
-
-        initialLoadComplete = true; // Set true setelah membaca data pertama kali
-        chatStream.scrollTop = chatStream.scrollHeight;
-      });
+  onValue(chatRef, (snapshot) => {
+    if (!chatStream) return;
+    chatStream.innerHTML = '';
+    if (!snapshot.exists()) {
+      chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
+      return;
     }
+
+    snapshot.forEach((childSnap) => {
+      renderSingleMessage(childSnap.val());
+    });
+
+    chatStream.scrollTop = chatStream.scrollHeight;
+  });
+}
     
     function renderSingleMessage(msg) {
       const chatStream = document.getElementById('chat-stream');
