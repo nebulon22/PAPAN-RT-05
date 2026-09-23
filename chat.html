@@ -23,10 +23,18 @@
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    #chat-stream {
+  overflow-y: auto !important;
+  overscroll-behavior: contain !important; /* Mencegah scroll menembus ke peta belakang */
+  -webkit-overflow-scrolling: touch;      /* Melancarkan pergeseran di HP */
+  touch-action: pan-y !important;          /* Mengunci gesture swipe khusus arah vertikal */
+}
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
+  
 <!-- Header Chat -->
   <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0 shadow-lg">
     <div class="flex items-center gap-3">
@@ -256,9 +264,26 @@ window.logoutUser = () => {
 };
     
     window.addEventListener('DOMContentLoaded', () => {
-      checkUserStatus();
-      loadLoginUserOptions();
+  checkUserStatus();
+  loadLoginUserOptions();
+
+  // === FITUR ANTI-TEMBUS MAP / LEAFLET ===
+  const chatStream = document.getElementById('chat-stream');
+  if (chatStream) {
+    // Matiin perambatan event drag/scroll agar tidak diteruskan ke Leaflet Map
+    if (typeof L !== 'undefined') {
+      L.DomEvent.disableClickPropagation(chatStream);
+      L.DomEvent.disableScrollPropagation(chatStream);
+    }
+
+    // Proteksi ekstra untuk layar sentuh HP (Touch Event)
+    ['touchstart', 'touchmove', 'touchend', 'wheel'].forEach(eventType => {
+      chatStream.addEventListener(eventType, (e) => {
+        e.stopPropagation();
+      }, { passive: true });
     });
+  }
+});
 
     function checkUserStatus() {
       if (!currentUser) {
