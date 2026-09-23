@@ -27,7 +27,7 @@
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-  <!-- Header Chat -->
+ <!-- Header Chat -->
   <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0 shadow-lg">
     <div class="flex items-center gap-3">
       <a href="index.html" class="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg transition">
@@ -41,9 +41,17 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
+      <!-- Tombol Ubah Nama -->
       <button onclick="openChangeNameModal()" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" title="Ganti Username">
         <i class="fa-solid fa-pen-to-square"></i> <span class="hidden sm:inline">Ubah Nama</span>
       </button>
+
+      <!-- TOMBOL LOGOUT/KELUAR BARU -->
+      <button onclick="logoutUser()" class="p-2 text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 rounded-lg border border-rose-500/30 transition flex items-center gap-1" title="Keluar Akun">
+        <i class="fa-solid fa-right-from-bracket"></i> <span class="hidden sm:inline">Keluar</span>
+      </button>
+
+      <!-- Tombol Daftar Warga -->
       <button onclick="toggleSidebar()" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
         <i class="fa-solid fa-users"></i>
         <span id="online-count-badge" class="bg-sky-500 text-slate-950 font-bold px-1.5 py-0.5 rounded-full text-[10px]">0</span>
@@ -224,6 +232,16 @@
 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec"; 
 
+window.logoutUser = () => {
+  if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
+    if (currentUser && currentUser.uid) {
+      set(ref(db, `users/${currentUser.uid}/state`), 'offline');
+    }
+    localStorage.removeItem('rt05_chat_user');
+    location.reload();
+  }
+};
+    
     window.addEventListener('DOMContentLoaded', () => {
       checkUserStatus();
       loadLoginUserOptions();
