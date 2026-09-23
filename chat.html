@@ -25,30 +25,28 @@
     ::-webkit-scrollbar-thumb:hover { background: #475569; }
 
     #chat-stream {
-  overflow-y: auto !important;
-  overscroll-behavior: contain !important; /* Mencegah scroll menembus ke peta belakang */
-  -webkit-overflow-scrolling: touch;      /* Melancarkan pergeseran di HP */
-  touch-action: pan-y !important;          /* Mengunci gesture swipe khusus arah vertikal */
-}
+      overflow-y: auto !important;
+      overscroll-behavior: contain !important; /* Mencegah scroll menembus ke peta belakang */
+      -webkit-overflow-scrolling: touch;      /* Melancarkan pergeseran di HP */
+      touch-action: pan-y !important;          /* Mengunci gesture swipe khusus arah vertikal */
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden">
 
-  
-<!-- Header Chat -->
-<header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0 shadow-lg">
-  <div class="flex items-center gap-3">
-    <!-- GANTI TAG <a> DENGAN BUTTON INI -->
-    <button type="button" onclick="tutupAplikasiChat()" class="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg transition cursor-pointer" title="Kembali ke Peta">
-      <i class="fa-solid fa-arrow-left"></i>
-    </button>
-    <div>
-      <h1 class="font-bold text-base text-white flex items-center gap-2">
-        <i class="fa-solid fa-comments text-sky-400"></i> Live Chat RT 05
-      </h1>
-      <p id="user-info-text" class="text-xs text-slate-400">Memuat profil...</p>
+  <!-- Header Chat -->
+  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex items-center justify-between shrink-0 shadow-lg">
+    <div class="flex items-center gap-3">
+      <button type="button" onclick="tutupAplikasiChat()" class="p-2 text-slate-400 hover:text-white bg-slate-800 rounded-lg transition cursor-pointer" title="Kembali ke Peta">
+        <i class="fa-solid fa-arrow-left"></i>
+      </button>
+      <div>
+        <h1 class="font-bold text-base text-white flex items-center gap-2">
+          <i class="fa-solid fa-comments text-sky-400"></i> Live Chat RT 05
+        </h1>
+        <p id="user-info-text" class="text-xs text-slate-400">Memuat profil...</p>
+      </div>
     </div>
-  </div>
 
     <div class="flex items-center gap-2">
       <!-- Tombol Ubah Nama -->
@@ -69,45 +67,45 @@
     </div>
   </header>
 
-<!-- Container Utama Chat + Sidebar -->
-<div class="flex-1 flex overflow-hidden relative" id="chat-container">
-  
-  <!-- Area Obrolan Stream (Otomatis mengambil sisa ruang paling luas) -->
-  <main class="flex-1 flex flex-col bg-slate-950 p-3 overflow-y-auto space-y-2 font-mono text-sm leading-relaxed" id="chat-stream">
-    <div class="text-center py-4 text-xs text-slate-500 font-sans italic" id="loading-chat">
-      <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke ruang chat...
-    </div>
-  </main>
+  <!-- Container Utama Chat + Sidebar -->
+  <div class="flex-1 flex overflow-hidden relative" id="chat-container">
+    
+    <!-- Area Obrolan Stream -->
+    <main class="flex-1 flex flex-col bg-slate-950 p-3 overflow-y-auto space-y-2 font-mono text-sm leading-relaxed" id="chat-stream">
+      <div class="text-center py-4 text-xs text-slate-500 font-sans italic" id="loading-chat">
+        <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke ruang chat...
+      </div>
+    </main>
 
-  <!-- TOMBOL PANAH TOGGLE -->
-  <button id="btn-toggle-center" onclick="toggleSidebar()" 
-    class="absolute right-[160px] top-1/2 -translate-y-1/2 translate-x-1/2 z-30 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer shadow-lg transition-all duration-300"
-    title="Sembunyikan/Tampilkan Daftar Warga">
-    <i id="sidebar-arrow-icon" class="fa-solid fa-chevron-right text-[9px]"></i>
-  </button>
+    <!-- TOMBOL PANAH TOGGLE -->
+    <button id="btn-toggle-center" onclick="toggleSidebar()" 
+      class="absolute right-[160px] top-1/2 -translate-y-1/2 translate-x-1/2 z-30 bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 rounded-full w-6 h-6 flex items-center justify-center cursor-pointer shadow-lg transition-all duration-300"
+      title="Sembunyikan/Tampilkan Daftar Warga">
+      <i id="sidebar-arrow-icon" class="fa-solid fa-chevron-right text-[9px]"></i>
+    </button>
 
-  <!-- Sidebar Warga (Lebar ramping 160px / w-40) -->
-  <aside id="sidebar-warga" class="w-40 bg-slate-900 border-l border-slate-800 flex flex-col transition-all duration-300 shrink-0">
-    <!-- Tab Menu Sidebar (Teks dipersingkat agar muat) -->
-    <div class="flex border-b border-slate-800 text-xs font-semibold bg-slate-900/50">
-      <button id="tab-aktif-btn" onclick="switchTab('aktif')" class="flex-1 py-2 text-sky-400 border-b-2 border-sky-400 flex items-center justify-center gap-1 text-[10px]">
-        <i class="fa-solid fa-circle text-[6px] text-emerald-400"></i> Aktif (<span id="count-aktif">0</span>)
-      </button>
-      <button id="tab-semua-btn" onclick="switchTab('semua')" class="flex-1 py-2 text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center justify-center gap-1 text-[10px]">
-        Semua (<span id="count-semua">0</span>)
-      </button>
-    </div>
+    <!-- Sidebar Warga -->
+    <aside id="sidebar-warga" class="w-40 bg-slate-900 border-l border-slate-800 flex flex-col transition-all duration-300 shrink-0">
+      <!-- Tab Menu Sidebar -->
+      <div class="flex border-b border-slate-800 text-xs font-semibold bg-slate-900/50">
+        <button id="tab-aktif-btn" onclick="switchTab('aktif')" class="flex-1 py-2 text-sky-400 border-b-2 border-sky-400 flex items-center justify-center gap-1 text-[10px]">
+          <i class="fa-solid fa-circle text-[6px] text-emerald-400"></i> Aktif (<span id="count-aktif">0</span>)
+        </button>
+        <button id="tab-semua-btn" onclick="switchTab('semua')" class="flex-1 py-2 text-slate-400 border-b-2 border-transparent hover:text-slate-200 flex items-center justify-center gap-1 text-[10px]">
+          Semua (<span id="count-semua">0</span>)
+        </button>
+      </div>
 
-    <!-- Box Pencarian -->
-    <div id="search-box-container" class="p-1 border-b border-slate-800 hidden">
-      <input type="text" id="search-warga" onkeyup="filterWarga()" placeholder="Cari..." class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-[10px] text-slate-200 focus:outline-none focus:border-sky-500">
-    </div>
+      <!-- Box Pencarian -->
+      <div id="search-box-container" class="p-1 border-b border-slate-800 hidden">
+        <input type="text" id="search-warga" onkeyup="filterWarga()" placeholder="Cari..." class="w-full bg-slate-950 border border-slate-800 rounded px-1.5 py-0.5 text-[10px] text-slate-200 focus:outline-none focus:border-sky-500">
+      </div>
 
-    <!-- List Warga -->
-    <div class="flex-1 overflow-y-auto p-1 space-y-1 text-xs" id="warga-list"></div>
-  </aside>
+      <!-- List Warga -->
+      <div class="flex-1 overflow-y-auto p-1 space-y-1 text-xs" id="warga-list"></div>
+    </aside>
 
-</div>
+  </div>
 
   <!-- Footer / Input Form Chat -->
   <footer class="bg-slate-900 border-t border-slate-800 p-3 shrink-0">
@@ -255,58 +253,52 @@
 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec"; 
 
-window.logoutUser = () => {
-  if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
-    if (currentUser && currentUser.uid) {
-      set(ref(db, `users/${currentUser.uid}/state`), 'offline');
-    }
-    localStorage.removeItem('rt05_chat_user');
-    location.reload();
-  }
-};
-    
+    window.logoutUser = () => {
+      if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
+        if (currentUser && currentUser.uid) {
+          set(ref(db, `users/${currentUser.uid}/state`), 'offline');
+        }
+        localStorage.removeItem('rt05_chat_user');
+        location.reload();
+      }
+    };
+        
     window.tutupAplikasiChat = () => {
-  // Jika chat dibuka di dalam modal/iframe pada index.html
-  if (window.parent && window.parent !== window) {
-    const parentDoc = window.parent.document;
-    // Cari elemen modal/container di index.html
-    const modalChat = parentDoc.getElementById('modal-chat') || 
-                      parentDoc.getElementById('chat-modal') || 
-                      parentDoc.getElementById('chat-frame-container') ||
-                      parentDoc.getElementById('chat-frame');
-                      
-    if (modalChat) {
-      modalChat.classList.add('hidden');
-      if (modalChat.style) modalChat.style.display = 'none';
-      return;
-    }
-  }
-  
-  // Fallback jika chat dibuka langsung di tab terpisah
-  window.location.href = 'index.html';
-};
-    
+      if (window.parent && window.parent !== window) {
+        const parentDoc = window.parent.document;
+        const modalChat = parentDoc.getElementById('modal-chat') || 
+                          parentDoc.getElementById('chat-modal') || 
+                          parentDoc.getElementById('chat-frame-container') ||
+                          parentDoc.getElementById('chat-frame');
+                          
+        if (modalChat) {
+          modalChat.classList.add('hidden');
+          if (modalChat.style) modalChat.style.display = 'none';
+          return;
+        }
+      }
+      window.location.href = 'index.html';
+    };
+        
     window.addEventListener('DOMContentLoaded', () => {
-  checkUserStatus();
-  loadLoginUserOptions();
+      checkUserStatus();
+      loadLoginUserOptions();
 
-  // === FITUR ANTI-TEMBUS MAP / LEAFLET ===
-  const chatStream = document.getElementById('chat-stream');
-  if (chatStream) {
-    // Matiin perambatan event drag/scroll agar tidak diteruskan ke Leaflet Map
-    if (typeof L !== 'undefined') {
-      L.DomEvent.disableClickPropagation(chatStream);
-      L.DomEvent.disableScrollPropagation(chatStream);
-    }
+      // === FITUR ANTI-TEMBUS MAP / LEAFLET ===
+      const chatStream = document.getElementById('chat-stream');
+      if (chatStream) {
+        if (typeof L !== 'undefined') {
+          L.DomEvent.disableClickPropagation(chatStream);
+          L.DomEvent.disableScrollPropagation(chatStream);
+        }
 
-    // Proteksi ekstra untuk layar sentuh HP (Touch Event)
-    ['touchstart', 'touchmove', 'touchend', 'wheel'].forEach(eventType => {
-      chatStream.addEventListener(eventType, (e) => {
-        e.stopPropagation();
-      }, { passive: true });
+        ['touchstart', 'touchmove', 'touchend', 'wheel'].forEach(eventType => {
+          chatStream.addEventListener(eventType, (e) => {
+            e.stopPropagation();
+          }, { passive: true });
+        });
+      }
     });
-  }
-});
 
     function checkUserStatus() {
       if (!currentUser) {
@@ -386,7 +378,6 @@ window.logoutUser = () => {
         if (snap.exists()) {
           const val = snap.val();
 
-          // Cek PIN
           if (String(val.pin) !== String(inputPin)) {
             alert("❌ PIN Rahasia Salah! Silakan coba lagi.");
             return;
@@ -426,7 +417,7 @@ window.logoutUser = () => {
         nama: nama,
         username: nama,
         hunian: hunian,
-        pin: pin, // Menyimpan PIN ke Database
+        pin: pin,
         role: 'warga',
         status: 'pending',
         state: 'offline',
@@ -652,24 +643,22 @@ window.logoutUser = () => {
       }
     };
 
-  window.toggleSidebar = () => {
-  const sidebar = document.getElementById('sidebar-warga');
-  const btnToggle = document.getElementById('btn-toggle-center');
-  const arrowIcon = document.getElementById('sidebar-arrow-icon');
+    window.toggleSidebar = () => {
+      const sidebar = document.getElementById('sidebar-warga');
+      const btnToggle = document.getElementById('btn-toggle-center');
+      const arrowIcon = document.getElementById('sidebar-arrow-icon');
 
-  if (sidebar.classList.contains('hidden')) {
-    // Buka Sidebar (Tombol pas di garis pembatas 160px)
-    sidebar.classList.remove('hidden');
-    btnToggle.style.right = '160px'; 
-    if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-right text-[9px]';
-  } else {
-    // Sembunyikan Sidebar (Tombol di tepi kanan)
-    sidebar.classList.add('hidden');
-    btnToggle.style.right = '12px'; 
-    if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-left text-[9px]';
-  }
-};
-    
+      if (sidebar.classList.contains('hidden')) {
+        sidebar.classList.remove('hidden');
+        btnToggle.style.right = '160px'; 
+        if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-right text-[9px]';
+      } else {
+        sidebar.classList.add('hidden');
+        btnToggle.style.right = '12px'; 
+        if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-left text-[9px]';
+      }
+    };
+        
     function escapeHTML(str) {
       return str ? str.replace(/[&<>'"]/g, 
         tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
