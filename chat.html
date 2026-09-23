@@ -243,10 +243,15 @@ window.handleRegistration = (e) => {
     localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
     currentUser = userData;
 
-    // 2. Kirim Notifikasi Email ke Gmail Admin
+
+    // 2. Kirim Notifikasi Email ke Gmail Admin (Format JSON + no-cors)
     fetch(SCRIPT_URL, {
       method: 'POST',
-      body: new URLSearchParams({
+      mode: 'no-cors',
+      headers: {
+        'Content-Type': 'text/plain;charset=utf-8'
+      },
+      body: JSON.stringify({
         'action': 'notifChatBaru',
         'nama': nama,
         'hunian': hunian
