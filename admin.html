@@ -161,56 +161,50 @@
       </div>
     </div>
 <!-- Section Persetujuan Chat Warga -->
- <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 text-slate-100 font-sans shadow-xl">
-  <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
-    <h2 class="text-base font-bold text-white flex items-center gap-2">
-      <i class="fa-solid fa-user-check text-sky-400"></i> Persetujuan Chat Warga RT 05
-    </h2>
-    <span id="pending-badge" class="bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold px-2.5 py-0.5 rounded-full text-xs">
+<!-- Container Persetujuan Chat (Background Gelap Solid) -->
+<div style="margin-top: 12px; background-color: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 12px; color: #ffffff; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); font-family: sans-serif;">
+  
+  <div style="display: flex; justify-content: space-between; items-center: center; border-bottom: 1px solid #1e293b; padding-bottom: 8px; margin-bottom: 8px;">
+    <span style="font-size: 12px; font-weight: bold; color: #38bdf8;">👥 Persetujuan Chat Warga RT 05</span>
+    <span id="pending-badge" style="background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px;">
       0 Pending
     </span>
   </div>
 
-  <!-- Table Pendaftar Pending -->
-  <div class="overflow-x-auto mb-6">
-    <table class="w-full text-xs text-left">
-      <thead class="bg-slate-950 text-slate-400 uppercase">
-        <tr>
-          <th class="p-3">Nama / Username</th>
-          <th class="p-3">Hunian / Lokasi</th>
-          <th class="p-3">Waktu Daftar</th>
-          <th class="p-3 text-center">Aksi</th>
+  <!-- Tabel Pendaftar Pending -->
+  <div style="max-height: 160px; overflow-y: auto;">
+    <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 1px solid #334155; color: #94a3b8; text-transform: uppercase; font-size: 10px;">
+          <th style="padding: 6px;">Nama / Lokasi</th>
+          <th style="padding: 6px; text-align: center;">Aksi</th>
         </tr>
       </thead>
-      <tbody id="pending-users-list" class="divide-y divide-slate-800">
+      <tbody id="pending-users-list">
         <tr>
-          <td colspan="4" class="p-4 text-center text-slate-500 italic">Tidak ada pendaftaran pending.</td>
+          <td colspan="2" style="padding: 10px; text-align: center; color: #64748b; font-style: italic;">
+            Memuat pendaftar...
+          </td>
         </tr>
       </tbody>
     </table>
   </div>
 
-  <!-- Kelola Seluruh Warga (Set Role Admin / Nonaktifkan) -->
-  <details class="text-xs">
-    <summary class="cursor-pointer text-slate-400 hover:text-sky-400 font-medium py-1 select-none">
-      <i class="fa-solid fa-users-gear"></i> Kelola Seluruh Warga Terdaftar (<span id="total-warga-count">0</span>)
+  <!-- Kelola Seluruh Warga (Accordion) -->
+  <details style="margin-top: 10px; border-top: 1px solid #1e293b; padding-top: 6px; font-size: 11px;">
+    <summary style="cursor: pointer; color: #94a3b8; font-weight: 500; user-select: none;">
+      ⚙️ Kelola Seluruh Warga (<span id="total-warga-count">0</span>)
     </summary>
-    <div class="overflow-x-auto mt-3 border-t border-slate-800 pt-3">
-      <table class="w-full text-xs text-left">
-        <thead class="bg-slate-950 text-slate-400 uppercase">
-          <tr>
-            <th class="p-2.5">User</th>
-            <th class="p-2.5">Role Chat</th>
-            <th class="p-2.5 text-center">Aksi Role / Hapus</th>
-          </tr>
-        </thead>
-        <tbody id="all-users-list" class="divide-y divide-slate-800">
+    <div style="max-height: 150px; overflow-y: auto; margin-top: 6px;">
+      <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
+        <tbody id="all-users-list">
           <!-- List semua warga -->
         </tbody>
       </table>
     </div>
   </details>
- </div>
+
+</div>
 
   
 </div>
@@ -1220,19 +1214,21 @@
   const app = initializeApp(firebaseConfig);
   const db = getDatabase(app);
 
-  // Pantau Data Users
   const usersRef = ref(db, 'users');
   onValue(usersRef, (snapshot) => {
     const pendingTable = document.getElementById('pending-users-list');
+    const allUsersTable = document.getElementById('all-users-list');
+    
     pendingTable.innerHTML = '';
+    allUsersTable.innerHTML = '';
 
     if (!snapshot.exists()) {
-      pendingTable.innerHTML = '<tr><td style="padding: 6px; text-align: center; color: #64748b;">Belum ada pendaftaran.</td></tr>';
-      document.getElementById('pending-badge').innerText = '0 Pending';
+      pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar.</td></tr>';
       return;
     }
 
     let pendingCount = 0;
+    let totalCount = 0;
 
     snapshot.forEach((childSnap) => {
       const u = childSnap.val();
@@ -1247,24 +1243,50 @@
             <strong style="color: #fff; display: block;">${escapeHTML(u.nama)}</strong>
             <span style="color: #94a3b8; font-size: 10px;">${escapeHTML(u.hunian)}</span>
           </td>
-          <td style="padding: 6px; text-align: right;">
-            <button onclick="approveUser('${uid}')" style="background: #10b981; color: #000; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
+          <td style="padding: 6px; text-align: center; white-space: nowrap;">
+            <button onclick="approveUser('${uid}')" style="background-color: #10b981; color: #022c22; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
               ACC
             </button>
-            <button onclick="rejectUser('${uid}')" style="background: #ef444420; color: #f87171; border: 1px solid #ef444440; padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
+            <button onclick="rejectUser('${uid}')" style="background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
               Tolak
             </button>
           </td>
         `;
         pendingTable.appendChild(tr);
+      } else if (u.status === 'aktif') {
+        totalCount++;
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = "1px solid #1e293b";
+        
+        const isAdmin = u.role === 'admin';
+        const roleBadge = isAdmin ? 
+          '<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold;">ADMIN</span>' : 
+          '<span style="background: #334155; color: #94a3b8; padding: 1px 4px; border-radius: 3px; font-size: 9px;">WARGA</span>';
+
+        tr.innerHTML = `
+          <td style="padding: 6px;">
+            <strong style="color: #e2e8f0; display: block;">${escapeHTML(u.username || u.nama)} ${roleBadge}</strong>
+            <span style="color: #64748b; font-size: 10px;">${escapeHTML(u.hunian)}</span>
+          </td>
+          <td style="padding: 6px; text-align: center; white-space: nowrap;">
+            <button onclick="toggleRole('${uid}', '${u.role}')" style="background: #334155; color: #cbd5e1; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
+              ${isAdmin ? 'Warga' : 'Jadi Admin'}
+            </button>
+            <button onclick="rejectUser('${uid}')" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
+              ❌
+            </button>
+          </td>
+        `;
+        allUsersTable.appendChild(tr);
       }
     });
 
     if (pendingCount === 0) {
-      pendingTable.innerHTML = '<tr><td style="padding: 6px; text-align: center; color: #64748b;">Tidak ada pendaftar pending.</td></tr>';
+      pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Tidak ada pendaftar pending.</td></tr>';
     }
 
     document.getElementById('pending-badge').innerText = `${pendingCount} Pending`;
+    document.getElementById('total-warga-count').innerText = totalCount;
   });
 
   window.approveUser = (uid) => {
@@ -1272,9 +1294,14 @@
   };
 
   window.rejectUser = (uid) => {
-    if (confirm("Tolak pendaftaran warga ini?")) {
+    if (confirm("Hapus / Tolak pendaftaran warga ini?")) {
       remove(ref(db, `users/${uid}`));
     }
+  };
+
+  window.toggleRole = (uid, currentRole) => {
+    const newRole = currentRole === 'admin' ? 'warga' : 'admin';
+    update(ref(db, `users/${uid}`), { role: newRole });
   };
 
   function escapeHTML(str) {
