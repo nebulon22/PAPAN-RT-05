@@ -160,7 +160,60 @@
         </button>
       </div>
     </div>
+<!-- Section Persetujuan Chat Warga -->
+ <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 mb-6 text-slate-100 font-sans shadow-xl">
+  <div class="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+    <h2 class="text-base font-bold text-white flex items-center gap-2">
+      <i class="fa-solid fa-user-check text-sky-400"></i> Persetujuan Chat Warga RT 05
+    </h2>
+    <span id="pending-badge" class="bg-amber-500/20 text-amber-400 border border-amber-500/30 font-bold px-2.5 py-0.5 rounded-full text-xs">
+      0 Pending
+    </span>
   </div>
+
+  <!-- Table Pendaftar Pending -->
+  <div class="overflow-x-auto mb-6">
+    <table class="w-full text-xs text-left">
+      <thead class="bg-slate-950 text-slate-400 uppercase">
+        <tr>
+          <th class="p-3">Nama / Username</th>
+          <th class="p-3">Hunian / Lokasi</th>
+          <th class="p-3">Waktu Daftar</th>
+          <th class="p-3 text-center">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="pending-users-list" class="divide-y divide-slate-800">
+        <tr>
+          <td colspan="4" class="p-4 text-center text-slate-500 italic">Tidak ada pendaftaran pending.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Kelola Seluruh Warga (Set Role Admin / Nonaktifkan) -->
+  <details class="text-xs">
+    <summary class="cursor-pointer text-slate-400 hover:text-sky-400 font-medium py-1 select-none">
+      <i class="fa-solid fa-users-gear"></i> Kelola Seluruh Warga Terdaftar (<span id="total-warga-count">0</span>)
+    </summary>
+    <div class="overflow-x-auto mt-3 border-t border-slate-800 pt-3">
+      <table class="w-full text-xs text-left">
+        <thead class="bg-slate-950 text-slate-400 uppercase">
+          <tr>
+            <th class="p-2.5">User</th>
+            <th class="p-2.5">Role Chat</th>
+            <th class="p-2.5 text-center">Aksi Role / Hapus</th>
+          </tr>
+        </thead>
+        <tbody id="all-users-list" class="divide-y divide-slate-800">
+          <!-- List semua warga -->
+        </tbody>
+      </table>
+    </div>
+  </details>
+ </div>
+
+  
+</div>
 
  <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
   <div id="modal-form" class="modal-bg" onclick="event.stopPropagation(); if(event.target === this) tutupModalForm();">
@@ -1146,5 +1199,87 @@
       }
     });
   </script>
+
+  <!-- FontAwesome Icons (Jika belum ada di admin.html) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
+    authDomain: "papan05-21a56.firebaseapp.com",
+    databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "papan05-21a56",
+    storageBucket: "papan05-21a56.firebasestorage.app",
+    messagingSenderId: "1068108426437",
+    appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getDatabase(app);
+
+  // Pantau Data Users
+  const usersRef = ref(db, 'users');
+  onValue(usersRef, (snapshot) => {
+    const pendingTable = document.getElementById('pending-users-list');
+    pendingTable.innerHTML = '';
+
+    if (!snapshot.exists()) {
+      pendingTable.innerHTML = '<tr><td style="padding: 6px; text-align: center; color: #64748b;">Belum ada pendaftaran.</td></tr>';
+      document.getElementById('pending-badge').innerText = '0 Pending';
+      return;
+    }
+
+    let pendingCount = 0;
+
+    snapshot.forEach((childSnap) => {
+      const u = childSnap.val();
+      const uid = childSnap.key;
+
+      if (u.status === 'pending') {
+        pendingCount++;
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = "1px solid #1e293b";
+        tr.innerHTML = `
+          <td style="padding: 6px;">
+            <strong style="color: #fff; display: block;">${escapeHTML(u.nama)}</strong>
+            <span style="color: #94a3b8; font-size: 10px;">${escapeHTML(u.hunian)}</span>
+          </td>
+          <td style="padding: 6px; text-align: right;">
+            <button onclick="approveUser('${uid}')" style="background: #10b981; color: #000; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
+              ACC
+            </button>
+            <button onclick="rejectUser('${uid}')" style="background: #ef444420; color: #f87171; border: 1px solid #ef444440; padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
+              Tolak
+            </button>
+          </td>
+        `;
+        pendingTable.appendChild(tr);
+      }
+    });
+
+    if (pendingCount === 0) {
+      pendingTable.innerHTML = '<tr><td style="padding: 6px; text-align: center; color: #64748b;">Tidak ada pendaftar pending.</td></tr>';
+    }
+
+    document.getElementById('pending-badge').innerText = `${pendingCount} Pending`;
+  });
+
+  window.approveUser = (uid) => {
+    update(ref(db, `users/${uid}`), { status: 'aktif' });
+  };
+
+  window.rejectUser = (uid) => {
+    if (confirm("Tolak pendaftaran warga ini?")) {
+      remove(ref(db, `users/${uid}`));
+    }
+  };
+
+  function escapeHTML(str) {
+    return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
+  }
+</script>
 </body>
 </html>
