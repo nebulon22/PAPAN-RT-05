@@ -510,6 +510,27 @@
       });
     }
 
+// === FUNGSI MUAT STREAM CHAT (YANG TERHAPUS) ===
+    function loadChatStream() {
+      const chatRef = query(ref(db, 'chats'), limitToLast(80));
+      const chatStream = document.getElementById('chat-stream');
+
+      onValue(chatRef, (snapshot) => {
+        chatStream.innerHTML = '';
+        if (!snapshot.exists()) {
+          chatStream.innerHTML = '<div class="text-center py-4 text-xs text-slate-500 italic">Belum ada obrolan. Mulai obrolan pertama!</div>';
+          return;
+        }
+
+        snapshot.forEach((childSnap) => {
+          const msg = childSnap.val();
+          renderSingleMessage(msg);
+        });
+
+        chatStream.scrollTop = chatStream.scrollHeight;
+      });
+    }
+    
    function renderSingleMessage(msg) {
   const chatStream = document.getElementById('chat-stream');
   const div = document.createElement('div');
