@@ -251,15 +251,27 @@
 
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec"; 
 
-    window.logoutUser = () => {
-      if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
-        if (currentUser && currentUser.uid) {
-          set(ref(db, `users/${currentUser.uid}/state`), 'offline');
-        }
-        localStorage.removeItem('rt05_chat_user');
-        location.reload();
-      }
-    };
+   window.logoutUser = () => {
+  if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
+    // 1. Ubah status presence di Firebase menjadi offline
+    if (currentUser && currentUser.uid) {
+      set(ref(db, `users/${currentUser.uid}/state`), 'offline');
+    }
+
+    // 2. Bersihkan seluruh penyimpanan lokal pengguna
+    localStorage.removeItem('rt05_chat_user');
+    currentUser = null;
+
+    // 3. Sembunyikan elemen obrolan & reset Tampilan ke Modal Registrasi
+    document.getElementById('chat-container').classList.add('hidden');
+    document.querySelector('footer').classList.add('hidden');
+    document.getElementById('pending-modal').classList.add('hidden');
+    document.getElementById('reg-modal').classList.remove('hidden');
+
+    // 4. Reload halaman agar state Firebase benar-benar bersih
+    location.reload();
+  }
+};
         
     window.tutupAplikasiChat = () => {
   // Jika dibuka di dalam iframe/modal
@@ -323,40 +335,51 @@
     });
 
     function checkUserStatus() {
-      if (!currentUser) {
-        document.getElementById('reg-modal').classList.remove('hidden');
-        return;
-      }
+  if (!currentUser) {
+    // Sembunyikan area chat & footer jika belum login / setelah logout
+    document.getElementById('chat-container').classList.add('hidden');
+    document.querySelector('footer').classList.add('hidden');
+    document.getElementById('reg-modal').classList.remove('hidden');
+    return;
+  }
 
-      const userRef = ref(db, `users/${currentUser.uid}`);
-      onValue(userRef, (snapshot) => {
-        const val = snapshot.val();
-        if (!val) {
-          localStorage.removeItem('rt05_chat_user');
-          location.reload();
-          return;
-        }
+  // Jika user terdeteksi login/aktif, tampilkan kembali area chat & footer
+  document.getElementById('chat-container').classList.remove('hidden');
+  document.querySelector('footer').classList.remove('hidden');
 
-        currentUser.status = val.status;
-        currentUser.role = val.role || 'warga';
-        currentUser.username = val.username || val.nama;
-        localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
-
-        if (val.status === 'pending') {
-          document.getElementById('pending-user-name').innerText = `${val.nama} (${val.hunian})`;
-          document.getElementById('pending-modal').classList.remove('hidden');
-          document.getElementById('reg-modal').classList.add('hidden');
-        } else if (val.status === 'aktif') {
-          document.getElementById('pending-modal').classList.add('hidden');
-          document.getElementById('reg-modal').classList.add('hidden');
-          document.getElementById('user-info-text').innerText = `${currentUser.username} • ${val.hunian}`;
-          
-          setupPresenceSystem();
-          loadChatStream();
-          loadUsersList();
-        }
-      });
+  const userRef = ref(db, `users/${currentUser.uid}`);
+  onValue(userRef, (snapshot) => {
+    const val = snapshot.val();
+    if (!val) {
+      localStorage.removeItem('rt05_chat_user');
+      location.reload();
+      return;
     }
+
+    currentUser.status = val.status;
+    currentUser.role = val.role || 'warga';
+    currentUser.username = val.username || val.nama;
+    localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
+
+    if (val.status === 'pending') {
+      document.getElementById('pending-user-name').innerText = `${val.nama} (${val.hunian})`;
+      document.getElementById('pending-modal').classList.remove('hidden');
+      document.getElementById('reg-modal').classList.add('hidden');
+      document.getElementById('chat-container').classList.add('hidden');
+      document.querySelector('footer').classList.add('hidden');
+    } else if (val.status === 'aktif') {
+      document.getElementById('pending-modal').classList.add('hidden');
+      document.getElementById('reg-modal').classList.add('hidden');
+      document.getElementById('chat-container').classList.remove('hidden');
+      document.querySelector('footer').classList.remove('hidden');
+      document.getElementById('user-info-text').innerText = `${currentUser.username} • ${val.hunian}`;
+      
+      setupPresenceSystem();
+      loadChatStream();
+      loadUsersList();
+    }
+  });
+}
 
     window.toggleAuthMode = (mode) => {
       if (mode === 'login') {
