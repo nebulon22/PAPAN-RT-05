@@ -390,11 +390,13 @@ function perbaruiAplikasiSekarang() {
   <!-- Peta Utama -->
   <div id="map"></div>
   
+  <!-- Indikator Sinkron Melayang (Pojok Kiri Atas) -->
+  <div id="status-sync" style="position: fixed; top: 12px; left: 12px; z-index: 2000; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-align: center; background-color: rgba(209, 250, 229, 0.9); color: #065f46; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+    🟢 Semua Data Ter-sinkron
+  </div>
+
   <!-- Panel pencarian dan filter melayang -->
   <div id="top-panel">
-    <div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-align: center; background-color: #d1fae5; color: #065f46;">
-      🟢 Semua Data Ter-sinkron
-    </div>
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
       <button onclick="cariLokasi()">Cari</button>
@@ -1351,34 +1353,34 @@ function perbaruiAplikasiSekarang() {
     }
 
     // --- SINKRONISASI OFFLINE ---
-    function perbaruiIndikatorSync() {
+   function perbaruiIndikatorSync() {
       let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
       let badge = document.getElementById('status-sync');
       
       if (!badge) return;
 
       if (sedangMengirim) {
-        badge.innerHTML = `🔵 Sedang Menyinkronkan Data...`;
-        badge.style.backgroundColor = '#dbeafe';
+        badge.innerHTML = `🔵 Sedang Menyinkronkan...`;
+        badge.style.backgroundColor = 'rgba(219, 234, 254, 0.9)';
         badge.style.color = '#1e40af';
       } else if (!navigator.onLine) {
         if (antrean.length > 0) {
           badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-          badge.style.backgroundColor = '#fef3c7';
+          badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
           badge.style.color = '#92400e';
         } else {
           badge.innerHTML = '🔴 Anda Sedang Offline';
-          badge.style.backgroundColor = '#fee2e2';
+          badge.style.backgroundColor = 'rgba(254, 226, 226, 0.9)';
           badge.style.color = '#991b1b';
         }
       } else {
         if (antrean.length === 0) {
           badge.innerHTML = '🟢 Semua Data Ter-sinkron';
-          badge.style.backgroundColor = '#d1fae5';
+          badge.style.backgroundColor = 'rgba(209, 250, 229, 0.9)';
           badge.style.color = '#065f46';
         } else {
           badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-          badge.style.backgroundColor = '#fef3c7';
+          badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
           badge.style.color = '#92400e';
         }
       }
@@ -1393,7 +1395,7 @@ function perbaruiAplikasiSekarang() {
         }
       }
     }
-
+    
     async function kirimDataPendingJimpitan() {
       if (sedangMengirim) return;
 
