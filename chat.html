@@ -216,31 +216,46 @@
     }
 
     // 3. Handle Registrasi Warga Baru
-    window.handleRegistration = (e) => {
-      e.preventDefault();
-      const nama = document.getElementById('reg-nama').value.trim();
-      const hunian = document.getElementById('reg-hunian').value.trim();
-      
-      if (!nama || !hunian) return;
+   // Masukkan Web App URL dari Google Apps Script milikmu di sini:
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec"; 
 
-      const uid = 'USR-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
-      const userData = {
-        uid: uid,
-        nama: nama,
-        username: nama,
-        hunian: hunian,
-        role: 'warga',
-        status: 'pending',
-        state: 'offline',
-        registeredAt: serverTimestamp()
-      };
+window.handleRegistration = (e) => {
+  e.preventDefault();
+  const nama = document.getElementById('reg-nama').value.trim();
+  const hunian = document.getElementById('reg-hunian').value.trim();
+  
+  if (!nama || !hunian) return;
 
-      set(ref(db, `users/${uid}`), userData).then(() => {
-        localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
-        currentUser = userData;
-        checkUserStatus();
-      });
-    };
+  const uid = 'USR-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+  const userData = {
+    uid: uid,
+    nama: nama,
+    username: nama,
+    hunian: hunian,
+    role: 'warga',
+    status: 'pending',
+    state: 'offline',
+    registeredAt: serverTimestamp()
+  };
+
+  // 1. Simpan ke Firebase Realtime Database
+  set(ref(db, `users/${uid}`), userData).then(() => {
+    localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
+    currentUser = userData;
+
+    // 2. Kirim Notifikasi Email ke Gmail Admin
+    fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: new URLSearchParams({
+        'action': 'notifChatBaru',
+        'nama': nama,
+        'hunian': hunian
+      })
+    }).catch(err => console.log("Gagal kirim notif email:", err));
+
+    checkUserStatus();
+  });
+};
 
     // 4. Sistem Kehadiran (Presence System)
     function setupPresenceSystem() {
