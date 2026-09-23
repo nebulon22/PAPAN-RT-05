@@ -4,21 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Obrolan Warga - RT 05 Kayen</title>
-<script>
-  // Meredam peringatan cdn.tailwindcss.com di Console
-  const _warn = console.warn;
-  console.warn = function(...args) {
-    if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
-    _warn.apply(console, args);
-  };
-</script>
+  
+  <script>
+    // Suppress warning Tailwind CDN di console
+    const _warn = console.warn;
+    console.warn = function(...args) {
+      if (args[0] && typeof args[0] === 'string' && args[0].includes('cdn.tailwindcss.com')) return;
+      _warn.apply(console, args);
+    };
+  </script>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <style>
-    /* Styling scrollbar ala game dark mode */
     ::-webkit-scrollbar { width: 6px; }
     ::-webkit-scrollbar-track { background: #0f172a; }
     ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -41,11 +41,9 @@
       </div>
     </div>
     <div class="flex items-center gap-2">
-      <!-- Tombol Ganti Username -->
       <button onclick="openChangeNameModal()" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" title="Ganti Username">
         <i class="fa-solid fa-pen-to-square"></i> <span class="hidden sm:inline">Ubah Nama</span>
       </button>
-      <!-- Tombol Toggle Sidebar Warga -->
       <button onclick="toggleSidebar()" class="p-2 text-xs bg-slate-800 hover:bg-slate-700 text-sky-400 rounded-lg border border-slate-700 transition flex items-center gap-1.5">
         <i class="fa-solid fa-users"></i>
         <span id="online-count-badge" class="bg-sky-500 text-slate-950 font-bold px-1.5 py-0.5 rounded-full text-[10px]">0</span>
@@ -53,19 +51,16 @@
     </div>
   </header>
 
-  <!-- Container Utama (Chat Stream + Sidebar Warga) -->
+  <!-- Container Utama -->
   <div class="flex-1 flex overflow-hidden relative">
-    
-    <!-- Stream Obrolan Utama (Horizontal Style Game) -->
     <main class="flex-1 flex flex-col bg-slate-950 p-3 overflow-y-auto space-y-2 font-mono text-sm leading-relaxed" id="chat-stream">
       <div class="text-center py-4 text-xs text-slate-500 font-sans italic" id="loading-chat">
         <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke ruang chat...
       </div>
     </main>
 
-    <!-- Sidebar Warga (Online / Semua) -->
+    <!-- Sidebar Warga -->
     <aside id="sidebar-warga" class="absolute right-0 top-0 bottom-0 w-72 bg-slate-900 border-l border-slate-800 flex flex-col transition-transform duration-300 translate-x-full md:translate-x-0 z-20 shadow-2xl md:shadow-none">
-      <!-- Tab Header Sidebar -->
       <div class="flex border-b border-slate-800 text-xs font-semibold bg-slate-900/50">
         <button id="tab-aktif-btn" onclick="switchTab('aktif')" class="flex-1 py-3 text-sky-400 border-b-2 border-sky-400 flex items-center justify-center gap-1">
           <i class="fa-solid fa-circle text-[8px] text-emerald-400"></i> Aktif (<span id="count-aktif">0</span>)
@@ -75,17 +70,12 @@
         </button>
       </div>
 
-      <!-- Search Box (Hanya Muncul di Tab Semua) -->
       <div id="search-box-container" class="p-2 border-b border-slate-800 hidden">
         <input type="text" id="search-warga" onkeyup="filterWarga()" placeholder="Cari nama / no rumah..." class="w-full bg-slate-950 border border-slate-800 rounded px-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-sky-500">
       </div>
 
-      <!-- Daftar Warga -->
-      <div class="flex-1 overflow-y-auto p-2 space-y-1 text-xs" id="warga-list">
-        <!-- Item Warga di-generate via JS -->
-      </div>
+      <div class="flex-1 overflow-y-auto p-2 space-y-1 text-xs" id="warga-list"></div>
     </aside>
-
   </div>
 
   <!-- Footer / Input Form Chat -->
@@ -98,30 +88,70 @@
     </form>
   </footer>
 
-  <!-- MODAL 1: Form Registration (Pengunjung Pertama) -->
+  <!-- MODAL 1: Form Registration & Login -->
   <div id="reg-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
     <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl">
-      <div class="text-center mb-6">
-        <div class="w-12 h-12 bg-sky-500/10 text-sky-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
-          <i class="fa-solid fa-user-plus"></i>
+      
+      <!-- TOGGLE FORM REGISTRASI / LOGIN -->
+      <div id="section-register">
+        <div class="text-center mb-6">
+          <div class="w-12 h-12 bg-sky-500/10 text-sky-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+            <i class="fa-solid fa-user-plus"></i>
+          </div>
+          <h2 class="text-lg font-bold text-white">Pendaftaran Chat Warga</h2>
+          <p class="text-xs text-slate-400 mt-1">Masukkan data diri untuk bergabung di ruang obrolan RT 05.</p>
         </div>
-        <h2 class="text-lg font-bold text-white">Pendaftaran Chat Warga</h2>
-        <p class="text-xs text-slate-400 mt-1">Masukkan data diri untuk bergabung di ruang obrolan RT 05.</p>
+
+        <form onsubmit="handleRegistration(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Nama Lengkap / Panggilan *</label>
+            <input type="text" id="reg-nama" required placeholder="Contoh: Pak Budi / Nebu" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">No. Rumah / Kost / Kontrakan *</label>
+            <input type="text" id="reg-hunian" required placeholder="Contoh: No. 12 / Kost Kenanga" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+          </div>
+          <button type="submit" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
+            Daftar & Minta ACC Admin
+          </button>
+        </form>
+
+        <div class="mt-4 text-center border-t border-slate-800 pt-3">
+          <button onclick="toggleAuthMode('login')" class="text-xs text-sky-400 hover:underline">
+            Sudah pernah mendaftar? <span class="font-bold">Masuk / Login di sini</span>
+          </button>
+        </div>
       </div>
 
-      <form onsubmit="handleRegistration(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">Nama Lengkap / Panggilan *</label>
-          <input type="text" id="reg-nama" required placeholder="Contoh: Pak Budi / Nebu" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+      <!-- FORM LOGIN AKUN TERDAFTAR -->
+      <div id="section-login" class="hidden">
+        <div class="text-center mb-6">
+          <div class="w-12 h-12 bg-emerald-500/10 text-emerald-400 rounded-full flex items-center justify-center mx-auto mb-3 text-xl">
+            <i class="fa-solid fa-right-to-bracket"></i>
+          </div>
+          <h2 class="text-lg font-bold text-white">Masuk Akun Chat</h2>
+          <p class="text-xs text-slate-400 mt-1">Pilih nama akun kamu yang sudah pernah di-ACC oleh Admin.</p>
         </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-300 mb-1">No. Rumah / Kost / Kontrakan *</label>
-          <input type="text" id="reg-hunian" required placeholder="Contoh: No. 12 / Kost Kenanga" class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-sky-500">
+
+        <form onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-300 mb-1">Pilih Akun Kamu *</label>
+            <select id="login-user-select" required class="w-full bg-slate-950 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-emerald-500">
+              <option value="">-- Memuat Daftar Akun --</option>
+            </select>
+          </div>
+          <button type="submit" class="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
+            Masuk Sekarang
+          </button>
+        </form>
+
+        <div class="mt-4 text-center border-t border-slate-800 pt-3">
+          <button onclick="toggleAuthMode('register')" class="text-xs text-slate-400 hover:underline">
+            Belum punya akun? <span class="text-sky-400 font-bold">Daftar Warga Baru</span>
+          </button>
         </div>
-        <button type="submit" class="w-full bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold py-2.5 rounded-lg text-sm transition">
-          Daftar & Minta ACC Admin
-        </button>
-      </form>
+      </div>
+
     </div>
   </div>
 
@@ -137,7 +167,7 @@
       </p>
       <div class="mt-6 pt-4 border-t border-slate-800 flex justify-between items-center text-xs text-slate-500">
         <span id="pending-user-name">...</span>
-        <button onclick="resetAccountData()" class="text-rose-400 hover:underline">Batalkan / Daftar Ulang</button>
+        <button onclick="resetAccountData()" class="text-rose-400 hover:underline">Batalkan / Keluar</button>
       </div>
     </div>
   </div>
@@ -154,12 +184,11 @@
     </div>
   </div>
 
-  <!-- Firebase SDK Modular (v9+) -->
+  <!-- Firebase SDK Modular -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    // KONEKSI FIREBASE KAMU
     const firebaseConfig = {
       apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
       authDomain: "papan05-21a56.firebaseapp.com",
@@ -173,29 +202,27 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // Global State
     let currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
     let allUsersCache = {};
     let activeTab = 'aktif';
 
-    // 1. Inisialisasi Aplikasi Chat
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec"; 
+
     window.addEventListener('DOMContentLoaded', () => {
       checkUserStatus();
+      loadLoginUserOptions();
     });
 
-    // 2. Cek Status Akun
     function checkUserStatus() {
       if (!currentUser) {
         document.getElementById('reg-modal').classList.remove('hidden');
         return;
       }
 
-      // Pantau status akun di database
       const userRef = ref(db, `users/${currentUser.uid}`);
       onValue(userRef, (snapshot) => {
         const val = snapshot.val();
         if (!val) {
-          // Jika terhapus di DB, reset lokal
           localStorage.removeItem('rt05_chat_user');
           location.reload();
           return;
@@ -215,7 +242,6 @@
           document.getElementById('reg-modal').classList.add('hidden');
           document.getElementById('user-info-text').innerText = `${currentUser.username} • ${val.hunian}`;
           
-          // Jalankan Presence & Load Chat
           setupPresenceSystem();
           loadChatStream();
           loadUsersList();
@@ -223,68 +249,110 @@
       });
     }
 
-    // 3. Handle Registrasi Warga Baru
-   // Masukkan Web App URL dari Google Apps Script milikmu di sini:
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec"; 
+    // TOGGLE MODAL DAFTAR ATAU LOGIN
+    window.toggleAuthMode = (mode) => {
+      if (mode === 'login') {
+        document.getElementById('section-register').classList.add('hidden');
+        document.getElementById('section-login').classList.remove('hidden');
+      } else {
+        document.getElementById('section-login').classList.add('hidden');
+        document.getElementById('section-register').classList.remove('hidden');
+      }
+    };
 
-window.handleRegistration = (e) => {
-  e.preventDefault();
-  const nama = document.getElementById('reg-nama').value.trim();
-  const hunian = document.getElementById('reg-hunian').value.trim();
-  
-  if (!nama || !hunian) return;
+    // MEMUAT DAFTAR USER YANG BISA DILOGIN
+    function loadLoginUserOptions() {
+      const usersRef = ref(db, 'users');
+      get(usersRef).then((snapshot) => {
+        const select = document.getElementById('login-user-select');
+        select.innerHTML = '<option value="">-- Pilih Akun Kamu --</option>';
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnap) => {
+            const u = childSnap.val();
+            if (u.status === 'aktif') {
+              const opt = document.createElement('option');
+              opt.value = u.uid;
+              opt.innerText = `${u.nama} (${u.hunian})`;
+              select.appendChild(opt);
+            }
+          });
+        }
+      });
+    }
 
-  const uid = 'USR-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
-  const userData = {
-    uid: uid,
-    nama: nama,
-    username: nama,
-    hunian: hunian,
-    role: 'warga',
-    status: 'pending',
-    state: 'offline',
-    registeredAt: serverTimestamp()
-  };
+    // HANDLE LOGIN SEBAGAI USER TERDAFTAR
+    window.handleLogin = (e) => {
+      e.preventDefault();
+      const uid = document.getElementById('login-user-select').value;
+      if (!uid) return;
 
-  // 1. Simpan ke Firebase Realtime Database
-  set(ref(db, `users/${uid}`), userData).then(() => {
-    localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
-    currentUser = userData;
+      const userRef = ref(db, `users/${uid}`);
+      get(userRef).then((snap) => {
+        if (snap.exists()) {
+          const val = snap.val();
+          currentUser = {
+            uid: val.uid,
+            nama: val.nama,
+            username: val.username || val.nama,
+            hunian: val.hunian,
+            role: val.role || 'warga',
+            status: val.status
+          };
+          localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
+          checkUserStatus();
+        }
+      });
+    };
 
+    window.handleRegistration = (e) => {
+      e.preventDefault();
+      const nama = document.getElementById('reg-nama').value.trim();
+      const hunian = document.getElementById('reg-hunian').value.trim();
+      
+      if (!nama || !hunian) return;
 
-    // 2. Kirim Notifikasi Email ke Gmail Admin (Format JSON + no-cors)
-    fetch(SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'text/plain;charset=utf-8'
-      },
-      body: JSON.stringify({
-        'action': 'notifChatBaru',
-        'nama': nama,
-        'hunian': hunian
-      })
-    }).catch(err => console.log("Gagal kirim notif email:", err));
+      const uid = 'USR-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
+      const userData = {
+        uid: uid,
+        nama: nama,
+        username: nama,
+        hunian: hunian,
+        role: 'warga',
+        status: 'pending',
+        state: 'offline',
+        registeredAt: serverTimestamp()
+      };
 
-    checkUserStatus();
-  });
-};
+      set(ref(db, `users/${uid}`), userData).then(() => {
+        localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
+        currentUser = userData;
 
-    // 4. Sistem Kehadiran (Presence System)
+        fetch(SCRIPT_URL, {
+          method: 'POST',
+          mode: 'no-cors',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            'action': 'notifChatBaru',
+            'nama': nama,
+            'hunian': hunian
+          })
+        }).catch(err => console.log("Gagal kirim notif email:", err));
+
+        checkUserStatus();
+      });
+    };
+
     function setupPresenceSystem() {
       const myPresenceRef = ref(db, `users/${currentUser.uid}/state`);
       const connectedRef = ref(db, '.info/connected');
 
       onValue(connectedRef, (snap) => {
         if (snap.val() === true) {
-          // Ketika koneksi terputus, ubah otomatis jadi offline
           onDisconnect(myPresenceRef).set('offline');
-          // Set status online saat aktif
           set(myPresenceRef, 'online');
         }
       });
 
-      // Deteksi jika browser di-minimize / idle
       document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
           set(myPresenceRef, 'idle');
@@ -294,7 +362,6 @@ window.handleRegistration = (e) => {
       });
     }
 
-    // 5. Memuat Stream Chat (Horizontal Game Style)
     function loadChatStream() {
       const chatRef = query(ref(db, 'chats'), limitToLast(80));
       const chatStream = document.getElementById('chat-stream');
@@ -311,18 +378,15 @@ window.handleRegistration = (e) => {
           renderSingleMessage(msg);
         });
 
-        // Auto Scroll ke Paling Bawah
         chatStream.scrollTop = chatStream.scrollHeight;
       });
     }
 
-    // 6. Format Tampilan Pesan Chat
     function renderSingleMessage(msg) {
       const chatStream = document.getElementById('chat-stream');
       const div = document.createElement('div');
       div.className = "break-words leading-snug hover:bg-slate-900/40 px-1 py-0.5 rounded transition";
 
-      // Cek Format Warna
       let nameColorClass = "text-white";
       let msgColorClass = "text-slate-200";
 
@@ -334,7 +398,6 @@ window.handleRegistration = (e) => {
         msgColorClass = "text-yellow-100";
       }
 
-      // Time formatting
       const timeStr = msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '';
 
       div.innerHTML = `
@@ -346,7 +409,6 @@ window.handleRegistration = (e) => {
       chatStream.appendChild(div);
     }
 
-    // 7. Kirim Pesan Chat
     window.sendChatMessage = (e) => {
       e.preventDefault();
       const input = document.getElementById('chat-input');
@@ -366,7 +428,6 @@ window.handleRegistration = (e) => {
       });
     };
 
-    // 8. Memuat Daftar Warga & Status (Sidebar)
     function loadUsersList() {
       const usersRef = ref(db, 'users');
       onValue(usersRef, (snapshot) => {
@@ -385,7 +446,7 @@ window.handleRegistration = (e) => {
       const filterText = (document.getElementById('search-warga').value || '').toLowerCase();
 
       Object.values(allUsersCache).forEach(u => {
-        if (u.status !== 'aktif') return; // Hanya yang sudah di-ACC
+        if (u.status !== 'aktif') return;
         
         totalCount++;
         const isOnline = u.state === 'online';
@@ -393,10 +454,8 @@ window.handleRegistration = (e) => {
 
         if (isOnline || isIdle) activeCount++;
 
-        // Filter berdasarkan Tab
         if (activeTab === 'aktif' && !(isOnline || isIdle)) return;
 
-        // Filter Search
         if (activeTab === 'semua' && filterText) {
           const matchNama = u.nama.toLowerCase().includes(filterText);
           const matchUsername = (u.username || '').toLowerCase().includes(filterText);
@@ -404,7 +463,6 @@ window.handleRegistration = (e) => {
           if (!matchNama && !matchUsername && !matchHunian) return;
         }
 
-        // Color badge status
         let statusDot = '<span class="w-2 h-2 rounded-full bg-slate-600"></span>';
         if (isOnline) statusDot = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>';
         if (isIdle) statusDot = '<span class="w-2 h-2 rounded-full bg-amber-400"></span>';
@@ -428,13 +486,11 @@ window.handleRegistration = (e) => {
         listContainer.appendChild(item);
       });
 
-      // Update badge counts
       document.getElementById('count-aktif').innerText = activeCount;
       document.getElementById('count-semua').innerText = totalCount;
       document.getElementById('online-count-badge').innerText = activeCount;
     };
 
-    // Switch Tab Sidebar
     window.switchTab = (tab) => {
       activeTab = tab;
       const tabAktif = document.getElementById('tab-aktif-btn');
@@ -453,7 +509,6 @@ window.handleRegistration = (e) => {
       renderWargaSidebar();
     };
 
-    // Modal Ubah Username
     window.openChangeNameModal = () => {
       if (!currentUser) return;
       document.getElementById('new-username-input').value = currentUser.username || currentUser.nama;
@@ -468,7 +523,6 @@ window.handleRegistration = (e) => {
       const newName = document.getElementById('new-username-input').value.trim();
       if (!newName) return;
 
-      // Blokir kata ADMIN untuk warga biasa
       if (newName.toUpperCase().includes('ADMIN') && currentUser.role !== 'admin') {
         alert("Username tidak boleh mengandung kata 'ADMIN'!");
         return;
@@ -481,20 +535,17 @@ window.handleRegistration = (e) => {
       });
     };
 
-    // Helper: Reset akun jika mau daftar ulang
     window.resetAccountData = () => {
-      if (confirm("Hapus pendaftaran saat ini dan daftar ulang?")) {
+      if (confirm("Keluar dari akun saat ini?")) {
         localStorage.removeItem('rt05_chat_user');
         location.reload();
       }
     };
 
-    // Helper: Toggle Sidebar HP
     window.toggleSidebar = () => {
       document.getElementById('sidebar-warga').classList.toggle('translate-x-full');
     };
 
-    // Helper: Security Escape HTML
     function escapeHTML(str) {
       return str ? str.replace(/[&<>'"]/g, 
         tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
