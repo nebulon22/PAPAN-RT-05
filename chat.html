@@ -264,21 +264,45 @@
     };
         
     window.tutupAplikasiChat = () => {
-      if (window.parent && window.parent !== window) {
-        const parentDoc = window.parent.document;
-        const modalChat = parentDoc.getElementById('modal-chat') || 
-                          parentDoc.getElementById('chat-modal') || 
-                          parentDoc.getElementById('chat-frame-container') ||
-                          parentDoc.getElementById('chat-frame');
-                          
-        if (modalChat) {
-          modalChat.classList.add('hidden');
-          if (modalChat.style) modalChat.style.display = 'none';
-          return;
+  // Jika dibuka di dalam iframe/modal
+  if (window.parent && window.parent !== window) {
+    try {
+      const parentDoc = window.parent.document;
+      
+      // 1. Cari elemen iframe tempat chat.html ini berjalan
+      const iframes = parentDoc.querySelectorAll('iframe');
+      iframes.forEach(iframe => {
+        if (iframe.src.includes('chat.html')) {
+          // Sembunyikan iframe atau container induk terdekatnya
+          const container = iframe.closest('.modal-bg') || iframe.closest('[id*="modal"]') || iframe.parentElement;
+          if (container) {
+            container.classList.add('hidden');
+            container.style.display = 'none';
+          }
         }
-      }
-      window.location.href = 'index.html';
-    };
+      });
+
+      // 2. Sembunyikan semua modal overlay di index.html jika ID spesifik tidak ketemu
+      const possibleModals = parentDoc.querySelectorAll('[id*="chat"], [id*="modal"]');
+      possibleModals.forEach(el => {
+        if (el.tagName !== 'BUTTON' && el.style.display !== 'none' && !el.classList.contains('hidden')) {
+          // Jika modal mengandung iframe chat
+          if (el.querySelector && el.querySelector('iframe[src*="chat.html"]')) {
+            el.classList.add('hidden');
+            el.style.display = 'none';
+          }
+        }
+      });
+
+      return; // Stop di sini, JANGAN redirect ke index.html
+    } catch (e) {
+      console.error("Gagal menutup modal parent:", e);
+    }
+  }
+
+  // Jika memang dibuka terpisah sebagai tab tunggal biasa
+  window.location.href = 'index.html';
+};
         
     window.addEventListener('DOMContentLoaded', () => {
       checkUserStatus();
