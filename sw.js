@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.4.2'; // <--- Naikkan versi di sini saat update
+const CACHE_NAME = 'rt-kayen-v1.4.3'; // <--- Naikkan versi di sini saat update
 
 self.addEventListener('install', (e) => {
   // CATATAN: self.skipWaiting() Sengaja DIHAPUS dari sini 
@@ -34,24 +34,22 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-self.addEventListener('fetch', (e) => {
-  if (e.request.url.includes('manifest.json')) {
-    e.respondWith(
-      fetch(e.request).catch(() => caches.match(e.request))
+// Izinkan navigasi halaman HTML & Firebase berjalan langsung tanpa lewat Cache
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+
+  // 1. Abaikan request navigasi HTML (seperti admin.html) & Firebase API
+  if (event.request.mode === 'navigate' || url.origin.includes('firebase') || url.origin.includes('gstatic')) {
+    event.respondWith(
+      fetch(event.request).catch(() => caches.match(event.request))
     );
     return;
   }
 
-  e.respondWith(
-    caches.match(e.request).then((response) => {
-      return response || fetch(e.request);
+  // 2. Caching biasa untuk aset statis (CSS, JS, Gambar, Font)
+  event.respondWith(
+    caches.match(event.request).then((cachedResponse) => {
+      return cachedResponse || fetch(event.request);
     })
   );
-});
-
-// Perintah skipWaiting HANYA berjalan saat warga klik tombol lonceng
-self.addEventListener('message', (event) => {
-  if (event.data && event.data.action === 'skipWaiting') {
-    self.skipWaiting();
-  }
 });
