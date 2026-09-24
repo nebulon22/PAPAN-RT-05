@@ -491,7 +491,13 @@ window.switchChatRoom = (type, targetUID = null) => {
   activeChatType = type;
   activePrivateUID = targetUID;
 
-  // Highlight Tab Public
+  // 1. Matikan listener stream sebelumnya agar data tidak campur aduk
+  if (currentChatUnsubscribe) {
+    currentChatUnsubscribe();
+    currentChatUnsubscribe = null;
+  }
+
+  // 2. Tampilan Visual Tab
   const btnPublic = document.getElementById('tab-room-public');
   if (btnPublic) {
     if (type === 'public') {
@@ -505,15 +511,13 @@ window.switchChatRoom = (type, targetUID = null) => {
 
   renderPrivateTabsUI();
 
-  // Bebaskan listener stream lama
-  if (currentChatUnsubscribe) {
-    currentChatUnsubscribe();
-  }
+  // 3. Load Chat Stream Sesuai Tab
+  const chatStream = document.getElementById('chat-stream');
+  if (chatStream) chatStream.innerHTML = ''; // Bersihkan layar dulu
 
-  // Load stream sesuai tab yang dipilih
   if (type === 'public') {
     loadChatStream();
-  } else {
+  } else if (type === 'private' && targetUID) {
     loadPrivateChatStream(targetUID);
   }
 };
@@ -559,26 +563,27 @@ window.sendChatMessage = (e) => {
   const input = document.getElementById('chat-input');
   const text = input.value.trim();
 
-  if (!text || currentUser.status !== 'aktif') return;
+  if (!text || currentUser?.status !== 'aktif') return;
 
+  // KIRIM KE PUBLIC GRUP
   if (activeChatType === 'public') {
-    // Kirim ke Grup Utama
     const newMsgRef = push(ref(db, 'chats'));
     set(newMsgRef, {
       uid: currentUser.uid,
-      sender: currentUser.username,
+      sender: currentUser.username || currentUser.nama,
       role: currentUser.role || 'warga',
       text: text,
       timestamp: serverTimestamp()
     }).then(() => { input.value = ''; });
 
+  // KIRIM KE PRIVATE ROOM (1-ON-1)
   } else if (activeChatType === 'private' && activePrivateUID) {
-    // Kirim ke Room Private
     const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
     const newMsgRef = push(ref(db, `private_chats/${roomID}`));
+
     set(newMsgRef, {
       uid: currentUser.uid,
-      sender: currentUser.username,
+      sender: currentUser.username || currentUser.nama,
       role: currentUser.role || 'warga',
       text: text,
       timestamp: serverTimestamp()
@@ -843,11 +848,15 @@ function loadUsersList() {
       });
     }
 
-   function loadChatStream() {
+  function loadChatStream() {
   const chatRef = query(ref(db, 'chats'), limitToLast(80));
   const chatStream = document.getElementById('chat-stream');
 
-  onValue(chatRef, (snapshot) => {
+  // Simpan listener ke variabel currentChatUnsubscribe
+  currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
+    // Keamanan: Jika user sedang berada di tab private, batalkan render publik ini!
+    if (activeChatType !== 'public') return;
+
     if (!chatStream) return;
     chatStream.innerHTML = '';
     if (!snapshot.exists()) {
