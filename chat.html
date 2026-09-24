@@ -237,14 +237,29 @@
     </div>
   </header>
 
-  <!-- Container Utama Chat + Sidebar -->
+ <!-- Container Utama Chat + Sidebar -->
   <div id="chat-container">
     
-    <!-- Area Obrolan Stream -->
-    <main id="chat-stream">
-      <div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;" id="loading-chat">
-        <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke ruang chat...
+    <!-- Area Obrolan Stream Utama -->
+    <main style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
+      
+      <!-- BAR TAB CHAT (Grup & Room Private) -->
+      <div id="chat-tabs-bar" style="display: flex; gap: 4px; padding: 6px 8px; background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid rgba(255, 255, 255, 0.1); overflow-x: auto; flex-shrink: 0; scrollbar-width: none;">
+        <!-- Tab Grup Utama -->
+        <button id="tab-room-public" onclick="switchChatRoom('public')" class="btn" style="background: #0288d1; color: #fff; border: none; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap;">
+          <i class="fa-solid fa-users"></i> Grup RT 05
+        </button>
+        <!-- Tab Private Chat Otomatis Muncul di Sini -->
+        <div id="dynamic-private-tabs" style="display: flex; gap: 4px;"></div>
       </div>
+
+      <!-- Area Stream Pesan -->
+      <div id="chat-stream" style="flex: 1; display: flex; flex-direction: column; padding: 8px; overflow-y: auto !important; gap: 4px; font-family: monospace; font-size: 12px; line-height: 1.4;">
+        <div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;" id="loading-chat">
+          <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke ruang chat...
+        </div>
+      </div>
+
     </main>
 
     <!-- TOMBOL PANAH TOGGLE -->
@@ -271,7 +286,6 @@
     </aside>
 
   </div>
-
   <!-- Footer / Input Form Chat -->
   <footer>
     <form id="chat-form" onsubmit="sendChatMessage(event)">
@@ -427,6 +441,150 @@
         });
       }
     });
+
+let activeChatType = 'public'; // 'public' atau 'private'
+let activePrivateUID = null;
+let currentChatUnsubscribe = null;
+let openPrivateRooms = {}; // Menyimpan daftar room private yang sedang aktif: { uid: targetName }
+
+// 1. Fungsi Buka Tab Private Chat
+window.openPrivateTab = (targetUID, targetName) => {
+  if (targetUID === currentUser.uid) return;
+
+  // Catat room ke daftar tab aktif
+  openPrivateRooms[targetUID] = targetName;
+  renderPrivateTabsUI();
+
+  // Switch ke tab private tersebut
+  switchChatRoom('private', targetUID);
+};
+
+// 2. Render UI Tab-tab Private yang Terbuka
+function renderPrivateTabsUI() {
+  const container = document.getElementById('dynamic-private-tabs');
+  if (!container) return;
+  container.innerHTML = '';
+
+  Object.keys(openPrivateRooms).forEach(uid => {
+    const name = openPrivateRooms[uid];
+    const isActive = (activeChatType === 'private' && activePrivateUID === uid);
+
+    const btn = document.createElement('div');
+    btn.style.cssText = `
+      display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px;
+      font-size: 11px; font-weight: 500; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+      background: ${isActive ? '#0288d1' : '#1e293b'}; color: ${isActive ? '#fff' : '#94a3b8'};
+      border: 1px solid ${isActive ? '#0388d1' : '#334155'};
+    `;
+
+    btn.innerHTML = `
+      <span onclick="switchChatRoom('private', '${uid}')"><i class="fa-solid fa-user"></i> ${escapeHTML(name)}</span>
+      <i class="fa-solid fa-xmark" onclick="closePrivateTab(event, '${uid}')" style="font-size: 10px; color: #f87171; padding: 2px;" title="Tutup Tab"></i>
+    `;
+
+    container.appendChild(btn);
+  });
+}
+
+// 3. Pindah Tab (Public <-> Private)
+window.switchChatRoom = (type, targetUID = null) => {
+  activeChatType = type;
+  activePrivateUID = targetUID;
+
+  // Highlight Tab Public
+  const btnPublic = document.getElementById('tab-room-public');
+  if (btnPublic) {
+    if (type === 'public') {
+      btnPublic.style.background = '#0288d1';
+      btnPublic.style.color = '#fff';
+    } else {
+      btnPublic.style.background = '#1e293b';
+      btnPublic.style.color = '#94a3b8';
+    }
+  }
+
+  renderPrivateTabsUI();
+
+  // Bebaskan listener stream lama
+  if (currentChatUnsubscribe) {
+    currentChatUnsubscribe();
+  }
+
+  // Load stream sesuai tab yang dipilih
+  if (type === 'public') {
+    loadChatStream();
+  } else {
+    loadPrivateChatStream(targetUID);
+  }
+};
+
+// 4. Tutup Tab Private
+window.closePrivateTab = (e, targetUID) => {
+  e.stopPropagation(); // Mencegah pemicu switchTab
+  delete openPrivateRooms[targetUID];
+
+  if (activeChatType === 'private' && activePrivateUID === targetUID) {
+    switchChatRoom('public');
+  } else {
+    renderPrivateTabsUI();
+  }
+};
+
+// 5. Listener Stream Chat Private (Firebase)
+function loadPrivateChatStream(targetUID) {
+  const roomID = [currentUser.uid, targetUID].sort().join('_');
+  const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
+  const chatStream = document.getElementById('chat-stream');
+
+  currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
+    if (!chatStream) return;
+    chatStream.innerHTML = '';
+
+    if (!snapshot.exists()) {
+      chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID])}. Mulai percakapan!</div>`;
+      return;
+    }
+
+    snapshot.forEach((childSnap) => {
+      renderSingleMessage(childSnap.val());
+    });
+
+    chatStream.scrollTop = chatStream.scrollHeight;
+  });
+}
+
+// 6. Perbarui Pengiriman Pesan (`sendChatMessage`)
+window.sendChatMessage = (e) => {
+  e.preventDefault();
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+
+  if (!text || currentUser.status !== 'aktif') return;
+
+  if (activeChatType === 'public') {
+    // Kirim ke Grup Utama
+    const newMsgRef = push(ref(db, 'chats'));
+    set(newMsgRef, {
+      uid: currentUser.uid,
+      sender: currentUser.username,
+      role: currentUser.role || 'warga',
+      text: text,
+      timestamp: serverTimestamp()
+    }).then(() => { input.value = ''; });
+
+  } else if (activeChatType === 'private' && activePrivateUID) {
+    // Kirim ke Room Private
+    const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+    const newMsgRef = push(ref(db, `private_chats/${roomID}`));
+    set(newMsgRef, {
+      uid: currentUser.uid,
+      sender: currentUser.username,
+      role: currentUser.role || 'warga',
+      text: text,
+      timestamp: serverTimestamp()
+    }).then(() => { input.value = ''; });
+  }
+};
 
 // === SYSTEM AUDIO KLING NOTIFIKASI ===
 let audioCtx = null;
@@ -706,23 +864,28 @@ function loadUsersList() {
 }
     
     function renderSingleMessage(msg) {
-      const chatStream = document.getElementById('chat-stream');
-      if (!chatStream) return;
-      
-      const div = document.createElement('div');
-      div.className = "msg-row";
+  const chatStream = document.getElementById('chat-stream');
+  if (!chatStream) return;
+  
+  const div = document.createElement('div');
+  div.className = "msg-row";
 
-      let nameClass = "role-user";
-      if (msg.role === 'admin') nameClass = "role-admin";
-      else if (msg.uid === currentUser.uid) nameClass = "role-self";
+  let nameClass = "role-user";
+  if (msg.role === 'admin') nameClass = "role-admin";
+  else if (msg.uid === currentUser.uid) nameClass = "role-self";
 
-      div.innerHTML = `
-        <span class="${nameClass}">${escapeHTML(msg.sender)}:</span>
-        <span class="msg-text">${escapeHTML(msg.text)}</span>
-      `;
+  // Klik nama untuk buka tab private
+  const clickHandler = (msg.uid !== currentUser.uid) 
+    ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
+    : '';
 
-      chatStream.appendChild(div);
-    }
+  div.innerHTML = `
+    <span class="${nameClass}" ${clickHandler}>${escapeHTML(msg.sender)}:</span>
+    <span class="msg-text">${escapeHTML(msg.text)}</span>
+  `;
+
+  chatStream.appendChild(div);
+}
 
     window.sendChatMessage = (e) => {
       e.preventDefault();
@@ -795,8 +958,14 @@ function loadUsersList() {
             </div>
           </div>
         `;
+        item.onclick = () => {
+        if (u.uid !== currentUser.uid) {
+        openPrivateTab(u.uid, u.username || u.nama);
+      }
+     };
+       item.style.cursor = u.uid !== currentUser.uid ? 'pointer' : 'default';
         listContainer.appendChild(item);
-      });
+    });
 
       const countAktif = document.getElementById('count-aktif');
       const countSemua = document.getElementById('count-semua');
