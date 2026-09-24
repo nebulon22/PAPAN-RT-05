@@ -494,7 +494,7 @@ function renderPrivateTabsUI() {
     const isActive = (activeChatType === 'private' && activePrivateUID === uid);
     const count = unreadCounts[uid] || 0;
 
-    // Styling badge yang lebih kuat & tegas untuk layar HP
+    // Badge merah tegas
     const badgeHTML = (count > 0 && !isActive) 
       ? `<span style="background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(239, 68, 68, 0.8);">${count}</span>` 
       : '';
@@ -570,47 +570,43 @@ window.closePrivateTab = (e, targetUID) => {
 };
 
 // 5. Listener Stream Chat Private (Firebase)
-let loadedPrivateRooms = {};
+// Memantau semua pesan private masuk secara otomatis di latar belakang
+let privateListeners = {};
 
-function loadPrivateChatStream(targetUID) {
-  const roomID = [currentUser.uid, targetUID].sort().join('_');
-  const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
-  const chatStream = document.getElementById('chat-stream');
+function listenAllPrivateChats() {
+  if (!currentUser?.uid) return;
 
-  currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      if (chatStream && (activeChatType === 'private' && activePrivateUID === targetUID)) {
-        chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID])}. Mulai percakapan!</div>`;
+  // Bebaskan listener lama jika ada
+  Object.values(privateListeners).forEach(unsub => unsub());
+  privateListeners = {};
+
+  Object.keys(openPrivateRooms).forEach(targetUID => {
+    const roomID = [currentUser.uid, targetUID].sort().join('_');
+    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
+
+    let isFirstLoad = true;
+
+    privateListeners[targetUID] = onValue(roomRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        isFirstLoad = false;
+        return;
       }
-      loadedPrivateRooms[roomID] = true;
-      return;
-    }
 
-    let lastMsg = null;
-    if (chatStream && (activeChatType === 'private' && activePrivateUID === targetUID)) {
-      chatStream.innerHTML = '';
-      snapshot.forEach((childSnap) => {
-        lastMsg = childSnap.val();
-        renderSingleMessage(lastMsg);
-      });
-      chatStream.scrollTop = chatStream.scrollHeight;
-    } else {
-      snapshot.forEach((childSnap) => { lastMsg = childSnap.val(); });
-    }
+      let lastMsg = null;
+      snapshot.forEach(childSnap => { lastMsg = childSnap.val(); });
 
-    // Jika room SUDAH pernah dimuat & ada PESAN BARU dari lawan bicara yang tidak di-fokus:
-    if (loadedPrivateRooms[roomID] && lastMsg && lastMsg.uid !== currentUser?.uid) {
-      if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
-        unreadCounts[targetUID] = (unreadCounts[targetUID] || 0) + 1;
-        renderPrivateTabsUI(); // Update UI badge merah!
+      // Jika ada pesan baru dari lawan bicara & tab-nya sedang TIDAK aktif, naikkan badge!
+      if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
+        if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
+          unreadCounts[targetUID] = (unreadCounts[targetUID] || 0) + 1;
+          renderPrivateTabsUI(); // Munculkan badge (1) merah!
+        }
       }
-    }
 
-    // Tandai bahwa data riwayat pertama kali untuk room ini sudah selesai dibaca
-    loadedPrivateRooms[roomID] = true;
+      isFirstLoad = false;
+    });
   });
 }
-
 // 6. Perbarui Pengiriman Pesan (`sendChatMessage`)
 window.sendChatMessage = (e) => {
   e.preventDefault();
