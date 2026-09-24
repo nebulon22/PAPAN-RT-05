@@ -727,49 +727,9 @@ function perbaruiAplikasiSekarang() {
     var dataKeuangan = [];
     var pinRumahAktif = null;
 
-    function parseCSV(text) {
-      var lines = text.replace(/\r/g, '').split('\n');
-      var result = [];
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (!line) continue;
-        var row = [];
-        var inQuotes = false;
-        var cur = '';
-        for (var c = 0; c < line.length; c++) {
-          var char = line[c];
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            row.push(cur.trim().replace(/^"|"$/g, ''));
-            cur = '';
-          } else {
-            cur += char;
-          }
-        }
-        row.push(cur.trim().replace(/^"|"$/g, ''));
-        result.push(row);
-      }
-      return result;
-    }
+    
 
-    function perbaikiKoordinat(val) {
-      if (!val) return "";
-      var str = val.toString().replace(/,/g, '.').replace(/\s+/g, '');
-      var isNegatif = str.startsWith('-');
-      str = str.replace(/-/g, '').replace(/\./g, '');
-      
-      if (str.length > 2) {
-        if (isNegatif && str.startsWith('7')) {
-          str = '-7.' + str.substring(1);
-        } else if (!isNegatif && str.startsWith('110')) {
-          str = '110.' + str.substring(3);
-        } else {
-          str = (isNegatif ? '-' : '') + str.substring(0, 1) + '.' + str.substring(1);
-        }
-      }
-      return str;
-    }
+   
 
     fetch(SHEET_URL)
       .then(response => response.text())
@@ -802,36 +762,7 @@ function perbaruiAplikasiSekarang() {
             var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
-            let emoji = '🏠'; 
-            let kategori = 'rumah';
-            let namaUpper = item.nameAsli.toUpperCase();
-
-            let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
-
-            if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
-              kategori = 'kuliner'; emoji = '🍽️';
-              bgStyle = 'background: #FFA500; border: 2px solid #FFFFFF; color: black; width: 22px; height: 22px; font-size: 12px;';
-            } 
-            else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
-              kategori = 'minimarket'; emoji = '🏪';
-              bgStyle = 'background: #FFFF00; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
-            } 
-            else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
-              kategori = 'kost'; emoji = '🛏️';
-              bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px; font-size: 12px;';
-            }
-            else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
-              kategori = 'fasum'; emoji = '🏛️';
-              bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px; font-size: 12px;';
-              
-              if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
-                emoji = '🕌';
-                bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;';
-              } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
-                emoji = '🏀';
-              }
-            }
-
+           
             var customIcon = L.divIcon({
               className: 'custom-pin',
               html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
