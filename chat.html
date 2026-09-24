@@ -612,15 +612,28 @@ window.sendChatMessage = (e) => {
   }
 };
 
-// === PENDEDEKSI STATUS IDLE / MINIMIZE PWA (ANTI-FLAPPING) ===
+// === PENDEDEKSI STATUS IDLE / MINIMIZE PWA (ANTI-FLAPPING & STABIL) ===
 let currentLocalState = 'online';
 
 function setupPresence() {
   if (!currentUser?.uid) return;
 
   const userStatusRef = ref(db, `users/${currentUser.uid}/state`);
+  const connectedRef = ref(db, '.info/connected');
 
-  // Ubah status HANYA jika status baru berbeda dari status lokal saat ini
+  // 1. Pantau status koneksi socket ke Realtime Database
+  onValue(connectedRef, (snap) => {
+    if (snap.val() === true) {
+      // Pasang handler jika terputus/ditutup
+      onDisconnect(userStatusRef).set('offline');
+      
+      // Tentukan status berdasarkan posisi tab saat ini
+      currentLocalState = document.hidden ? 'idle' : 'online';
+      set(userStatusRef, currentLocalState);
+    }
+  });
+
+  // 2. Ubah status HANYA jika status baru berbeda dari status lokal saat ini (Anti-Flapping)
   document.addEventListener('visibilitychange', () => {
     const newState = document.hidden ? 'idle' : 'online';
 
@@ -629,13 +642,8 @@ function setupPresence() {
       set(userStatusRef, newState);
     }
   });
-
-  // Saat pengguna menutup browser/PWA total
-  onDisconnect(userStatusRef).set('offline');
 }
 
-// Panggil fungsi ini
-setupPresence();
 
     
 // === SYSTEM AUDIO KLING NOTIFIKASI ===
