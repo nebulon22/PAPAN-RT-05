@@ -644,7 +644,20 @@ function setupPresence() {
   });
 }
 
+// === FUNGSI PERMINTAAN IZIN NOTIFIKASI PWA ===
+function requestNotificationPermission() {
+  // Cek apakah browser mendukung notifikasi
+  if (!('Notification' in window) || !currentUser?.uid) return;
 
+  // HANYA minta izin jika belum pernah ditentukan (default)
+  if (Notification.permission === 'default') {
+    Notification.requestPermission().then((permission) => {
+      if (permission === 'granted') {
+        console.log('Izin notifikasi diberikan oleh warga!');
+      }
+    });
+  }
+}
     
 // === SYSTEM AUDIO KLING NOTIFIKASI ===
 let audioCtx = null;
@@ -777,19 +790,12 @@ function loadUsersList() {
           setupPresence();
           loadChatStream();
           loadUsersList();
+
+          // Minta izin notifikasi otomatis saat login/masuk aplikasi
+          requestNotificationPermission();
         }
       });
     }
-
-    window.toggleAuthMode = (mode) => {
-      if (mode === 'login') {
-        document.getElementById('section-register').style.display = 'none';
-        document.getElementById('section-login').style.display = 'block';
-      } else {
-        document.getElementById('section-login').style.display = 'none';
-        document.getElementById('section-register').style.display = 'block';
-      }
-    };
 
     function loadLoginUserOptions() {
       const usersRef = ref(db, 'users');
@@ -1081,6 +1087,9 @@ function loadUsersList() {
     }
 
     window.filterWarga = () => renderWargaSidebar();
+
+
+    
   </script>
 </body>
 </html>
