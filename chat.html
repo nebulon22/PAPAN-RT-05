@@ -439,7 +439,7 @@
     let activeChatType = 'public'; // 'public' atau 'private'
     let activePrivateUID = null;
     let currentChatUnsubscribe = null;
-    let openPrivateRooms = {}; // { uid: targetName }
+    let openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {}; // { uid: targetName }
     let unreadCounts = {}; // Menampung jumlah pesan belum dibaca: { uid: number }
     
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec"; 
@@ -473,15 +473,16 @@ let activePrivateUID = null;
 let currentChatUnsubscribe = null;
 let openPrivateRooms = {}; // Menyimpan daftar room private yang sedang aktif: { uid: targetName }
 
+
 // 1. Fungsi Buka Tab Private Chat
 window.openPrivateTab = (targetUID, targetName) => {
-  if (targetUID === currentUser.uid) return;
+  if (targetUID === currentUser?.uid) return;
 
-  // Catat room ke daftar tab aktif
+  // Simpan ke memori lokal
   openPrivateRooms[targetUID] = targetName;
-  renderPrivateTabsUI();
+  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
-  // Switch ke tab private tersebut
+  renderPrivateTabsUI();
   switchChatRoom('private', targetUID);
 };
 
@@ -573,6 +574,9 @@ window.switchChatRoom = (type, targetUID = null) => {
 window.closePrivateTab = (e, targetUID) => {
   e.stopPropagation(); // Mencegah pemicu switchTab
   delete openPrivateRooms[targetUID];
+
+  // Update memori lokal
+  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
   if (activeChatType === 'private' && activePrivateUID === targetUID) {
     switchChatRoom('public');
@@ -854,7 +858,8 @@ function loadUsersList() {
           loadChatStream();
           loadUsersList();
 
-          // Minta izin notifikasi otomatis saat login/masuk aplikasi
+          // Pulihkan tampilan tab private dari reload sebelumnya
+          renderPrivateTabsUI();
           requestNotificationPermission();
         }
       });
