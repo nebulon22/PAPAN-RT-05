@@ -729,9 +729,7 @@ function perbaruiAplikasiSekarang() {
 
     
 
-   
-
-    fetch(SHEET_URL)
+   fetch(SHEET_URL)
       .then(response => response.text())
       .then(csvText => {
         var baris = parseCSV(csvText).slice(1);
@@ -762,10 +760,12 @@ function perbaruiAplikasiSekarang() {
             var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
-           
+            // Memanggil logika ikon yang sudah dipindah ke utils.js
+            var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+
             var customIcon = L.divIcon({
               className: 'custom-pin',
-              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
+              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
               iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
             });
             
@@ -779,13 +779,14 @@ function perbaruiAplikasiSekarang() {
               lat: item.lat, 
               lng: item.lng,
               hidden: item.hidden,
-              kategori: kategori 
+              kategori: dataIkon.kategori 
             });
           }
         });
       })
       .catch(error => console.error(error));
 
+    
     fetch(PENGUMUMAN_URL)
       .then(response => response.text())
       .then(csvText => {
