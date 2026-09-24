@@ -1502,15 +1502,22 @@ var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?fo
 
 var cacheDataHarian = {};
 var arrayTanggal = [];
+let isJimpitanLoaded = false; // Flag sistem cache
 
 function muatDataJimpitan() {
+  // 1. SISTEM CACHE: Cegah download ulang jika data sudah ada di memori RAM HP
+  if (isJimpitanLoaded && arrayTanggal.length > 0) {
+    return; 
+  }
+
   var gridContainer = document.getElementById('grid-jimpitan');
-  if (gridContainer) gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:10px;">Memuat data...</div>';
+  if (gridContainer) gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data terbaru...</div>';
 
   fetch(JIMPITAN_URL)
     .then(response => response.text())
     .then(csvText => {
-      var baris = parseCSV(csvText).slice(1);
+      // 2. PEMBATAS MEMORI: Ambil maksimal 300 baris terbawah saja agar HP tidak lemot
+      var baris = parseCSV(csvText).slice(1).slice(-300);
       
       cacheDataHarian = {};
       arrayTanggal = [];
@@ -1522,7 +1529,6 @@ function muatDataJimpitan() {
           var warga = '-';
           var nominal = 0;
 
-          // Deteksi otomatis format kolom
           if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
             malamManual = kolom[1].trim(); 
             warga = kolom[2] || '-';
@@ -1543,14 +1549,9 @@ function muatDataJimpitan() {
             var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
 
             var dateObj = new Date(thn, bln, tgl, jam, menit);
-
-            // LOGIKA SHIFT WAKTU: Mundurkan 6 jam agar input jam 01:00 atau 02:00 pagi 
-            // tetap dihitung masuk ke grup "Malam Sebelumnya"
             var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
-            
             var strBulan = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"];
             
-            // Buat kunci unik per tanggal persis (YYYY-MM-DD)
             var keyTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
             var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
 
@@ -1565,21 +1566,40 @@ function muatDataJimpitan() {
               arrayTanggal.push(keyTanggal);
             }
 
-            // Masukkan data ke array tanggal tersebut
             cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
             cacheDataHarian[keyTanggal].subtotal += nominal;
           }
         }
       });
 
-      // Urutkan array dari tanggal paling baru ke paling lama
       arrayTanggal.sort((a, b) => b.localeCompare(a));
-
+      
+      // Kunci data agar tidak diload ulang dari internet saat modal dibuka lagi
+      isJimpitanLoaded = true; 
+      
       renderDropdownTanggal();
     })
-    .catch(err => console.error("Gagal muat data jimpitan:", err));
+    .catch(err => {
+      console.error("Gagal muat data jimpitan:", err);
+      if (gridContainer) gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data. Periksa koneksi internet.</div>';
+    });
 }
 
+function bukaModalRiwayatJimpitan() {
+  document.getElementById('modal-riwayat-jimpitan').style.display = 'flex';
+  muatDataJimpitan(); // Akan instan jika isJimpitanLoaded = true
+}
+
+function tutupModalRiwayatJimpitan() {
+  document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
+}
+
+// Opsi tombol refresh jika warga ingin memaksa ambil data terbaru dari Sheet
+window.refreshDataJimpitan = function() {
+  isJimpitanLoaded = false; 
+  muatDataJimpitan(); 
+};
+    
 function renderDropdownTanggal() {
   // Tetap pakai ID select-bulan agar tidak merusak struktur HTML bawaanmu
   var select = document.getElementById('select-bulan-jimpitan');
@@ -1678,14 +1698,7 @@ function renderCardHarian(keyTanggal) {
   if (totalElem) totalElem.innerText = 'Rp ' + dataMalam.subtotal.toLocaleString('id-ID');
 }
 
-function bukaModalRiwayatJimpitan() {
-  document.getElementById('modal-riwayat-jimpitan').style.display = 'flex';
-  muatDataJimpitan();
-}
 
-function tutupModalRiwayatJimpitan() {
-  document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
-}
     
     // --- CHANGELOG ---
     const dataChangelog = [
