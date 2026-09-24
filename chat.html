@@ -143,11 +143,27 @@
       display: flex; align-items: center; justify-content: space-between;
       padding: 6px; border-radius: 4px; background: rgba(2, 6, 23, 0.5); border: 1px solid rgba(51, 65, 85, 0.2);
     }
-    .status-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-    .dot-online { background: #34d399; box-shadow: 0 0 6px #34d399; }
-    .dot-idle { background: #fbbf24; }
-    .dot-offline { background: #475569; }
-    .badge-admin { font-size: 8px; background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-weight: bold; padding: 1px 4px; border-radius: 2px; margin-left: 4px; }
+    
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-dot.online {
+  background-color: #10b981; /* Hijau */
+  box-shadow: 0 0 6px rgba(16, 185, 129, 0.6);
+}
+
+.status-dot.idle {
+  background-color: #f59e0b; /* Oranye (Kuning Kunyit/Idle) */
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+}
+
+.status-dot.offline {
+  background-color: #64748b; /* Abu-abu */
+}
 
     /* Footer Input Form */
     footer {
@@ -590,6 +606,28 @@ window.sendChatMessage = (e) => {
     }).then(() => { input.value = ''; });
   }
 };
+
+// === PENDEDEKSI STATUS IDLE / MINIMIZE PWA ===
+function setupPresence() {
+  if (!currentUser?.uid) return;
+
+  const userStatusRef = ref(db, `users/${currentUser.uid}/state`);
+
+  // Ubah status saat pengguna pindah tab / minimize PWA
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      set(userStatusRef, 'idle'); // PWA di-minimize / buka tab lain (ORANYE)
+    } else {
+      set(userStatusRef, 'online'); // PWA dibuka kembali (HIJAU)
+    }
+  });
+
+  // Saat pengguna menutup browser/PWA total
+  onDisconnect(userStatusRef).set('offline');
+}
+
+// Panggil fungsi ini setelah currentUser berhasil dimuat/login
+setupPresence();
 
 // === SYSTEM AUDIO KLING NOTIFIKASI ===
 let audioCtx = null;
