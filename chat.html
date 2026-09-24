@@ -428,7 +428,86 @@
       }
     });
 
+// === SYSTEM AUDIO KLING NOTIFIKASI ===
+let audioCtx = null;
+let lastKlingTime = 0; // Catatan waktu suara terakhir berbunyi
 
+// Unlock Audio saat ada interaksi pertama pengguna di layar
+function unlockAudio() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+window.addEventListener('click', unlockAudio, { once: true });
+window.addEventListener('touchstart', unlockAudio, { once: true });
+
+// Fungsi Pemutar Suara Kling Lonceng Halus (dengan Cooldown 3 detik)
+function playKlingSound() {
+  try {
+    if (!audioCtx || audioCtx.state !== 'running') return;
+
+    const now = Date.now();
+    // COOLDOWN: Jika belum ada 3 detik dari suara sebelumnya, BATALKAN suara baru
+    if (now - lastKlingTime < 3000) return; 
+    
+    lastKlingTime = now; // Update waktu suara terakhir
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
+    osc.frequency.setValueAtTime(987.77, audioCtx.currentTime + 0.08); // B5
+
+    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.35);
+  } catch (e) {
+    // Abaikan error
+  }
+}
+
+// === LOGIKA PEMANTAU WARGA ONLINE ===
+let previousOnlineUsers = new Set(); // Menyimpan daftar UID warga yang online sebelumnya
+let isInitialUsersLoaded = false;    // Flag Mencegah bunyi saat aplikasi baru pertama dibuka
+
+function loadUsersList() {
+  const usersRef = ref(db, 'users');
+  onValue(usersRef, (snapshot) => {
+    if (!snapshot.exists()) return;
+    
+    allUsersCache = snapshot.val();
+    const currentOnlineUsers = new Set();
+
+    Object.values(allUsersCache).forEach(u => {
+      if (u.status === 'aktif' && u.state === 'online') {
+        currentOnlineUsers.add(u.uid);
+      }
+    });
+
+    // Deteksi jika ada warga baru yang statusnya berubah jadi 'online'
+    if (isInitialUsersLoaded) {
+      currentOnlineUsers.forEach(uid => {
+        if (!previousOnlineUsers.has(uid) && uid !== currentUser?.uid) {
+          playKlingSound(); // Bunyikan Kling!
+        }
+      });
+    }
+
+    previousOnlineUsers = currentOnlineUsers;
+    isInitialUsersLoaded = true;
+
+    renderWargaSidebar();
+  });
+}
     
     function checkUserStatus() {
       const chatContainer = document.getElementById('chat-container');
