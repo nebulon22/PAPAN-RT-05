@@ -1506,7 +1506,12 @@ var cacheDataBulanan = {};
 var arrayTanggal = [];
 var arrayBulan = [];
 let isJimpitanLoaded = false;
-let modeJimpitan = 'harian'; // Default mode
+let modeJimpitan = 'harian'; 
+
+// Helper anti-error untuk merapikan teks (menggantikan escapeHtml yang rawan macet)
+function teksAman(str) {
+  return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
+}
 
 function muatDataJimpitan() {
   if (isJimpitanLoaded && arrayTanggal.length > 0) {
@@ -1521,7 +1526,6 @@ function muatDataJimpitan() {
   fetch(JIMPITAN_URL)
     .then(response => response.text())
     .then(csvText => {
-      // Ambil 2000 baris terakhir agar data bulan-bulan lalu tetap terjangkau
       var baris = parseCSV(csvText).slice(1).slice(-2000);
       
       cacheDataHarian = {};
@@ -1603,7 +1607,6 @@ function muatDataJimpitan() {
     });
 }
 
-// Menyisipkan Tombol Toggle Mode (Harian/Bulanan) secara dinamis
 function setupToggleJimpitan() {
   var select = document.getElementById('select-bulan-jimpitan');
   if (!select) return;
@@ -1614,16 +1617,22 @@ function setupToggleJimpitan() {
   if (!container) {
     container = document.createElement('div');
     container.id = containerId;
-    container.style.cssText = 'display:flex; background:#f1f5f9; border-radius:8px; padding:4px; margin-bottom:12px;';
-    select.parentNode.insertBefore(container, select);
+    // PERBAIKAN TATA LETAK: Membentang penuh (100%) dan tidak nyempil di sebelah dropdown
+    container.style.cssText = 'display:flex; background:#f1f5f9; border-radius:8px; padding:4px; margin-bottom:12px; width:100%;';
+    
+    // Disisipkan TEPAT DI ATAS wadah "Pilih Periode", bukan di dalamnya
+    var parentBaris = select.parentNode; 
+    if (parentBaris) {
+      parentBaris.parentNode.insertBefore(container, parentBaris);
+    }
   }
 
   var btnHarianStyle = modeJimpitan === 'harian' ? 'background:#10b981; color:#fff; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent; color:#64748b;';
   var btnBulananStyle = modeJimpitan === 'bulanan' ? 'background:#10b981; color:#fff; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent; color:#64748b;';
 
   container.innerHTML = `
-    <button onclick="switchModeJimpitan('harian')" style="flex:1; border:none; border-radius:6px; padding:6px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnHarianStyle}">Riwayat Harian</button>
-    <button onclick="switchModeJimpitan('bulanan')" style="flex:1; border:none; border-radius:6px; padding:6px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnBulananStyle}">Laporan Bulanan</button>
+    <button onclick="switchModeJimpitan('harian')" style="flex:1; border:none; border-radius:6px; padding:8px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnHarianStyle}">🌙 Harian</button>
+    <button onclick="switchModeJimpitan('bulanan')" style="flex:1; border:none; border-radius:6px; padding:8px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnBulananStyle}">📅 Bulanan</button>
   `;
 }
 
@@ -1644,7 +1653,7 @@ function renderDropdownTanggal() {
       renderCardHarian(null);
       return;
     }
-    var limitData = arrayTanggal.slice(0, 30); // 30 Malam terakhir
+    var limitData = arrayTanggal.slice(0, 30); 
     limitData.forEach((key, index) => {
       var opt = document.createElement('option');
       opt.value = key;
@@ -1655,7 +1664,7 @@ function renderDropdownTanggal() {
     renderCardHarian(limitData[0]);
 
   } else {
-    // Mode Bulanan
+    // Mode Laporan Bulanan
     if (arrayBulan.length === 0) {
       select.innerHTML = '<option>Belum ada laporan bulanan</option>';
       renderCardBulanan(null);
@@ -1672,7 +1681,6 @@ function renderDropdownTanggal() {
   }
 }
 
-// Render Kartu Mode Harian (Seperti sebelumnya)
 function renderCardHarian(keyTanggal) {
   var gridContainer = document.getElementById('grid-jimpitan');
   var totalElem = document.getElementById('total-jimpitan');
@@ -1692,7 +1700,7 @@ function renderCardHarian(keyTanggal) {
     var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
     return `
       <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
-        <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">${escapeHtml(item.warga)}</span>
+        <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">${teksAman(item.warga)}</span>
         <span style="color: ${warnaNominal}; font-weight: bold;">Rp ${item.nominal.toLocaleString('id-ID')}</span>
       </div>
     `;
@@ -1702,7 +1710,6 @@ function renderCardHarian(keyTanggal) {
   if (totalElem) totalElem.innerText = 'Rp ' + dataMalam.subtotal.toLocaleString('id-ID');
 }
 
-// Render Kartu Mode Bulanan (Akumulasi Total Warga)
 function renderCardBulanan(keyBulan) {
   var gridContainer = document.getElementById('grid-jimpitan');
   var totalElem = document.getElementById('total-jimpitan');
@@ -1716,7 +1723,7 @@ function renderCardBulanan(keyBulan) {
   }
 
   var dataBulan = cacheDataBulanan[keyBulan];
-  var daftarWarga = Object.keys(dataBulan.rekapWarga).sort(); // Urut abjad
+  var daftarWarga = Object.keys(dataBulan.rekapWarga).sort(); 
   
   var itemListHTML = daftarWarga.map(warga => {
     var totalWarga = dataBulan.rekapWarga[warga];
@@ -1726,7 +1733,7 @@ function renderCardBulanan(keyBulan) {
 
     return `
       <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px solid #f1f5f9; ${bgRow}">
-        <span style="color: ${isNihil ? '#991b1b' : '#334155'}; font-weight: 500;">${escapeHtml(warga)}</span>
+        <span style="color: ${isNihil ? '#991b1b' : '#334155'}; font-weight: 500;">${teksAman(warga)}</span>
         <span style="color: ${warnaNominal}; font-weight: bold;">Rp ${totalWarga.toLocaleString('id-ID')}</span>
       </div>
     `;
@@ -1736,7 +1743,6 @@ function renderCardBulanan(keyBulan) {
   if (totalElem) totalElem.innerText = 'Rp ' + dataBulan.total.toLocaleString('id-ID');
 }
 
-// Fungsi Bantuan untuk Render HTML Kartu
 function buatDanTampilkanKartu(container, judul, total, htmlList) {
   var card = document.createElement('div');
   card.style.cssText = 'background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; flex-direction:column;';
@@ -1768,105 +1774,6 @@ window.refreshDataJimpitan = function() {
   isJimpitanLoaded = false; 
   muatDataJimpitan(); 
 };
-    
-function renderDropdownTanggal() {
-  // Tetap pakai ID select-bulan agar tidak merusak struktur HTML bawaanmu
-  var select = document.getElementById('select-bulan-jimpitan');
-  if (!select) return;
-  
-  select.innerHTML = ''; // Bersihkan opsi lama
-
-  if (arrayTanggal.length === 0) {
-    var opt = document.createElement('option');
-    opt.text = "Belum ada data";
-    select.appendChild(opt);
-    renderCardHarian(null);
-    return;
-  }
-
-  // Tampilkan maksimal 30 malam ronda terakhir di opsi dropdown
-  var limitData = arrayTanggal.slice(0, 30);
-  limitData.forEach((key, index) => {
-    var opt = document.createElement('option');
-    opt.value = key;
-    opt.text = (index === 0 ? "Terkini: " : "") + cacheDataHarian[key].label;
-    select.appendChild(opt);
-  });
-
-  // Saat dropdown diganti, langsung render kartu di tanggal tersebut
-  select.onchange = function() {
-    renderCardHarian(this.value);
-  };
-
-  // Otomatis merender data paling pertama (Malam Ronda Paling Terakhir)
-  renderCardHarian(limitData[0]);
-}
-
-function renderCardHarian(keyTanggal) {
-  var gridContainer = document.getElementById('grid-jimpitan');
-  var totalElem = document.getElementById('total-jimpitan');
-  
-  if (!gridContainer) return;
-  gridContainer.innerHTML = '';
-  
-  if (!keyTanggal || !cacheDataHarian[keyTanggal]) {
-    gridContainer.innerHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data ronda</div>';
-    if (totalElem) totalElem.innerText = 'Rp 0';
-    return;
-  }
-
-  var dataMalam = cacheDataHarian[keyTanggal];
-
-  var card = document.createElement('div');
-  card.style.cssText = `
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    padding: 10px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-    display: flex;
-    flex-direction: column;
-  `;
-
-  var itemListHTML = '';
-  if (dataMalam.items.length === 0) {
-    itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
-  } else {
-    // Karena dipisah per malam, list warga tidak dibalik agar urutannya sesuai absen asli
-    itemListHTML = dataMalam.items.map(item => {
-      var isAbsen = item.nominal === 0;
-      var warnaNominal = isAbsen ? '#dc2626' : '#059669';
-      var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
-
-      return `
-        <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
-          <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">
-            ${escapeHtml(item.warga)}
-          </span>
-          <span style="color: ${warnaNominal}; font-weight: bold;">
-            Rp ${item.nominal.toLocaleString('id-ID')}
-          </span>
-        </div>
-      `;
-    }).join('');
-  }
-
-  card.innerHTML = `
-    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 8px;">
-      <span style="font-weight: bold; font-size: 12px; color: #065f46;">🌙 ${dataMalam.label}</span>
-      <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
-        Rp ${dataMalam.subtotal.toLocaleString('id-ID')}
-      </span>
-    </div>
-    <div style="max-height: 250px; overflow-y: auto; flex-grow: 1; padding-right: 4px;">
-      ${itemListHTML}
-    </div>
-  `;
-
-  gridContainer.appendChild(card);
-  if (totalElem) totalElem.innerText = 'Rp ' + dataMalam.subtotal.toLocaleString('id-ID');
-}
-
 
     
     // --- CHANGELOG ---
