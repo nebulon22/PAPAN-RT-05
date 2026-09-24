@@ -1742,30 +1742,21 @@ function renderCardBulanan(keyBulan) {
     return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
   });
   
-  // Cetak kartu untuk masing-masing regu malam
-  daftarMalam.forEach(malam => {
-    var dataMalam = dataBulan.rekapMalam[malam];
-    var daftarWarga = Object.keys(dataMalam.rekapWarga).sort(); 
-    
-    var itemListHTML = daftarWarga.map(warga => {
-      var totalWarga = dataMalam.rekapWarga[warga];
-      var isNihil = totalWarga === 0;
-      var warnaNominal = isNihil ? '#dc2626' : '#0288d1'; // Warna biru untuk totalan bulanan
-      var bgRow = isNihil ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
+  // Cetak daftar regu malam beserta total setorannya selama sebulan
+  var itemListHTML = daftarMalam.map(malam => {
+    var subtotalMalam = dataBulan.rekapMalam[malam].subtotal;
 
-      return `
-        <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px solid #f1f5f9; ${bgRow}">
-          <span style="color: ${isNihil ? '#991b1b' : '#334155'}; font-weight: 500;">${teksAman(warga)}</span>
-          <span style="color: ${warnaNominal}; font-weight: bold;">Rp ${totalWarga.toLocaleString('id-ID')}</span>
-        </div>
-      `;
-    }).join('');
+    return `
+      <div style="display: flex; justify-content: space-between; font-size: 12px; border-bottom: 1px solid #f1f5f9; padding: 8px 4px;">
+        <span style="color: #334155; font-weight: 600;">🌙 ${teksAman(malam)}</span>
+        <span style="color: #0288d1; font-weight: bold;">Rp ${subtotalMalam.toLocaleString('id-ID')}</span>
+      </div>
+    `;
+  }).join('');
 
-    // Tampilkan menggunakan fungsi pembantu kartu (sama dengan mode harian)
-    buatDanTampilkanKartu(gridContainer, "🌙 Rekap " + malam, dataMalam.subtotal, itemListHTML);
-  });
+  // Tampilkan dalam 1 kartu rekapitulasi saja
+  buatDanTampilkanKartu(gridContainer, "📅 Rekap " + dataBulan.label, dataBulan.total, itemListHTML);
 
-  // Total uang besar di banner atas tetap menjumlahkan keseluruhan (satu RT)
   if (totalElem) totalElem.innerText = 'Rp ' + dataBulan.total.toLocaleString('id-ID');
 }
     
