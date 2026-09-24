@@ -144,32 +144,33 @@
       padding: 6px; border-radius: 4px; background: rgba(2, 6, 23, 0.5); border: 1px solid rgba(51, 65, 85, 0.2);
     }
     
-/* Base Style Titik Status */
-.status-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  display: inline-block;
-  flex-shrink: 0;
-}
+    /* Base Style Titik Status */
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+      flex-shrink: 0;
+    }
 
-/* Status ONLINE (Hijau Menyala) */
-.dot-online {
-  background-color: #34d399 !important;
-  box-shadow: 0 0 6px #34d399 !important;
-}
+    /* Status ONLINE (Hijau Menyala) */
+    .dot-online {
+      background-color: #34d399 !important;
+      box-shadow: 0 0 6px #34d399 !important;
+    }
 
-/* Status IDLE / Pindah Tab / Minimize (Oranye Menyala) */
-.dot-idle {
-  background-color: #fbbf24 !important;
-  box-shadow: 0 0 6px #fbbf24 !important;
-}
+    /* Status IDLE / Pindah Tab / Minimize (Oranye Menyala) */
+    .dot-idle {
+      background-color: #fbbf24 !important;
+      box-shadow: 0 0 6px #fbbf24 !important;
+    }
 
-/* Status OFFLINE (Abu-abu Slate) */
-.dot-offline {
-  background-color: #475569 !important;
-  box-shadow: none !important;
-}
+    /* Status OFFLINE (Abu-abu Slate) */
+    .dot-offline {
+      background-color: #475569 !important;
+      box-shadow: none !important;
+    }
+
     /* Footer Input Form */
     footer {
       background: rgba(15, 23, 42, 0.2);
@@ -258,7 +259,7 @@
     </div>
   </header>
 
- <!-- Container Utama Chat + Sidebar -->
+  <!-- Container Utama Chat + Sidebar -->
   <div id="chat-container">
     
     <!-- Area Obrolan Stream Utama -->
@@ -307,6 +308,7 @@
     </aside>
 
   </div>
+
   <!-- Footer / Input Form Chat -->
   <footer>
     <form id="chat-form" onsubmit="sendChatMessage(event)">
@@ -468,329 +470,335 @@
       }
     });
 
+    // 1. Fungsi Buka Tab Private Chat
+    window.openPrivateTab = (targetUID, targetName) => {
+      if (targetUID === currentUser?.uid) return;
 
+      // Simpan ke memori lokal
+      openPrivateRooms[targetUID] = targetName;
+      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
+      renderPrivateTabsUI();
+      listenAllPrivateChats();
+      switchChatRoom('private', targetUID);
+    };
 
-// 1. Fungsi Buka Tab Private Chat
-window.openPrivateTab = (targetUID, targetName) => {
-  if (targetUID === currentUser?.uid) return;
+    // 2. Render UI Tab-tab Private yang Terbuka
+    function renderPrivateTabsUI() {
+      const container = document.getElementById('dynamic-private-tabs');
+      if (!container) return;
+      container.innerHTML = '';
 
-  // Simpan ke memori lokal
-  openPrivateRooms[targetUID] = targetName;
-  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+      Object.keys(openPrivateRooms).forEach(uid => {
+        const name = openPrivateRooms[uid];
+        const isActive = (activeChatType === 'private' && activePrivateUID === uid);
+        const count = unreadCounts[uid] || 0;
 
-  renderPrivateTabsUI();
-  switchChatRoom('private', targetUID);
-};
+        // Badge merah tegas
+        const badgeHTML = (count > 0 && !isActive) 
+          ? `<span style="background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(239, 68, 68, 0.8);">${count}</span>` 
+          : '';
 
-// 2. Render UI Tab-tab Private yang Terbuka
-function renderPrivateTabsUI() {
-  const container = document.getElementById('dynamic-private-tabs');
-  if (!container) return;
-  container.innerHTML = '';
+        const btn = document.createElement('div');
+        btn.style.cssText = `
+          display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 6px;
+          font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+          background: ${isActive ? '#0288d1' : '#1e293b'}; color: ${isActive ? '#fff' : '#94a3b8'};
+          border: 1px solid ${isActive ? '#0388d1' : '#334155'}; flex-shrink: 0;
+        `;
 
-  Object.keys(openPrivateRooms).forEach(uid => {
-    const name = openPrivateRooms[uid];
-    const isActive = (activeChatType === 'private' && activePrivateUID === uid);
-    const count = unreadCounts[uid] || 0;
+        btn.innerHTML = `
+          <span onclick="switchChatRoom('private', '${uid}')" style="display: flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}
+          </span>
+          <i class="fa-solid fa-xmark" onclick="closePrivateTab(event, '${uid}')" style="font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px;" title="Tutup Tab"></i>
+        `;
 
-    // Badge merah tegas
-    const badgeHTML = (count > 0 && !isActive) 
-      ? `<span style="background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(239, 68, 68, 0.8);">${count}</span>` 
-      : '';
+        container.appendChild(btn);
+      });
+    }
 
-    const btn = document.createElement('div');
-    btn.style.cssText = `
-      display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 6px;
-      font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
-      background: ${isActive ? '#0288d1' : '#1e293b'}; color: ${isActive ? '#fff' : '#94a3b8'};
-      border: 1px solid ${isActive ? '#0388d1' : '#334155'}; flex-shrink: 0;
-    `;
+    // 3. Pindah Tab (Public <-> Private)
+    window.switchChatRoom = (type, targetUID = null) => {
+      activeChatType = type;
+      activePrivateUID = targetUID;
 
-    btn.innerHTML = `
-      <span onclick="switchChatRoom('private', '${uid}')" style="display: flex; align-items: center; gap: 5px;">
-        <i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}
-      </span>
-      <i class="fa-solid fa-xmark" onclick="closePrivateTab(event, '${uid}')" style="font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px;" title="Tutup Tab"></i>
-    `;
-
-    container.appendChild(btn);
-  });
-}
-
-// 3. Pindah Tab (Public <-> Private)
-window.switchChatRoom = (type, targetUID = null) => {
-  activeChatType = type;
-  activePrivateUID = targetUID;
-
-  // Bersihkan angka badge jika tab private ini dibuka
-  if (type === 'private' && targetUID) {
-    unreadCounts[targetUID] = 0;
-  }
-
-  // 1. Matikan listener stream sebelumnya
-  if (currentChatUnsubscribe) {
-    currentChatUnsubscribe();
-    currentChatUnsubscribe = null;
-  }
-
-  // 2. Tampilan Visual Tab
-  const btnPublic = document.getElementById('tab-room-public');
-  if (btnPublic) {
-    btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
-    btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
-  }
-
-  renderPrivateTabsUI();
-
-  // 3. Load Stream Chat
-  const chatStream = document.getElementById('chat-stream');
-  if (chatStream) chatStream.innerHTML = '';
-
-  if (type === 'public') {
-    loadChatStream();
-  } else if (type === 'private' && targetUID) {
-    loadPrivateChatStream(targetUID);
-  }
-};
-
-// 4. Tutup Tab Private
-window.closePrivateTab = (e, targetUID) => {
-  e.stopPropagation(); // Mencegah pemicu switchTab
-  delete openPrivateRooms[targetUID];
-
-  // Update memori lokal
-  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
-
-  if (activeChatType === 'private' && activePrivateUID === targetUID) {
-    switchChatRoom('public');
-  } else {
-    renderPrivateTabsUI();
-  }
-};
-
-// 5. Listener Stream Chat Private (Firebase)
-// Memantau semua pesan private masuk secara otomatis di latar belakang
-let privateListeners = {};
-
-function listenAllPrivateChats() {
-  if (!currentUser?.uid) return;
-
-  // Bebaskan listener lama jika ada
-  Object.values(privateListeners).forEach(unsub => unsub());
-  privateListeners = {};
-
-  Object.keys(openPrivateRooms).forEach(targetUID => {
-    const roomID = [currentUser.uid, targetUID].sort().join('_');
-    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
-
-    let isFirstLoad = true;
-
-    privateListeners[targetUID] = onValue(roomRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        isFirstLoad = false;
-        return;
+      // Bersihkan angka badge jika tab private ini dibuka
+      if (type === 'private' && targetUID) {
+        unreadCounts[targetUID] = 0;
       }
 
-      let lastMsg = null;
-      snapshot.forEach(childSnap => { lastMsg = childSnap.val(); });
+      // 1. Matikan listener stream sebelumnya
+      if (currentChatUnsubscribe) {
+        currentChatUnsubscribe();
+        currentChatUnsubscribe = null;
+      }
 
-      // Jika ada pesan baru dari lawan bicara & tab-nya sedang TIDAK aktif, naikkan badge!
-      if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
-        if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
-          unreadCounts[targetUID] = (unreadCounts[targetUID] || 0) + 1;
-          renderPrivateTabsUI(); // Munculkan badge (1) merah!
+      // 2. Tampilan Visual Tab
+      const btnPublic = document.getElementById('tab-room-public');
+      if (btnPublic) {
+        btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
+        btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
+      }
+
+      renderPrivateTabsUI();
+
+      // 3. Load Stream Chat
+      const chatStream = document.getElementById('chat-stream');
+      if (chatStream) chatStream.innerHTML = '';
+
+      if (type === 'public') {
+        loadChatStream();
+      } else if (type === 'private' && targetUID) {
+        loadPrivateChatStream(targetUID);
+      }
+    };
+
+    // 4. Tutup Tab Private
+    window.closePrivateTab = (e, targetUID) => {
+      e.stopPropagation(); // Mencegah pemicu switchTab
+      delete openPrivateRooms[targetUID];
+
+      // Update memori lokal
+      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+
+      if (activeChatType === 'private' && activePrivateUID === targetUID) {
+        switchChatRoom('public');
+      } else {
+        renderPrivateTabsUI();
+      }
+    };
+
+    // 5. Listener Stream Chat Private Aktif
+    function loadPrivateChatStream(targetUID) {
+      const roomID = [currentUser.uid, targetUID].sort().join('_');
+      const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
+      const chatStream = document.getElementById('chat-stream');
+
+      currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
+        if (!chatStream) return;
+        chatStream.innerHTML = '';
+
+        if (!snapshot.exists()) {
+          chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID])}. Mulai percakapan!</div>`;
+          return;
         }
-      }
 
-      isFirstLoad = false;
-    });
-  });
-}
-// 6. Perbarui Pengiriman Pesan (`sendChatMessage`)
-window.sendChatMessage = (e) => {
-  e.preventDefault();
-  const input = document.getElementById('chat-input');
-  const text = input.value.trim();
+        snapshot.forEach((childSnap) => {
+          renderSingleMessage(childSnap.val());
+        });
 
-  if (!text || currentUser?.status !== 'aktif') return;
-
-  // KIRIM KE PUBLIC GRUP
-  if (activeChatType === 'public') {
-    const newMsgRef = push(ref(db, 'chats'));
-    set(newMsgRef, {
-      uid: currentUser.uid,
-      sender: currentUser.username || currentUser.nama,
-      role: currentUser.role || 'warga',
-      text: text,
-      timestamp: serverTimestamp()
-    }).then(() => { input.value = ''; });
-
- // KIRIM KE PRIVATE ROOM (1-ON-1)
-  } else if (activeChatType === 'private' && activePrivateUID) {
-    const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
-    const newMsgRef = push(ref(db, `private_chats/${roomID}`));
-
-    set(newMsgRef, {
-      uid: currentUser.uid,
-      sender: currentUser.username || currentUser.nama,
-      role: currentUser.role || 'warga',
-      text: text,
-      timestamp: serverTimestamp()
-    }).then(() => { 
-      input.value = ''; 
-
-      // Pemicu Push Notification jika target sedang IDLE / OFFLINE
-      const targetUser = allUsersCache[activePrivateUID];
-      if (targetUser && targetUser.state !== 'online') {
-        fetch(SCRIPT_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'notifChatPrivate',
-            targetUid: activePrivateUID,
-            senderName: currentUser.username || currentUser.nama,
-            messageText: text
-          })
-        }).catch(err => console.log(err));
-      }
-    });
-  }
-};
-
-// === PENDEDEKSI STATUS IDLE / MINIMIZE PWA (ANTI-FLAPPING & STABIL) ===
-let currentLocalState = 'online';
-
-function setupPresence() {
-  if (!currentUser?.uid) return;
-
-  const userStatusRef = ref(db, `users/${currentUser.uid}/state`);
-  const connectedRef = ref(db, '.info/connected');
-
-  // 1. Pantau status koneksi socket ke Realtime Database
-  onValue(connectedRef, (snap) => {
-    if (snap.val() === true) {
-      // Pasang handler jika terputus/ditutup
-      onDisconnect(userStatusRef).set('offline');
-      
-      // Tentukan status berdasarkan posisi tab saat ini
-      currentLocalState = document.hidden ? 'idle' : 'online';
-      set(userStatusRef, currentLocalState);
+        chatStream.scrollTop = chatStream.scrollHeight;
+      });
     }
-  });
 
-  // 2. Ubah status HANYA jika status baru berbeda dari status lokal saat ini (Anti-Flapping)
-  document.addEventListener('visibilitychange', () => {
-    const newState = document.hidden ? 'idle' : 'online';
+    // Pemantau pesan private di latar belakang untuk memicu Badge Merah
+    let privateListeners = {};
 
-    if (newState !== currentLocalState) {
-      currentLocalState = newState;
-      set(userStatusRef, newState);
+    function listenAllPrivateChats() {
+      if (!currentUser?.uid) return;
+
+      Object.values(privateListeners).forEach(unsub => unsub());
+      privateListeners = {};
+
+      Object.keys(openPrivateRooms).forEach(targetUID => {
+        const roomID = [currentUser.uid, targetUID].sort().join('_');
+        const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
+
+        let isFirstLoad = true;
+
+        privateListeners[targetUID] = onValue(roomRef, (snapshot) => {
+          if (!snapshot.exists()) {
+            isFirstLoad = false;
+            return;
+          }
+
+          let lastMsg = null;
+          snapshot.forEach(childSnap => { lastMsg = childSnap.val(); });
+
+          if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
+            if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
+              unreadCounts[targetUID] = (unreadCounts[targetUID] || 0) + 1;
+              renderPrivateTabsUI();
+            }
+          }
+
+          isFirstLoad = false;
+        });
+      });
     }
-  });
-}
 
-// === FUNGSI PERMINTAAN IZIN NOTIFIKASI PWA ===
-function requestNotificationPermission() {
-  // Cek apakah browser mendukung notifikasi
-  if (!('Notification' in window) || !currentUser?.uid) return;
+    // 6. Pengiriman Pesan (`sendChatMessage`)
+    window.sendChatMessage = (e) => {
+      e.preventDefault();
+      const input = document.getElementById('chat-input');
+      const text = input.value.trim();
 
-  // HANYA minta izin jika belum pernah ditentukan (default)
-  if (Notification.permission === 'default') {
-    Notification.requestPermission().then((permission) => {
-      if (permission === 'granted') {
-        console.log('Izin notifikasi diberikan oleh warga!');
+      if (!text || currentUser?.status !== 'aktif') return;
+
+      // KIRIM KE PUBLIC GRUP
+      if (activeChatType === 'public') {
+        const newMsgRef = push(ref(db, 'chats'));
+        set(newMsgRef, {
+          uid: currentUser.uid,
+          sender: currentUser.username || currentUser.nama,
+          role: currentUser.role || 'warga',
+          text: text,
+          timestamp: serverTimestamp()
+        }).then(() => { input.value = ''; });
+
+      // KIRIM KE PRIVATE ROOM (1-ON-1)
+      } else if (activeChatType === 'private' && activePrivateUID) {
+        const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+        const newMsgRef = push(ref(db, `private_chats/${roomID}`));
+
+        set(newMsgRef, {
+          uid: currentUser.uid,
+          sender: currentUser.username || currentUser.nama,
+          role: currentUser.role || 'warga',
+          text: text,
+          timestamp: serverTimestamp()
+        }).then(() => { 
+          input.value = ''; 
+
+          const targetUser = allUsersCache[activePrivateUID];
+          if (targetUser && targetUser.state !== 'online') {
+            fetch(SCRIPT_URL, {
+              method: 'POST',
+              mode: 'no-cors',
+              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({
+                action: 'notifChatPrivate',
+                targetUid: activePrivateUID,
+                senderName: currentUser.username || currentUser.nama,
+                messageText: text
+              })
+            }).catch(err => console.log(err));
+          }
+        });
       }
-    });
-  }
-}
-    
-// === SYSTEM AUDIO KLING NOTIFIKASI ===
-let audioCtx = null;
-let lastKlingTime = 0; // Catatan waktu suara terakhir berbunyi
+    };
 
-// Unlock Audio saat ada interaksi pertama pengguna di layar
-function unlockAudio() {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-}
-window.addEventListener('click', unlockAudio, { once: true });
-window.addEventListener('touchstart', unlockAudio, { once: true });
+    // === PENDEDEKSI STATUS IDLE / MINIMIZE PWA ===
+    let currentLocalState = 'online';
 
-// Fungsi Pemutar Suara Kling Lonceng Halus (dengan Cooldown 3 detik)
-function playKlingSound() {
-  try {
-    if (!audioCtx || audioCtx.state !== 'running') return;
+    function setupPresence() {
+      if (!currentUser?.uid) return;
 
-    const now = Date.now();
-    // COOLDOWN: Jika belum ada 3 detik dari suara sebelumnya, BATALKAN suara baru
-    if (now - lastKlingTime < 3000) return; 
-    
-    lastKlingTime = now; // Update waktu suara terakhir
+      const userStatusRef = ref(db, `users/${currentUser.uid}/state`);
+      const connectedRef = ref(db, '.info/connected');
 
-    const osc = audioCtx.createOscillator();
-    const gain = audioCtx.createGain();
+      onValue(connectedRef, (snap) => {
+        if (snap.val() === true) {
+          onDisconnect(userStatusRef).set('offline');
+          currentLocalState = document.hidden ? 'idle' : 'online';
+          set(userStatusRef, currentLocalState);
+        }
+      });
 
-    osc.type = 'sine';
-    osc.frequency.setValueAtTime(659.25, audioCtx.currentTime); // E5
-    osc.frequency.setValueAtTime(987.77, audioCtx.currentTime + 0.08); // B5
+      document.addEventListener('visibilitychange', () => {
+        const newState = document.hidden ? 'idle' : 'online';
 
-    gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
-
-    osc.connect(gain);
-    gain.connect(audioCtx.destination);
-
-    osc.start();
-    osc.stop(audioCtx.currentTime + 0.35);
-  } catch (e) {
-    // Abaikan error
-  }
-}
-
-// === LOGIKA PEMANTAU WARGA ONLINE ===
-let previousOnlineUsers = new Set();
-let isInitialUsersLoaded = false;
-
-function loadUsersList() {
-  const usersRef = ref(db, 'users');
-  onValue(usersRef, (snapshot) => {
-    if (!snapshot.exists()) return;
-    
-    allUsersCache = snapshot.val();
-    const currentOnlineUsers = new Set();
-
-    Object.values(allUsersCache).forEach(u => {
-      // HANYA anggap aktif jika benar-benar state-nya 'online'
-      if (u.status === 'aktif' && u.state === 'online') {
-        currentOnlineUsers.add(u.uid);
-      }
-    });
-
-    // Deteksi HANYA jika UID warga sebelumnya TIDAK ada di daftar online
-    if (isInitialUsersLoaded) {
-      currentOnlineUsers.forEach(uid => {
-        const isSelf = (uid === currentUser?.uid);
-        const wasNotOnline = !previousOnlineUsers.has(uid);
-
-        if (wasNotOnline && !isSelf) {
-          playKlingSound(); // Bunyikan Kling!
+        if (newState !== currentLocalState) {
+          currentLocalState = newState;
+          set(userStatusRef, newState);
         }
       });
     }
 
-    previousOnlineUsers = currentOnlineUsers;
-    isInitialUsersLoaded = true;
+    // === FUNGSI PERMINTAAN IZIN NOTIFIKASI PWA ===
+    function requestNotificationPermission() {
+      if (!('Notification' in window) || !currentUser?.uid) return;
 
-    renderWargaSidebar();
-  });
-}
-    
+      if (Notification.permission === 'default') {
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            console.log('Izin notifikasi diberikan oleh warga!');
+          }
+        });
+      }
+    }
+        
+    // === SYSTEM AUDIO KLING NOTIFIKASI ===
+    let audioCtx = null;
+    let lastKlingTime = 0;
+
+    function unlockAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+    }
+    window.addEventListener('click', unlockAudio, { once: true });
+    window.addEventListener('touchstart', unlockAudio, { once: true });
+
+    function playKlingSound() {
+      try {
+        if (!audioCtx || audioCtx.state !== 'running') return;
+
+        const now = Date.now();
+        if (now - lastKlingTime < 3000) return; 
+        
+        lastKlingTime = now;
+
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime);
+        osc.frequency.setValueAtTime(987.77, audioCtx.currentTime + 0.08);
+
+        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.35);
+      } catch (e) {
+        // Abaikan error
+      }
+    }
+
+    // === LOGIKA PEMANTAU WARGA ONLINE ===
+    let previousOnlineUsers = new Set();
+    let isInitialUsersLoaded = false;
+
+    function loadUsersList() {
+      const usersRef = ref(db, 'users');
+      onValue(usersRef, (snapshot) => {
+        if (!snapshot.exists()) return;
+        
+        allUsersCache = snapshot.val();
+        const currentOnlineUsers = new Set();
+
+        Object.values(allUsersCache).forEach(u => {
+          if (u.status === 'aktif' && u.state === 'online') {
+            currentOnlineUsers.add(u.uid);
+          }
+        });
+
+        if (isInitialUsersLoaded) {
+          currentOnlineUsers.forEach(uid => {
+            const isSelf = (uid === currentUser?.uid);
+            const wasNotOnline = !previousOnlineUsers.has(uid);
+
+            if (wasNotOnline && !isSelf) {
+              playKlingSound();
+            }
+          });
+        }
+
+        previousOnlineUsers = currentOnlineUsers;
+        isInitialUsersLoaded = true;
+
+        renderWargaSidebar();
+      });
+    }
+        
     function checkUserStatus() {
       const chatContainer = document.getElementById('chat-container');
       const chatFooter = document.querySelector('footer');
@@ -838,28 +846,27 @@ function loadUsersList() {
           loadChatStream();
           loadUsersList();
 
-          // Pulihkan tampilan tab private dari reload sebelumnya
           renderPrivateTabsUI();
+          listenAllPrivateChats();
           requestNotificationPermission();
         }
       });
     }
 
-    // === PERBAIKAN: PASANG WINDOW.TOGGLEAUTHMODE ===
-window.toggleAuthMode = (mode) => {
-  const secReg = document.getElementById('section-register');
-  const secLog = document.getElementById('section-login');
+    window.toggleAuthMode = (mode) => {
+      const secReg = document.getElementById('section-register');
+      const secLog = document.getElementById('section-login');
 
-  if (!secReg || !secLog) return;
+      if (!secReg || !secLog) return;
 
-  if (mode === 'login') {
-    secReg.style.display = 'none';
-    secLog.style.display = 'block';
-  } else {
-    secLog.style.display = 'none';
-    secReg.style.display = 'block';
-  }
-};
+      if (mode === 'login') {
+        secReg.style.display = 'none';
+        secLog.style.display = 'block';
+      } else {
+        secLog.style.display = 'none';
+        secReg.style.display = 'block';
+      }
+    };
 
     function loadLoginUserOptions() {
       const usersRef = ref(db, 'users');
@@ -953,66 +960,61 @@ window.toggleAuthMode = (mode) => {
       });
     };
 
-   
-  let isInitialPublicChatLoaded = false;
+    let isInitialPublicChatLoaded = false;
 
-function loadChatStream() {
-  const chatRef = query(ref(db, 'chats'), limitToLast(80));
-  const chatStream = document.getElementById('chat-stream');
+    function loadChatStream() {
+      const chatRef = query(ref(db, 'chats'), limitToLast(80));
+      const chatStream = document.getElementById('chat-stream');
 
-  currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
-    if (activeChatType !== 'public') return;
+      currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
+        if (activeChatType !== 'public') return;
 
-    if (!chatStream) return;
-    chatStream.innerHTML = '';
+        if (!chatStream) return;
+        chatStream.innerHTML = '';
 
-    if (!snapshot.exists()) {
-      chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
-      isInitialPublicChatLoaded = true;
-      return;
+        if (!snapshot.exists()) {
+          chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
+          isInitialPublicChatLoaded = true;
+          return;
+        }
+
+        let lastMsg = null;
+        snapshot.forEach((childSnap) => {
+          lastMsg = childSnap.val();
+          renderSingleMessage(lastMsg);
+        });
+
+        if (isInitialPublicChatLoaded && lastMsg && lastMsg.uid !== currentUser?.uid) {
+          playKlingSound();
+        }
+
+        isInitialPublicChatLoaded = true;
+        chatStream.scrollTop = chatStream.scrollHeight;
+      });
     }
-
-    let lastMsg = null;
-    snapshot.forEach((childSnap) => {
-      lastMsg = childSnap.val();
-      renderSingleMessage(lastMsg);
-    });
-
-    // Pemicu Suara "Kling": HANYA jika ada PESAN BARU dari ORANG LAIN
-    if (isInitialPublicChatLoaded && lastMsg && lastMsg.uid !== currentUser?.uid) {
-      playKlingSound();
-    }
-
-    isInitialPublicChatLoaded = true;
-    chatStream.scrollTop = chatStream.scrollHeight;
-  });
-}
-    
-    function renderSingleMessage(msg) {
-  const chatStream = document.getElementById('chat-stream');
-  if (!chatStream) return;
-  
-  const div = document.createElement('div');
-  div.className = "msg-row";
-
-  let nameClass = "role-user";
-  if (msg.role === 'admin') nameClass = "role-admin";
-  else if (msg.uid === currentUser.uid) nameClass = "role-self";
-
-  // Klik nama untuk buka tab private
-  const clickHandler = (msg.uid !== currentUser.uid) 
-    ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
-    : '';
-
-  div.innerHTML = `
-    <span class="${nameClass}" ${clickHandler}>${escapeHTML(msg.sender)}:</span>
-    <span class="msg-text">${escapeHTML(msg.text)}</span>
-  `;
-
-  chatStream.appendChild(div);
-}
-
         
+    function renderSingleMessage(msg) {
+      const chatStream = document.getElementById('chat-stream');
+      if (!chatStream) return;
+      
+      const div = document.createElement('div');
+      div.className = "msg-row";
+
+      let nameClass = "role-user";
+      if (msg.role === 'admin') nameClass = "role-admin";
+      else if (msg.uid === currentUser.uid) nameClass = "role-self";
+
+      const clickHandler = (msg.uid !== currentUser.uid) 
+        ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
+        : '';
+
+      div.innerHTML = `
+        <span class="${nameClass}" ${clickHandler}>${escapeHTML(msg.sender)}:</span>
+        <span class="msg-text">${escapeHTML(msg.text)}</span>
+      `;
+
+      chatStream.appendChild(div);
+    }
 
     window.renderWargaSidebar = () => {
       const listContainer = document.getElementById('warga-list');
@@ -1065,13 +1067,13 @@ function loadChatStream() {
           </div>
         `;
         item.onclick = () => {
-        if (u.uid !== currentUser.uid) {
-        openPrivateTab(u.uid, u.username || u.nama);
-      }
-     };
-       item.style.cursor = u.uid !== currentUser.uid ? 'pointer' : 'default';
+          if (u.uid !== currentUser.uid) {
+            openPrivateTab(u.uid, u.username || u.nama);
+          }
+        };
+        item.style.cursor = u.uid !== currentUser.uid ? 'pointer' : 'default';
         listContainer.appendChild(item);
-    });
+      });
 
       const countAktif = document.getElementById('count-aktif');
       const countSemua = document.getElementById('count-semua');
@@ -1161,9 +1163,6 @@ function loadChatStream() {
     }
 
     window.filterWarga = () => renderWargaSidebar();
-
-
-    
   </script>
 </body>
 </html>
