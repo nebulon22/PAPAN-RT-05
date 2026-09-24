@@ -476,8 +476,8 @@ function playKlingSound() {
 }
 
 // === LOGIKA PEMANTAU WARGA ONLINE ===
-let previousOnlineUsers = new Set(); // Menyimpan daftar UID warga yang online sebelumnya
-let isInitialUsersLoaded = false;    // Flag Mencegah bunyi saat aplikasi baru pertama dibuka
+let previousOnlineUsers = new Set();
+let isInitialUsersLoaded = false;
 
 function loadUsersList() {
   const usersRef = ref(db, 'users');
@@ -488,15 +488,20 @@ function loadUsersList() {
     const currentOnlineUsers = new Set();
 
     Object.values(allUsersCache).forEach(u => {
+      // HANYA anggap aktif jika benar-benar state-nya 'online'
       if (u.status === 'aktif' && u.state === 'online') {
         currentOnlineUsers.add(u.uid);
       }
     });
 
+    // Deteksi HANYA jika UID warga sebelumnya TIDAK ada di daftar online
     if (isInitialUsersLoaded) {
       currentOnlineUsers.forEach(uid => {
-        if (!previousOnlineUsers.has(uid) && uid !== currentUser?.uid) {
-          playKlingSound();
+        const isSelf = (uid === currentUser?.uid);
+        const wasNotOnline = !previousOnlineUsers.has(uid);
+
+        if (wasNotOnline && !isSelf) {
+          playKlingSound(); // Bunyikan Kling!
         }
       });
     }
