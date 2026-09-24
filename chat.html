@@ -479,6 +479,9 @@ function playKlingSound() {
 let previousOnlineUsers = new Set(); // Menyimpan daftar UID warga yang online sebelumnya
 let isInitialUsersLoaded = false;    // Flag Mencegah bunyi saat aplikasi baru pertama dibuka
 
+let previousOnlineUsers = new Set();
+let isInitialUsersLoaded = false;
+
 function loadUsersList() {
   const usersRef = ref(db, 'users');
   onValue(usersRef, (snapshot) => {
@@ -493,11 +496,10 @@ function loadUsersList() {
       }
     });
 
-    // Deteksi jika ada warga baru yang statusnya berubah jadi 'online'
     if (isInitialUsersLoaded) {
       currentOnlineUsers.forEach(uid => {
         if (!previousOnlineUsers.has(uid) && uid !== currentUser?.uid) {
-          playKlingSound(); // Bunyikan Kling!
+          playKlingSound();
         }
       });
     }
@@ -739,14 +741,7 @@ function loadUsersList() {
       });
     };
 
-    function loadUsersList() {
-      const usersRef = ref(db, 'users');
-      onValue(usersRef, (snapshot) => {
-        if (!snapshot.exists()) return;
-        allUsersCache = snapshot.val();
-        renderWargaSidebar();
-      });
-    }
+    
 
     window.renderWargaSidebar = () => {
       const listContainer = document.getElementById('warga-list');
