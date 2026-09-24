@@ -518,14 +518,16 @@
       });
     }
 
-    // 3. Pindah Tab (Public <-> Private)
+  // 3. Pindah Tab (Public <-> Private)
     window.switchChatRoom = (type, targetUID = null) => {
       activeChatType = type;
       activePrivateUID = targetUID;
 
-      // Bersihkan angka badge jika tab private ini dibuka
+      // AMBIL JUMLAH UNREAD SEBELUM DI-RESET
+      let passedUnreadCount = 0;
       if (type === 'private' && targetUID) {
-        unreadCounts[targetUID] = 0;
+        passedUnreadCount = unreadCounts[targetUID] || 0;
+        unreadCounts[targetUID] = 0; // Bersihkan angka badge di UI
       }
 
       // 1. Matikan listener stream sebelumnya
@@ -550,7 +552,8 @@
       if (type === 'public') {
         loadChatStream();
       } else if (type === 'private' && targetUID) {
-        loadPrivateChatStream(targetUID);
+        // KIRIM JUMLAH UNREAD KE FUNGSI LOAD PRIVATE
+        loadPrivateChatStream(targetUID, passedUnreadCount);
       }
     };
 
@@ -569,8 +572,8 @@
       }
     };
 
-    // 5. Listener Stream Chat Private Aktif
-    function loadPrivateChatStream(targetUID) {
+   // 5. Listener Stream Chat Private Aktif
+    function loadPrivateChatStream(targetUID, unreadCount = 0) {
       const roomID = [currentUser.uid, targetUID].sort().join('_');
       const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
       const chatStream = document.getElementById('chat-stream');
@@ -584,9 +587,21 @@
           return;
         }
 
-        snapshot.forEach((childSnap) => {
-          renderSingleMessage(childSnap.val());
+        // Masukkan data ke dalam Array agar bisa dihitung posisi pesannya
+        const msgs = [];
+        snapshot.forEach((childSnap) => msgs.push(childSnap.val()));
+        const totalMsgs = msgs.length;
+
+        // Render baris per baris
+        msgs.forEach((msg, index) => {
+          // Tandai 'true' jika index pesan masuk dalam X jumlah pesan terakhir
+          const isUnread = (unreadCount > 0 && index >= totalMsgs - unreadCount);
+          renderSingleMessage(msg, isUnread);
         });
+
+        // Setel unreadCount ke 0 agar jika ada chat baru masuk saat tab sedang dibuka,
+        // chat baru tsb tidak ikut ter-highlight terus-menerus.
+        unreadCount = 0;
 
         chatStream.scrollTop = chatStream.scrollHeight;
       });
@@ -989,12 +1004,19 @@
       });
     }
         
-    function renderSingleMessage(msg) {
+    function renderSingleMessage(msg, isUnread = false) {
       const chatStream = document.getElementById('chat-stream');
       if (!chatStream) return;
       
       const div = document.createElement('div');
       div.className = "msg-row";
+
+      // >>> EFEK HIGHLIGHT CHAT BELUM TERBACA <<<
+      // Beri background putih transparan HANYA jika isUnread true & pesannya dari lawan bicara
+      if (isUnread && msg.uid !== currentUser.uid) {
+        div.style.background = "rgba(255, 255, 255, 0.12)";
+        div.style.borderLeft = "3px solid #38bdf8"; // Opsional: Beri garis biru tipis di kiri biar elegan
+      }
 
       let nameClass = "role-user";
       if (msg.role === 'admin') nameClass = "role-admin";
