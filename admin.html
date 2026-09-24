@@ -877,58 +877,74 @@
       }
     }
 
+let cachePerkakas = [];
+    let cachePeminjaman = [];
+
     async function muatPeminjamanAdmin() {
       const container = document.getElementById("tabel-peminjaman-admin");
       if (!container) return;
 
-      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
+      // Jika data sudah ada di cache, langsung tampilkan agar instan
+      if (cachePerkakas.length > 0 || cachePeminjaman.length > 0) {
+        renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
+      } else {
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
+      }
 
       try {
-        const res = await fetch(GAS_WEB_APP_URL);
+        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL);
         const data = await res.json();
         
-        const daftarPinjam = Array.isArray(data) ? data : (data.peminjaman || []);
+        cachePeminjaman = Array.isArray(data) ? data : (data.peminjaman || []);
+        cachePerkakas = data.perkakas || [];
 
-        const selectBarang = document.getElementById("pinjamPilihBarang");
-        const selectBarangStok = document.getElementById("stokPilihBarang");
-
-        if (data.perkakas && data.perkakas.length > 0) {
-          if (selectBarang) {
-            selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-              data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
-          }
-
-          if (selectBarangStok) {
-            selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
-              `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
-              data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa Stok: ${item.total})</option>`).join('');
-          }
-        }
-        
-        const pinjamanAktif = daftarPinjam.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
-
-        if (pinjamanAktif.length === 0) {
-          container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
-          return;
-        }
-
-        container.innerHTML = pinjamanAktif.map(row => `
-          <tr style="border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
-            <td style="padding: 6px;">${row[2]}</td>
-            <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
-            <td style="padding: 6px; text-align: center;">
-              <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
-                ↩️ Dikembalikan
-              </button>
-            </td>
-          </tr>
-        `).join('');
+        renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
       } catch (err) {
-        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#6b7280; padding:12px;">Mode Offline (Gagal memuat data online).</td></tr>`;
+        if (cachePeminjaman.length === 0) {
+          container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#6b7280; padding:12px;">Mode Offline (Gagal memuat data online).</td></tr>`;
+        }
       }
     }
 
+    function renderTabelDanDropdown(perkakas, peminjaman) {
+      const container = document.getElementById("tabel-peminjaman-admin");
+      const selectBarang = document.getElementById("pinjamPilihBarang");
+      const selectBarangStok = document.getElementById("stokPilihBarang");
+
+      if (perkakas && perkakas.length > 0) {
+        if (selectBarang) {
+          selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
+            perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
+        }
+
+        if (selectBarangStok) {
+          selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
+            `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
+            perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa Stok: ${item.total})</option>`).join('');
+        }
+      }
+      
+      const pinjamanAktif = peminjaman.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
+
+      if (pinjamanAktif.length === 0) {
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
+        return;
+      }
+
+      container.innerHTML = pinjamanAktif.map(row => `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
+          <td style="padding: 6px;">${row[2]}</td>
+          <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
+          <td style="padding: 6px; text-align: center;">
+            <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
+              ↩️ Dikembalikan
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+    
     // Catat Pinjam (Modal 3 - Offline Supported)
     async function simpanPeminjamanAdmin() {
       const peminjam = document.getElementById("pinjamNamaWarga").value;
