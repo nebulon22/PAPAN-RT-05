@@ -556,7 +556,10 @@ window.closePrivateTab = (e, targetUID) => {
 };
 
 // 5. Listener Stream Chat Private (Firebase)
+let isInitialPrivateChatLoaded = false;
+
 function loadPrivateChatStream(targetUID) {
+  isInitialPrivateChatLoaded = false; // Reset setiap kali buka tab private baru
   const roomID = [currentUser.uid, targetUID].sort().join('_');
   const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
   const chatStream = document.getElementById('chat-stream');
@@ -567,13 +570,22 @@ function loadPrivateChatStream(targetUID) {
 
     if (!snapshot.exists()) {
       chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID])}. Mulai percakapan!</div>`;
+      isInitialPrivateChatLoaded = true;
       return;
     }
 
+    let lastMsg = null;
     snapshot.forEach((childSnap) => {
-      renderSingleMessage(childSnap.val());
+      lastMsg = childSnap.val();
+      renderSingleMessage(lastMsg);
     });
 
+    // Pemicu Suara "Kling": HANYA jika ada PESAN PRIVATE BARU dari lawan bicara
+    if (isInitialPrivateChatLoaded && lastMsg && lastMsg.uid !== currentUser?.uid) {
+      playKlingSound();
+    }
+
+    isInitialPrivateChatLoaded = true;
     chatStream.scrollTop = chatStream.scrollHeight;
   });
 }
@@ -908,26 +920,36 @@ function loadUsersList() {
     };
 
    
-  function loadChatStream() {
+  let isInitialPublicChatLoaded = false;
+
+function loadChatStream() {
   const chatRef = query(ref(db, 'chats'), limitToLast(80));
   const chatStream = document.getElementById('chat-stream');
 
-  // Simpan listener ke variabel currentChatUnsubscribe
   currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
-    // Keamanan: Jika user sedang berada di tab private, batalkan render publik ini!
     if (activeChatType !== 'public') return;
 
     if (!chatStream) return;
     chatStream.innerHTML = '';
+
     if (!snapshot.exists()) {
       chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
+      isInitialPublicChatLoaded = true;
       return;
     }
 
+    let lastMsg = null;
     snapshot.forEach((childSnap) => {
-      renderSingleMessage(childSnap.val());
+      lastMsg = childSnap.val();
+      renderSingleMessage(lastMsg);
     });
 
+    // Pemicu Suara "Kling": HANYA jika ada PESAN BARU dari ORANG LAIN
+    if (isInitialPublicChatLoaded && lastMsg && lastMsg.uid !== currentUser?.uid) {
+      playKlingSound();
+    }
+
+    isInitialPublicChatLoaded = true;
     chatStream.scrollTop = chatStream.scrollHeight;
   });
 }
