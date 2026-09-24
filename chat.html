@@ -612,18 +612,21 @@ window.sendChatMessage = (e) => {
   }
 };
 
-// === PENDEDEKSI STATUS IDLE / MINIMIZE PWA ===
+// === PENDEDEKSI STATUS IDLE / MINIMIZE PWA (ANTI-FLAPPING) ===
+let currentLocalState = 'online';
+
 function setupPresence() {
   if (!currentUser?.uid) return;
 
   const userStatusRef = ref(db, `users/${currentUser.uid}/state`);
 
-  // Ubah status saat pengguna pindah tab / minimize PWA
+  // Ubah status HANYA jika status baru berbeda dari status lokal saat ini
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden) {
-      set(userStatusRef, 'idle'); // PWA di-minimize / buka tab lain (ORANYE)
-    } else {
-      set(userStatusRef, 'online'); // PWA dibuka kembali (HIJAU)
+    const newState = document.hidden ? 'idle' : 'online';
+
+    if (newState !== currentLocalState) {
+      currentLocalState = newState;
+      set(userStatusRef, newState);
     }
   });
 
@@ -631,9 +634,10 @@ function setupPresence() {
   onDisconnect(userStatusRef).set('offline');
 }
 
-// Panggil fungsi ini setelah currentUser berhasil dimuat/login
+// Panggil fungsi ini
 setupPresence();
 
+    
 // === SYSTEM AUDIO KLING NOTIFIKASI ===
 let audioCtx = null;
 let lastKlingTime = 0; // Catatan waktu suara terakhir berbunyi
@@ -871,26 +875,7 @@ function loadUsersList() {
       });
     };
 
-    function setupPresenceSystem() {
-      const myPresenceRef = ref(db, `users/${currentUser.uid}/state`);
-      const connectedRef = ref(db, '.info/connected');
-
-      onValue(connectedRef, (snap) => {
-        if (snap.val() === true) {
-          onDisconnect(myPresenceRef).set('offline');
-          set(myPresenceRef, 'online');
-        }
-      });
-
-      document.addEventListener('visibilitychange', () => {
-        if (document.hidden) {
-          set(myPresenceRef, 'idle');
-        } else {
-          set(myPresenceRef, 'online');
-        }
-      });
-    }
-
+   
   function loadChatStream() {
   const chatRef = query(ref(db, 'chats'), limitToLast(80));
   const chatStream = document.getElementById('chat-stream');
