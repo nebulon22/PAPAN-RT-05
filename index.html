@@ -1563,10 +1563,11 @@ function muatDataJimpitan() {
             var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
             var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
             
+            var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
+
             // --- DATA HARIAN ---
             var keyTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
             var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
-            var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
 
             if (!cacheDataHarian[keyTanggal]) {
               cacheDataHarian[keyTanggal] = { label: namaMalam + ' (' + labelTanggal + ')', subtotal: 0, items: [] };
@@ -1575,19 +1576,28 @@ function muatDataJimpitan() {
             cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
             cacheDataHarian[keyTanggal].subtotal += nominal;
 
-            // --- DATA BULANAN ---
+            // --- DATA BULANAN (Dikelompokkan Berdasarkan Malam Ronda) ---
             var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
             var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
 
             if (!cacheDataBulanan[keyBulan]) {
-              cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapWarga: {} };
+              cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
               if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
             }
             
-            if (!cacheDataBulanan[keyBulan].rekapWarga[warga]) {
-              cacheDataBulanan[keyBulan].rekapWarga[warga] = 0;
+            // Sub-kategori regu malam
+            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
+              cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
             }
-            cacheDataBulanan[keyBulan].rekapWarga[warga] += nominal;
+            
+            // Sub-kategori warga dalam regu tersebut
+            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
+              cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
+            }
+
+            // Tambahkan nominalnya
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
             cacheDataBulanan[keyBulan].total += nominal;
           }
         }
@@ -1606,7 +1616,7 @@ function muatDataJimpitan() {
       if (gridContainer) gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data. Periksa koneksi internet.</div>';
     });
 }
-
+    
 function setupToggleJimpitan() {
   var select = document.getElementById('select-bulan-jimpitan');
   if (!select) return;
@@ -1723,26 +1733,42 @@ function renderCardBulanan(keyBulan) {
   }
 
   var dataBulan = cacheDataBulanan[keyBulan];
-  var daftarWarga = Object.keys(dataBulan.rekapWarga).sort(); 
   
-  var itemListHTML = daftarWarga.map(warga => {
-    var totalWarga = dataBulan.rekapWarga[warga];
-    var isNihil = totalWarga === 0;
-    var warnaNominal = isNihil ? '#dc2626' : '#0288d1';
-    var bgRow = isNihil ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
+  // Urutkan jadwal malam ronda agar tampil rapi dari Senin s/d Minggu
+  var urutanMalam = ['Malam Senin', 'Malam Selasa', 'Malam Rabu', 'Malam Kamis', 'Malam Jumat', 'Malam Sabtu', 'Malam Minggu'];
+  var daftarMalam = Object.keys(dataBulan.rekapMalam).sort((a, b) => {
+    var idxA = urutanMalam.indexOf(a);
+    var idxB = urutanMalam.indexOf(b);
+    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+  });
+  
+  // Cetak kartu untuk masing-masing regu malam
+  daftarMalam.forEach(malam => {
+    var dataMalam = dataBulan.rekapMalam[malam];
+    var daftarWarga = Object.keys(dataMalam.rekapWarga).sort(); 
+    
+    var itemListHTML = daftarWarga.map(warga => {
+      var totalWarga = dataMalam.rekapWarga[warga];
+      var isNihil = totalWarga === 0;
+      var warnaNominal = isNihil ? '#dc2626' : '#0288d1'; // Warna biru untuk totalan bulanan
+      var bgRow = isNihil ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
 
-    return `
-      <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px solid #f1f5f9; ${bgRow}">
-        <span style="color: ${isNihil ? '#991b1b' : '#334155'}; font-weight: 500;">${teksAman(warga)}</span>
-        <span style="color: ${warnaNominal}; font-weight: bold;">Rp ${totalWarga.toLocaleString('id-ID')}</span>
-      </div>
-    `;
-  }).join('');
+      return `
+        <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px solid #f1f5f9; ${bgRow}">
+          <span style="color: ${isNihil ? '#991b1b' : '#334155'}; font-weight: 500;">${teksAman(warga)}</span>
+          <span style="color: ${warnaNominal}; font-weight: bold;">Rp ${totalWarga.toLocaleString('id-ID')}</span>
+        </div>
+      `;
+    }).join('');
 
-  buatDanTampilkanKartu(gridContainer, "📅 Rekap " + dataBulan.label, dataBulan.total, itemListHTML);
+    // Tampilkan menggunakan fungsi pembantu kartu (sama dengan mode harian)
+    buatDanTampilkanKartu(gridContainer, "🌙 Rekap " + malam, dataMalam.subtotal, itemListHTML);
+  });
+
+  // Total uang besar di banner atas tetap menjumlahkan keseluruhan (satu RT)
   if (totalElem) totalElem.innerText = 'Rp ' + dataBulan.total.toLocaleString('id-ID');
 }
-
+    
 function buatDanTampilkanKartu(container, judul, total, htmlList) {
   var card = document.createElement('div');
   card.style.cssText = 'background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; flex-direction:column;';
