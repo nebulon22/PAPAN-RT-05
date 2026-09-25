@@ -505,6 +505,34 @@
       }
     });
 
+    // === PENDETEKSI MODAL TERBUKA/TIDAK ===
+    let isChatVisible = true;
+
+    window.addEventListener('DOMContentLoaded', () => {
+      // Deteksi jika modal disembunyikan menggunakan CSS/Iframe
+      const observer = new IntersectionObserver((entries) => {
+        isChatVisible = entries[0].isIntersecting && !document.hidden;
+        if (isChatVisible && activeChatType === 'private' && activePrivateUID) {
+          unreadCounts[activePrivateUID] = 0;
+          markRoomAsRead(activePrivateUID);
+          renderPrivateTabsUI();
+        }
+      });
+      observer.observe(document.body);
+    });
+
+    // Deteksi jika layar HP mati / minimize
+    document.addEventListener('visibilitychange', () => {
+      isChatVisible = !document.hidden;
+      if (isChatVisible && activeChatType === 'private' && activePrivateUID) {
+        unreadCounts[activePrivateUID] = 0;
+        markRoomAsRead(activePrivateUID);
+        renderPrivateTabsUI();
+      }
+    });
+    // ======================================
+
+    
     // 1. Buka Tab Private Chat
     window.openPrivateTab = (targetUID, targetName) => {
       if (targetUID === currentUser?.uid) return;
@@ -671,15 +699,17 @@
           renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
-        // Tandai bahwa data awal sudah sukses dimuat
+       // Tandai bahwa data awal sudah sukses dimuat
         isInitialPrivateChatLoaded[targetUID] = true;
         
-        // Auto-scroll ke pesan terbawah
         requestAnimationFrame(() => {
           chatStream.scrollTop = chatStream.scrollHeight;
         });
 
-        markRoomAsRead(targetUID);
+        // HANYA tandai dibaca JIKA modal sedang terbuka & layar menyala
+        if (isChatVisible) {
+          markRoomAsRead(targetUID);
+        }
       });
     }
 
@@ -700,7 +730,7 @@
       globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
         if (!snapshot.exists()) {
           isFirstLoad = false;
-          sendTotalUnreadToParent(); // <-- Pastikan huruf 't' di akhir ada
+          sendTotalUnreadToParent(); 
           return;
         }
 
@@ -748,7 +778,9 @@
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-              if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
+              // --- PENEMPATAN YANG BENAR ADA DI SINI ---
+              // Jika beda tab, ATAU modal sedang ditutup/layar mati (!isChatVisible)
+              if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
                 unreadCounts[targetUID] = unreadTotalCount;
                 if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) playKlingSound();
               }
@@ -759,7 +791,7 @@
         });
 
         renderPrivateTabsUI();
-        sendTotalUnreadToParent(); // <-- Pastikan huruf 't' di akhir ada
+        sendTotalUnreadToParent(); 
         isFirstLoad = false;
       });
     }
@@ -909,16 +941,13 @@
       sendUnreadCountToParent(0);
     };
     
-    // Helper Akumulasi Total Unread (Hanya Public Grup yang dikirim ke Index)
+   // Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
     let lastPublicUnreadCount = 0;
 
     function sendTotalUnreadToParent() {
-      // Sesuai permintaan: Notifikasi chat private HANYA tampil di tab-nya saja.
-      // Kita hapus penjumlahan totalPrivateUnread ke index.html.
-      
       window.parent.postMessage({
         type: 'RT05_CHAT_UNREAD_UPDATE',
-        unreadPublicCount: lastPublicUnreadCount // Hanya kirim data unread Grup
+        unreadPublicCount: lastPublicUnreadCount // Hanya kirim grup publik
       }, '*');
     }
 
