@@ -14,35 +14,44 @@
  
  <script src="utils.js"></script>
  <script>
-  var serviceWorkerMenunggu = null;
+ var serviceWorkerMenunggu = null;
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      // 1. Cek jika sudah ada file update yang siap dipasang
-      if (reg.waiting) {
-        serviceWorkerMenunggu = reg.waiting;
-        tampilkanLoncengUpdate();
-      }
-
-      // 2. Deteksi saat ada update baru yang terunduh
-      reg.addEventListener('updatefound', () => {
-        var workerBaru = reg.installing;
-        workerBaru.addEventListener('statechange', () => {
-          if (workerBaru.state === 'installed' && navigator.serviceWorker.controller) {
-            serviceWorkerMenunggu = workerBaru;
-            tampilkanLoncengUpdate();
-          }
-        });
-      });
-    });
-
-    // Auto-reload saat controller berpindah ke SW baru
+    // 1. Auto-reload saat controller berpindah ke SW baru
     let sedangRefresh = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!sedangRefresh) {
         sedangRefresh = true;
         window.location.reload();
       }
+    });
+
+    // 2. Registrasi Service Worker & Penanganan Update
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      const tangkapSWWaiting = (sw) => {
+        if (!sw) return;
+        serviceWorkerMenunggu = sw;
+        tampilkanLoncengUpdate();
+      };
+
+      // Cek jika sudah ada file update yang siap dipasang
+      if (reg.waiting) {
+        tangkapSWWaiting(reg.waiting);
+      }
+
+      // Deteksi saat ada update baru yang sedang terunduh
+      reg.addEventListener('updatefound', () => {
+        const workerBaru = reg.installing;
+        if (workerBaru) {
+          workerBaru.addEventListener('statechange', () => {
+            if (workerBaru.state === 'installed' && navigator.serviceWorker.controller) {
+              tangkapSWWaiting(workerBaru);
+            }
+          });
+        }
+      });
+    }).catch(err => {
+      console.error("Gagal registrasi SW:", err);
     });
   }
 
