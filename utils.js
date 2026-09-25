@@ -172,22 +172,24 @@ window.toggleSenterRonda = async function() {
 
   try {
     if (!isSenterAktif) {
-      // Nyalakan senter via kamera belakang
+      // Nyalakan Senter
       mediaStreamSenter = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', advanced: [{ torch: true }] }
       });
       isSenterAktif = true;
 
       if (btn) {
-        btn.style.background = '#fbbf24';
-        btn.style.color = '#0f172a';
+        btn.style.background = '#fbbf24'; // Background Kuning
+        btn.style.color = '#0f172a';      // Teks Hitam
         btn.style.borderColor = '#f59e0b';
       }
-      if (icon) icon.className = 'fa-solid fa-lightbulb';
+      if (icon) {
+        icon.style.color = '#0f172a';      // Ikon Bohlam Hitam di atas background Kuning
+      }
       if (status) status.innerText = 'ON';
 
     } else {
-      // Matikan senter
+      // Matikan Senter
       if (mediaStreamSenter) {
         mediaStreamSenter.getTracks().forEach(track => track.stop());
         mediaStreamSenter = null;
@@ -195,11 +197,14 @@ window.toggleSenterRonda = async function() {
       isSenterAktif = false;
 
       if (btn) {
-        btn.style.background = '#1e293b';
-        btn.style.color = '#fbbf24';
+        btn.style.background = '#1e293b'; // Background Gelap
+        btn.style.color = '#fbbf24';      // Teks Kuning
         btn.style.borderColor = '#334155';
       }
-      if (icon) icon.className = 'fa-solid fa-flashlight';
+      if (icon) {
+        icon.className = 'fa-solid fa-lightbulb'; // Tetap pertahankan class ikon bohlam
+        icon.style.color = '#fbbf24';              // Ikon Bohlam Kuning Emas
+      }
       if (status) status.innerText = 'OFF';
     }
   } catch (err) {
