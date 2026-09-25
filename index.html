@@ -1384,6 +1384,10 @@ function teksAman(str) {
   return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
 }
 
+// ==========================================
+// BAGIAN 2: OPTIMASI RIWAYAT JIMPITAN
+// ==========================================
+
 function muatDataJimpitan() {
   if (isJimpitanLoaded && arrayTanggal.length > 0) {
     setupToggleJimpitan();
@@ -1392,100 +1396,104 @@ function muatDataJimpitan() {
   }
 
   var gridContainer = document.getElementById('grid-jimpitan');
-  if (gridContainer) gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data terbaru...</div>';
+  
+  // Tampilkan loading HANYA jika data cache belum ada di HP
+  if (!localStorage.getItem('cache_jimpitan_warga') && gridContainer) {
+    gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data terbaru...</div>';
+  }
 
-  fetch(JIMPITAN_URL)
-    .then(response => response.text())
-    .then(csvText => {
-      var baris = parseCSV(csvText).slice(1).slice(-2000);
-      
-      cacheDataHarian = {};
-      cacheDataBulanan = {};
-      arrayTanggal = [];
-      arrayBulan = [];
+  // Menggunakan helper ambilDataSheets untuk caching
+  ambilDataSheets('cache_jimpitan_warga', JIMPITAN_URL, (data, fromCache) => {
+    if (!data || data.length === 0) {
+      if (!fromCache && gridContainer) {
+        gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data atau sedang offline.</div>';
+      }
+      return;
+    }
 
-      baris.forEach(kolom => {
-        if (kolom.length >= 3 && kolom[0] !== '') {
-          var tglStr = kolom[0];
-          var malamManual = '';
-          var warga = '-';
-          var nominal = 0;
+    // Adaptasi otomatis jika respons berupa Array JSON atau teks CSV
+    var baris = Array.isArray(data) ? data.slice(1).slice(-2000) : parseCSV(data).slice(1).slice(-2000);
+    
+    cacheDataHarian = {};
+    cacheDataBulanan = {};
+    arrayTanggal = [];
+    arrayBulan = [];
 
-          if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
-            malamManual = kolom[1].trim(); 
-            warga = kolom[2] || '-';
-            var nominalRaw = kolom[3] ? kolom[3].replace(/[^0-9]/g, '') : '0';
-            nominal = parseInt(nominalRaw, 10) || 0;
-          } else {
-            warga = kolom[1] || '-';
-            var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
-            nominal = parseInt(nominalRaw, 10) || 0;
-          }
+    baris.forEach(kolom => {
+      if (kolom.length >= 3 && kolom[0] !== '') {
+        var tglStr = kolom[0];
+        var malamManual = '';
+        var warga = '-';
+        var nominal = 0;
 
-          var angkaTanggal = tglStr.match(/\d+/g); 
-          if (angkaTanggal && angkaTanggal.length >= 3) {
-            var tgl = parseInt(angkaTanggal[0], 10);
-            var bln = parseInt(angkaTanggal[1], 10) - 1;
-            var thn = parseInt(angkaTanggal[2], 10);
-            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
-
-            var dateObj = new Date(thn, bln, tgl, jam, menit);
-            var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
-            var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-            
-            var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
-
-            // --- DATA HARIAN ---
-            var keyTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
-            var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
-
-            if (!cacheDataHarian[keyTanggal]) {
-              cacheDataHarian[keyTanggal] = { label: namaMalam + ' (' + labelTanggal + ')', subtotal: 0, items: [] };
-              arrayTanggal.push(keyTanggal);
-            }
-            cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
-            cacheDataHarian[keyTanggal].subtotal += nominal;
-
-            // --- DATA BULANAN (Dikelompokkan Berdasarkan Malam Ronda) ---
-            var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
-            var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
-
-            if (!cacheDataBulanan[keyBulan]) {
-              cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
-              if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
-            }
-            
-            // Sub-kategori regu malam
-            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
-              cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
-            }
-            
-            // Sub-kategori warga dalam regu tersebut
-            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
-              cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
-            }
-
-            // Tambahkan nominalnya
-            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
-            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
-            cacheDataBulanan[keyBulan].total += nominal;
-          }
+        if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
+          malamManual = kolom[1].trim(); 
+          warga = kolom[2] || '-';
+          var nominalRaw = kolom[3] ? String(kolom[3]).replace(/[^0-9]/g, '') : '0';
+          nominal = parseInt(nominalRaw, 10) || 0;
+        } else {
+          warga = kolom[1] || '-';
+          var nominalRaw = kolom[2] ? String(kolom[2]).replace(/[^0-9]/g, '') : '0';
+          nominal = parseInt(nominalRaw, 10) || 0;
         }
-      });
 
-      arrayTanggal.sort((a, b) => b.localeCompare(a));
-      arrayBulan.sort((a, b) => b.localeCompare(a));
-      
-      isJimpitanLoaded = true; 
-      
-      setupToggleJimpitan();
-      renderDropdownTanggal();
-    })
-    .catch(err => {
-      console.error("Gagal muat data jimpitan:", err);
-      if (gridContainer) gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data. Periksa koneksi internet.</div>';
+        var angkaTanggal = tglStr.match(/\d+/g); 
+        if (angkaTanggal && angkaTanggal.length >= 3) {
+          var tgl = parseInt(angkaTanggal[0], 10);
+          var bln = parseInt(angkaTanggal[1], 10) - 1;
+          var thn = parseInt(angkaTanggal[2], 10);
+          var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+          var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+
+          var dateObj = new Date(thn, bln, tgl, jam, menit);
+          var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
+          var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+          
+          var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
+
+          // --- DATA HARIAN ---
+          var keyTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
+          var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
+
+          if (!cacheDataHarian[keyTanggal]) {
+            cacheDataHarian[keyTanggal] = { label: namaMalam + ' (' + labelTanggal + ')', subtotal: 0, items: [] };
+            arrayTanggal.push(keyTanggal);
+          }
+          cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
+          cacheDataHarian[keyTanggal].subtotal += nominal;
+
+          // --- DATA BULANAN ---
+          var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
+          var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
+
+          if (!cacheDataBulanan[keyBulan]) {
+            cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
+            if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
+          }
+          
+          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
+          }
+          
+          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
+          }
+
+          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
+          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
+          cacheDataBulanan[keyBulan].total += nominal;
+        }
+      }
     });
+
+    arrayTanggal.sort((a, b) => b.localeCompare(a));
+    arrayBulan.sort((a, b) => b.localeCompare(a));
+    
+    isJimpitanLoaded = true; 
+    
+    setupToggleJimpitan();
+    renderDropdownTanggal();
+  });
 }
     
 function setupToggleJimpitan() {
