@@ -597,7 +597,10 @@
       renderPrivateTabsUI();
 
       const chatStream = document.getElementById('chat-stream');
-      if (chatStream) chatStream.innerHTML = '';
+      if (chatStream) {
+        // Berikan indikator memuat daripada langsung mengosongkan layar secara mendadak
+        chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
+      }
 
       if (type === 'public') {
         loadChatStream();
@@ -625,7 +628,7 @@
       }
     };
 
-    // 5. Listener Stream Chat Private Aktif (Dengan Efek Sorot Memudar 2 Detik)
+ // 5. Listener Stream Chat Private Aktif (Fix Bug Chat Hilang)
     let isInitialPrivateChatLoaded = {};
 
     function loadPrivateChatStream(targetUID) {
@@ -637,10 +640,11 @@
         if (!chatStream) return;
         if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
 
+        // Kosongkan indikator loading hanya jika snapshot siap di-render
         chatStream.innerHTML = '';
 
         if (!snapshot.exists()) {
-          chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID])}. Mulai percakapan!</div>`;
+          chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID] || 'Warga')}. Mulai percakapan!</div>`;
           isInitialPrivateChatLoaded[targetUID] = true;
           return;
         }
@@ -667,8 +671,14 @@
           renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
+        // Tandai bahwa data awal sudah sukses dimuat
         isInitialPrivateChatLoaded[targetUID] = true;
-        chatStream.scrollTop = chatStream.scrollHeight;
+        
+        // Auto-scroll ke pesan terbawah
+        requestAnimationFrame(() => {
+          chatStream.scrollTop = chatStream.scrollHeight;
+        });
+
         markRoomAsRead(targetUID);
       });
     }
