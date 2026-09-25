@@ -622,65 +622,75 @@
       });
     }
 
-   // Pemantau pesan private di latar belakang (Offline & Realtime Ready)
-    let privateListeners = {};
+  // Pemantau Pesan Private Universal (Otomatis Buka Tab Baru Jika Ada Chat Masuk)
+    let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
       if (!currentUser?.uid) return;
 
-      Object.values(privateListeners).forEach(unsub => unsub());
-      privateListeners = {};
+      // Matikan listener lama jika ada
+      if (globalPrivateListener) {
+        globalPrivateListener();
+        globalPrivateListener = null;
+      }
 
-      // Ambil riwayat waktu terakhir user membaca pesan tiap room dari localStorage
       const lastReadTimestamps = JSON.parse(localStorage.getItem('rt05_chat_last_read')) || {};
+      const allPrivateRef = ref(db, 'private_chats');
 
-      Object.keys(openPrivateRooms).forEach(targetUID => {
-        const roomID = [currentUser.uid, targetUID].sort().join('_');
-        const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
+      let isFirstLoad = true;
 
-        let isFirstLoad = true;
-
-        privateListeners[targetUID] = onValue(roomRef, (snapshot) => {
-          if (!snapshot.exists()) {
-            isFirstLoad = false;
-            return;
-          }
-
-          let lastMsg = null;
-          let unreadTotalCount = 0;
-          const lastReadTime = lastReadTimestamps[targetUID] || 0;
-
-          snapshot.forEach(childSnap => { 
-            const msgData = childSnap.val();
-            lastMsg = msgData;
-
-            // Hitung pesan dari lawan bicara yang terkirim SETELAH terakhir kali user membaca room ini
-            if (msgData.uid !== currentUser.uid && msgData.timestamp > lastReadTime) {
-              unreadTotalCount++;
-            }
-          });
-
-          // Skenario 1: Baru buka aplikasi (Pesan masuk saat Offline)
-          if (isFirstLoad) {
-            if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
-              if (unreadTotalCount > 0) {
-                unreadCounts[targetUID] = unreadTotalCount;
-                renderPrivateTabsUI();
-              }
-            }
-          } 
-          // Skenario 2: Pesan baru tiba secara Realtime saat aplikasi menyala
-          else {
-            if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
-              if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
-                unreadCounts[targetUID] = (unreadCounts[targetUID] || 0) + 1;
-                renderPrivateTabsUI(); 
-              }
-            }
-          }
-
+      globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
+        if (!snapshot.exists()) {
           isFirstLoad = false;
+          return;
+        }
+
+        snapshot.forEach((roomSnap) => {
+          const roomID = roomSnap.key;
+          // Cek apakah roomID ini melibatkan currentUser (Format roomID: UID1_UID2)
+          if (roomID.includes(currentUser.uid)) {
+            const parts = roomID.split('_');
+            const targetUID = parts[0] === currentUser.uid ? parts[1] : parts[0];
+
+            let unreadTotalCount = 0;
+            let lastMsg = null;
+            const lastReadTime = lastReadTimestamps[targetUID] || 0;
+
+            roomSnap.forEach((msgSnap) => {
+              const msgData = msgSnap.val();
+              lastMsg = msgData;
+
+              // Hitung pesan masuk dari lawan bicara yang belum dibaca
+              if (msgData.uid !== currentUser.uid && (msgData.timestamp || 0) > lastReadTime) {
+                unreadTotalCount++;
+              }
+            });
+
+            // Jika ada pesan baru dari lawan bicara
+            if (unreadTotalCount > 0) {
+              const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
+
+              // 1. OTOMATIS TAMBAHKAN KE OPEN PRIVATE ROOMS BILA TAB BELUM ADA
+              if (!openPrivateRooms[targetUID]) {
+                openPrivateRooms[targetUID] = senderName;
+                localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+              }
+
+              // 2. UPDATE UNREAD COUNT & SUARA NOTIFIKASI
+              if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
+                unreadCounts[targetUID] = unreadTotalCount;
+                
+                // Bunyikan suara kling jika ada pesan baru saat aplikasi menyala
+                if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
+                  playKlingSound();
+                }
+              }
+            }
+          }
         });
+
+        renderPrivateTabsUI();
+        isFirstLoad = false;
       });
     }
 
