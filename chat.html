@@ -934,9 +934,9 @@
       }, '*');
     }
 
-    
-    // Pendeteksi Status IDLE / MINIMIZE
+    // Pendeteksi Status IDLE / MINIMIZE (Anti-Kedip di HP PWA)
     let currentLocalState = 'online';
+    let visibilityTimeout = null;
 
     function setupPresence() {
       if (!currentUser?.uid) return;
@@ -953,15 +953,22 @@
       });
 
       document.addEventListener('visibilitychange', () => {
-        const newState = document.hidden ? 'idle' : 'online';
+        // Hapus timeout sebelumnya jika ada aksi beruntun
+        if (visibilityTimeout) clearTimeout(visibilityTimeout);
 
-        if (newState !== currentLocalState) {
-          currentLocalState = newState;
-          set(userStatusRef, newState);
-        }
+        // Beri jeda 3 detik sebelum mengubah status untuk mencegah respon berlebih dari OS HP
+        visibilityTimeout = setTimeout(() => {
+          const newState = document.hidden ? 'idle' : 'online';
+
+          if (newState !== currentLocalState) {
+            currentLocalState = newState;
+            set(userStatusRef, newState);
+          }
+        }, 3000);
       });
     }
 
+    
     function requestNotificationPermission() {
       if (!('Notification' in window) || !currentUser?.uid) return;
 
