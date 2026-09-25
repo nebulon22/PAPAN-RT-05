@@ -53,3 +53,10 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+// 3. Tambahkan ini agar perintah skipWaiting dari lonceng bisa dieksekusi!
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.action === 'skipWaiting') {
+    self.skipWaiting();
+  }
+});
