@@ -758,7 +758,7 @@
       }
     };
 
-// Pemantau Pesan Unread Grup Chat Publik untuk Tombol Oranye (Berdasarkan ID Pesan)
+// Pemantau Pesan Unread Grup Chat Publik untuk Tombol Oranye
     let publicGroupListener = null;
 
     function listenPublicGroupUnread() {
@@ -784,7 +784,7 @@
         let lastMsg = null;
         let countAfterKey = false;
 
-        if (!lastReadPublicMapKey) countAfterKey = true; // Jika belum pernah baca, hitung pesan warga lain
+        if (!lastReadPublicMapKey) countAfterKey = true;
 
         snapshot.forEach((msgSnap) => {
           const msgKey = msgSnap.key;
@@ -792,7 +792,7 @@
           lastMsg = msgData;
 
           if (msgKey === lastReadPublicMapKey) {
-            countAfterKey = true; // Ketemu ID penanda baca terakhir, hitung pesan SETELAH ID ini
+            countAfterKey = true;
             unreadPublicCount = 0;
           } else if (countAfterKey && msgData.uid !== currentUser.uid) {
             unreadPublicCount++;
@@ -804,19 +804,13 @@
           unreadPublicCount = 0;
         }
 
-        // Jika user sedang aktif membuka room public di layar chat, tandai langsung sebagai terbaca
-        if (activeChatType === 'public') {
-          unreadPublicCount = 0;
-          markPublicGroupAsRead();
-        }
-
-        // Kirim angka badge ke halaman utama (index.html)
+        // Kirim jumlah unread murni ke halaman utama (index.html)
         sendUnreadCountToParent(unreadPublicCount);
       });
     }
 
-    // Helper: Tandai ID Pesan Terakhir Grup Chat Publik Sudah Dibaca
-    function markPublicGroupAsRead() {
+   // Helper: Tandai ID Pesan Terakhir Grup Chat Publik Sudah Dibaca
+    window.markPublicGroupAsRead = () => {
       if (!currentUser?.uid) return;
 
       const chatsRef = query(ref(db, 'chats'), limitToLast(1));
@@ -834,7 +828,7 @@
       });
 
       sendUnreadCountToParent(0);
-    }
+    };
 
     // Helper: Kirim data Unread Count ke Parent Window (index.html)
     function sendUnreadCountToParent(count) {
