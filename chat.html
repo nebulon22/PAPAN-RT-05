@@ -447,7 +447,6 @@
     let openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
     let unreadCounts = {};
 
-    // Safe Helper URL Google Apps Script dari utils.js
     function getGasUrl() {
       return (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.GAS_WEB_APP_URL) 
         ? RT05_CONFIG.GAS_WEB_APP_URL 
@@ -477,7 +476,7 @@
       }
     });
 
-    // 1. Fungsi Buka Tab Private Chat
+    // 1. Buka Tab Private Chat
     window.openPrivateTab = (targetUID, targetName) => {
       if (targetUID === currentUser?.uid) return;
 
@@ -523,22 +522,33 @@
       });
     }
 
-// 3. Pindah Tab (Public <-> Private)
+    // Helper: Tandai Pesan Terakhir di Room ini Sudah Dibaca
+    function markRoomAsRead(targetUID) {
+      const roomID = [currentUser.uid, targetUID].sort().join('_');
+      const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
+
+      get(roomRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          let lastKey = null;
+          snapshot.forEach(child => { lastKey = child.key; });
+          
+          if (lastKey) {
+            const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+            lastReadKeyMap[targetUID] = lastKey;
+            localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
+          }
+        }
+      });
+    }
+
+    // 3. Pindah Tab (Public <-> Private)
     window.switchChatRoom = (type, targetUID = null) => {
       activeChatType = type;
       activePrivateUID = targetUID;
 
       if (type === 'private' && targetUID) {
-        unreadCounts[targetUID] = 0; // Reset badge
-
-        const roomID = [currentUser.uid, targetUID].sort().join('_');
-        const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
-
-        get(roomRef).then((snapshot) => {
-          const lastCountMap = JSON.parse(localStorage.getItem('rt05_chat_last_count')) || {};
-          lastCountMap[targetUID] = snapshot.exists() ? snapshot.size : 0;
-          localStorage.setItem('rt05_chat_last_count', JSON.stringify(lastCountMap));
-        });
+        unreadCounts[targetUID] = 0; // Reset badge di memori UI
+        markRoomAsRead(targetUID);   // Catat ID pesan terakhir
       }
 
       if (currentChatUnsubscribe) {
@@ -564,19 +574,12 @@
       }
     };
 
-  // 4. Tutup Tab Private (Simpan Total Jumlah Pesan Saat Ditutup)
+    // 4. Tutup Tab Private
     window.closePrivateTab = (e, targetUID) => {
       if (e) e.stopPropagation(); 
 
-      const roomID = [currentUser.uid, targetUID].sort().join('_');
-      const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
-
-      // Ambil jumlah total pesan saat ini di Firebase lalu simpan ke LocalStorage
-      get(roomRef).then((snapshot) => {
-        const lastCountMap = JSON.parse(localStorage.getItem('rt05_chat_last_count')) || {};
-        lastCountMap[targetUID] = snapshot.exists() ? snapshot.size : 0;
-        localStorage.setItem('rt05_chat_last_count', JSON.stringify(lastCountMap));
-      });
+      // Tandai pesan terakhir sebagai sudah dibaca
+      markRoomAsRead(targetUID);
 
       // Bersihkan badge & tab
       unreadCounts[targetUID] = 0;
@@ -591,12 +594,10 @@
     };
 
     // 5. Listener Stream Chat Private Aktif
-    function loadPrivateChatStream(targetUID, unreadCount = 0) {
+    function loadPrivateChatStream(targetUID) {
       const roomID = [currentUser.uid, targetUID].sort().join('_');
       const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
       const chatStream = document.getElementById('chat-stream');
-
-      let highlightedKeys = null;
 
       currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
         if (!chatStream) return;
@@ -609,34 +610,17 @@
           return;
         }
 
-        const msgs = [];
         snapshot.forEach((childSnap) => {
-          msgs.push({ key: childSnap.key, data: childSnap.val() });
-        });
-        
-        const totalMsgs = msgs.length;
-
-        if (highlightedKeys === null) {
-          highlightedKeys = new Set();
-          if (unreadCount > 0) {
-            for (let i = totalMsgs - unreadCount; i < totalMsgs; i++) {
-              if (i >= 0 && msgs[i].data.uid !== currentUser.uid) {
-                highlightedKeys.add(msgs[i].key);
-              }
-            }
-          }
-        }
-
-        msgs.forEach((msgObj) => {
-          const isUnread = highlightedKeys.has(msgObj.key);
-          renderSingleMessage(msgObj.data, isUnread);
+          renderSingleMessage(childSnap.val(), false, childSnap.key);
         });
 
         chatStream.scrollTop = chatStream.scrollHeight;
+        markRoomAsRead(targetUID); // Otomatis tandai sudah dibaca saat melihat pesan
       });
     }
 
-let globalPrivateListener = null;
+    // Pemantau Pesan Private Universal (Menggunakan Akurasi Key ID Pesan)
+    let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
       if (!currentUser?.uid) return;
@@ -655,7 +639,7 @@ let globalPrivateListener = null;
           return;
         }
 
-        const lastCountMap = JSON.parse(localStorage.getItem('rt05_chat_last_count')) || {};
+        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
 
         snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
@@ -664,18 +648,27 @@ let globalPrivateListener = null;
             const parts = roomID.split('_');
             const targetUID = parts[0] === currentUser.uid ? parts[1] : parts[0];
 
-            const totalCurrentMsgs = roomSnap.size;
-            const lastReadCount = lastCountMap[targetUID] || 0;
-
-            // Hitung selisih pesan baru dari total pesan saat ini
-            let unreadTotalCount = totalCurrentMsgs - lastReadCount;
-            if (unreadTotalCount < 0) unreadTotalCount = 0;
-
-            // Dapatkan pesan paling akhir untuk cek pengirimnya
+            let unreadTotalCount = 0;
             let lastMsg = null;
-            roomSnap.forEach((msgSnap) => { lastMsg = msgSnap.val(); });
+            const lastReadKey = lastReadKeyMap[targetUID];
 
-            // Jika pesan terakhir dikirim oleh diri sendiri, badge tidak perlu muncul
+            let countAfterKey = false;
+            if (!lastReadKey) countAfterKey = true; // Jika belum pernah baca, hitung semua pesan lawan bicara
+
+            roomSnap.forEach((msgSnap) => {
+              const msgKey = msgSnap.key;
+              const msgData = msgSnap.val();
+              lastMsg = msgData;
+
+              if (msgKey === lastReadKey) {
+                countAfterKey = true; // Ketemu penanda baca terakhir, hitung pesan SETELAH key ini
+                unreadTotalCount = 0;
+              } else if (countAfterKey && msgData.uid !== currentUser.uid) {
+                unreadTotalCount++;
+              }
+            });
+
+            // Jika pesan terakhir dikirim oleh diri sendiri, unread harus 0
             if (lastMsg && lastMsg.uid === currentUser.uid) {
               unreadTotalCount = 0;
             }
@@ -683,7 +676,7 @@ let globalPrivateListener = null;
             if (unreadTotalCount > 0) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
 
-              // Munculkan tab otomatis jika belum terbuka
+              // Buka tab jika belum ada
               if (!openPrivateRooms[targetUID]) {
                 const keys = Object.keys(openPrivateRooms);
                 if (keys.length >= 5) delete openPrivateRooms[keys[0]];
@@ -707,7 +700,6 @@ let globalPrivateListener = null;
       });
     }
 
-    
     // 6. Pengiriman Pesan
     window.sendChatMessage = (e) => {
       e.preventDefault();
@@ -730,6 +722,8 @@ let globalPrivateListener = null;
         const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
         const newMsgRef = push(ref(db, `private_chats/${roomID}`));
 
+        const newKey = newMsgRef.key;
+
         set(newMsgRef, {
           uid: currentUser.uid,
           sender: currentUser.username || currentUser.nama,
@@ -738,6 +732,11 @@ let globalPrivateListener = null;
           timestamp: serverTimestamp()
         }).then(() => { 
           input.value = ''; 
+
+          // Tandai pesan sendiri ini sebagai acuan terakhir
+          const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+          lastReadKeyMap[activePrivateUID] = newKey;
+          localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
 
           const targetUser = allUsersCache[activePrivateUID];
           const gasUrl = getGasUrl();
@@ -921,8 +920,6 @@ let globalPrivateListener = null;
           if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
           
           setupPresence();
-          
-          // GANTI loadChatStream() DENGAN INI AGAR SELALU MASUK KELOMPOK PUBLIC SAAT AWAL
           switchChatRoom('public'); 
           
           loadUsersList();
@@ -1064,7 +1061,7 @@ let globalPrivateListener = null;
         let lastMsg = null;
         snapshot.forEach((childSnap) => {
           lastMsg = childSnap.val();
-          renderSingleMessage(lastMsg);
+          renderSingleMessage(lastMsg, false, childSnap.key);
         });
 
         isInitialPublicChatLoaded = true;
@@ -1072,13 +1069,13 @@ let globalPrivateListener = null;
       });
     }
         
-function renderSingleMessage(msg, isUnread = false, msgKey = '') {
+    function renderSingleMessage(msg, isUnread = false, msgKey = '') {
       const chatStream = document.getElementById('chat-stream');
       if (!chatStream) return;
       
       const div = document.createElement('div');
       div.className = "msg-row";
-      if (msgKey) div.setAttribute('data-msg-id', msgKey); // Simpan ID pesan ke elemen HTML
+      if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
       if (isUnread) {
         div.style.transition = "background-color 3s ease, border-color 2s ease";
