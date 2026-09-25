@@ -1072,13 +1072,17 @@
           if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
           
           setupPresence();
-          switchChatRoom('public'); 
           
+          // 1. Jalankan semua listener pemantau pesan terlebih dahulu
           loadUsersList();
           renderPrivateTabsUI();
           listenAllPrivateChats();
-          listenPublicGroupUnread();
+          listenPublicGroupUnread(); // <--- Hitung unread dari localStorage sebelum ditimpa!
           requestNotificationPermission();
+
+          // 2. Set ruang aktif ke public TANPA langsung menandainya sebagai 'read' secara paksa
+          activeChatType = 'public';
+          loadChatStream();
         }
       });
     }
