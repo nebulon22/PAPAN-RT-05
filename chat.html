@@ -960,9 +960,9 @@
       sendTotalUnreadToParent();
     }
 
-   // --- LOGIKA PRESENCE & IDLE USER (DENGAN ANTI-KEDIP 3000 MS) ---
+  // --- LOGIKA PRESENCE & IDLE USER ---
     let idleTimer = null;
-    let antiKedipTimer = null; // Variable penahan anti-kedip
+    let antiKedipTimer = null;
     let isPresenceSetup = false;
     let lastSetState = '';
 
@@ -991,35 +991,46 @@
         return true; 
       };
 
-      // Evaluasi status berdasarkan kondisi layar & modal chat (Anti-Kedip 3000 ms)
-      const evaluateStatus = () => {
-        // Batalkan timer jika ada aksi cepat berulang
-        if (antiKedipTimer) clearTimeout(antiKedipTimer);
-
-        antiKedipTimer = setTimeout(() => {
-          // Jika Tab disembunyikan ATAU Modal Chat ditutup -> Set IDLE (Kuning)
-          if (document.hidden || !isChatModalOpen()) {
-            clearTimeout(idleTimer);
-            setMyState('idle');
-            return;
-          }
-
-          // Jika Tab Aktif & Modal Chat Terbuka -> Set ONLINE (Hijau)
-          setMyState('online');
-
-          // Reset timer idle (3 menit tanpa gerakan di chat -> IDLE)
+      // Eksekusi perubahan status
+      const executeStatusChange = () => {
+        // Jika Tab disembunyikan ATAU Modal Chat ditutup -> Set IDLE (Kuning)
+        if (document.hidden || !isChatModalOpen()) {
           clearTimeout(idleTimer);
-          idleTimer = setTimeout(() => {
-            setMyState('idle');
-          }, 3 * 60 * 1000);
-        }, 3000); // <-- Penahan Anti-Kedip 3 detik (3000 ms)
+          setMyState('idle');
+          return;
+        }
+
+        // Jika Tab Aktif & Modal Chat Terbuka -> Set ONLINE (Hijau)
+        setMyState('online');
+
+        // Reset timer idle (3 menit tanpa gerakan di chat -> IDLE)
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          setMyState('idle');
+        }, 3 * 60 * 1000);
       };
 
-      // 1. PENGATURAN KONEKSI FIREBASE (Saat Browser/Tab Ditutup Paksa -> OFFLINE)
+      // Evaluasi status dengan parameter instan / delay
+      const evaluateStatus = (instant = false) => {
+        if (antiKedipTimer) clearTimeout(antiKedipTimer);
+
+        if (instant) {
+          // Tanpa delay: Langsung set ke Firebase (dipakai saat awal buka chat)
+          executeStatusChange();
+        } else {
+          // Gunakan delay 3000 ms anti-kedip (dipakai saat beralih tab)
+          antiKedipTimer = setTimeout(() => {
+            executeStatusChange();
+          }, 3000);
+        }
+      };
+
+      // 1. PENGATURAN KONEKSI FIREBASE (Saat pertama kali terhubung / buka chat)
       onValue(connectedRef, (snap) => {
         if (snap.val() === true) {
           onDisconnect(userStateRef).set('offline').then(() => {
-            evaluateStatus();
+            // INSTAN: Langsung anggap ONLINE saat pertama buka tanpa menunggu delay!
+            evaluateStatus(true);
           });
         }
       });
@@ -1028,22 +1039,26 @@
       ['mousemove', 'keydown', 'touchstart', 'scroll', 'click'].forEach(evt => {
         window.addEventListener(evt, () => {
           if (!document.hidden && isChatModalOpen()) {
-            evaluateStatus();
+            // Jika status saat ini IDLE, langsung kembalikan ke ONLINE secara instan
+            if (lastSetState === 'idle') {
+              evaluateStatus(true);
+            } else {
+              evaluateStatus(false);
+            }
           }
         }, { passive: true });
       });
 
-      // 3. DETEKSI BERALIH TAB (Visibility Change)
+      // 3. DETEKSI BERALIH TAB (Visibility Change menggunakan anti-kedip 3 detik)
       document.addEventListener('visibilitychange', () => {
-        evaluateStatus();
+        evaluateStatus(false);
       });
 
-      // 4. EKSPOSE FUNGSI UNTUK DIPANGGUL SAAT TOMBOL CHAT DITUTUP/DIBUKA
+      // 4. EKSPOSE FUNGSI SAAT TOMBOL CHAT DITUTUP/DIBUKA (Instan)
       window.updatePresenceOnChatToggle = function() {
-        evaluateStatus();
+        evaluateStatus(true);
       };
     }
-
     
     function requestNotificationPermission() {
       if (!('Notification' in window) || !currentUser?.uid) return;
