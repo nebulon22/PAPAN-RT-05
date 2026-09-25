@@ -523,20 +523,22 @@
       });
     }
 
-    // 3. Pindah Tab (Public <-> Private)
+// 3. Pindah Tab (Public <-> Private)
     window.switchChatRoom = (type, targetUID = null) => {
       activeChatType = type;
       activePrivateUID = targetUID;
 
-      let passedUnreadCount = 0;
       if (type === 'private' && targetUID) {
-        passedUnreadCount = unreadCounts[targetUID] || 0;
-        unreadCounts[targetUID] = 0; // Reset badge di UI
+        unreadCounts[targetUID] = 0; // Reset badge
 
-        // Simpan waktu timestamp saat ini sebagai penanda "Sudah Dibaca"
-        const lastReadTimestamps = JSON.parse(localStorage.getItem('rt05_chat_last_read')) || {};
-        lastReadTimestamps[targetUID] = Date.now();
-        localStorage.setItem('rt05_chat_last_read', JSON.stringify(lastReadTimestamps));
+        const roomID = [currentUser.uid, targetUID].sort().join('_');
+        const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
+
+        get(roomRef).then((snapshot) => {
+          const lastCountMap = JSON.parse(localStorage.getItem('rt05_chat_last_count')) || {};
+          lastCountMap[targetUID] = snapshot.exists() ? snapshot.size : 0;
+          localStorage.setItem('rt05_chat_last_count', JSON.stringify(lastCountMap));
+        });
       }
 
       if (currentChatUnsubscribe) {
@@ -558,33 +560,29 @@
       if (type === 'public') {
         loadChatStream();
       } else if (type === 'private' && targetUID) {
-        loadPrivateChatStream(targetUID, passedUnreadCount);
+        loadPrivateChatStream(targetUID);
       }
     };
 
-   // 4. Tutup Tab Private (Simpan ID Pesan Terakhir)
+  // 4. Tutup Tab Private (Simpan Total Jumlah Pesan Saat Ditutup)
     window.closePrivateTab = (e, targetUID) => {
       if (e) e.stopPropagation(); 
 
-      // 1. Ambil ID pesan paling akhir yang ada di layar saat ini
       const roomID = [currentUser.uid, targetUID].sort().join('_');
-      const lastReadIds = JSON.parse(localStorage.getItem('rt05_chat_last_msg_id')) || {};
-      
-      // Ambil elemen pesan terakhir di stream jika sedang dibuka
-      const chatStream = document.getElementById('chat-stream');
-      if (activeChatType === 'private' && activePrivateUID === targetUID && chatStream.lastElementChild) {
-        lastReadIds[targetUID] = chatStream.lastElementChild.getAttribute('data-msg-id') || 'READ';
-      } else {
-        lastReadIds[targetUID] = 'READ_ALL';
-      }
-      localStorage.setItem('rt05_chat_last_msg_id', JSON.stringify(lastReadIds));
+      const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
 
-      // 2. Bersihkan memori tab & badge
+      // Ambil jumlah total pesan saat ini di Firebase lalu simpan ke LocalStorage
+      get(roomRef).then((snapshot) => {
+        const lastCountMap = JSON.parse(localStorage.getItem('rt05_chat_last_count')) || {};
+        lastCountMap[targetUID] = snapshot.exists() ? snapshot.size : 0;
+        localStorage.setItem('rt05_chat_last_count', JSON.stringify(lastCountMap));
+      });
+
+      // Bersihkan badge & tab
       unreadCounts[targetUID] = 0;
       delete openPrivateRooms[targetUID];
       localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
-      // 3. Pindah ke grup public jika tab ini yang sedang aktif
       if (activeChatType === 'private' && activePrivateUID === targetUID) {
         switchChatRoom('public');
       } else {
@@ -657,7 +655,7 @@ let globalPrivateListener = null;
           return;
         }
 
-        const lastReadIds = JSON.parse(localStorage.getItem('rt05_chat_last_msg_id')) || {};
+        const lastCountMap = JSON.parse(localStorage.getItem('rt05_chat_last_count')) || {};
 
         snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
@@ -666,37 +664,26 @@ let globalPrivateListener = null;
             const parts = roomID.split('_');
             const targetUID = parts[0] === currentUser.uid ? parts[1] : parts[0];
 
-            let unreadTotalCount = 0;
+            const totalCurrentMsgs = roomSnap.size;
+            const lastReadCount = lastCountMap[targetUID] || 0;
+
+            // Hitung selisih pesan baru dari total pesan saat ini
+            let unreadTotalCount = totalCurrentMsgs - lastReadCount;
+            if (unreadTotalCount < 0) unreadTotalCount = 0;
+
+            // Dapatkan pesan paling akhir untuk cek pengirimnya
             let lastMsg = null;
-            let foundLastRead = false;
-            const targetLastReadId = lastReadIds[targetUID];
+            roomSnap.forEach((msgSnap) => { lastMsg = msgSnap.val(); });
 
-            roomSnap.forEach((msgSnap) => {
-              const msgKey = msgSnap.key;
-              const msgData = msgSnap.val();
-              lastMsg = msgData;
-
-              if (targetLastReadId) {
-                // Jika pesan ini adalah pesan terakhir yang dibaca/di-close sebelumnya
-                if (msgKey === targetLastReadId) {
-                  foundLastRead = true;
-                  unreadTotalCount = 0; // Reset hitungan
-                } else if (foundLastRead && msgData.uid !== currentUser.uid) {
-                  unreadTotalCount++; // Hitung pesan SETELAH pesan terakhir terbaca
-                }
-              } else {
-                if (msgData.uid !== currentUser.uid) unreadTotalCount++;
-              }
-            });
-
-            // Jika tab di-close tanpa ID spesifik, dan tidak ada pesan baru dari lawan bicara di akhir
-            if (targetLastReadId === 'READ_ALL' || (lastMsg && lastMsg.uid === currentUser.uid)) {
+            // Jika pesan terakhir dikirim oleh diri sendiri, badge tidak perlu muncul
+            if (lastMsg && lastMsg.uid === currentUser.uid) {
               unreadTotalCount = 0;
             }
 
             if (unreadTotalCount > 0) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
 
+              // Munculkan tab otomatis jika belum terbuka
               if (!openPrivateRooms[targetUID]) {
                 const keys = Object.keys(openPrivateRooms);
                 if (keys.length >= 5) delete openPrivateRooms[keys[0]];
@@ -719,6 +706,7 @@ let globalPrivateListener = null;
         isFirstLoad = false;
       });
     }
+
     
     // 6. Pengiriman Pesan
     window.sendChatMessage = (e) => {
