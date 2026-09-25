@@ -6,22 +6,26 @@
   <title>Admin - Denah, Inventaris, & Keuangan RT 05</title>
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  
-<script>
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js');
 
-    // Memicu auto-refresh otomatis tanpa campur tangan warga
-    let sedangRefresh = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!sedangRefresh) {
-        sedangRefresh = true;
-        window.location.reload();
-      }
-    });
-  }
-</script>
-  
+  <script src="utils.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('ServiceWorker gagal terdaftar:', err);
+        });
+      });
+
+      let sedangRefresh = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!sedangRefresh) {
+          sedangRefresh = true;
+          window.location.reload();
+        }
+      });
+    }
+  </script>
+    
   <style>
     html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
     #map { width: 100%; height: 100vh; }
@@ -160,9 +164,49 @@
         </button>
       </div>
     </div>
+
+    <!-- Section Persetujuan Chat Warga -->
+    <div style="margin-top: 12px; background-color: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 12px; color: #ffffff; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); font-family: sans-serif;">
+      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 8px; margin-bottom: 8px;">
+        <span style="font-size: 12px; font-weight: bold; color: #38bdf8;">👥 Persetujuan Chat Warga RT 05</span>
+        <span id="pending-badge" style="background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px;">
+          0 Pending
+        </span>
+      </div>
+
+      <div style="max-height: 160px; overflow-y: auto;">
+        <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
+          <thead>
+            <tr style="border-bottom: 1px solid #334155; color: #94a3b8; text-transform: uppercase; font-size: 10px;">
+              <th style="padding: 6px;">Nama / Lokasi</th>
+              <th style="padding: 6px; text-align: center;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="pending-users-list">
+            <tr>
+              <td colspan="2" style="padding: 10px; text-align: center; color: #64748b; font-style: italic;">
+                Memuat pendaftar...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <details style="margin-top: 10px; border-top: 1px solid #1e293b; padding-top: 6px; font-size: 11px;">
+        <summary style="cursor: pointer; color: #94a3b8; font-weight: 500; user-select: none;">
+          ⚙️ Kelola Seluruh Warga (<span id="total-warga-count">0</span>)
+        </summary>
+        <div style="max-height: 150px; overflow-y: auto; margin-top: 6px;">
+          <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
+            <tbody id="all-users-list">
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </div>
   </div>
 
- <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
+  <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
   <div id="modal-form" class="modal-bg" onclick="event.stopPropagation(); if(event.target === this) tutupModalForm();">
     <div class="modal-content">
       <div class="modal-header">
@@ -269,7 +313,7 @@
     </div>
   </div>
    
- <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
+  <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
   <div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
     <div class="modal-content" style="max-width: 550px; width: 92%;">
       
@@ -369,9 +413,9 @@
   <!-- JAVASCRIPT LOGIC -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec";
+    const GAS_WEB_APP_URL = RT05_CONFIG.GAS_WEB_APP_URL;
 
-  // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
+    // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
     let sedangMengirimAdmin = false;
 
     function perbaruiIndikatorSyncAdmin() {
@@ -380,14 +424,11 @@
       
       if (!badge) return;
 
-      // 1. Jika Sedang Proses Pengiriman (Biru)
       if (sedangMengirimAdmin) {
         badge.innerHTML = `🔵 Sedang Menyinkronkan Data...`;
         badge.style.backgroundColor = '#dbeafe';
         badge.style.color = '#1e40af';
-      } 
-      // 2. Jika HP Sedang Offline (Merah / Kuning)
-      else if (!navigator.onLine) {
+      } else if (!navigator.onLine) {
         if (antrean.length > 0) {
           badge.innerHTML = `🟡 ${antrean.length} Data Admin Menunggu Sinyal`;
           badge.style.backgroundColor = '#fef3c7';
@@ -397,9 +438,7 @@
           badge.style.backgroundColor = '#fee2e2';
           badge.style.color = '#991b1b';
         }
-      } 
-      // 3. Jika HP Online (Hijau / Kuning)
-      else {
+      } else {
         if (antrean.length === 0) {
           badge.innerHTML = '🟢 Semua Data Ter-sinkron';
           badge.style.backgroundColor = '#d1fae5';
@@ -421,7 +460,7 @@
       }
 
       sedangMengirimAdmin = true;
-      perbaruiIndikatorSyncAdmin(); // Ubah ke indikator Biru saat mulai kirim
+      perbaruiIndikatorSyncAdmin();
 
       let sisaAntrean = [];
 
@@ -444,7 +483,7 @@
 
       localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
       sedangMengirimAdmin = false;
-      perbaruiIndikatorSyncAdmin(); // Kembalikan ke Hijau/Kuning/Merah
+      perbaruiIndikatorSyncAdmin();
     }
 
     function simpanPayloadKeAntrean(label, payload) {
@@ -456,7 +495,6 @@
       kirimDataPendingAdmin();
     }
 
-    // Deteksi Otomatis Saat Sinyal Hilang / Muncul Tiba-tiba
     window.addEventListener('online', () => {
       console.log("Jaringan online kembali. Mengirim data admin pending...");
       perbaruiIndikatorSyncAdmin();
@@ -467,7 +505,6 @@
       perbaruiIndikatorSyncAdmin();
     });
 
-    // Format angka ribuan otomatis saat diketik
     function formatRibuanInput(el) {
       let val = el.value.replace(/\D/g, '');
       if (!val) {
@@ -488,7 +525,6 @@
       btnLogin.innerText = "⏳ Memeriksa...";
       btnLogin.disabled = true;
 
-      // Mode Offline Check
       if (!navigator.onLine) {
         btnLogin.innerText = "Buka Kunci";
         btnLogin.disabled = false;
@@ -525,7 +561,6 @@
       .catch(err => {
         btnLogin.innerText = "Buka Kunci";
         btnLogin.disabled = false;
-        // Offline Fallback Login
         sessionStorage.setItem('authAdmin', 'true');
         sessionStorage.setItem('verifiedPin', input);
         bukaAkses();
@@ -540,7 +575,6 @@
       setTimeout(() => { if(map) map.invalidateSize(); }, 300);
     }
 
-    // Submit Peta (Modal 1)
     document.getElementById('dataForm').addEventListener('submit', function(e) {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitForm');
@@ -591,8 +625,7 @@
     });
 
     var map, daftarPin = [], pinRumahAktif = null;
-    var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
-    var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Peta`;
+    var SHEET_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Peta`;
 
     function initMap() {
       if (map) return;
@@ -602,14 +635,7 @@
       L.DomEvent.disableClickPropagation(document.getElementById('modal-admin-inventaris'));
       L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
 
-      var batasRT05 = [
-        [-7.7441031, 110.3835], [-7.7447197, 110.3852273], [-7.743848, 110.3854633],
-        [-7.7440818, 110.3861822], [-7.742955, 110.3864933], [-7.7428593, 110.3858925],
-        [-7.7407331, 110.3866972], [-7.7404886, 110.3861929], [-7.740563, 110.3848089],
-        [-7.7399995, 110.3831674], [-7.740159, 110.382234], [-7.7414879, 110.3818906],
-        [-7.7421789, 110.3819979], [-7.7428699, 110.3838755], [-7.7441031, 110.3835]
-      ];
-      L.polygon(batasRT05, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
       map.on('click', function(e) {
         if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex') return;
@@ -622,10 +648,10 @@
         document.getElementById('modal-form').style.display = 'flex';
       });
 
-      fetch(SHEET_URL)
-      .then(response => response.text())
-      .then(csvText => {
-        var baris = parseCSV(csvText).slice(1);
+      // Menggunakan helper ambilDataSheets dari utils.js dengan caching instan
+      ambilDataSheets('cache_peta_admin', SHEET_URL, (data, fromCache) => {
+        var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+        daftarPin = [];
 
         baris.forEach(function(kolom) {
           if (kolom.length >= 3 && kolom[0] !== '') {
@@ -651,38 +677,11 @@
             var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
             var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
-            let emoji = '🏠'; 
-            let kategori = 'rumah';
-            let namaUpper = item.nameAsli.toUpperCase();
-            let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
-
-            if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
-              kategori = 'kuliner'; emoji = '🍽️';
-              bgStyle = 'background: #FFA500; border: 2px solid #FFFFFF; color: black; width: 22px; height: 22px; font-size: 12px;';
-            } 
-            else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
-              kategori = 'minimarket'; emoji = '🏪';
-              bgStyle = 'background: #FFFF00; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
-            } 
-            else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
-              kategori = 'kost'; emoji = '🛏️';
-              bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px; font-size: 12px;';
-            }
-            else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
-              kategori = 'fasum'; emoji = '🏛️';
-              bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px; font-size: 12px;';
-              
-              if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
-                emoji = '🕌';
-                bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;';
-              } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
-                emoji = '🏀';
-              }
-            }
+            let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
 
             var customIcon = L.divIcon({
               className: 'custom-pin',
-              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${emoji}</div>`,
+              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
               iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
             });
             
@@ -696,45 +695,11 @@
               lat: item.lat, 
               lng: item.lng,
               hidden: item.hidden,
-              kategori: kategori 
+              kategori: dataIkon.kategori 
             });
           }
         });
-      })
-      .catch(error => console.error(error));
-    }
-      
-    function parseCSV(text) {
-      var lines = text.replace(/\r/g, '').split('\n'); var result = [];
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim(); if (!line) continue;
-        var row = []; var inQuotes = false; var cur = '';
-        for (var c = 0; c < line.length; c++) {
-          var char = line[c];
-          if (char === '"') inQuotes = !inQuotes;
-          else if (char === ',' && !inQuotes) { row.push(cur.trim().replace(/^"|"$/g, '')); cur = ''; }
-          else cur += char;
-        }
-        row.push(cur.trim().replace(/^"|"$/g, '')); result.push(row);
-      } return result;
-    }
-      
-    function perbaikiKoordinat(val) {
-      if (!val) return "";
-      var str = val.toString().replace(/,/g, '.').replace(/\s+/g, '');
-      var isNegatif = str.startsWith('-');
-      str = str.replace(/-/g, '').replace(/\./g, '');
-      
-      if (str.length > 2) {
-        if (isNegatif && str.startsWith('7')) {
-          str = '-7.' + str.substring(1);
-        } else if (!isNegatif && str.startsWith('110')) {
-          str = '110.' + str.substring(3);
-        } else {
-          str = (isNegatif ? '-' : '') + str.substring(0, 1) + '.' + str.substring(1);
-        }
-      }
-      return str;
+      });
     }
 
     function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
@@ -826,59 +791,70 @@
       }
     }
 
-    async function muatPeminjamanAdmin() {
+    let cachePerkakas = [];
+    let cachePeminjaman = [];
+
+  async function muatPeminjamanAdmin() {
       const container = document.getElementById("tabel-peminjaman-admin");
       if (!container) return;
 
-      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
-
-      try {
-        const res = await fetch(GAS_WEB_APP_URL);
-        const data = await res.json();
-        
-        const daftarPinjam = Array.isArray(data) ? data : (data.peminjaman || []);
-
-        const selectBarang = document.getElementById("pinjamPilihBarang");
-        const selectBarangStok = document.getElementById("stokPilihBarang");
-
-        if (data.perkakas && data.perkakas.length > 0) {
-          if (selectBarang) {
-            selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-              data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
-          }
-
-          if (selectBarangStok) {
-            selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
-              `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
-              data.perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa Stok: ${item.total})</option>`).join('');
-          }
-        }
-        
-        const pinjamanAktif = daftarPinjam.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
-
-        if (pinjamanAktif.length === 0) {
-          container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
-          return;
-        }
-
-        container.innerHTML = pinjamanAktif.map(row => `
-          <tr style="border-bottom: 1px solid #e5e7eb;">
-            <td style="padding: 6px; font-weight: bold;">${row[1]}</td>
-            <td style="padding: 6px;">${row[2]}</td>
-            <td style="padding: 6px; text-align: center; font-weight: bold;">${row[3]}</td>
-            <td style="padding: 6px; text-align: center;">
-              <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
-                ↩️ Dikembalikan
-              </button>
-            </td>
-          </tr>
-        `).join('');
-      } catch (err) {
-        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#6b7280; padding:12px;">Mode Offline (Gagal memuat data online).</td></tr>`;
+      // Kembalikan logika UI Loading jika cache belum ada
+      if (!localStorage.getItem('cache_inventaris_admin')) {
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
       }
+
+      // Gunakan helper ambilDataSheets dari utils.js
+      ambilDataSheets('cache_inventaris_admin', RT05_CONFIG.GAS_WEB_APP_URL, (data, fromCache) => {
+        if (data && (data.perkakas || data.peminjaman)) {
+          cachePeminjaman = Array.isArray(data) ? data : (data.peminjaman || []);
+          cachePerkakas = data.perkakas || [];
+          renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
+        } else if (!fromCache && (!data || data.length === 0)) {
+          // Jika tidak ada di cache dan gagal dari web
+          container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Mode Offline: Gagal memuat data.</td></tr>`;
+        }
+      });
     }
 
-    // Catat Pinjam (Modal 3 - Offline Supported)
+    function renderTabelDanDropdown(perkakas, peminjaman) {
+      const container = document.getElementById("tabel-peminjaman-admin");
+      const selectBarang = document.getElementById("pinjamPilihBarang");
+      const selectBarangStok = document.getElementById("stokPilihBarang");
+
+      if (perkakas && perkakas.length > 0) {
+        if (selectBarang) {
+          selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
+            perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
+        }
+
+        if (selectBarangStok) {
+          selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
+            `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
+            perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa Stok: ${item.total})</option>`).join('');
+        }
+      }
+      
+      const pinjamanAktif = peminjaman.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
+
+      if (pinjamanAktif.length === 0) {
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
+        return;
+      }
+
+      container.innerHTML = pinjamanAktif.map(row => `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 6px; font-weight: bold;">${escapeHTML(row[1])}</td>
+          <td style="padding: 6px;">${escapeHTML(row[2])}</td>
+          <td style="padding: 6px; text-align: center; font-weight: bold;">${escapeHTML(row[3])}</td>
+          <td style="padding: 6px; text-align: center;">
+            <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
+              ↩️ Dikembalikan
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+    
     async function simpanPeminjamanAdmin() {
       const peminjam = document.getElementById("pinjamNamaWarga").value;
       const barang = document.getElementById("pinjamPilihBarang").value;
@@ -914,7 +890,7 @@
       }
 
       try {
-        const res = await fetch(GAS_WEB_APP_URL, {
+        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
           method: "POST",
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
@@ -941,7 +917,6 @@
       }
     }
 
-    // Simpan Stok (Modal 3 - Offline Supported)
     async function simpanBarangStokAdmin() {
       const pilihPilihan = document.getElementById('stokPilihBarang').value;
       const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
@@ -979,7 +954,7 @@
       }
 
       try {
-        const res = await fetch(GAS_WEB_APP_URL, {
+        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)
@@ -1010,7 +985,6 @@
       }
     }
 
-    // Kembalikan Barang (Offline Supported)
     async function prosesPengembalian(id) {
       if (confirm("Apakah barang ini sudah dikembalikan?")) {
         const pinAdmin = sessionStorage.getItem('verifiedPin') || '';
@@ -1027,7 +1001,7 @@
         }
 
         try {
-          const res = await fetch(GAS_WEB_APP_URL, {
+          const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
             method: "POST",
             headers: { 'Content-Type': 'text/plain;charset=utf-8' },
             body: JSON.stringify(payload)
@@ -1058,7 +1032,6 @@
       document.getElementById('formLaporanDivisi').reset();
     }
 
-    // Simpan Keuangan Divisi (Modal 2 - Offline Supported)
     function simpanLaporanDivisi() {
       const tglInput = document.getElementById('laporanTanggal').value;
       const divisi = document.getElementById('laporanNamaDivisi').value;
@@ -1100,7 +1073,7 @@
         return;
       }
 
-      fetch(GAS_WEB_APP_URL, {
+      fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
@@ -1124,14 +1097,9 @@
       });
     }
 
-    // Event Online Listener & Auto Sync
-    window.addEventListener('online', () => {
-      console.log("Jaringan online kembali. Mengirim data admin pending...");
-      kirimDataPendingAdmin();
-    });
-
     document.addEventListener("DOMContentLoaded", () => {
       perbaruiIndikatorSyncAdmin();
+      muatPeminjamanAdmin();
       if (navigator.onLine) {
         kirimDataPendingAdmin();
       }
@@ -1145,6 +1113,113 @@
         }, 300);
       }
     });
+  </script>
+
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    const app = initializeApp(RT05_CONFIG.FIREBASE);
+    const db = getDatabase(app);
+
+    const usersRef = ref(db, 'users');
+    onValue(usersRef, (snapshot) => {
+      const pendingTable = document.getElementById('pending-users-list');
+      const allUsersTable = document.getElementById('all-users-list');
+      
+      pendingTable.innerHTML = '';
+      allUsersTable.innerHTML = '';
+
+      if (!snapshot.exists()) {
+        pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar.</td></tr>';
+        return;
+      }
+
+      let pendingCount = 0;
+      let totalCount = 0;
+
+      snapshot.forEach((childSnap) => {
+        const u = childSnap.val();
+        const uid = childSnap.key;
+
+        if (u.status === 'pending') {
+          pendingCount++;
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = "1px solid #1e293b";
+          tr.innerHTML = `
+            <td style="padding: 6px;">
+              <strong style="color: #fff; display: block;">${escapeHTML(u.nama)}</strong>
+              <span style="color: #94a3b8; font-size: 10px;">${escapeHTML(u.hunian)}</span>
+            </td>
+            <td style="padding: 6px; text-align: center; white-space: nowrap;">
+              <button onclick="approveUser('${uid}')" style="background-color: #10b981; color: #022c22; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
+                ACC
+              </button>
+              <button onclick="rejectUser('${uid}')" style="background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
+                Tolak
+              </button>
+            </td>
+          `;
+          pendingTable.appendChild(tr);
+        } else if (u.status === 'aktif') {
+          totalCount++;
+          const tr = document.createElement('tr');
+          tr.style.borderBottom = "1px solid #1e293b";
+          
+          const isAdmin = u.role === 'admin';
+          const roleBadge = isAdmin ? 
+            '<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold;">ADMIN</span>' : 
+            '<span style="background: #334155; color: #94a3b8; padding: 1px 4px; border-radius: 3px; font-size: 9px;">WARGA</span>';
+
+          tr.innerHTML = `
+            <td style="padding: 6px;">
+              <strong style="color: #e2e8f0; display: block;">${escapeHTML(u.username || u.nama)} ${roleBadge}</strong>
+              <span style="color: #64748b; font-size: 10px;">${escapeHTML(u.hunian)}</span>
+            </td>
+            <td style="padding: 6px; text-align: center; white-space: nowrap;">
+              <button onclick="toggleRole('${uid}', '${u.role}')" style="background: #334155; color: #cbd5e1; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
+                ${isAdmin ? 'Warga' : 'Jadi Admin'}
+              </button>
+              <button onclick="rejectUser('${uid}')" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
+                ❌
+              </button>
+            </td>
+          `;
+          allUsersTable.appendChild(tr);
+        }
+      });
+
+      if (pendingCount === 0) {
+        pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar pending.</td></tr>';
+      }
+
+      document.getElementById('pending-badge').innerText = `${pendingCount} Pending`;
+      document.getElementById('total-warga-count').innerText = totalCount;
+    });
+
+    window.approveUser = (uid) => {
+      update(ref(db, `users/${uid}`), { status: 'aktif' });
+    };
+
+    window.rejectUser = (uid) => {
+      if (confirm("Hapus / Tolak pendaftaran warga ini?")) {
+        remove(ref(db, `users/${uid}`));
+      }
+    };
+
+    window.toggleRole = (uid, currentRole) => {
+      const newRole = currentRole === 'admin' ? 'warga' : 'admin';
+      update(ref(db, `users/${uid}`), { role: newRole });
+    };
+
+    // KEMBALIKAN FUNGSI INI AGAR MODULE SCRIPT TIDAK ERROR DI HP
+    function escapeHTML(str) {
+      return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
+    }
+    
   </script>
 </body>
 </html>

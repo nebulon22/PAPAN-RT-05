@@ -5,42 +5,53 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Denah Interaktif & Keuangan RT 05 Kayen</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  
+   <!-- FontAwesome Icons -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.4.1">
+  <link rel="manifest" href="manifest.json?v=1.4.6">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
-
+ 
+ <script src="utils.js"></script>
  <script>
-  var serviceWorkerMenunggu = null;
+ var serviceWorkerMenunggu = null;
 
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      // 1. Cek jika sudah ada file update yang siap dipasang
-      if (reg.waiting) {
-        serviceWorkerMenunggu = reg.waiting;
-        tampilkanLoncengUpdate();
-      }
-
-      // 2. Deteksi saat ada update baru yang terunduh
-      reg.addEventListener('updatefound', () => {
-        var workerBaru = reg.installing;
-        workerBaru.addEventListener('statechange', () => {
-          if (workerBaru.state === 'installed' && navigator.serviceWorker.controller) {
-            serviceWorkerMenunggu = workerBaru;
-            tampilkanLoncengUpdate();
-          }
-        });
-      });
-    });
-
-    // Auto-reload saat controller berpindah ke SW baru
+    // 1. Auto-reload saat controller berpindah ke SW baru
     let sedangRefresh = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!sedangRefresh) {
         sedangRefresh = true;
         window.location.reload();
       }
+    });
+
+    // 2. Registrasi Service Worker & Penanganan Update
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      const tangkapSWWaiting = (sw) => {
+        if (!sw) return;
+        serviceWorkerMenunggu = sw;
+        tampilkanLoncengUpdate();
+      };
+
+      // Cek jika sudah ada file update yang siap dipasang
+      if (reg.waiting) {
+        tangkapSWWaiting(reg.waiting);
+      }
+
+      // Deteksi saat ada update baru yang sedang terunduh
+      reg.addEventListener('updatefound', () => {
+        const workerBaru = reg.installing;
+        if (workerBaru) {
+          workerBaru.addEventListener('statechange', () => {
+            if (workerBaru.state === 'installed' && navigator.serviceWorker.controller) {
+              tangkapSWWaiting(workerBaru);
+            }
+          });
+        }
+      });
+    }).catch(err => {
+      console.error("Gagal registrasi SW:", err);
     });
   }
 
@@ -52,10 +63,21 @@ function tampilkanLoncengUpdate() {
 
 // Fungsi yang dipicu saat lonceng/teks diklik warga
 function perbaruiAplikasiSekarang() {
+  var container = document.getElementById('container-update-pwa');
+  
+  // 1. Ubah tampilan tombol untuk memberi tahu warga bahwa proses sedang berjalan
+  if (container) {
+    container.innerHTML = '<span style="font-size: 11px; font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Memasang pembaruan...</span>';
+  }
+
+  // 2. Kirim sinyal skipWaiting ke Service Worker
   if (serviceWorkerMenunggu) {
     serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
   } else {
-    window.location.reload(true);
+    // Jalankan reload paksa jika service worker tidak merespons
+    setTimeout(() => {
+      window.location.reload(true);
+    }, 500);
   }
 }
    
@@ -388,11 +410,13 @@ function perbaruiAplikasiSekarang() {
   <!-- Peta Utama -->
   <div id="map"></div>
   
+  <!-- Indikator Sinkron Melayang (Pojok Kiri Atas) -->
+  <div id="status-sync" style="position: fixed; top: 12px; left: 12px; z-index: 2000; padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-align: center; background-color: rgba(209, 250, 229, 0.9); color: #065f46; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+    🟢 Semua Data Ter-sinkron
+  </div>
+
   <!-- Panel pencarian dan filter melayang -->
   <div id="top-panel">
-    <div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-align: center; background-color: #d1fae5; color: #065f46;">
-      🟢 Semua Data Ter-sinkron
-    </div>
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
       <button onclick="cariLokasi()">Cari</button>
@@ -514,8 +538,9 @@ function perbaruiAplikasiSekarang() {
         </select>
       </div>
 
+      <!-- Ditambahkan id="label-total-jimpitan" pada span berikut -->
       <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
-        <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Total Jimpitan Bulan Ini</span>
+        <span id="label-total-jimpitan" style="font-size:11px; text-transform:uppercase; opacity:0.9;">TOTAL JIMPITAN HARI INI</span>
         <div id="total-jimpitan" style="font-size:22px; font-weight:bold;">Rp 0</div>
       </div>
 
@@ -524,7 +549,8 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-  <!-- Modal Kamera QR Scanner -->
+ <!-- Modal Kamera QR Scanner -->
+
   <div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
     <div class="modal-content" style="max-width: 320px; text-align: center;">
       <div class="modal-header">
@@ -534,7 +560,13 @@ function perbaruiAplikasiSekarang() {
       <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
       <button onclick="stopScanQR()" style="margin-top: 12px; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">❌ Batal</button>
     </div>
-  </div>
+  </div> 
+
+<!-- Tombol Senter -->
+<button onclick="toggleSenterRonda()" id="btn-senter-ronda" title="Senter Ronda" style="position: fixed; bottom: 20px; left: calc(50% + 45px); z-index: 1000; background: #1e293b; color: #fbbf24; border: 1px solid #334155; padding: 6px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 42px; transition: all 0.2s;">
+  <i class="fa-solid fa-lightbulb" id="icon-senter-ronda" style="font-size: 16px;"></i>
+  <span id="status-senter-ronda" style="font-size: 8px; font-weight: bold; margin-top: 2px;">OFF</span>
+</button>
 
   <!-- Modal Form Input Jimpitan -->
   <div id="modal-jimpitan" class="modal-bg" style="display: none; z-index: 3000;">
@@ -656,18 +688,76 @@ function perbaruiAplikasiSekarang() {
       text-shadow: 0 0 2px #ffffff, 0 0 6px rgba(255, 255, 255, 0.9);
     ">Ronda Broo</span>
   </button>
+
+
+  
+ <!-- 1. TOMBOL CHAT MELAYANG (Pojok Kiri Bawah) -->
+<button onclick="toggleChatModal()" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #f97316; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: pointer;" title="Buka Live Chat RT">
+  <i class="fa-solid fa-comments" style="font-size: 20px;"></i>
+  
+  <!-- BADGE UNREAD OBROLAN GRUP UTAMA -->
+  <span id="badge-chat-main" style="display: none; position: absolute; top: -3px; right: -3px; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 12px; border: 2px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); min-width: 18px; text-align: center; line-height: 1;">
+    0
+  </span>
+</button>
+
+<!-- 2. KOTAK PANEL CHAT OVERLAY (Transparan Hitam 20% Okupasi) -->
+<div id="chat-overlay-modal" style="display: none; position: fixed; top: 180px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1000; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
+  
+  <!-- Header Chat Overlay -->
+  <div style="background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <i class="fa-solid fa-comments" style="color: #38bdf8;"></i>
+      <span style="font-weight: bold; font-size: 13px; color: #ffffff;">Live Chat RT 05</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <button onclick="toggleChatModal()" style="background: transparent; border: none; color: #f87171; font-size: 16px; cursor: pointer; font-weight: bold;">✕</button>
+    </div>
+  </div>
+
+
+  <!-- Frame Tampilan Chat (Iframe Transparan) -->
+  <iframe src="chat.html" style="width: 100%; height: 100%; border: none; background: transparent;" allowtransparency="true"></iframe>
+
+</div>
+
+  <script>
+ function toggleChatModal() {
+    const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
+
+    if (!modal) return;
+
+    if (modal.style.display === 'none' || modal.style.display === '') {
+      modal.style.display = 'flex';
+      
+      // Sembunyikan badge saat modal chat dibuka
+      const badge = document.getElementById('badge-chat-main');
+      if (badge) badge.style.display = 'none';
+
+      // Pindahkan ke Public Group & tandai terbaca HANYA saat modal DIBUKA
+      if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
+        iframe.contentWindow.switchChatRoom('public');
+      }
+    } else {
+      // Saat modal DITUTUP, murni sembunyikan modal saja (JANGAN panggil switchChatRoom)
+      modal.style.display = 'none';
+    }
+  }
+  </script>
     
   <script src="html5-qrcode.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     // --- KODE PETA & DATA ---
-    var SHEET_ID = '1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y'; 
+   
     var GID_PENGUMUMAN = '1885853390'; 
     var GID_KEUANGAN = '1568425671';
 
-    var SHEET_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv`;
-    var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
-    var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
+   var SHEET_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`;
+//              ^                                                                                 ^
+    var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
+    var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
 
     var map = L.map('map').setView([-7.7423, 110.3842], 17);
 
@@ -677,184 +767,102 @@ function perbaruiAplikasiSekarang() {
         attribution: '&copy; Google Maps'
     }).addTo(map);
 
-    var batasRT05 = [
-      [-7.7441031, 110.3835], [-7.7447197, 110.3852273], [-7.743848, 110.3854633],
-      [-7.7440818, 110.3861822], [-7.742955, 110.3864933], [-7.7428593, 110.3858925],
-      [-7.7407331, 110.3866972], [-7.7404886, 110.3861929], [-7.740563, 110.3848089],
-      [-7.7399995, 110.3831674], [-7.740159, 110.382234], [-7.7414879, 110.3818906],
-      [-7.7421789, 110.3819979], [-7.7428699, 110.3838755], [-7.7441031, 110.3835]
-    ];
-
-    L.polygon(batasRT05, { 
-      color: '#00c853', 
-      weight: 3, 
-      fillColor: '#00c853', 
-      fillOpacity: 0.1 
-    }).addTo(map).bindPopup('<b>Batas Wilayah RT 05 Kayen</b>');
-
+   L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+ 
     var daftarPin = [];
     var daftarPengumuman = [];
     var dataKeuangan = [];
     var pinRumahAktif = null;
 
-    function parseCSV(text) {
-      var lines = text.replace(/\r/g, '').split('\n');
-      var result = [];
-      for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (!line) continue;
-        var row = [];
-        var inQuotes = false;
-        var cur = '';
-        for (var c = 0; c < line.length; c++) {
-          var char = line[c];
-          if (char === '"') {
-            inQuotes = !inQuotes;
-          } else if (char === ',' && !inQuotes) {
-            row.push(cur.trim().replace(/^"|"$/g, ''));
-            cur = '';
-          } else {
-            cur += char;
-          }
-        }
-        row.push(cur.trim().replace(/^"|"$/g, ''));
-        result.push(row);
-      }
-      return result;
-    }
+    // ==========================================
+    // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
+    // ==========================================
 
-    function perbaikiKoordinat(val) {
-      if (!val) return "";
-      var str = val.toString().replace(/,/g, '.').replace(/\s+/g, '');
-      var isNegatif = str.startsWith('-');
-      str = str.replace(/-/g, '').replace(/\./g, '');
+    // 1. Muat Data Peta (Offline Ready & Auto Update)
+    ambilDataSheets('cache_peta_warga', SHEET_URL, (data, fromCache) => {
+      if (!data) return;
+      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
       
-      if (str.length > 2) {
-        if (isNegatif && str.startsWith('7')) {
-          str = '-7.' + str.substring(1);
-        } else if (!isNegatif && str.startsWith('110')) {
-          str = '110.' + str.substring(3);
-        } else {
-          str = (isNegatif ? '-' : '') + str.substring(0, 1) + '.' + str.substring(1);
+      // Bersihkan marker lama jika ada update dari background (mencegah marker ganda)
+      daftarPin.forEach(pin => map.removeLayer(pin.marker));
+      daftarPin = [];
+
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          var latClean = perbaikiKoordinat(kolom[1]);
+          var lngClean = perbaikiKoordinat(kolom[2]);
+          var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
+          var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
+          var urlFoto = kolom[5] ? kolom[5].trim() : '';
+
+          var namaAsli = kolom[0].trim();
+          var item = {
+            name: namaAsli,
+            nameAsli: namaAsli,
+            lat: parseFloat(latClean),
+            lng: parseFloat(lngClean),
+            hidden: statusHidden,
+            foto: urlFoto
+          };
+
+          if (isNaN(item.lat) || isNaN(item.lng)) return;
+
+          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+          
+          var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+
+          var customIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+          });
+          
+          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+          if (!item.hidden) marker.addTo(map);
+
+          daftarPin.push({ 
+            namaRaw: item.nameAsli,
+            nama: item.nameAsli.toLowerCase(), 
+            marker: marker, 
+            lat: item.lat, 
+            lng: item.lng,
+            hidden: item.hidden,
+            kategori: dataIkon.kategori 
+          });
         }
+      });
+    });
+
+    // 2. Muat Data Pengumuman
+    ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
+      if (!data) return;
+      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+      daftarPengumuman = [];
+
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 2 && kolom[1] !== '') {
+          var status = kolom[4] ? kolom[4].trim().toUpperCase() : 'AKTIF';
+          if (status === 'AKTIF') {
+            daftarPengumuman.push({
+              tanggal: kolom[0] || '',
+              judul: kolom[1] || '',
+              detail: kolom[2] || '',
+              lokasi: kolom[3] ? kolom[3].trim() : ''
+            });
+          }
+        }
+      });
+
+      var badge = document.getElementById('badge-count');
+      if (daftarPengumuman.length > 0) {
+        badge.innerText = daftarPengumuman.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
       }
-      return str;
-    }
-
-    fetch(SHEET_URL)
-      .then(response => response.text())
-      .then(csvText => {
-        var baris = parseCSV(csvText).slice(1);
-
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 3 && kolom[0] !== '') {
-            var latClean = perbaikiKoordinat(kolom[1]);
-            var lngClean = perbaikiKoordinat(kolom[2]);
-            var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
-            var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? kolom[5].trim() : '';
-
-            var namaAsli = kolom[0].trim();
-            var namaTampil = namaAsli;
-
-            var item = {
-              name: namaTampil,
-              nameAsli: namaAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
-              hidden: statusHidden,
-              foto: urlFoto
-            };
-
-            if (isNaN(item.lat) || isNaN(item.lng)) return;
-
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
-            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-            
-            let emoji = '🏠'; 
-            let kategori = 'rumah';
-            let namaUpper = item.nameAsli.toUpperCase();
-
-            let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
-
-            if (kategoriManual.includes('kuliner') || namaUpper.includes('COFFEE') || namaUpper.includes('CAFE') || namaUpper.includes('KEDAI') || namaUpper.includes('WARUNG') || namaUpper.includes('BAKSO') || namaUpper.includes('AYAM') || namaUpper.includes('SOTO')) {
-              kategori = 'kuliner'; emoji = '🍽️';
-              bgStyle = 'background: #FFA500; border: 2px solid #FFFFFF; color: black; width: 22px; height: 22px; font-size: 12px;';
-            } 
-            else if (kategoriManual.includes('minimarket') || kategoriManual.includes('toko') || namaUpper.includes('MART') || namaUpper.includes('TOKO') || namaUpper.includes('LAUNDRY')) {
-              kategori = 'minimarket'; emoji = '🏪';
-              bgStyle = 'background: #FFFF00; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
-            } 
-            else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
-              kategori = 'kost'; emoji = '🛏️';
-              bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px; font-size: 12px;';
-            }
-            else if (kategoriManual.includes('fasum') || kategoriManual.includes('umum') || namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || namaUpper.includes('LAPANGAN') || namaUpper.includes('BALAI') || namaUpper.includes('SPORT')) {
-              kategori = 'fasum'; emoji = '🏛️';
-              bgStyle = 'background: white; border: 2px solid #ef4444; color: black; width: 22px; height: 22px; font-size: 12px;';
-              
-              if (namaUpper.includes('MASJID') || namaUpper.includes('MUSHOLA') || kategoriManual.includes('masjid')) {
-                emoji = '🕌';
-                bgStyle = 'background-color: #0d9488; color: white; border: 2px solid white; width: 28px; height: 28px; font-size: 14px;';
-              } else if (namaUpper.includes('LAPANGAN') || namaUpper.includes('SPORT') || namaUpper.includes('BASKETBALL')) {
-                emoji = '🏀';
-              }
-            }
-
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            
-            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-            if (!item.hidden) marker.addTo(map);
-
-            daftarPin.push({ 
-              namaRaw: item.nameAsli,
-              nama: item.nameAsli.toLowerCase(), 
-              marker: marker, 
-              lat: item.lat, 
-              lng: item.lng,
-              hidden: item.hidden,
-              kategori: kategori 
-            });
-          }
-        });
-      })
-      .catch(error => console.error(error));
-
-    fetch(PENGUMUMAN_URL)
-      .then(response => response.text())
-      .then(csvText => {
-        var baris = parseCSV(csvText).slice(1);
-        daftarPengumuman = [];
-
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 2 && kolom[1] !== '') {
-            var status = kolom[4] ? kolom[4].trim().toUpperCase() : 'AKTIF';
-            
-            if (status === 'AKTIF') {
-              daftarPengumuman.push({
-                tanggal: kolom[0] || '',
-                judul: kolom[1] || '',
-                detail: kolom[2] || '',
-                lokasi: kolom[3] ? kolom[3].trim() : ''
-              });
-            }
-          }
-        });
-
-        var badge = document.getElementById('badge-count');
-        if (daftarPengumuman.length > 0) {
-          badge.innerText = daftarPengumuman.length;
-          badge.style.display = 'inline-block';
-        } else {
-          badge.style.display = 'none';
-        }
-      })
-      .catch(error => console.error("Gagal membaca tab Pengumuman:", error));
+    });
 
     function escapeHtml(text) {
       if (!text) return '';
@@ -881,17 +889,11 @@ function perbaruiAplikasiSekarang() {
           container.innerHTML += html;
         });
       }
-
       document.getElementById('modal-info').style.display = 'flex';
     }
 
-    function tutupModalInfo() {
-      document.getElementById('modal-info').style.display = 'none';
-    }
-
-    function bukaTutupLuar(e) {
-      if (e.target.id === 'modal-info') tutupModalInfo();
-    }
+    function tutupModalInfo() { document.getElementById('modal-info').style.display = 'none'; }
+    function bukaTutupLuar(e) { if (e.target.id === 'modal-info') tutupModalInfo(); }
 
     function sorotLokasi(lokasiEncoded) {
       var namaLokasi = decodeURIComponent(lokasiEncoded).trim();
@@ -900,18 +902,11 @@ function perbaruiAplikasiSekarang() {
       if (!namaLokasi) return;
 
       var kataKunci = namaLokasi.toLowerCase();
-      var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci);
-
-      if (!hasil) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
-      }
+      var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci) || 
+                  daftarPin.find(pin => pin.nama.includes(kataKunci));
 
       if (hasil) {
-        if (pinRumahAktif) {
-          map.removeLayer(pinRumahAktif);
-          pinRumahAktif = null;
-        }
-
+        if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
         if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
           hasil.marker.addTo(map);
           pinRumahAktif = hasil.marker;
@@ -919,14 +914,10 @@ function perbaruiAplikasiSekarang() {
 
         var pointM = map.project([hasil.lat, hasil.lng], 19);
         var pointC = L.point(pointM.x, pointM.y - 200);
-        var targetCenter = map.unproject(pointC, 19);
-
-        map.flyTo(targetCenter, 19);
+        map.flyTo(map.unproject(pointC, 19), 19);
 
         map.once('moveend', function() {
-          if (hasil.marker.getPopup()) {
-            hasil.marker.getPopup().options.autoPan = false;
-          }
+          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
           hasil.marker.openPopup();
         });
       }
@@ -936,16 +927,11 @@ function perbaruiAplikasiSekarang() {
       var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
       if (!kataKunci) return;
 
-      var hasil = null;
-      hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
 
       if (!hasil && /^\d+$/.test(kataKunci)) {
         var angkaCari = parseInt(kataKunci, 10);
-        
-        hasil = daftarPin.find(pin => {
-          var kataKata = pin.nama.split(/[\s,().-]+/);
-          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-        });
+        hasil = daftarPin.find(pin => pin.nama.split(/[\s,().-]+/).some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari));
       }
 
       if (!hasil && !/^\d+$/.test(kataKunci)) {
@@ -953,11 +939,7 @@ function perbaruiAplikasiSekarang() {
       }
       
       if (hasil) {
-        if (pinRumahAktif) {
-          map.removeLayer(pinRumahAktif);
-          pinRumahAktif = null;
-        }
-
+        if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
         if (!map.hasLayer(hasil.marker)) {
           hasil.marker.addTo(map);
           pinRumahAktif = hasil.marker;
@@ -965,17 +947,12 @@ function perbaruiAplikasiSekarang() {
 
         var pointM = map.project([hasil.lat, hasil.lng], 19);
         var pointC = L.point(pointM.x, pointM.y - 200);
-        var targetCenter = map.unproject(pointC, 19);
-
-        map.flyTo(targetCenter, 19);
+        map.flyTo(map.unproject(pointC, 19), 19);
 
         map.once('moveend', function() {
-          if (hasil.marker.getPopup()) {
-            hasil.marker.getPopup().options.autoPan = false;
-          }
+          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
           hasil.marker.openPopup();
         });
-
       } else {
         alert("Nomor atau nama tempat tidak ditemukan.");
       }
@@ -987,78 +964,61 @@ function perbaruiAplikasiSekarang() {
 
       daftarPin.forEach(pin => {
         map.removeLayer(pin.marker);
-
-        if (!pin.hidden) {
-          if (kat === 'semua') {
-            pin.marker.addTo(map);
-          } else if (pin.kategori === kat) {
-            pin.marker.addTo(map);
-          }
+        if (!pin.hidden && (kat === 'semua' || pin.kategori === kat)) {
+          pin.marker.addTo(map);
         }
       });
     }
 
     function bukaFotoBesar(src, e) {
       if (e) e.stopPropagation();
-      var modal = document.getElementById('modal-foto');
-      var imgPreview = document.getElementById('foto-preview');
-      imgPreview.src = src;
-      modal.style.display = 'flex';
+      document.getElementById('foto-preview').src = src;
+      document.getElementById('modal-foto').style.display = 'flex';
     }
 
     function tutupFotoBesar(e) {
-      if (e) {
-        e.stopPropagation(); 
-        e.preventDefault();
-      }
+      if (e) { e.stopPropagation(); e.preventDefault(); }
       document.getElementById('modal-foto').style.display = 'none';
     }
 
-    // --- FITUR KEUANGAN ---
+    // 3. Muat Data Keuangan
     function muatDataKeuangan() {
-      fetch(KEUANGAN_URL)
-        .then(response => response.text())
-        .then(csvText => {
-          var baris = parseCSV(csvText).slice(1);
-          dataKeuangan = [];
-          var daftarDivisi = new Set();
+      ambilDataSheets('cache_keuangan_warga', KEUANGAN_URL, (data, fromCache) => {
+        if (!data) return;
+        var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+        dataKeuangan = [];
+        var daftarDivisi = new Set();
 
-          baris.forEach(function(kolom) {
-            if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
-              var tgl = kolom[1] ? kolom[1].trim() : (kolom[0] ? kolom[0].split(' ')[0] : '-');
-              var divisi = kolom[2] ? kolom[2].trim() : 'Umum';
-              var ket = kolom[3] ? kolom[3].trim() : '-';
-              
-              var tipeRaw = kolom[4] ? kolom[4].trim().toUpperCase() : 'MASUK';
-              var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
-              
-              var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
-              var nominal = parseInt(nominalRaw ? nominalRaw.replace(/[^0-9]/g, '') : '0') || 0;
+        baris.forEach(function(kolom) {
+          if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
+            var tgl = kolom[1] ? kolom[1].trim() : (kolom[0] ? kolom[0].split(' ')[0] : '-');
+            var divisi = kolom[2] ? kolom[2].trim() : 'Umum';
+            var ket = kolom[3] ? kolom[3].trim() : '-';
+            var tipeRaw = kolom[4] ? kolom[4].trim().toUpperCase() : 'MASUK';
+            var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
+            var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
+            var nominal = parseInt(nominalRaw ? nominalRaw.replace(/[^0-9]/g, '') : '0') || 0;
 
-              if (divisi) daftarDivisi.add(divisi);
-
-              dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
-            }
-          });
-
-          var selectDivisi = document.getElementById('filterDivisi');
-          var divisiSebelumnya = selectDivisi.value;
-          
-          selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
-          
-          daftarDivisi.forEach(div => {
-            selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
-          });
-          
-          if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
-            selectDivisi.value = divisiSebelumnya;
-          } else {
-            selectDivisi.value = 'semua';
+            if (divisi) daftarDivisi.add(divisi);
+            dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
           }
+        });
 
-          tampilkanRekeningKoran();
-        })
-        .catch(err => console.error("Gagal muat data keuangan:", err));
+        var selectDivisi = document.getElementById('filterDivisi');
+        var divisiSebelumnya = selectDivisi.value;
+        selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
+        
+        daftarDivisi.forEach(div => {
+          selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
+        });
+        
+        if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
+          selectDivisi.value = divisiSebelumnya;
+        } else {
+          selectDivisi.value = 'semua';
+        }
+        tampilkanRekeningKoran();
+      });
     }
 
     function tampilkanRekeningKoran() {
@@ -1149,7 +1109,7 @@ function perbaruiAplikasiSekarang() {
     }
 
     // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
-    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec';
+    
 
     let audioCtx = null;
     let html5QrcodeScanner = null;
@@ -1311,34 +1271,34 @@ function perbaruiAplikasiSekarang() {
     }
 
     // --- SINKRONISASI OFFLINE ---
-    function perbaruiIndikatorSync() {
+   function perbaruiIndikatorSync() {
       let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
       let badge = document.getElementById('status-sync');
       
       if (!badge) return;
 
       if (sedangMengirim) {
-        badge.innerHTML = `🔵 Sedang Menyinkronkan Data...`;
-        badge.style.backgroundColor = '#dbeafe';
+        badge.innerHTML = `🔵 Sedang Menyinkronkan...`;
+        badge.style.backgroundColor = 'rgba(219, 234, 254, 0.9)';
         badge.style.color = '#1e40af';
       } else if (!navigator.onLine) {
         if (antrean.length > 0) {
           badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-          badge.style.backgroundColor = '#fef3c7';
+          badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
           badge.style.color = '#92400e';
         } else {
           badge.innerHTML = '🔴 Anda Sedang Offline';
-          badge.style.backgroundColor = '#fee2e2';
+          badge.style.backgroundColor = 'rgba(254, 226, 226, 0.9)';
           badge.style.color = '#991b1b';
         }
       } else {
         if (antrean.length === 0) {
           badge.innerHTML = '🟢 Semua Data Ter-sinkron';
-          badge.style.backgroundColor = '#d1fae5';
+          badge.style.backgroundColor = 'rgba(209, 250, 229, 0.9)';
           badge.style.color = '#065f46';
         } else {
           badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-          badge.style.backgroundColor = '#fef3c7';
+          badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
           badge.style.color = '#92400e';
         }
       }
@@ -1353,7 +1313,7 @@ function perbaruiAplikasiSekarang() {
         }
       }
     }
-
+    
     async function kirimDataPendingJimpitan() {
       if (sedangMengirim) return;
 
@@ -1370,7 +1330,7 @@ function perbaruiAplikasiSekarang() {
 
       for (let item of antrean) {
         try {
-          await fetch(GAS_WEB_APP_URL, {
+          await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -1454,182 +1414,370 @@ function perbaruiAplikasiSekarang() {
       }
     });
 
-    // --- FITUR REKAP & RIWAYAT JIMPITAN ---
-    var GID_JIMPITAN = '515393252'; 
-    var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
+   // Mendengarkan Pembaruan Badge Unread dari iframe chat.html
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
+      const badge = document.getElementById('badge-chat-main');
+      const count = event.data.unreadPublicCount || 0;
+      const modal = document.getElementById('chat-overlay-modal');
 
-    function inisialisasiSelectBulan() {
-      var select = document.getElementById('select-bulan-jimpitan');
-      if (!select || select.children.length > 0) return;
+      const isModalOpen = (modal && modal.style.display === 'flex');
 
-      var namaBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-      var skrg = new Date();
-
-      for (var i = 0; i < 6; i++) {
-        var d = new Date(skrg.getFullYear(), skrg.getMonth() - i, 1);
-        var bln = d.getMonth();
-        var thn = d.getFullYear();
-        
-        var option = document.createElement('option');
-        option.value = thn + '-' + bln;
-        option.text = (i === 0 ? "Bulan Ini (" : "") + namaBulan[bln] + " " + thn + (i === 0 ? ")" : "");
-        select.appendChild(option);
+      if (badge) {
+        if (count > 0 && !isModalOpen) {
+          badge.innerText = count > 99 ? '99+' : count;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
       }
     }
+  });
 
-    function muatDataJimpitan() {
-  inisialisasiSelectBulan();
+    
+// --- FITUR REKAP & RIWAYAT JIMPITAN ---
+var GID_JIMPITAN = '515393252'; 
+var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
 
-  var selectPeriode = document.getElementById('select-bulan-jimpitan');
-  var bulanDipilih, tahunDipilih;
+var cacheDataHarian = {};
+var cacheDataBulanan = {};
+var arrayTanggal = [];
+var arrayBulan = [];
+let isJimpitanLoaded = false;
+let modeJimpitan = 'harian'; 
 
-  if (selectPeriode && selectPeriode.value) {
-    var parts = selectPeriode.value.split('-');
-    tahunDipilih = parseInt(parts[0], 10);
-    bulanDipilih = parseInt(parts[1], 10);
-  } else {
-    var skrg = new Date();
-    bulanDipilih = skrg.getMonth();
-    tahunDipilih = skrg.getFullYear();
+// Helper anti-error untuk merapikan teks (menggantikan escapeHtml yang rawan macet)
+function teksAman(str) {
+  return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
+}
+
+// ==========================================
+// BAGIAN 2: OPTIMASI RIWAYAT JIMPITAN
+// ==========================================
+
+function muatDataJimpitan() {
+ 
+  var gridContainer = document.getElementById('grid-jimpitan');
+  
+  // Tampilkan loading HANYA jika data cache belum ada di HP
+  if (!localStorage.getItem('cache_jimpitan_warga') && gridContainer) {
+    gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data terbaru...</div>';
   }
 
-  fetch(JIMPITAN_URL)
-    .then(response => response.text())
-    .then(csvText => {
-      var baris = parseCSV(csvText).slice(1);
-      var gridContainer = document.getElementById('grid-jimpitan');
-      
-      if (!gridContainer) return;
-      gridContainer.innerHTML = '';
-      var grandTotal = 0;
+  // Menggunakan helper ambilDataSheets untuk caching
+  ambilDataSheets('cache_jimpitan_warga', JIMPITAN_URL, (data, fromCache) => {
+    if (!data || data.length === 0) {
+      if (!fromCache && gridContainer) {
+        gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data atau sedang offline.</div>';
+      }
+      return;
+    }
 
-      // 6 Hari Ronda Utama
-      var rekapMalam = {
-        'Malam Senin': { subtotal: 0, items: [] },
-        'Malam Selasa': { subtotal: 0, items: [] },
-        'Malam Rabu': { subtotal: 0, items: [] },
-        'Malam Kamis': { subtotal: 0, items: [] },
-        'Malam Jumat': { subtotal: 0, items: [] },
-        'Malam Sabtu': { subtotal: 0, items: [] }
-      };
+    // Adaptasi otomatis jika respons berupa Array JSON atau teks CSV
+    var baris = Array.isArray(data) ? data.slice(1).slice(-2000) : parseCSV(data).slice(1).slice(-2000);
+    
+    cacheDataHarian = {};
+    cacheDataBulanan = {};
+    arrayTanggal = [];
+    arrayBulan = [];
 
-      baris.forEach(kolom => {
-        if (kolom.length >= 3 && kolom[0] !== '') {
-          var tglStr = kolom[0];
-          var malamManual = '';
-          var warga = '-';
-          var nominal = 0;
+    baris.forEach(kolom => {
+      if (kolom.length >= 3 && kolom[0] !== '') {
+        var tglStr = kolom[0];
+        var malamManual = '';
+        var warga = '-';
+        var nominal = 0;
 
-          // Deteksi otomatis format kolom
-          if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
-            malamManual = kolom[1].trim(); // Membaca teks Kolom B hasil editan Google Sheet
-            warga = kolom[2] || '-';
-            var nominalRaw = kolom[3] ? kolom[3].replace(/[^0-9]/g, '') : '0';
-            nominal = parseInt(nominalRaw, 10) || 0;
-          } else {
-            warga = kolom[1] || '-';
-            var nominalRaw = kolom[2] ? kolom[2].replace(/[^0-9]/g, '') : '0';
-            nominal = parseInt(nominalRaw, 10) || 0;
-          }
-
-          var angkaTanggal = tglStr.match(/\d+/g); 
-          if (angkaTanggal && angkaTanggal.length >= 3) {
-            var tgl = parseInt(angkaTanggal[0], 10);
-            var bln = parseInt(angkaTanggal[1], 10) - 1;
-            var thn = parseInt(angkaTanggal[2], 10);
-            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
-
-            var dateObj = new Date(thn, bln, tgl, jam, menit);
-
-            // Filter Periode Bulan & Tahun dari Kolom A
-            if (dateObj.getMonth() === bulanDipilih && dateObj.getFullYear() === tahunDipilih) {
-              
-              // LOGIKA HYBRID: Gunakan Kolom B dulu, jika kosong baru hitung otomatis
-              var namaMalam = malamManual ? malamManual : getInfoMalamRonda(dateObj).kelompokMalam;
-
-              if (namaMalam && rekapMalam[namaMalam]) {
-                rekapMalam[namaMalam].items.push({ warga: warga, nominal: nominal, waktu: tglStr });
-                rekapMalam[namaMalam].subtotal += nominal;
-                grandTotal += nominal;
-              }
-            }
-          }
-        }
-      });
-
-      Object.keys(rekapMalam).forEach(malam => {
-        var dataMalam = rekapMalam[malam];
-        var card = document.createElement('div');
-        card.style.cssText = `
-          background: #ffffff;
-          border: 1px solid #e5e7eb;
-          border-radius: 8px;
-          padding: 10px;
-          box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-          display: flex;
-          flex-direction: column;
-        `;
-
-        var itemListHTML = '';
-        if (dataMalam.items.length === 0) {
-          itemListHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data</div>';
+        if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
+          malamManual = kolom[1].trim(); 
+          warga = kolom[2] || '-';
+          var nominalRaw = kolom[3] ? String(kolom[3]).replace(/[^0-9]/g, '') : '0';
+          nominal = parseInt(nominalRaw, 10) || 0;
         } else {
-          itemListHTML = dataMalam.items.reverse().map(item => {
-            var isAbsen = item.nominal === 0;
-            var warnaNominal = isAbsen ? '#dc2626' : '#059669';
-            var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
-
-            return `
-              <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
-                <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">
-                  ${escapeHtml(item.warga)}
-                </span>
-                <span style="color: ${warnaNominal}; font-weight: bold;">
-                  Rp ${item.nominal.toLocaleString('id-ID')}
-                </span>
-              </div>
-            `;
-          }).join('');
+          warga = kolom[1] || '-';
+          var nominalRaw = kolom[2] ? String(kolom[2]).replace(/[^0-9]/g, '') : '0';
+          nominal = parseInt(nominalRaw, 10) || 0;
         }
 
-        card.innerHTML = `
-          <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #10b981; padding-bottom: 6px; margin-bottom: 8px;">
-            <span style="font-weight: bold; font-size: 12px; color: #065f46;">🌙 ${malam}</span>
-            <span style="background: #d1fae5; color: #065f46; font-size: 11px; font-weight: bold; padding: 2px 6px; border-radius: 4px;">
-              Rp ${dataMalam.subtotal.toLocaleString('id-ID')}
-            </span>
-          </div>
-          <div style="max-height: 120px; overflow-y: auto; flex-grow: 1;">
-            ${itemListHTML}
-          </div>
-        `;
+        var angkaTanggal = tglStr.match(/\d+/g); 
+        if (angkaTanggal && angkaTanggal.length >= 3) {
+          var tgl = parseInt(angkaTanggal[0], 10);
+          var bln = parseInt(angkaTanggal[1], 10) - 1;
+          var thn = parseInt(angkaTanggal[2], 10);
+          var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+          var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
 
-        gridContainer.appendChild(card);
-      });
+          var dateObj = new Date(thn, bln, tgl, jam, menit);
+          var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
+          var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+          
+          var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
 
-      var totalElem = document.getElementById('total-jimpitan');
-      if (totalElem) totalElem.innerText = 'Rp ' + grandTotal.toLocaleString('id-ID');
-    })
-    .catch(err => console.error("Gagal muat data jimpitan:", err));
+          // --- DATA HARIAN ---
+          var keyTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
+          var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
+
+          if (!cacheDataHarian[keyTanggal]) {
+            cacheDataHarian[keyTanggal] = { label: namaMalam + ' (' + labelTanggal + ')', subtotal: 0, items: [] };
+            arrayTanggal.push(keyTanggal);
+          }
+          cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
+          cacheDataHarian[keyTanggal].subtotal += nominal;
+
+          // --- DATA BULANAN ---
+          var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
+          var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
+
+          if (!cacheDataBulanan[keyBulan]) {
+            cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
+            if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
+          }
+          
+          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
+          }
+          
+          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
+          }
+
+          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
+          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
+          cacheDataBulanan[keyBulan].total += nominal;
+        }
+      }
+    });
+
+    arrayTanggal.sort((a, b) => b.localeCompare(a));
+    arrayBulan.sort((a, b) => b.localeCompare(a));
+    
+    isJimpitanLoaded = true; 
+    
+    setupToggleJimpitan();
+    renderDropdownTanggal();
+  });
 }
     
-    function bukaModalRiwayatJimpitan() {
-      document.getElementById('modal-riwayat-jimpitan').style.display = 'flex';
-      muatDataJimpitan();
-    }
+function setupToggleJimpitan() {
+  var select = document.getElementById('select-bulan-jimpitan');
+  if (!select) return;
 
-    function tutupModalRiwayatJimpitan() {
-      document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
+  var containerId = 'toggle-mode-jimpitan';
+  var container = document.getElementById(containerId);
+  
+  if (!container) {
+    container = document.createElement('div');
+    container.id = containerId;
+    // PERBAIKAN TATA LETAK: Membentang penuh (100%) dan tidak nyempil di sebelah dropdown
+    container.style.cssText = 'display:flex; background:#f1f5f9; border-radius:8px; padding:4px; margin-bottom:12px; width:100%;';
+    
+    // Disisipkan TEPAT DI ATAS wadah "Pilih Periode", bukan di dalamnya
+    var parentBaris = select.parentNode; 
+    if (parentBaris) {
+      parentBaris.parentNode.insertBefore(container, parentBaris);
     }
+  }
 
+  var btnHarianStyle = modeJimpitan === 'harian' ? 'background:#10b981; color:#fff; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent; color:#64748b;';
+  var btnBulananStyle = modeJimpitan === 'bulanan' ? 'background:#10b981; color:#fff; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent; color:#64748b;';
+
+  container.innerHTML = `
+    <button onclick="switchModeJimpitan('harian')" style="flex:1; border:none; border-radius:6px; padding:8px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnHarianStyle}">🌙 Harian</button>
+    <button onclick="switchModeJimpitan('bulanan')" style="flex:1; border:none; border-radius:6px; padding:8px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnBulananStyle}">📅 Bulanan</button>
+  `;
+}
+
+window.switchModeJimpitan = function(mode) {
+  modeJimpitan = mode;
+  setupToggleJimpitan();
+  renderDropdownTanggal();
+};
+
+function renderDropdownTanggal() {
+  var select = document.getElementById('select-bulan-jimpitan');
+  if (!select) return;
+  select.innerHTML = ''; 
+
+  if (modeJimpitan === 'harian') {
+    if (arrayTanggal.length === 0) {
+      select.innerHTML = '<option>Belum ada data harian</option>';
+      renderCardHarian(null);
+      return;
+    }
+    var limitData = arrayTanggal.slice(0, 30); 
+    limitData.forEach((key, index) => {
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.text = (index === 0 ? "Terkini: " : "") + cacheDataHarian[key].label;
+      select.appendChild(opt);
+    });
+    select.onchange = function() { renderCardHarian(this.value); };
+    renderCardHarian(limitData[0]);
+
+  } else {
+    // Mode Laporan Bulanan
+    if (arrayBulan.length === 0) {
+      select.innerHTML = '<option>Belum ada laporan bulanan</option>';
+      renderCardBulanan(null);
+      return;
+    }
+    arrayBulan.forEach((key, index) => {
+      var opt = document.createElement('option');
+      opt.value = key;
+      opt.text = (index === 0 ? "Bulan Ini: " : "") + cacheDataBulanan[key].label;
+      select.appendChild(opt);
+    });
+    select.onchange = function() { renderCardBulanan(this.value); };
+    renderCardBulanan(arrayBulan[0]);
+  }
+}
+
+function renderCardHarian(keyTanggal) {
+  var gridContainer = document.getElementById('grid-jimpitan');
+  var totalElem = document.getElementById('total-jimpitan');
+  var labelTotalElem = document.getElementById('label-total-jimpitan'); // Penambahan elemen label
+
+  // Ubah judul kartu hijau secara dinamis ke mode harian
+  if (labelTotalElem) labelTotalElem.innerText = 'TOTAL';
+
+  if (!gridContainer) return;
+  gridContainer.innerHTML = '';
+  
+  if (!keyTanggal || !cacheDataHarian[keyTanggal]) {
+    gridContainer.innerHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada data ronda</div>';
+    if (totalElem) totalElem.innerText = 'Rp 0';
+    return;
+  }
+
+  var dataMalam = cacheDataHarian[keyTanggal];
+  var itemListHTML = dataMalam.items.map(item => {
+    var isAbsen = item.nominal === 0;
+    var warnaNominal = isAbsen ? '#dc2626' : '#059669';
+    var bgRow = isAbsen ? 'background-color: #fef2f2; padding: 4px 6px; border-radius: 4px;' : 'padding: 4px 0;';
+    return `
+      <div style="display: flex; justify-content: space-between; font-size: 11px; border-bottom: 1px dashed #f3f4f6; ${bgRow}">
+        <span style="color: ${isAbsen ? '#991b1b' : '#374151'}; font-weight: ${isAbsen ? 'bold' : '500'};">${teksAman(item.warga)}</span>
+        <span style="color: ${warnaNominal}; font-weight: bold;">Rp ${item.nominal.toLocaleString('id-ID')}</span>
+      </div>
+    `;
+  }).join('');
+
+  buatDanTampilkanKartu(gridContainer, "🌙 " + dataMalam.label, dataMalam.subtotal, itemListHTML);
+  if (totalElem) totalElem.innerText = 'Rp ' + dataMalam.subtotal.toLocaleString('id-ID');
+}
+
+function renderCardBulanan(keyBulan) {
+  var gridContainer = document.getElementById('grid-jimpitan');
+  var totalElem = document.getElementById('total-jimpitan');
+  if (!gridContainer) return;
+  gridContainer.innerHTML = '';
+
+  if (!keyBulan || !cacheDataBulanan[keyBulan]) {
+    gridContainer.innerHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada laporan bulanan</div>';
+    if (totalElem) totalElem.innerText = 'Rp 0';
+    return;
+  }
+
+  var dataBulan = cacheDataBulanan[keyBulan];
+  
+  // Urutkan jadwal malam ronda agar tampil rapi dari Senin s/d Minggu
+  var urutanMalam = ['Malam Senin', 'Malam Selasa', 'Malam Rabu', 'Malam Kamis', 'Malam Jumat', 'Malam Sabtu', 'Malam Minggu'];
+  var daftarMalam = Object.keys(dataBulan.rekapMalam).sort((a, b) => {
+    var idxA = urutanMalam.indexOf(a);
+    var idxB = urutanMalam.indexOf(b);
+    return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+  });
+  
+  // Cetak daftar regu malam beserta total setorannya selama sebulan
+  var itemListHTML = daftarMalam.map(malam => {
+    var subtotalMalam = dataBulan.rekapMalam[malam].subtotal;
+
+    return `
+      <div style="display: flex; justify-content: space-between; font-size: 12px; border-bottom: 1px solid #f1f5f9; padding: 8px 4px;">
+        <span style="color: #334155; font-weight: 600;">🌙 ${teksAman(malam)}</span>
+        <span style="color: #0288d1; font-weight: bold;">Rp ${subtotalMalam.toLocaleString('id-ID')}</span>
+      </div>
+    `;
+  }).join('');
+
+  // Tampilkan dalam 1 kartu rekapitulasi saja
+  buatDanTampilkanKartu(gridContainer, "📅 Rekap " + dataBulan.label, dataBulan.total, itemListHTML);
+
+  if (totalElem) totalElem.innerText = 'Rp ' + dataBulan.total.toLocaleString('id-ID');
+}
+    
+function buatDanTampilkanKartu(container, judul, total, htmlList) {
+  var card = document.createElement('div');
+  card.style.cssText = 'background:#fff; border:1px solid #e5e7eb; border-radius:8px; padding:10px; box-shadow:0 1px 3px rgba(0,0,0,0.05); display:flex; flex-direction:column;';
+  
+  card.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #10b981; padding-bottom:6px; margin-bottom:8px;">
+      <span style="font-weight:bold; font-size:12px; color:#065f46;">${judul}</span>
+      <span style="background:#d1fae5; color:#065f46; font-size:11px; font-weight:bold; padding:2px 6px; border-radius:4px;">
+        Rp ${total.toLocaleString('id-ID')}
+      </span>
+    </div>
+    <div style="max-height: 250px; overflow-y: auto; flex-grow: 1; padding-right: 4px;">
+      ${htmlList || '<div style="color:#9ca3af; font-style:italic; font-size:11px; text-align:center; padding:12px 0;">Belum ada data</div>'}
+    </div>
+  `;
+  container.appendChild(card);
+}
+
+function bukaModalRiwayatJimpitan() {
+  document.getElementById('modal-riwayat-jimpitan').style.display = 'flex';
+  muatDataJimpitan(); 
+}
+
+function tutupModalRiwayatJimpitan() {
+  document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
+}
+
+window.refreshDataJimpitan = function() {
+  isJimpitanLoaded = false; 
+  muatDataJimpitan(); 
+};
+
+    
     // --- CHANGELOG ---
     const dataChangelog = [
+       {
+        versi: "v1.4.6",
+        tanggal: "26 Sep 2026",
+        status: "Terbaru",
+        warna: "#4CAF50",
+        fitur: [
+          "Penambahan fitur lampu senter/torch",
+          "Perbaikan fitur notifikasi lonceng update versi/pembaruan"
+        ]
+      },
+      {
+        versi: "v1.4.5",
+        tanggal: "25 Sep 2026",
+        status: "",
+        warna: "#888",
+        fitur: [
+          "Penambahan fitur read/unread badge",
+          "Perbaikan fitur online/idle/offline user",
+          "Perbaikan fitur notifikasi chat baru"
+        ]
+      },
+      {
+        versi: "v1.4.4",
+        tanggal: "23 Sep 2026",
+        status: "",
+        warna: "#888",
+        fitur: [
+          "Penambahan fitur chat",
+          "Penambahan fitur admin chat",
+          "Penambahan fitur daftar/login untuk chat warga"
+        ]
+      },
       {
         versi: "v1.4.1",
         tanggal: "22 Sep 2026",
-        status: "Terbaru",
-        warna: "#4CAF50",
+        status: "",
+        warna: "#888",
         fitur: [
           "Perbaikan fitur update otomatis di browser",
           "Perbaikan ikon lonceng notifikasi update dan text versi"
@@ -1767,7 +1915,7 @@ function perbaruiAplikasiSekarang() {
       };
 
       try {
-        const res = await fetch(GAS_WEB_APP_URL, {
+        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
           body: JSON.stringify(payload)

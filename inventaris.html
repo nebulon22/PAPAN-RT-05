@@ -6,6 +6,7 @@
   <title>Inventaris Perkakas RT 05</title>
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
 
+  <script src="utils.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js');
@@ -26,6 +27,7 @@
     .card-rules { background: #f3e8ff; border-left: 4px solid #8b5cf6; padding: 12px; border-radius: 6px; font-size: 12px; color: #4c1d95; line-height: 1.5; margin-bottom: 16px; }
     .card-barang { border: 1px solid #e5e7eb; padding: 14px; border-radius: 8px; margin-bottom: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
     .btn-wa { display: block; text-align: center; margin-top: 20px; padding: 12px; background: #25d366; color: white; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 13px; box-shadow: 0 4px 10px rgba(37,211,102,0.3); }
+    #status-offline { display: none; background: #fee2e2; color: #991b1b; padding: 8px; border-radius: 6px; font-size: 11px; text-align: center; font-weight: bold; margin-bottom: 12px; }
   </style>
 </head>
 <body>
@@ -35,6 +37,9 @@
     <h3 style="margin: 0; font-size: 16px; color: #111;">📦 Inventaris RT 05</h3>
     <a href="index.html" class="btn-back">⬅️ Kembali</a>
   </div>
+
+  <!-- Indikator Status Offline -->
+  <div id="status-offline">⚠️ Anda sedang offline. Menampilkan data tersimpan di perangkat.</div>
 
   <!-- Aturan Pinjam -->
   <div class="card-rules">
@@ -59,50 +64,67 @@
   </a>
 
   <script>
-    const GAS_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec';
     const CACHE_KEY = 'cache_inventaris_rt05';
 
     document.addEventListener("DOMContentLoaded", () => {
+      cekStatusJaringan();
       muatStokInventaris();
+
+      window.addEventListener('online', () => {
+        cekStatusJaringan();
+        muatStokInventaris();
+      });
+
+      window.addEventListener('offline', () => {
+        cekStatusJaringan();
+      });
     });
 
+    function cekStatusJaringan() {
+      const bannerOffline = document.getElementById('status-offline');
+      if (!navigator.onLine) {
+        if (bannerOffline) bannerOffline.style.display = 'block';
+      } else {
+        if (bannerOffline) bannerOffline.style.display = 'none';
+      }
+    }
+
     async function muatStokInventaris() {
-      const container = document.getElementById("daftar-inventaris"); 
+      const container = document.getElementById("daftar-inventaris");  
       if (!container) return;
 
-      // 1. TAMPILKAN DATA SEMENTARA DARI LOCALSTORAGE (INSTAN 0.01 DETIK)
+      // 1. AMBIL DARI LOCALSTORAGE AGAR TAMPIL INSTAN TANPA MEMBEBANI RAM
       const cachedData = localStorage.getItem(CACHE_KEY);
       if (cachedData) {
         try {
           renderHTML(JSON.parse(cachedData));
         } catch (e) {
-          console.error("Cache error", e);
+          console.error("Gagal memparsing cache:", e);
         }
       } else {
         container.innerHTML = `<div style="text-align:center; padding: 20px; color:#666;">⏳ Memuat data stok...</div>`;
       }
 
-      // 2. AMBIL DATA TERBARU DARI GOOGLE SHEETS DI BELAKANG LAYAR
+      // 2. JIKA ONLINE, TARIK DATA TERBARU DARI GOOGLE SHEETS DI LATAR BELAKANG
+      if (!navigator.onLine) return;
+
       try {
-        const res = await fetch(GAS_WEB_APP_URL);
+        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL);
         const data = await res.json();
 
         if (data && data.perkakas) {
-          // Simpan data terbaru ke penyimpanan browser
           localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-          // Update tampilan secara mulus
           renderHTML(data);
         }
       } catch (err) {
-        console.error(err);
-        // Jika jaringan gagal tapi ada data cache, jangan tampilkan pesan error
+        console.warn("Gagal memperbarui data dari server, menggunakan cache lokal.", err);
         if (!cachedData) {
-          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data. Periksa koneksi internet Anda.</div>`;
+          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data dan tidak ada data tersimpan.</div>`;
         }
       }
     }
 
-    // Fungsi Render Tampilan
+    // Fungsi Render Tampilan yang Ringan
     function renderHTML(data) {
       const container = document.getElementById("daftar-inventaris");
       const daftarPerkakas = data.perkakas || [];
@@ -113,7 +135,7 @@
         return;
       }
 
-      // Filter peminjaman aktif
+      // Buat pemetaan peminjaman aktif secara efisien
       const dipinjamAktif = dataPinjaman.filter(row => row[5] === "Dipinjam");
       const rekapDipinjam = {};
       dipinjamAktif.forEach(row => {
@@ -122,11 +144,11 @@
         rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
       });
 
-      // Render Kartu Barang
+      // Render Kartu Barang menggunakan map string
       container.innerHTML = daftarPerkakas.map(item => {
         const terpakai = rekapDipinjam[item.nama] || 0;
         const sisaStok = parseInt(item.total) || 0;
-        const totalAwal = sisaStok + terpakai; 
+        const totalAwal = sisaStok + terpakai;  
         
         const statusBadge = sisaStok > 0 
           ? `<span style="background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Tersedia</span>`
@@ -134,7 +156,7 @@
 
         return `
           <div class="card-barang">
-            ${item.foto ? `<img src="${item.foto}" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:10px;" onError="this.style.display='none'">` : ''}
+            ${item.foto ? `<img src="${item.foto}" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:10px;" loading="lazy" onError="this.style.display='none'">` : ''}
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
               <h3 style="margin: 0; font-size: 15px; color: #111827;">${item.nama}</h3>
