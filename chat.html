@@ -683,7 +683,7 @@
       });
     }
 
-    // Pemantau Pesan Private Universal
+    // Pemantau Pesan Private Universal (Updated Sinyal ke Index)
     let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
@@ -700,6 +700,7 @@
       globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
         if (!snapshot.exists()) {
           isFirstLoad = false;
+          sendTotalUnreadToParent(); // Sync jika 0
           return;
         }
 
@@ -758,10 +759,11 @@
         });
 
         renderPrivateTabsUI();
+        UnreadToParent(); // Send akumulasi unread ke index.html!
         isFirstLoad = false;
       });
     }
-
+    
     // 6. Pengiriman Pesan (Keyboard Tetap Terbuka)
     window.sendChatMessage = (e) => {
       e.preventDefault();
@@ -907,11 +909,28 @@
       sendUnreadCountToParent(0);
     };
     
-    function sendUnreadCountToParent(count) {
+    // Helper Akumulasi Total Unread (Public + All Private)
+    let lastPublicUnreadCount = 0;
+
+    function sendTotalUnreadToParent() {
+      // Hitung total unread seluruh room private
+      let totalPrivateUnread = 0;
+      Object.values(unreadCounts).forEach(count => {
+        totalPrivateUnread += (count || 0);
+      });
+
+      const grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
+
       window.parent.postMessage({
         type: 'RT05_CHAT_UNREAD_UPDATE',
-        unreadPublicCount: count
+        unreadPublicCount: grandTotalUnread
       }, '*');
+    }
+
+    // Perbarui juga sendUnreadCountToParent agar mengingat angka public
+    function sendUnreadCountToParent(count) {
+      lastPublicUnreadCount = count || 0;
+      sendTotalUnreadToParent();
     }
 
     // Pendeteksi Status IDLE / MINIMIZE (Anti-Kedip)
