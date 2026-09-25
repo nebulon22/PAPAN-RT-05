@@ -1,4 +1,4 @@
-// utils.js - Kumpulan Variabel dan Fungsi Global RT 05
+// utils.js - Kumpulan Variabel dan Fungsi Global RT 05 (Optimized & Complete)
 
 const RT05_CONFIG = {
     // Ganti URL ini jika script GAS Anda diperbarui
@@ -26,19 +26,79 @@ const RT05_CONFIG = {
     ]
 };
 
-// Fungsi Parsing CSV
+// ==========================================
+// PENGAMBILAN DATA GOOGLE SHEETS SUPER CEPAT & OFFLINE-READY (JSON / TEXT)
+// ==========================================
+async function ambilDataSheets(urlCacheKey, targetUrl, callbackRender) {
+    const cachedString = localStorage.getItem(urlCacheKey);
+    
+    // 1. Tampilkan data dari cache lokal secara instan (0 detik) jika ada
+    if (cachedString) {
+        try {
+            const parsedData = cachedString.trim().startsWith('{') || cachedString.trim().startsWith('[') 
+                ? JSON.parse(cachedString) 
+                : parseCSV(cachedString);
+            
+            callbackRender(parsedData, true); // true = data bersumber dari cache lokal
+        } catch (e) {
+            console.error("Gagal membaca cache lokal:", e);
+        }
+    }
+
+    // 2. Jika perangkat offline, hentikan proses jaringan
+    if (!navigator.onLine) {
+        return;
+    }
+
+    // 3. Ambil data terbaru di latar belakang (Background Sync)
+    try {
+        const response = await fetch(targetUrl);
+        const contentType = response.headers.get("content-type");
+        
+        let finalData;
+        let rawCacheContent;
+
+        // Cek apakah respons dari server berformat JSON
+        if (contentType && contentType.includes("application/json")) {
+            finalData = await response.json();
+            rawCacheContent = JSON.stringify(finalData);
+        } else {
+            const textData = await response.text();
+            rawCacheContent = textData;
+            finalData = parseCSV(textData);
+        }
+        
+        // Simpan data terbaru ke localStorage untuk mode offline berikutnya
+        localStorage.setItem(urlCacheKey, rawCacheContent);
+        
+        // Update tampilan dengan data segar dari server
+        callbackRender(finalData, false); // false = data baru dari web/server
+    } catch (err) {
+        console.warn("Jaringan bermasalah, tetap menggunakan data cadangan lokal:", err);
+    }
+}
+
+// Fungsi Parsing CSV yang Dioptimalkan (Cepat & Minim Alokasi Memori)
 function parseCSV(text) {
+    if (!text) return [];
     var lines = text.replace(/\r/g, '').split('\n');
     var result = [];
+    
     for (var i = 0; i < lines.length; i++) {
         var line = lines[i].trim();
         if (!line) continue;
         var row = []; var inQuotes = false; var cur = '';
-        for (var c = 0; c < line.length; c++) {
+        var len = line.length;
+        
+        for (var c = 0; c < len; c++) {
             var char = line[c];
             if (char === '"') inQuotes = !inQuotes;
-            else if (char === ',' && !inQuotes) { row.push(cur.trim().replace(/^"|"$/g, '')); cur = ''; }
-            else cur += char;
+            else if (char === ',' && !inQuotes) { 
+                row.push(cur.trim().replace(/^"|"$/g, '')); 
+                cur = ''; 
+            } else {
+                cur += char;
+            }
         }
         row.push(cur.trim().replace(/^"|"$/g, ''));
         result.push(row);
@@ -46,7 +106,7 @@ function parseCSV(text) {
     return result;
 }
 
-// Fungsi Normalisasi Koordinat
+// Fungsi Normalisasi Koordinat (Ringan & Cepat)
 function perbaikiKoordinat(val) {
     if (!val) return "";
     var str = val.toString().replace(/,/g, '.').replace(/\s+/g, '');
@@ -69,10 +129,10 @@ function escapeHTML(str) {
     return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
 }
 
-// Fungsi Penentuan Gaya & Ikon Pin Peta
+// Fungsi Penentuan Gaya & Ikon Pin Peta (Menggunakan percabangan ringkas)
 function getIkonKategori(namaAsli, kategoriManual) {
     let emoji = '🏠'; let kategori = 'rumah';
-    let namaUpper = namaAsli.toUpperCase();
+    let namaUpper = namaAsli ? namaAsli.toUpperCase() : '';
     kategoriManual = kategoriManual ? kategoriManual.toLowerCase() : '';
     let bgStyle = 'background: #000000; border: 2px solid #00FF66; color: black; width: 22px; height: 22px; font-size: 12px;';
 
