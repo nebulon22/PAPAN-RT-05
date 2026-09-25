@@ -174,14 +174,15 @@
       box-shadow: none !important;
     }
 
-    /* Footer Input Form */
-    footer {
-      background: rgba(15, 23, 42, 0.2);
-      backdrop-filter: blur(4px);
-      border-top: 1px solid rgba(255, 255, 255, 0.1);
-      padding: 8px;
-      flex-shrink: 0;
-    }
+    <!-- Footer / Input Form Chat -->
+  <footer>
+    <form id="chat-form" onsubmit="sendChatMessage(event)">
+      <input type="text" id="chat-input" placeholder="Ketik pesan obrolan di sini..." autocomplete="off" maxlength="300">
+      <button type="submit" class="btn-send" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault()">
+        <i class="fa-solid fa-paper-plane"></i> <span style="display: none;" class="sm-show">Kirim</span>
+      </button>
+    </form>
+  </footer>
     #chat-form { display: flex; gap: 8px; max-width: 1000px; margin: 0 auto; align-items: center; }
     #chat-input {
       flex: 1;
@@ -724,7 +725,7 @@
       });
     }
 
-    // 6. Pengiriman Pesan
+   // 6. Pengiriman Pesan (Keyboard Tetap Terbuka)
     window.sendChatMessage = (e) => {
       e.preventDefault();
       const input = document.getElementById('chat-input');
@@ -740,12 +741,14 @@
           role: currentUser.role || 'warga',
           text: text,
           timestamp: serverTimestamp()
-        }).then(() => { input.value = ''; });
+        }).then(() => { 
+          input.value = ''; 
+          input.focus(); // Pertahankan kursor & keyboard di HP
+        });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
         const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
         const newMsgRef = push(ref(db, `private_chats/${roomID}`));
-
         const newKey = newMsgRef.key;
 
         set(newMsgRef, {
@@ -756,6 +759,7 @@
           timestamp: serverTimestamp()
         }).then(() => { 
           input.value = ''; 
+          input.focus(); // Pertahankan kursor & keyboard di HP
 
           // Tandai pesan sendiri ini sebagai acuan terakhir
           const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
