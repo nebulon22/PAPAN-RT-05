@@ -160,3 +160,51 @@ function getIkonKategori(namaAsli, kategoriManual) {
     }
     return { emoji, kategori, bgStyle };
 }
+
+
+let mediaStreamSenter = null;
+let isSenterAktif = false;
+
+window.toggleSenterRonda = async function() {
+  const btn = document.getElementById('btn-senter-ronda');
+  const icon = document.getElementById('icon-senter-ronda');
+  const status = document.getElementById('status-senter-ronda');
+
+  try {
+    if (!isSenterAktif) {
+      // Nyalakan senter via kamera belakang
+      mediaStreamSenter = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment', advanced: [{ torch: true }] }
+      });
+      isSenterAktif = true;
+
+      if (btn) {
+        btn.style.background = '#fbbf24';
+        btn.style.color = '#0f172a';
+        btn.style.borderColor = '#f59e0b';
+      }
+      if (icon) icon.className = 'fa-solid fa-lightbulb';
+      if (status) status.innerText = 'ON';
+
+    } else {
+      // Matikan senter
+      if (mediaStreamSenter) {
+        mediaStreamSenter.getTracks().forEach(track => track.stop());
+        mediaStreamSenter = null;
+      }
+      isSenterAktif = false;
+
+      if (btn) {
+        btn.style.background = '#1e293b';
+        btn.style.color = '#fbbf24';
+        btn.style.borderColor = '#334155';
+      }
+      if (icon) icon.className = 'fa-solid fa-flashlight';
+      if (status) status.innerText = 'OFF';
+    }
+  } catch (err) {
+    alert("❌ Fitur senter tidak didukung di browser HP ini atau izin kamera belum diberikan.");
+    isSenterAktif = false;
+    if (status) status.innerText = 'OFF';
+  }
+};
