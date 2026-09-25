@@ -562,13 +562,21 @@
       }
     };
 
-    // 4. Tutup Tab Private
+    // 4. Tutup Tab Private (Diperbarui agar riwayat Unread di-reset bersih)
     window.closePrivateTab = (e, targetUID) => {
-      e.stopPropagation();
-      delete openPrivateRooms[targetUID];
+      e.stopPropagation(); // Mencegah pemicu switchTab
+      
+      // 1. Catat waktu saat tab ditutup sebagai 'last read' agar pesan lama tidak terhitung ulang
+      const lastReadTimestamps = JSON.parse(localStorage.getItem('rt05_chat_last_read')) || {};
+      lastReadTimestamps[targetUID] = Date.now();
+      localStorage.setItem('rt05_chat_last_read', JSON.stringify(lastReadTimestamps));
 
+      // 2. Bersihkan hitungan unread & hapus room dari memori
+      delete unreadCounts[targetUID];
+      delete openPrivateRooms[targetUID];
       localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
+      // 3. Pindah ke grup public jika tab yang sedang dibuka adalah tab yang ditutup
       if (activeChatType === 'private' && activePrivateUID === targetUID) {
         switchChatRoom('public');
       } else {
