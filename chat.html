@@ -1141,10 +1141,27 @@
           return;
         }
 
-        let lastMsg = null;
+        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+        const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
+
+        let isUnreadSection = false;
+        if (!lastReadPublicMapKey) isUnreadSection = true;
+
         snapshot.forEach((childSnap) => {
-          lastMsg = childSnap.val();
-          renderSingleMessage(lastMsg, false, childSnap.key);
+          const msgKey = childSnap.key;
+          const msgData = childSnap.val();
+
+          // Tentukan apakah pesan ini termasuk pesan baru yang belum dibaca sebelumnya
+          let isUnreadMsg = false;
+          if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
+            isUnreadMsg = true;
+          }
+
+          if (msgKey === lastReadPublicMapKey) {
+            isUnreadSection = true; // Ketemu ID penanda baca terakhir, pesan setelah ID ini dianggap baru
+          }
+
+          renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
         isInitialPublicChatLoaded = true;
@@ -1160,9 +1177,10 @@
       div.className = "msg-row";
       if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
+      // Efek Latar Putih Transparan + Memudar dalam 2 Detik
       if (isUnread) {
-        div.style.transition = "background-color 3s ease, border-color 2s ease";
-        div.style.backgroundColor = "rgba(255, 255, 255, 0.12)";
+        div.style.transition = "background-color 2s ease, border-color 2s ease";
+        div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
         div.style.borderLeft = "3px solid #38bdf8";
         div.style.paddingLeft = "8px";
 
@@ -1174,9 +1192,9 @@
 
       let nameClass = "role-user";
       if (msg.role === 'admin') nameClass = "role-admin";
-      else if (msg.uid === currentUser.uid) nameClass = "role-self";
+      else if (msg.uid === currentUser?.uid) nameClass = "role-self";
 
-      const clickHandler = (msg.uid !== currentUser.uid) 
+      const clickHandler = (msg.uid !== currentUser?.uid) 
         ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
         : '';
 
