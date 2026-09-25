@@ -960,38 +960,82 @@
       sendTotalUnreadToParent();
     }
 
-    // Pendeteksi Status IDLE / MINIMIZE (Anti-Kedip)
-    let currentLocalState = 'online';
-    let visibilityTimeout = null;
+    // --- LOGIKA PRESENCE & IDLE USER ---
+    let idleTimer = null;
+    let isPresenceSetup = false;
 
     function setupPresence() {
-      if (!currentUser?.uid) return;
+      if (!currentUser || !currentUser.uid || isPresenceSetup) return;
+      isPresenceSetup = true;
 
-      const userStatusRef = ref(db, `users/${currentUser.uid}/state`);
+      const userStateRef = ref(db, `users/${currentUser.uid}/state`);
       const connectedRef = ref(db, '.info/connected');
 
+      // Fungsi pembantu memperbarui state di Firebase
+      const setMyState = (stateValue) => {
+        if (!currentUser || !currentUser.uid) return;
+        set(userStateRef, stateValue);
+      };
+
+      // Cek apakah Modal Chat sedang terbuka di layar
+      const isChatModalOpen = () => {
+        // Cek modal di parent window (index.html) jika running di iframe
+        const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : document.getElementById('chat-overlay-modal');
+        if (modal) {
+          return modal.style.display !== 'none' && modal.style.display !== '';
+        }
+        return true; 
+      };
+
+      // Evaluasi status berdasarkan kondisi layar & modal chat
+      const evaluateStatus = () => {
+        // Jika Tab disembunyikan ATAU Modal Chat ditutup -> Set IDLE (Kuning)
+        if (document.hidden || !isChatModalOpen()) {
+          clearTimeout(idleTimer);
+          setMyState('idle');
+          return;
+        }
+
+        // Jika Tab Aktif & Modal Chat Terbuka -> Set ONLINE (Hijau)
+        setMyState('online');
+
+        // Reset timer idle (3 menit tanpa gerakan di chat -> IDLE)
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          setMyState('idle');
+        }, 3 * 60 * 1000);
+      };
+
+      // 1. PENGATURAN KONEKSI FIREBASE (Saat Browser/Tab Ditutup Paksa -> OFFLINE)
       onValue(connectedRef, (snap) => {
         if (snap.val() === true) {
-          onDisconnect(userStatusRef).set('offline');
-          currentLocalState = document.hidden ? 'idle' : 'online';
-          set(userStatusRef, currentLocalState);
+          onDisconnect(userStateRef).set('offline').then(() => {
+            evaluateStatus();
+          });
         }
       });
 
-      document.addEventListener('visibilitychange', () => {
-        if (visibilityTimeout) clearTimeout(visibilityTimeout);
-
-        visibilityTimeout = setTimeout(() => {
-          const newState = document.hidden ? 'idle' : 'online';
-
-          if (newState !== currentLocalState) {
-            currentLocalState = newState;
-            set(userStatusRef, newState);
+      // 2. DETEKSI GERAKAN MOUSE / INTERAKSI SAAT CHAT TERBUKA
+      ['mousemove', 'keydown', 'touchstart', 'scroll', 'click'].forEach(evt => {
+        window.addEventListener(evt, () => {
+          if (!document.hidden && isChatModalOpen()) {
+            evaluateStatus();
           }
-        }, 3000);
+        }, { passive: true });
       });
+
+      // 3. DETEKSI BERALIH TAB (Visibility Change)
+      document.addEventListener('visibilitychange', () => {
+        evaluateStatus();
+      });
+
+      // 4. EKSPOSE FUNGSI UNTUK DIPANGGUL SAAT TOMBOL CHAT DITUTUP/DIBUKA
+      window.updatePresenceOnChatToggle = function() {
+        evaluateStatus();
+      };
     }
 
+    
     function requestNotificationPermission() {
       if (!('Notification' in window) || !currentUser?.uid) return;
 
