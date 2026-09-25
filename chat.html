@@ -562,21 +562,29 @@
       }
     };
 
-    // 4. Tutup Tab Private (Diperbarui agar riwayat Unread di-reset bersih)
+   // 4. Tutup Tab Private (Simpan ID Pesan Terakhir)
     window.closePrivateTab = (e, targetUID) => {
-      e.stopPropagation(); // Mencegah pemicu switchTab
-      
-      // 1. Catat waktu saat tab ditutup sebagai 'last read' agar pesan lama tidak terhitung ulang
-      const lastReadTimestamps = JSON.parse(localStorage.getItem('rt05_chat_last_read')) || {};
-      lastReadTimestamps[targetUID] = Date.now();
-      localStorage.setItem('rt05_chat_last_read', JSON.stringify(lastReadTimestamps));
+      if (e) e.stopPropagation(); 
 
-      // 2. Bersihkan hitungan unread & hapus room dari memori
-      delete unreadCounts[targetUID];
+      // 1. Ambil ID pesan paling akhir yang ada di layar saat ini
+      const roomID = [currentUser.uid, targetUID].sort().join('_');
+      const lastReadIds = JSON.parse(localStorage.getItem('rt05_chat_last_msg_id')) || {};
+      
+      // Ambil elemen pesan terakhir di stream jika sedang dibuka
+      const chatStream = document.getElementById('chat-stream');
+      if (activeChatType === 'private' && activePrivateUID === targetUID && chatStream.lastElementChild) {
+        lastReadIds[targetUID] = chatStream.lastElementChild.getAttribute('data-msg-id') || 'READ';
+      } else {
+        lastReadIds[targetUID] = 'READ_ALL';
+      }
+      localStorage.setItem('rt05_chat_last_msg_id', JSON.stringify(lastReadIds));
+
+      // 2. Bersihkan memori tab & badge
+      unreadCounts[targetUID] = 0;
       delete openPrivateRooms[targetUID];
       localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
-      // 3. Pindah ke grup public jika tab yang sedang dibuka adalah tab yang ditutup
+      // 3. Pindah ke grup public jika tab ini yang sedang aktif
       if (activeChatType === 'private' && activePrivateUID === targetUID) {
         switchChatRoom('public');
       } else {
@@ -630,21 +638,17 @@
       });
     }
 
-  // Pemantau Pesan Private Universal (Otomatis Buka Tab Baru Jika Ada Chat Masuk)
-    let globalPrivateListener = null;
+let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
       if (!currentUser?.uid) return;
 
-      // Matikan listener lama jika ada
       if (globalPrivateListener) {
         globalPrivateListener();
         globalPrivateListener = null;
       }
 
-      const lastReadTimestamps = JSON.parse(localStorage.getItem('rt05_chat_last_read')) || {};
       const allPrivateRef = ref(db, 'private_chats');
-
       let isFirstLoad = true;
 
       globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
@@ -653,46 +657,60 @@
           return;
         }
 
+        const lastReadIds = JSON.parse(localStorage.getItem('rt05_chat_last_msg_id')) || {};
+
         snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
-          // Cek apakah roomID ini melibatkan currentUser (Format roomID: UID1_UID2)
+          
           if (roomID.includes(currentUser.uid)) {
             const parts = roomID.split('_');
             const targetUID = parts[0] === currentUser.uid ? parts[1] : parts[0];
 
             let unreadTotalCount = 0;
             let lastMsg = null;
-            const lastReadTime = lastReadTimestamps[targetUID] || 0;
+            let foundLastRead = false;
+            const targetLastReadId = lastReadIds[targetUID];
 
             roomSnap.forEach((msgSnap) => {
+              const msgKey = msgSnap.key;
               const msgData = msgSnap.val();
               lastMsg = msgData;
 
-              // Hitung pesan masuk dari lawan bicara yang belum dibaca
-              if (msgData.uid !== currentUser.uid && (msgData.timestamp || 0) > lastReadTime) {
-                unreadTotalCount++;
+              if (targetLastReadId) {
+                // Jika pesan ini adalah pesan terakhir yang dibaca/di-close sebelumnya
+                if (msgKey === targetLastReadId) {
+                  foundLastRead = true;
+                  unreadTotalCount = 0; // Reset hitungan
+                } else if (foundLastRead && msgData.uid !== currentUser.uid) {
+                  unreadTotalCount++; // Hitung pesan SETELAH pesan terakhir terbaca
+                }
+              } else {
+                if (msgData.uid !== currentUser.uid) unreadTotalCount++;
               }
             });
 
-            // Jika ada pesan baru dari lawan bicara
+            // Jika tab di-close tanpa ID spesifik, dan tidak ada pesan baru dari lawan bicara di akhir
+            if (targetLastReadId === 'READ_ALL' || (lastMsg && lastMsg.uid === currentUser.uid)) {
+              unreadTotalCount = 0;
+            }
+
             if (unreadTotalCount > 0) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
 
-              // 1. OTOMATIS TAMBAHKAN KE OPEN PRIVATE ROOMS BILA TAB BELUM ADA
               if (!openPrivateRooms[targetUID]) {
+                const keys = Object.keys(openPrivateRooms);
+                if (keys.length >= 5) delete openPrivateRooms[keys[0]];
+
                 openPrivateRooms[targetUID] = senderName;
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-              // 2. UPDATE UNREAD COUNT & SUARA NOTIFIKASI
               if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
                 unreadCounts[targetUID] = unreadTotalCount;
-                
-                // Bunyikan suara kling jika ada pesan baru saat aplikasi menyala
-                if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
-                  playKlingSound();
-                }
+                if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) playKlingSound();
               }
+            } else {
+              unreadCounts[targetUID] = 0;
             }
           }
         });
@@ -701,7 +719,7 @@
         isFirstLoad = false;
       });
     }
-
+    
     // 6. Pengiriman Pesan
     window.sendChatMessage = (e) => {
       e.preventDefault();
@@ -1066,12 +1084,13 @@
       });
     }
         
-    function renderSingleMessage(msg, isUnread = false) {
+function renderSingleMessage(msg, isUnread = false, msgKey = '') {
       const chatStream = document.getElementById('chat-stream');
       if (!chatStream) return;
       
       const div = document.createElement('div');
       div.className = "msg-row";
+      if (msgKey) div.setAttribute('data-msg-id', msgKey); // Simpan ID pesan ke elemen HTML
 
       if (isUnread) {
         div.style.transition = "background-color 3s ease, border-color 2s ease";
@@ -1100,7 +1119,7 @@
 
       chatStream.appendChild(div);
     }
-
+    
     window.renderWargaSidebar = () => {
       const listContainer = document.getElementById('warga-list');
       if (!listContainer) return;
