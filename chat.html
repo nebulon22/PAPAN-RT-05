@@ -316,10 +316,11 @@
       
       <!-- BAR TAB CHAT (Grup & Room Private) -->
       <div id="chat-tabs-bar" style="display: flex; gap: 4px; padding: 6px 8px; background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid rgba(255, 255, 255, 0.1); overflow-x: auto; flex-shrink: 0; scrollbar-width: none;">
-        <!-- Tab Grup Utama -->
-        <button id="tab-room-public" onclick="switchChatRoom('public')" class="btn" style="background: #0288d1; color: #fff; border: none; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap;">
-          <i class="fa-solid fa-users"></i> Grup RT 05
-        </button>
+        <!-- Tab Grup Utama dengan Badge Unread -->
+<button id="tab-room-public" onclick="switchChatRoom('public')" class="btn" style="background: #0288d1; color: #fff; border: none; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;">
+  <i class="fa-solid fa-users"></i> Grup RT 05
+  <span id="badge-public-tab" style="display: none; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; min-width: 16px; height: 16px; line-height: 1; text-align: center; box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);">0</span>
+</button>
         <!-- Tab Private Chat -->
         <div id="dynamic-private-tabs" style="display: flex; gap: 4px;"></div>
       </div>
@@ -588,12 +589,13 @@
     }
 
     // 3. Pindah Tab (Public <-> Private)
-   window.switchChatRoom = (type, targetUID = null) => {
+    window.switchChatRoom = (type, targetUID = null) => {
       activeChatType = type;
       activePrivateUID = targetUID;
 
       if (type === 'public') {
-        markPublicGroupAsRead(); // <--- Tandai ID grup publik sebagai terbaca
+        updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
+        markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
       } else if (type === 'private' && targetUID) {
         unreadCounts[targetUID] = 0; 
         markRoomAsRead(targetUID);   
@@ -621,6 +623,8 @@
         loadPrivateChatStream(targetUID);
       }
     };
+
+    
     // 4. Tutup Tab Private
     window.closePrivateTab = (e, targetUID) => {
       if (e) e.stopPropagation(); 
@@ -828,7 +832,7 @@
       }
     };
 
-// Pemantau Pesan Unread Grup Chat Publik untuk Tombol Oranye
+    // Pemantau Pesan Unread Grup Chat Publik untuk Tombol Oranye & Tab Utama
     let publicGroupListener = null;
 
     function listenPublicGroupUnread() {
@@ -843,6 +847,7 @@
 
       publicGroupListener = onValue(chatsRef, (snapshot) => {
         if (!snapshot.exists()) {
+          updatePublicTabBadge(0);
           sendUnreadCountToParent(0);
           return;
         }
@@ -874,12 +879,32 @@
           unreadPublicCount = 0;
         }
 
-        // Kirim jumlah unread murni ke halaman utama (index.html)
+        // Tampilkan badge di Tab "Grup RT 05" HANYA jika user sedang berada di tab private
+        if (activeChatType === 'private') {
+          updatePublicTabBadge(unreadPublicCount);
+        } else {
+          updatePublicTabBadge(0);
+        }
+
+        // Kirim jumlah unread ke tombol utama di index.html
         sendUnreadCountToParent(unreadPublicCount);
       });
     }
 
-   // Helper: Tandai ID Pesan Terakhir Grup Chat Publik Sudah Dibaca
+    // Helper: Update Tampilan Badge di Tab "Grup RT 05"
+    function updatePublicTabBadge(count) {
+      const tabBadge = document.getElementById('badge-public-tab');
+      if (tabBadge) {
+        if (count > 0) {
+          tabBadge.innerText = count > 99 ? '99+' : count;
+          tabBadge.style.display = 'inline-flex';
+        } else {
+          tabBadge.style.display = 'none';
+        }
+      }
+    }
+
+    // Helper: Tandai ID Pesan Terakhir Grup Chat Publik Sudah Dibaca
     window.markPublicGroupAsRead = () => {
       if (!currentUser?.uid) return;
 
@@ -897,9 +922,10 @@
         }
       });
 
+      updatePublicTabBadge(0);
       sendUnreadCountToParent(0);
     };
-
+    
     // Helper: Kirim data Unread Count ke Parent Window (index.html)
     function sendUnreadCountToParent(count) {
       window.parent.postMessage({
