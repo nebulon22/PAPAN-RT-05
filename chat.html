@@ -178,11 +178,13 @@
   <footer>
     <form id="chat-form" onsubmit="sendChatMessage(event)">
       <input type="text" id="chat-input" placeholder="Ketik pesan obrolan di sini..." autocomplete="off" maxlength="300">
-      <button type="submit" class="btn-send" onmousedown="event.preventDefault()" ontouchstart="event.preventDefault()">
+      <button type="submit" class="btn-send">
         <i class="fa-solid fa-paper-plane"></i> <span style="display: none;" class="sm-show">Kirim</span>
       </button>
     </form>
   </footer>
+
+    
     #chat-form { display: flex; gap: 8px; max-width: 1000px; margin: 0 auto; align-items: center; }
     #chat-input {
       flex: 1;
@@ -725,13 +727,17 @@
       });
     }
 
-   // 6. Pengiriman Pesan (Keyboard Tetap Terbuka)
+ // 6. Pengiriman Pesan (Keyboard Murni Tetap Terbuka Anti-Kedip)
     window.sendChatMessage = (e) => {
       e.preventDefault();
       const input = document.getElementById('chat-input');
       const text = input.value.trim();
 
       if (!text || currentUser?.status !== 'aktif') return;
+
+      // Kosongkan input dan JAGA FOKUS SEGERA secara langsung (Instan)
+      input.value = '';
+      input.focus();
 
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
@@ -741,9 +747,6 @@
           role: currentUser.role || 'warga',
           text: text,
           timestamp: serverTimestamp()
-        }).then(() => { 
-          input.value = ''; 
-          input.focus(); // Pertahankan kursor & keyboard di HP
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
@@ -758,9 +761,6 @@
           text: text,
           timestamp: serverTimestamp()
         }).then(() => { 
-          input.value = ''; 
-          input.focus(); // Pertahankan kursor & keyboard di HP
-
           // Tandai pesan sendiri ini sebagai acuan terakhir
           const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
           lastReadKeyMap[activePrivateUID] = newKey;
