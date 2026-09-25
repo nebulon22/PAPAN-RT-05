@@ -545,7 +545,7 @@
       switchChatRoom('private', targetUID);
     };
 
-    // 2. Render UI Tab-tab Private
+    // 2. Render UI Tab-tab Private (Perbaiki bagian event klik tab)
     function renderPrivateTabsUI() {
       const container = document.getElementById('dynamic-private-tabs');
       if (!container) return;
@@ -568,8 +568,9 @@
           border: 1px solid ${isActive ? '#0388d1' : '#334155'}; flex-shrink: 0;
         `;
 
+        // Pastikan pemanggilan switchChatRoom berdiri sendiri dengan aman
         btn.innerHTML = `
-          <span onclick="switchChatRoom('private', '${uid}')" style="display: flex; align-items: center; gap: 5px;">
+          <span onclick="event.stopPropagation(); switchChatRoom('private', '${uid}')" style="display: flex; align-items: center; gap: 5px;">
             <i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}
           </span>
           <i class="fa-solid fa-xmark" onclick="closePrivateTab(event, '${uid}')" style="font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px;" title="Tutup Tab"></i>
@@ -579,6 +580,7 @@
       });
     }
 
+    
     // Helper: Tandai Pesan Terakhir di Room ini Sudah Dibaca
     function markRoomAsRead(targetUID) {
       const roomID = [currentUser.uid, targetUID].sort().join('_');
@@ -598,10 +600,11 @@
       });
     }
 
-    // 3. Pindah Tab (Public <-> Private)
+   // 3. Pindah Tab (Public <-> Private)
     window.switchChatRoom = (type, targetUID = null) => {
       activeChatType = type;
       activePrivateUID = targetUID;
+      isChatVisible = true; // <-- TAMBAHKAN INI AGAR KLIK TAB LANGSUNG DIANGGAP AKTIF/TERBUKA
 
       if (type === 'public') {
         updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
