@@ -909,21 +909,16 @@
       sendUnreadCountToParent(0);
     };
     
-    // Helper Akumulasi Total Unread (Public + All Private)
+    // Helper Akumulasi Total Unread (Hanya Public Grup yang dikirim ke Index)
     let lastPublicUnreadCount = 0;
 
     function sendTotalUnreadToParent() {
-      // Hitung total unread seluruh room private
-      let totalPrivateUnread = 0;
-      Object.values(unreadCounts).forEach(count => {
-        totalPrivateUnread += (count || 0);
-      });
-
-      const grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
-
+      // Sesuai permintaan: Notifikasi chat private HANYA tampil di tab-nya saja.
+      // Kita hapus penjumlahan totalPrivateUnread ke index.html.
+      
       window.parent.postMessage({
         type: 'RT05_CHAT_UNREAD_UPDATE',
-        unreadPublicCount: grandTotalUnread
+        unreadPublicCount: lastPublicUnreadCount // Hanya kirim data unread Grup
       }, '*');
     }
 
