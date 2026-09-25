@@ -54,10 +54,21 @@ function tampilkanLoncengUpdate() {
 
 // Fungsi yang dipicu saat lonceng/teks diklik warga
 function perbaruiAplikasiSekarang() {
+  var container = document.getElementById('container-update-pwa');
+  
+  // 1. Ubah tampilan tombol untuk memberi tahu warga bahwa proses sedang berjalan
+  if (container) {
+    container.innerHTML = '<span style="font-size: 11px; font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Memasang pembaruan...</span>';
+  }
+
+  // 2. Kirim sinyal skipWaiting ke Service Worker
   if (serviceWorkerMenunggu) {
     serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
   } else {
-    window.location.reload(true);
+    // Jalankan reload paksa jika service worker tidak merespons
+    setTimeout(() => {
+      window.location.reload(true);
+    }, 500);
   }
 }
    
