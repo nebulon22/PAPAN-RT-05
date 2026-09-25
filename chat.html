@@ -542,13 +542,15 @@
     }
 
     // 3. Pindah Tab (Public <-> Private)
-    window.switchChatRoom = (type, targetUID = null) => {
+   window.switchChatRoom = (type, targetUID = null) => {
       activeChatType = type;
       activePrivateUID = targetUID;
 
-      if (type === 'private' && targetUID) {
-        unreadCounts[targetUID] = 0; // Reset badge di memori UI
-        markRoomAsRead(targetUID);   // Catat ID pesan terakhir
+      if (type === 'public') {
+        markPublicGroupAsRead(); // <--- Tandai ID grup publik sebagai terbaca
+      } else if (type === 'private' && targetUID) {
+        unreadCounts[targetUID] = 0; 
+        markRoomAsRead(targetUID);   
       }
 
       if (currentChatUnsubscribe) {
@@ -573,7 +575,6 @@
         loadPrivateChatStream(targetUID);
       }
     };
-
     // 4. Tutup Tab Private
     window.closePrivateTab = (e, targetUID) => {
       if (e) e.stopPropagation(); 
@@ -757,6 +758,93 @@
       }
     };
 
+// Pemantau Pesan Unread Grup Chat Publik untuk Tombol Oranye (Berdasarkan ID Pesan)
+    let publicGroupListener = null;
+
+    function listenPublicGroupUnread() {
+      if (!currentUser?.uid || currentUser.status !== 'aktif') return;
+
+      if (publicGroupListener) {
+        publicGroupListener();
+        publicGroupListener = null;
+      }
+
+      const chatsRef = query(ref(db, 'chats'), limitToLast(80));
+
+      publicGroupListener = onValue(chatsRef, (snapshot) => {
+        if (!snapshot.exists()) {
+          sendUnreadCountToParent(0);
+          return;
+        }
+
+        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+        const lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+
+        let unreadPublicCount = 0;
+        let lastMsg = null;
+        let countAfterKey = false;
+
+        if (!lastReadPublicMapKey) countAfterKey = true; // Jika belum pernah baca, hitung pesan warga lain
+
+        snapshot.forEach((msgSnap) => {
+          const msgKey = msgSnap.key;
+          const msgData = msgSnap.val();
+          lastMsg = msgData;
+
+          if (msgKey === lastReadPublicMapKey) {
+            countAfterKey = true; // Ketemu ID penanda baca terakhir, hitung pesan SETELAH ID ini
+            unreadPublicCount = 0;
+          } else if (countAfterKey && msgData.uid !== currentUser.uid) {
+            unreadPublicCount++;
+          }
+        });
+
+        // Jika pesan paling akhir dikirim oleh diri sendiri, unread harus 0
+        if (lastMsg && lastMsg.uid === currentUser.uid) {
+          unreadPublicCount = 0;
+        }
+
+        // Jika user sedang aktif membuka room public di layar chat, tandai langsung sebagai terbaca
+        if (activeChatType === 'public') {
+          unreadPublicCount = 0;
+          markPublicGroupAsRead();
+        }
+
+        // Kirim angka badge ke halaman utama (index.html)
+        sendUnreadCountToParent(unreadPublicCount);
+      });
+    }
+
+    // Helper: Tandai ID Pesan Terakhir Grup Chat Publik Sudah Dibaca
+    function markPublicGroupAsRead() {
+      if (!currentUser?.uid) return;
+
+      const chatsRef = query(ref(db, 'chats'), limitToLast(1));
+      get(chatsRef).then((snapshot) => {
+        if (snapshot.exists()) {
+          let lastKey = null;
+          snapshot.forEach(child => { lastKey = child.key; });
+
+          if (lastKey) {
+            const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+            lastReadPublicMap[currentUser.uid] = lastKey;
+            localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+          }
+        }
+      });
+
+      sendUnreadCountToParent(0);
+    }
+
+    // Helper: Kirim data Unread Count ke Parent Window (index.html)
+    function sendUnreadCountToParent(count) {
+      window.parent.postMessage({
+        type: 'RT05_CHAT_UNREAD_UPDATE',
+        unreadPublicCount: count
+      }, '*');
+    }
+
+    
     // Pendeteksi Status IDLE / MINIMIZE
     let currentLocalState = 'online';
 
@@ -925,6 +1013,7 @@
           loadUsersList();
           renderPrivateTabsUI();
           listenAllPrivateChats();
+          listenPublicGroupUnread();
           requestNotificationPermission();
         }
       });
