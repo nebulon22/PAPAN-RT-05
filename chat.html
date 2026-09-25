@@ -594,7 +594,9 @@
       }
     };
 
-    // 5. Listener Stream Chat Private Aktif
+   // 5. Listener Stream Chat Private Aktif (Dengan Efek Sorot Memudar 2 Detik)
+    let isInitialPrivateChatLoaded = {};
+
     function loadPrivateChatStream(targetUID) {
       const roomID = [currentUser.uid, targetUID].sort().join('_');
       const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
@@ -608,15 +610,36 @@
 
         if (!snapshot.exists()) {
           chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID])}. Mulai percakapan!</div>`;
+          isInitialPrivateChatLoaded[targetUID] = true;
           return;
         }
 
+        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+        const lastReadKey = lastReadKeyMap[targetUID];
+
+        let isUnreadSection = false;
+        if (!lastReadKey) isUnreadSection = true;
+
         snapshot.forEach((childSnap) => {
-          renderSingleMessage(childSnap.val(), false, childSnap.key);
+          const msgKey = childSnap.key;
+          const msgData = childSnap.val();
+
+          // Tentukan apakah pesan ini termasuk pesan baru dari lawan bicara
+          let isUnreadMsg = false;
+          if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
+            isUnreadMsg = true;
+          }
+
+          if (msgKey === lastReadKey) {
+            isUnreadSection = true; // Ketemu ID penanda baca terakhir, pesan setelah ID ini disorot
+          }
+
+          renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
+        isInitialPrivateChatLoaded[targetUID] = true;
         chatStream.scrollTop = chatStream.scrollHeight;
-        markRoomAsRead(targetUID); // Otomatis tandai sudah dibaca saat melihat pesan
+        markRoomAsRead(targetUID); // Otomatis tandai sudah dibaca setelah dirender
       });
     }
 
