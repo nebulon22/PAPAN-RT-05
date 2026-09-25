@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Obrolan Warga - RT 05 Kayen</title>
   
+  <!-- IMPORTANT: Panggil utils.js terlebih dahulu agar RT05_CONFIG terdefinisi -->
+  <script src="utils.js"></script>
+
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
@@ -153,19 +156,19 @@
       flex-shrink: 0;
     }
 
-    /* Status ONLINE (Hijau Menyala) */
+    /* Status ONLINE */
     .dot-online {
       background-color: #34d399 !important;
       box-shadow: 0 0 6px #34d399 !important;
     }
 
-    /* Status IDLE / Pindah Tab / Minimize (Oranye Menyala) */
+    /* Status IDLE */
     .dot-idle {
       background-color: #fbbf24 !important;
       box-shadow: 0 0 6px #fbbf24 !important;
     }
 
-    /* Status OFFLINE (Abu-abu Slate) */
+    /* Status OFFLINE */
     .dot-offline {
       background-color: #475569 !important;
       box-shadow: none !important;
@@ -271,7 +274,7 @@
         <button id="tab-room-public" onclick="switchChatRoom('public')" class="btn" style="background: #0288d1; color: #fff; border: none; font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap;">
           <i class="fa-solid fa-users"></i> Grup RT 05
         </button>
-        <!-- Tab Private Chat Otomatis Muncul di Sini -->
+        <!-- Tab Private Chat -->
         <div id="dynamic-private-tabs" style="display: flex; gap: 4px;"></div>
       </div>
 
@@ -289,7 +292,7 @@
       <i id="sidebar-arrow-icon" class="fa-solid fa-chevron-left" style="font-size: 9px;"></i>
     </button>
 
-    <!-- Sidebar Warga (Default: hidden) -->
+    <!-- Sidebar Warga -->
     <aside id="sidebar-warga" class="hidden">
       <div class="tab-header">
         <button id="tab-aktif-btn" onclick="switchTab('aktif')" class="tab-btn active">
@@ -319,7 +322,7 @@
     </form>
   </footer>
 
-  <!-- MODAL 1: Form Registration & Login dengan PIN -->
+  <!-- MODAL 1: Form Registration & Login -->
   <div id="reg-modal" class="modal-overlay hidden">
     <div class="modal-box">
       
@@ -359,7 +362,7 @@
         </div>
       </div>
 
-      <!-- FORM LOGIN (PIN) -->
+      <!-- FORM LOGIN -->
       <div id="section-login" style="display: none;">
         <div style="text-align: center; margin-bottom: 16px;">
           <h2 style="font-size: 16px; font-weight: bold; color: #fff;">Masuk Akun Chat</h2>
@@ -438,13 +441,18 @@
     let currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
     let allUsersCache = {};
     let activeTab = 'aktif';
-    let activeChatType = 'public'; // 'public' atau 'private'
+    let activeChatType = 'public';
     let activePrivateUID = null;
     let currentChatUnsubscribe = null;
-    let openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {}; // { uid: targetName }
-    let unreadCounts = {}; // Menampung jumlah pesan belum dibaca: { uid: number }
-    
-    
+    let openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
+    let unreadCounts = {};
+
+    // Safe Helper URL Google Apps Script dari utils.js
+    function getGasUrl() {
+      return (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.GAS_WEB_APP_URL) 
+        ? RT05_CONFIG.GAS_WEB_APP_URL 
+        : '';
+    }
 
     window.logoutUser = () => {
       if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
@@ -461,7 +469,6 @@
       checkUserStatus();
       loadLoginUserOptions();
 
-      // Proteksi scroll modal di HP
       const regModal = document.getElementById('reg-modal');
       if (regModal) {
         ['touchstart', 'touchmove', 'wheel'].forEach(eventType => {
@@ -474,7 +481,6 @@
     window.openPrivateTab = (targetUID, targetName) => {
       if (targetUID === currentUser?.uid) return;
 
-      // Simpan ke memori lokal
       openPrivateRooms[targetUID] = targetName;
       localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
@@ -483,7 +489,7 @@
       switchChatRoom('private', targetUID);
     };
 
-    // 2. Render UI Tab-tab Private yang Terbuka
+    // 2. Render UI Tab-tab Private
     function renderPrivateTabsUI() {
       const container = document.getElementById('dynamic-private-tabs');
       if (!container) return;
@@ -494,7 +500,6 @@
         const isActive = (activeChatType === 'private' && activePrivateUID === uid);
         const count = unreadCounts[uid] || 0;
 
-        // Badge merah tegas
         const badgeHTML = (count > 0 && !isActive) 
           ? `<span style="background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(239, 68, 68, 0.8);">${count}</span>` 
           : '';
@@ -518,51 +523,45 @@
       });
     }
 
- // 3. Pindah Tab (Public <-> Private)
-window.switchChatRoom = (type, targetUID = null) => {
-  activeChatType = type;
-  activePrivateUID = targetUID;
+    // 3. Pindah Tab (Public <-> Private)
+    window.switchChatRoom = (type, targetUID = null) => {
+      activeChatType = type;
+      activePrivateUID = targetUID;
 
-  // AMBIL JUMLAH UNREAD SEBELUM DI-RESET
-  let passedUnreadCount = 0;
-  if (type === 'private' && targetUID) {
-    passedUnreadCount = unreadCounts[targetUID] || 0;
-    unreadCounts[targetUID] = 0; // Bersihkan angka badge di UI
-  }
+      let passedUnreadCount = 0;
+      if (type === 'private' && targetUID) {
+        passedUnreadCount = unreadCounts[targetUID] || 0;
+        unreadCounts[targetUID] = 0;
+      }
 
-  // 1. Matikan listener stream sebelumnya
-  if (currentChatUnsubscribe) {
-    currentChatUnsubscribe();
-    currentChatUnsubscribe = null;
-  }
+      if (currentChatUnsubscribe) {
+        currentChatUnsubscribe();
+        currentChatUnsubscribe = null;
+      }
 
-  // 2. Tampilan Visual Tab
-  const btnPublic = document.getElementById('tab-room-public');
-  if (btnPublic) {
-    btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
-    btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
-  }
+      const btnPublic = document.getElementById('tab-room-public');
+      if (btnPublic) {
+        btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
+        btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
+      }
 
-  renderPrivateTabsUI();
+      renderPrivateTabsUI();
 
-  // 3. Load Stream Chat
-  const chatStream = document.getElementById('chat-stream');
-  if (chatStream) chatStream.innerHTML = '';
+      const chatStream = document.getElementById('chat-stream');
+      if (chatStream) chatStream.innerHTML = '';
 
-  if (type === 'public') {
-    loadChatStream();
-  } else if (type === 'private' && targetUID) {
-    // KIRIM JUMLAH UNREAD KE FUNGSI RENDER PESAN PRIVATE
-    loadPrivateChatStream(targetUID, passedUnreadCount);
-  }
-};
+      if (type === 'public') {
+        loadChatStream();
+      } else if (type === 'private' && targetUID) {
+        loadPrivateChatStream(targetUID, passedUnreadCount);
+      }
+    };
 
     // 4. Tutup Tab Private
     window.closePrivateTab = (e, targetUID) => {
-      e.stopPropagation(); // Mencegah pemicu switchTab
+      e.stopPropagation();
       delete openPrivateRooms[targetUID];
 
-      // Update memori lokal
       localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
       if (activeChatType === 'private' && activePrivateUID === targetUID) {
@@ -572,99 +571,89 @@ window.switchChatRoom = (type, targetUID = null) => {
       }
     };
 
- // 5. Listener Stream Chat Private Aktif
-function loadPrivateChatStream(targetUID, unreadCount = 0) {
-  const roomID = [currentUser.uid, targetUID].sort().join('_');
-  const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
-  const chatStream = document.getElementById('chat-stream');
+    // 5. Listener Stream Chat Private Aktif
+    function loadPrivateChatStream(targetUID, unreadCount = 0) {
+      const roomID = [currentUser.uid, targetUID].sort().join('_');
+      const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
+      const chatStream = document.getElementById('chat-stream');
 
-  // Simpan state highlight agar tidak kedip/hilang saat Firebase melakukan re-render 
-  let highlightedKeys = null;
+      let highlightedKeys = null;
 
-  currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
-    if (!chatStream) return;
-    
-    // Cegah kebocoran render ke tab lain
-    if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
+      currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
+        if (!chatStream) return;
+        if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
 
-    chatStream.innerHTML = '';
+        chatStream.innerHTML = '';
 
-    if (!snapshot.exists()) {
-      chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID])}. Mulai percakapan!</div>`;
-      return;
-    }
+        if (!snapshot.exists()) {
+          chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID])}. Mulai percakapan!</div>`;
+          return;
+        }
 
-    const msgs = [];
-    snapshot.forEach((childSnap) => {
-      msgs.push({ key: childSnap.key, data: childSnap.val() });
-    });
-    
-    const totalMsgs = msgs.length;
+        const msgs = [];
+        snapshot.forEach((childSnap) => {
+          msgs.push({ key: childSnap.key, data: childSnap.val() });
+        });
+        
+        const totalMsgs = msgs.length;
 
-    // Tentukan ID pesan mana yang harus diberi background (hanya dihitung saat tab baru diklik)
-    if (highlightedKeys === null) {
-      highlightedKeys = new Set();
-      if (unreadCount > 0) {
-        // Ambil N pesan terakhir dari array
-        for (let i = totalMsgs - unreadCount; i < totalMsgs; i++) {
-          if (i >= 0 && msgs[i].data.uid !== currentUser.uid) {
-            highlightedKeys.add(msgs[i].key);
+        if (highlightedKeys === null) {
+          highlightedKeys = new Set();
+          if (unreadCount > 0) {
+            for (let i = totalMsgs - unreadCount; i < totalMsgs; i++) {
+              if (i >= 0 && msgs[i].data.uid !== currentUser.uid) {
+                highlightedKeys.add(msgs[i].key);
+              }
+            }
           }
         }
-      }
+
+        msgs.forEach((msgObj) => {
+          const isUnread = highlightedKeys.has(msgObj.key);
+          renderSingleMessage(msgObj.data, isUnread);
+        });
+
+        chatStream.scrollTop = chatStream.scrollHeight;
+      });
     }
 
-    // Render baris per baris
-    msgs.forEach((msgObj) => {
-      const isUnread = highlightedKeys.has(msgObj.key);
-      renderSingleMessage(msgObj.data, isUnread);
-    });
+    // Pemantau pesan private di latar belakang
+    let privateListeners = {};
 
-    chatStream.scrollTop = chatStream.scrollHeight;
-  });
-}
+    function listenAllPrivateChats() {
+      if (!currentUser?.uid) return;
 
-    // Pemantau pesan private di latar belakang untuk memicu Badge Merah
-   // Pemantau pesan private di latar belakang
-let privateListeners = {};
+      Object.values(privateListeners).forEach(unsub => unsub());
+      privateListeners = {};
 
-function listenAllPrivateChats() {
-  if (!currentUser?.uid) return;
+      Object.keys(openPrivateRooms).forEach(targetUID => {
+        const roomID = [currentUser.uid, targetUID].sort().join('_');
+        const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
 
-  Object.values(privateListeners).forEach(unsub => unsub());
-  privateListeners = {};
+        let isFirstLoad = true;
 
-  Object.keys(openPrivateRooms).forEach(targetUID => {
-    const roomID = [currentUser.uid, targetUID].sort().join('_');
-    
-    // PERBAIKAN: Gunakan limitToLast(80) agar TIDAK BENTROK dengan pemantau tab!
-    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
+        privateListeners[targetUID] = onValue(roomRef, (snapshot) => {
+          if (!snapshot.exists()) {
+            isFirstLoad = false;
+            return;
+          }
 
-    let isFirstLoad = true;
+          let lastMsg = null;
+          snapshot.forEach(childSnap => { lastMsg = childSnap.val(); });
 
-    privateListeners[targetUID] = onValue(roomRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        isFirstLoad = false;
-        return;
-      }
+          if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
+            if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
+              unreadCounts[targetUID] = (unreadCounts[targetUID] || 0) + 1;
+              renderPrivateTabsUI(); 
+            }
+          }
 
-      let lastMsg = null;
-      snapshot.forEach(childSnap => { lastMsg = childSnap.val(); });
+          isFirstLoad = false;
+        });
+      });
+    }
 
-      // Jika ada pesan private masuk baru dari lawan bicara
-      if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
-        if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
-          unreadCounts[targetUID] = (unreadCounts[targetUID] || 0) + 1;
-          renderPrivateTabsUI(); 
-        }
-      }
-
-      isFirstLoad = false;
-    });
-  });
-}
-
-    // 6. Pengiriman Pesan (`sendChatMessage`)
+    // 6. Pengiriman Pesan
     window.sendChatMessage = (e) => {
       e.preventDefault();
       const input = document.getElementById('chat-input');
@@ -672,7 +661,6 @@ function listenAllPrivateChats() {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
-      // KIRIM KE PUBLIC GRUP
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         set(newMsgRef, {
@@ -683,7 +671,6 @@ function listenAllPrivateChats() {
           timestamp: serverTimestamp()
         }).then(() => { input.value = ''; });
 
-      // KIRIM KE PRIVATE ROOM (1-ON-1)
       } else if (activeChatType === 'private' && activePrivateUID) {
         const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
         const newMsgRef = push(ref(db, `private_chats/${roomID}`));
@@ -698,8 +685,9 @@ function listenAllPrivateChats() {
           input.value = ''; 
 
           const targetUser = allUsersCache[activePrivateUID];
-          if (targetUser && targetUser.state !== 'online') {
-            fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+          const gasUrl = getGasUrl();
+          if (targetUser && targetUser.state !== 'online' && gasUrl) {
+            fetch(gasUrl, {
               method: 'POST',
               mode: 'no-cors',
               headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -715,7 +703,7 @@ function listenAllPrivateChats() {
       }
     };
 
-    // === PENDEDEKSI STATUS IDLE / MINIMIZE PWA ===
+    // Pendeteksi Status IDLE / MINIMIZE
     let currentLocalState = 'online';
 
     function setupPresence() {
@@ -742,7 +730,6 @@ function listenAllPrivateChats() {
       });
     }
 
-    // === FUNGSI PERMINTAAN IZIN NOTIFIKASI PWA ===
     function requestNotificationPermission() {
       if (!('Notification' in window) || !currentUser?.uid) return;
 
@@ -755,7 +742,7 @@ function listenAllPrivateChats() {
       }
     }
         
-    // === SYSTEM AUDIO KLING NOTIFIKASI ===
+    // Audio Kling Notifikasi
     let audioCtx = null;
     let lastKlingTime = 0;
 
@@ -799,7 +786,7 @@ function listenAllPrivateChats() {
       }
     }
 
-    // === LOGIKA PEMANTAU WARGA ONLINE ===
+    // Logika Pemantau Warga Online
     let previousOnlineUsers = new Set();
     let isInitialUsersLoaded = false;
 
@@ -985,12 +972,15 @@ function listenAllPrivateChats() {
         localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
         currentUser = userData;
 
-        fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-          method: 'POST',
-          mode: 'no-cors',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ 'action': 'notifChatBaru', 'nama': nama, 'hunian': hunian })
-        }).catch(err => console.log(err));
+        const gasUrl = getGasUrl();
+        if (gasUrl) {
+          fetch(gasUrl, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ 'action': 'notifChatBaru', 'nama': nama, 'hunian': hunian })
+          }).catch(err => console.log(err));
+        }
 
         checkUserStatus();
       });
@@ -1025,28 +1015,22 @@ function listenAllPrivateChats() {
       });
     }
         
-   function renderSingleMessage(msg, isUnread = false) {
+    function renderSingleMessage(msg, isUnread = false) {
       const chatStream = document.getElementById('chat-stream');
       if (!chatStream) return;
       
       const div = document.createElement('div');
       div.className = "msg-row";
 
-      // >>> EFEK HIGHLIGHT & PUDAR CHAT BELUM TERBACA <<<
       if (isUnread) {
-        // 1. Tentukan pengaturan transisi (3 detik perlahan menghilang)
         div.style.transition = "background-color 3s ease, border-color 2s ease";
-        
-        // 2. Terapkan warna awal (putih transparan & garis biru)
         div.style.backgroundColor = "rgba(255, 255, 255, 0.12)";
         div.style.borderLeft = "3px solid #38bdf8";
         div.style.paddingLeft = "8px";
 
-        // 3. Hilangkan warna secara otomatis setelah ditahan 2 detik
         setTimeout(() => {
           div.style.backgroundColor = "transparent";
           div.style.borderLeftColor = "transparent"; 
-          // (Kita ubah warnanya saja jadi transparan, bukan menghapus garisnya, agar posisi teks tidak bergeser tiba-tiba)
         }, 2000);
       }
 
@@ -1081,11 +1065,9 @@ function listenAllPrivateChats() {
         
         totalCount++;
         const isOnline = u.state === 'online';
-        const isIdle = u.state === 'idle';
+        if (isOnline || u.state === 'idle') activeCount++;
 
-        if (isOnline || isIdle) activeCount++;
-
-        if (activeTab === 'aktif' && !(isOnline || isIdle)) return;
+        if (activeTab === 'aktif' && !(isOnline || u.state === 'idle')) return;
 
         if (activeTab === 'semua' && filterText) {
           const matchNama = u.nama.toLowerCase().includes(filterText);
@@ -1096,7 +1078,7 @@ function listenAllPrivateChats() {
 
         let dotClass = "dot-offline";
         if (isOnline) dotClass = "dot-online";
-        if (isIdle) dotClass = "dot-idle";
+        if (u.state === 'idle') dotClass = "dot-idle";
 
         let roleBadge = '';
         if (u.role === 'admin') roleBadge = '<span class="badge-admin">ADMIN</span>';
