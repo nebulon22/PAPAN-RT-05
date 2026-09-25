@@ -691,10 +691,16 @@ function perbaruiAplikasiSekarang() {
   <script>
   function toggleChatModal() {
     const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal.querySelector('iframe');
+
     if (modal.style.display === 'none' || modal.style.display === '') {
       modal.style.display = 'flex';
     } else {
       modal.style.display = 'none';
+      // Reset ruang chat di iframe kembali ke Grup Utama (Public) saat ditutup
+      if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
+        iframe.contentWindow.switchChatRoom('public');
+      }
     }
   }
 </script>
