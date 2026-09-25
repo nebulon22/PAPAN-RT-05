@@ -531,7 +531,12 @@
       let passedUnreadCount = 0;
       if (type === 'private' && targetUID) {
         passedUnreadCount = unreadCounts[targetUID] || 0;
-        unreadCounts[targetUID] = 0;
+        unreadCounts[targetUID] = 0; // Reset badge di UI
+
+        // Simpan waktu timestamp saat ini sebagai penanda "Sudah Dibaca"
+        const lastReadTimestamps = JSON.parse(localStorage.getItem('rt05_chat_last_read')) || {};
+        lastReadTimestamps[targetUID] = Date.now();
+        localStorage.setItem('rt05_chat_last_read', JSON.stringify(lastReadTimestamps));
       }
 
       if (currentChatUnsubscribe) {
@@ -617,7 +622,7 @@
       });
     }
 
-    // Pemantau pesan private di latar belakang
+   // Pemantau pesan private di latar belakang (Offline & Realtime Ready)
     let privateListeners = {};
 
     function listenAllPrivateChats() {
@@ -625,6 +630,9 @@
 
       Object.values(privateListeners).forEach(unsub => unsub());
       privateListeners = {};
+
+      // Ambil riwayat waktu terakhir user membaca pesan tiap room dari localStorage
+      const lastReadTimestamps = JSON.parse(localStorage.getItem('rt05_chat_last_read')) || {};
 
       Object.keys(openPrivateRooms).forEach(targetUID => {
         const roomID = [currentUser.uid, targetUID].sort().join('_');
@@ -639,12 +647,35 @@
           }
 
           let lastMsg = null;
-          snapshot.forEach(childSnap => { lastMsg = childSnap.val(); });
+          let unreadTotalCount = 0;
+          const lastReadTime = lastReadTimestamps[targetUID] || 0;
 
-          if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
+          snapshot.forEach(childSnap => { 
+            const msgData = childSnap.val();
+            lastMsg = msgData;
+
+            // Hitung pesan dari lawan bicara yang terkirim SETELAH terakhir kali user membaca room ini
+            if (msgData.uid !== currentUser.uid && msgData.timestamp > lastReadTime) {
+              unreadTotalCount++;
+            }
+          });
+
+          // Skenario 1: Baru buka aplikasi (Pesan masuk saat Offline)
+          if (isFirstLoad) {
             if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
-              unreadCounts[targetUID] = (unreadCounts[targetUID] || 0) + 1;
-              renderPrivateTabsUI(); 
+              if (unreadTotalCount > 0) {
+                unreadCounts[targetUID] = unreadTotalCount;
+                renderPrivateTabsUI();
+              }
+            }
+          } 
+          // Skenario 2: Pesan baru tiba secara Realtime saat aplikasi menyala
+          else {
+            if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
+              if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
+                unreadCounts[targetUID] = (unreadCounts[targetUID] || 0) + 1;
+                renderPrivateTabsUI(); 
+              }
             }
           }
 
