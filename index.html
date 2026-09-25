@@ -661,15 +661,20 @@ function perbaruiAplikasiSekarang() {
     ">Ronda Broo</span>
   </button>
 
-  <!-- 1. TOMBOL CHAT MELAYANG (Pojok Kiri Bawah) -->
+ <!-- 1. TOMBOL CHAT MELAYANG (Pojok Kiri Bawah) -->
 <button onclick="toggleChatModal()" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #f97316; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: pointer;" title="Buka Live Chat RT">
   <i class="fa-solid fa-comments" style="font-size: 20px;"></i>
+  
+  <!-- BADGE UNREAD OBROLAN GRUP UTAMA -->
+  <span id="badge-chat-main" style="display: none; position: absolute; top: -3px; right: -3px; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 12px; border: 2px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); min-width: 18px; text-align: center; line-height: 1;">
+    0
+  </span>
 </button>
 
-<!-- 2. KOTAK PANEL CHAT OVERLAY (Transparan Hitam 40% Okupasi) -->
-<div id="chat-overlay-modal" style="display: none; position: fixed; top: 180px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1000; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); overflow: hidden; flex-direction: column;">
+<!-- 2. KOTAK PANEL CHAT OVERLAY (Transparan Hitam 20% Okupasi) -->
+<div id="chat-overlay-modal" style="display: none; position: fixed; top: 180px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1000; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
   
- <!-- Header Chat Overlay -->
+  <!-- Header Chat Overlay -->
   <div style="background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
     <div style="display: flex; align-items: center; gap: 8px;">
       <i class="fa-solid fa-comments" style="color: #38bdf8;"></i>
@@ -683,6 +688,7 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
+
   <!-- Frame Tampilan Chat (Iframe Transparan) -->
   <iframe src="chat.html" style="width: 100%; height: 100%; border: none; background: transparent;" allowtransparency="true"></iframe>
 
@@ -691,13 +697,25 @@ function perbaruiAplikasiSekarang() {
   <script>
   function toggleChatModal() {
     const modal = document.getElementById('chat-overlay-modal');
-    const iframe = modal.querySelector('iframe');
+    const iframe = modal ? modal.querySelector('iframe') : null;
+
+    if (!modal) return;
 
     if (modal.style.display === 'none' || modal.style.display === '') {
       modal.style.display = 'flex';
+      
+      // Sembunyikan badge saat modal chat dibuka
+      const badge = document.getElementById('badge-chat-main');
+      if (badge) badge.style.display = 'none';
+
+      // Pindahkan ruang chat di iframe ke Public Group & tandai sudah dibaca
+      if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
+        iframe.contentWindow.switchChatRoom('public');
+      }
     } else {
       modal.style.display = 'none';
-      // Reset ruang chat di iframe kembali ke Grup Utama (Public) saat ditutup
+      
+      // Saat modal ditutup, reset tampilan iframe ke grup public
       if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
         iframe.contentWindow.switchChatRoom('public');
       }
@@ -1373,15 +1391,18 @@ function perbaruiAplikasiSekarang() {
       }
     });
 
-    // Menerima update jumlah chat belum dibaca dari iframe chat.html
+   // Mendengarkan Pembaruan Badge Unread dari iframe chat.html
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
-      var badge = document.getElementById('badge-chat-main');
-      var count = event.data.unreadPublicCount || 0;
+      const badge = document.getElementById('badge-chat-main');
+      const count = event.data.unreadPublicCount || 0;
+      const modal = document.getElementById('chat-overlay-modal');
+
+      const isModalOpen = (modal && modal.style.display === 'flex');
 
       if (badge) {
-        if (count > 0) {
-          badge.innerText = count;
+        if (count > 0 && !isModalOpen) {
+          badge.innerText = count > 99 ? '99+' : count;
           badge.style.display = 'inline-block';
         } else {
           badge.style.display = 'none';
@@ -1390,6 +1411,7 @@ function perbaruiAplikasiSekarang() {
     }
   });
 
+    
 // --- FITUR REKAP & RIWAYAT JIMPITAN ---
 var GID_JIMPITAN = '515393252'; 
 var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
