@@ -727,95 +727,95 @@ function perbaruiAplikasiSekarang() {
     var dataKeuangan = [];
     var pinRumahAktif = null;
 
-    
-fetch(SHEET_URL)
-      .then(response => response.text())
-      .then(csvText => {
-        var baris = parseCSV(csvText).slice(1);
+    // ==========================================
+    // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
+    // ==========================================
 
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 3 && kolom[0] !== '') {
-            var latClean = perbaikiKoordinat(kolom[1]);
-            var lngClean = perbaikiKoordinat(kolom[2]);
-            var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
-            var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? kolom[5].trim() : '';
+    // 1. Muat Data Peta (Offline Ready & Auto Update)
+    ambilDataSheets('cache_peta_warga', SHEET_URL, (data, fromCache) => {
+      if (!data) return;
+      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+      
+      // Bersihkan marker lama jika ada update dari background (mencegah marker ganda)
+      daftarPin.forEach(pin => map.removeLayer(pin.marker));
+      daftarPin = [];
 
-            var namaAsli = kolom[0].trim();
-            var namaTampil = namaAsli;
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          var latClean = perbaikiKoordinat(kolom[1]);
+          var lngClean = perbaikiKoordinat(kolom[2]);
+          var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
+          var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
+          var urlFoto = kolom[5] ? kolom[5].trim() : '';
 
-            var item = {
-              name: namaTampil,
-              nameAsli: namaAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
-              hidden: statusHidden,
-              foto: urlFoto
-            };
+          var namaAsli = kolom[0].trim();
+          var item = {
+            name: namaAsli,
+            nameAsli: namaAsli,
+            lat: parseFloat(latClean),
+            lng: parseFloat(lngClean),
+            hidden: statusHidden,
+            foto: urlFoto
+          };
 
-            if (isNaN(item.lat) || isNaN(item.lng)) return;
+          if (isNaN(item.lat) || isNaN(item.lng)) return;
 
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
-            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-            
-            // Pengecekan menggunakan utils.js
-            var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+          
+          var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
 
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            
-            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-            if (!item.hidden) marker.addTo(map);
+          var customIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+          });
+          
+          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+          if (!item.hidden) marker.addTo(map);
 
-            daftarPin.push({ 
-              namaRaw: item.nameAsli,
-              nama: item.nameAsli.toLowerCase(), 
-              marker: marker, 
-              lat: item.lat, 
-              lng: item.lng,
-              hidden: item.hidden,
-              kategori: dataIkon.kategori 
-            });
-          }
-        });
-      })
-      .catch(error => console.error(error));
-   
-    
-    fetch(PENGUMUMAN_URL)
-      .then(response => response.text())
-      .then(csvText => {
-        var baris = parseCSV(csvText).slice(1);
-        daftarPengumuman = [];
-
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 2 && kolom[1] !== '') {
-            var status = kolom[4] ? kolom[4].trim().toUpperCase() : 'AKTIF';
-            
-            if (status === 'AKTIF') {
-              daftarPengumuman.push({
-                tanggal: kolom[0] || '',
-                judul: kolom[1] || '',
-                detail: kolom[2] || '',
-                lokasi: kolom[3] ? kolom[3].trim() : ''
-              });
-            }
-          }
-        });
-
-        var badge = document.getElementById('badge-count');
-        if (daftarPengumuman.length > 0) {
-          badge.innerText = daftarPengumuman.length;
-          badge.style.display = 'inline-block';
-        } else {
-          badge.style.display = 'none';
+          daftarPin.push({ 
+            namaRaw: item.nameAsli,
+            nama: item.nameAsli.toLowerCase(), 
+            marker: marker, 
+            lat: item.lat, 
+            lng: item.lng,
+            hidden: item.hidden,
+            kategori: dataIkon.kategori 
+          });
         }
-      })
-      .catch(error => console.error("Gagal membaca tab Pengumuman:", error));
+      });
+    });
+
+    // 2. Muat Data Pengumuman
+    ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
+      if (!data) return;
+      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+      daftarPengumuman = [];
+
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 2 && kolom[1] !== '') {
+          var status = kolom[4] ? kolom[4].trim().toUpperCase() : 'AKTIF';
+          if (status === 'AKTIF') {
+            daftarPengumuman.push({
+              tanggal: kolom[0] || '',
+              judul: kolom[1] || '',
+              detail: kolom[2] || '',
+              lokasi: kolom[3] ? kolom[3].trim() : ''
+            });
+          }
+        }
+      });
+
+      var badge = document.getElementById('badge-count');
+      if (daftarPengumuman.length > 0) {
+        badge.innerText = daftarPengumuman.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    });
 
     function escapeHtml(text) {
       if (!text) return '';
@@ -842,17 +842,11 @@ fetch(SHEET_URL)
           container.innerHTML += html;
         });
       }
-
       document.getElementById('modal-info').style.display = 'flex';
     }
 
-    function tutupModalInfo() {
-      document.getElementById('modal-info').style.display = 'none';
-    }
-
-    function bukaTutupLuar(e) {
-      if (e.target.id === 'modal-info') tutupModalInfo();
-    }
+    function tutupModalInfo() { document.getElementById('modal-info').style.display = 'none'; }
+    function bukaTutupLuar(e) { if (e.target.id === 'modal-info') tutupModalInfo(); }
 
     function sorotLokasi(lokasiEncoded) {
       var namaLokasi = decodeURIComponent(lokasiEncoded).trim();
@@ -861,18 +855,11 @@ fetch(SHEET_URL)
       if (!namaLokasi) return;
 
       var kataKunci = namaLokasi.toLowerCase();
-      var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci);
-
-      if (!hasil) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
-      }
+      var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci) || 
+                  daftarPin.find(pin => pin.nama.includes(kataKunci));
 
       if (hasil) {
-        if (pinRumahAktif) {
-          map.removeLayer(pinRumahAktif);
-          pinRumahAktif = null;
-        }
-
+        if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
         if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
           hasil.marker.addTo(map);
           pinRumahAktif = hasil.marker;
@@ -880,14 +867,10 @@ fetch(SHEET_URL)
 
         var pointM = map.project([hasil.lat, hasil.lng], 19);
         var pointC = L.point(pointM.x, pointM.y - 200);
-        var targetCenter = map.unproject(pointC, 19);
-
-        map.flyTo(targetCenter, 19);
+        map.flyTo(map.unproject(pointC, 19), 19);
 
         map.once('moveend', function() {
-          if (hasil.marker.getPopup()) {
-            hasil.marker.getPopup().options.autoPan = false;
-          }
+          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
           hasil.marker.openPopup();
         });
       }
@@ -897,16 +880,11 @@ fetch(SHEET_URL)
       var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
       if (!kataKunci) return;
 
-      var hasil = null;
-      hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
 
       if (!hasil && /^\d+$/.test(kataKunci)) {
         var angkaCari = parseInt(kataKunci, 10);
-        
-        hasil = daftarPin.find(pin => {
-          var kataKata = pin.nama.split(/[\s,().-]+/);
-          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-        });
+        hasil = daftarPin.find(pin => pin.nama.split(/[\s,().-]+/).some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari));
       }
 
       if (!hasil && !/^\d+$/.test(kataKunci)) {
@@ -914,11 +892,7 @@ fetch(SHEET_URL)
       }
       
       if (hasil) {
-        if (pinRumahAktif) {
-          map.removeLayer(pinRumahAktif);
-          pinRumahAktif = null;
-        }
-
+        if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
         if (!map.hasLayer(hasil.marker)) {
           hasil.marker.addTo(map);
           pinRumahAktif = hasil.marker;
@@ -926,17 +900,12 @@ fetch(SHEET_URL)
 
         var pointM = map.project([hasil.lat, hasil.lng], 19);
         var pointC = L.point(pointM.x, pointM.y - 200);
-        var targetCenter = map.unproject(pointC, 19);
-
-        map.flyTo(targetCenter, 19);
+        map.flyTo(map.unproject(pointC, 19), 19);
 
         map.once('moveend', function() {
-          if (hasil.marker.getPopup()) {
-            hasil.marker.getPopup().options.autoPan = false;
-          }
+          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
           hasil.marker.openPopup();
         });
-
       } else {
         alert("Nomor atau nama tempat tidak ditemukan.");
       }
@@ -948,78 +917,61 @@ fetch(SHEET_URL)
 
       daftarPin.forEach(pin => {
         map.removeLayer(pin.marker);
-
-        if (!pin.hidden) {
-          if (kat === 'semua') {
-            pin.marker.addTo(map);
-          } else if (pin.kategori === kat) {
-            pin.marker.addTo(map);
-          }
+        if (!pin.hidden && (kat === 'semua' || pin.kategori === kat)) {
+          pin.marker.addTo(map);
         }
       });
     }
 
     function bukaFotoBesar(src, e) {
       if (e) e.stopPropagation();
-      var modal = document.getElementById('modal-foto');
-      var imgPreview = document.getElementById('foto-preview');
-      imgPreview.src = src;
-      modal.style.display = 'flex';
+      document.getElementById('foto-preview').src = src;
+      document.getElementById('modal-foto').style.display = 'flex';
     }
 
     function tutupFotoBesar(e) {
-      if (e) {
-        e.stopPropagation(); 
-        e.preventDefault();
-      }
+      if (e) { e.stopPropagation(); e.preventDefault(); }
       document.getElementById('modal-foto').style.display = 'none';
     }
 
-    // --- FITUR KEUANGAN ---
+    // 3. Muat Data Keuangan
     function muatDataKeuangan() {
-      fetch(KEUANGAN_URL)
-        .then(response => response.text())
-        .then(csvText => {
-          var baris = parseCSV(csvText).slice(1);
-          dataKeuangan = [];
-          var daftarDivisi = new Set();
+      ambilDataSheets('cache_keuangan_warga', KEUANGAN_URL, (data, fromCache) => {
+        if (!data) return;
+        var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+        dataKeuangan = [];
+        var daftarDivisi = new Set();
 
-          baris.forEach(function(kolom) {
-            if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
-              var tgl = kolom[1] ? kolom[1].trim() : (kolom[0] ? kolom[0].split(' ')[0] : '-');
-              var divisi = kolom[2] ? kolom[2].trim() : 'Umum';
-              var ket = kolom[3] ? kolom[3].trim() : '-';
-              
-              var tipeRaw = kolom[4] ? kolom[4].trim().toUpperCase() : 'MASUK';
-              var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
-              
-              var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
-              var nominal = parseInt(nominalRaw ? nominalRaw.replace(/[^0-9]/g, '') : '0') || 0;
+        baris.forEach(function(kolom) {
+          if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
+            var tgl = kolom[1] ? kolom[1].trim() : (kolom[0] ? kolom[0].split(' ')[0] : '-');
+            var divisi = kolom[2] ? kolom[2].trim() : 'Umum';
+            var ket = kolom[3] ? kolom[3].trim() : '-';
+            var tipeRaw = kolom[4] ? kolom[4].trim().toUpperCase() : 'MASUK';
+            var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
+            var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
+            var nominal = parseInt(nominalRaw ? nominalRaw.replace(/[^0-9]/g, '') : '0') || 0;
 
-              if (divisi) daftarDivisi.add(divisi);
-
-              dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
-            }
-          });
-
-          var selectDivisi = document.getElementById('filterDivisi');
-          var divisiSebelumnya = selectDivisi.value;
-          
-          selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
-          
-          daftarDivisi.forEach(div => {
-            selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
-          });
-          
-          if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
-            selectDivisi.value = divisiSebelumnya;
-          } else {
-            selectDivisi.value = 'semua';
+            if (divisi) daftarDivisi.add(divisi);
+            dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
           }
+        });
 
-          tampilkanRekeningKoran();
-        })
-        .catch(err => console.error("Gagal muat data keuangan:", err));
+        var selectDivisi = document.getElementById('filterDivisi');
+        var divisiSebelumnya = selectDivisi.value;
+        selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
+        
+        daftarDivisi.forEach(div => {
+          selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
+        });
+        
+        if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
+          selectDivisi.value = divisiSebelumnya;
+        } else {
+          selectDivisi.value = 'semua';
+        }
+        tampilkanRekeningKoran();
+      });
     }
 
     function tampilkanRekeningKoran() {
