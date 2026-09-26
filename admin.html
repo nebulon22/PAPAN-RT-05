@@ -593,23 +593,21 @@
 
     function cekLogin() {
       const input = document.getElementById('adminPin').value.trim();
-      if(input.length !== 6) {
-        alert("PIN harus berisi 6 digit angka!");
-        return;
-      }
+if(!/^\d{6}$/.test(input)) {
+  alert("PIN harus berisi 6 digit angka!");
+  return;
+}
 
       const btnLogin = document.querySelector('.login-box button');
       btnLogin.innerText = "⏳ Memeriksa...";
       btnLogin.disabled = true;
 
-      if (!navigator.onLine) {
-        btnLogin.innerText = "Buka Kunci";
-        btnLogin.disabled = false;
-        localStorage.setItem('authAdmin', 'true'); // Ubah ke localStorage
-        localStorage.setItem('verifiedPin', input); // Ubah ke localStorage
-        bukaAkses();
-        return;
-      }
+     if (!navigator.onLine) {
+  btnLogin.innerText = "Buka Kunci";
+  btnLogin.disabled = false;
+  alert("❌ Tidak dapat memverifikasi PIN karena tidak ada koneksi internet.");
+  return;
+}
 
       const payloadTes = {
         action: 'cek_pin',
@@ -636,12 +634,11 @@
         }
       })
       .catch(err => {
-        btnLogin.innerText = "Buka Kunci";
-        btnLogin.disabled = false;
-        localStorage.setItem('authAdmin', 'true'); // Ubah ke localStorage
-        localStorage.setItem('verifiedPin', input); // Ubah ke localStorage
-        bukaAkses();
-      });
+  console.error("❌ Gagal memverifikasi PIN:", err);
+  btnLogin.innerText = "Buka Kunci";
+  btnLogin.disabled = false;
+  alert("❌ Gagal menghubungi server. PIN belum dapat diverifikasi.");
+});
     }
 
   function bukaAkses() {
