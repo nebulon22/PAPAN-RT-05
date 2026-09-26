@@ -605,8 +605,8 @@
       if (!navigator.onLine) {
         btnLogin.innerText = "Buka Kunci";
         btnLogin.disabled = false;
-        sessionStorage.setItem('authAdmin', 'true');
-        sessionStorage.setItem('verifiedPin', input);
+        localStorage.setItem('authAdmin', 'true'); // Ubah ke localStorage
+        localStorage.setItem('verifiedPin', input); // Ubah ke localStorage
         bukaAkses();
         return;
       }
@@ -627,8 +627,8 @@
         btnLogin.disabled = false;
 
         if (!result.includes("PIN Admin Salah")) {
-          sessionStorage.setItem('authAdmin', 'true');
-          sessionStorage.setItem('verifiedPin', input);
+          localStorage.setItem('authAdmin', 'true'); // Ubah ke localStorage
+          localStorage.setItem('verifiedPin', input); // Ubah ke localStorage
           bukaAkses();
         } else {
           alert("❌ PIN salah! Akses ditolak.");
@@ -638,16 +638,16 @@
       .catch(err => {
         btnLogin.innerText = "Buka Kunci";
         btnLogin.disabled = false;
-        sessionStorage.setItem('authAdmin', 'true');
-        sessionStorage.setItem('verifiedPin', input);
+        localStorage.setItem('authAdmin', 'true'); // Ubah ke localStorage
+        localStorage.setItem('verifiedPin', input); // Ubah ke localStorage
         bukaAkses();
       });
     }
 
-    function bukaAkses() {
+  function bukaAkses() {
       document.getElementById('login-overlay').style.display = 'none';
       document.body.style.overflow = 'auto';
-      document.getElementById('inputPinForm').value = sessionStorage.getItem('verifiedPin') || '';
+      document.getElementById('inputPinForm').value = localStorage.getItem('verifiedPin') || ''; // Ubah ke localStorage
       initMap(); 
       setTimeout(() => { if(map) map.invalidateSize(); }, 300);
     }
@@ -1358,6 +1358,24 @@
     btn.innerText = "💾 Simpan ke Google Sheets";
   }
 }
+
+document.addEventListener("DOMContentLoaded", () => {
+      perbaruiIndikatorSyncAdmin();
+      muatPeminjamanAdmin();
+      muatSemuaDataAdmin();
+      if (navigator.onLine) {
+        kirimDataPendingAdmin();
+      }
+
+      if(localStorage.getItem('authAdmin') === 'true') {
+        bukaAkses();
+      } else {
+        setTimeout(() => {
+          const inputPin = document.getElementById('adminPin');
+          if (inputPin) inputPin.focus();
+        }, 300);
+      }
+    });
     
   </script>
 
