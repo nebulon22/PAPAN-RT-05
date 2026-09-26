@@ -778,7 +778,7 @@ function perbaruiAplikasiSekarang() {
     // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
     // ==========================================
 
-    // 1. Muat Data Peta (Offline Ready & Auto Update)
+ // 1. Muat Data Peta (Offline Ready & Auto Update)
     ambilDataSheets('cache_peta_warga', SHEET_URL, (data, fromCache) => {
       if (!data) return;
       var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
@@ -791,11 +791,13 @@ function perbaruiAplikasiSekarang() {
         if (kolom.length >= 3 && kolom[0] !== '') {
           var latClean = perbaikiKoordinat(kolom[1]);
           var lngClean = perbaikiKoordinat(kolom[2]);
-          var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
-          var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
-          var urlFoto = kolom[5] ? kolom[5].trim() : '';
+          
+          // PERBAIKAN: Bungkus dengan String() sebelum di-trim agar tidak error jika tipe data Boolean/Number
+          var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
+          var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
+          var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
+          var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
 
-          var namaAsli = kolom[0].trim();
           var item = {
             name: namaAsli,
             nameAsli: namaAsli,
