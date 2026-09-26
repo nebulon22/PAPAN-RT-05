@@ -591,63 +591,87 @@
       el.value = new Intl.NumberFormat('id-ID').format(val);
     }
 
-    function cekLogin() {
-      const input = document.getElementById('adminPin').value.trim();
-if(!/^\d{6}$/.test(input)) {
-  alert("PIN harus berisi 6 digit angka!");
-  return;
+
+function cekLogin() {
+  const input = document.getElementById('adminPin').value.trim();
+
+  if (!/^\d{6}$/.test(input)) {
+    alert("PIN harus berisi 6 digit angka!");
+    return;
+  }
+
+  const btnLogin = document.querySelector('.login-box button');
+  btnLogin.innerText = "⏳ Memeriksa...";
+  btnLogin.disabled = true;
+
+  // PIN WAJIB diverifikasi ke server.
+  // Tidak boleh ada verifikasi PIN secara offline.
+  if (!navigator.onLine) {
+    btnLogin.innerText = "Buka Kunci";
+    btnLogin.disabled = false;
+
+    alert("❌ Tidak dapat memverifikasi PIN karena tidak ada koneksi internet.");
+    return;
+  }
+
+  const payloadTes = {
+    action: 'cek_pin',
+    pin: input
+  };
+
+  fetch(GAS_WEB_APP_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'text/plain;charset=utf-8'
+    },
+    body: JSON.stringify(payloadTes)
+  })
+  .then(res => res.text())
+  .then(result => {
+    btnLogin.innerText = "Buka Kunci";
+    btnLogin.disabled = false;
+
+    result = result.trim();
+
+    if (result === "SUCCESS") {
+
+      // HANYA simpan status login.
+      // PIN asli TIDAK disimpan.
+      localStorage.setItem('authAdmin', 'true');
+
+      bukaAkses();
+
+    } else {
+      alert("❌ PIN salah! Akses ditolak.");
+      document.getElementById('adminPin').value = "";
+    }
+  })
+  .catch(err => {
+    console.error("❌ Gagal memverifikasi PIN:", err);
+
+    btnLogin.innerText = "Buka Kunci";
+    btnLogin.disabled = false;
+
+    alert("❌ Gagal menghubungi server. PIN belum dapat diverifikasi.");
+  });
 }
 
-      const btnLogin = document.querySelector('.login-box button');
-      btnLogin.innerText = "⏳ Memeriksa...";
-      btnLogin.disabled = true;
+    
 
-     if (!navigator.onLine) {
-  btnLogin.innerText = "Buka Kunci";
-  btnLogin.disabled = false;
-  alert("❌ Tidak dapat memverifikasi PIN karena tidak ada koneksi internet.");
-  return;
+function bukaAkses() {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.body.style.overflow = 'auto';
+
+  // Jangan pernah mengisi atau mengambil PIN dari localStorage.
+  document.getElementById('inputPinForm').value = '';
+
+  initMap();
+
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 300);
 }
 
-      const payloadTes = {
-        action: 'cek_pin',
-        pin: input
-      };
-
-      fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payloadTes)
-      })
-      .then(res => res.text())
-      .then(result => {
-        btnLogin.innerText = "Buka Kunci";
-        btnLogin.disabled = false;
-
-        if (!result.includes("PIN Admin Salah")) {
-          localStorage.setItem('authAdmin', 'true'); // Ubah ke localStorage
-          localStorage.setItem('verifiedPin', input); // Ubah ke localStorage
-          bukaAkses();
-        } else {
-          alert("❌ PIN salah! Akses ditolak.");
-          document.getElementById('adminPin').value = "";
-        }
-      })
-      .catch(err => {
-  console.error("❌ Gagal memverifikasi PIN:", err);
-  btnLogin.innerText = "Buka Kunci";
-  btnLogin.disabled = false;
-  alert("❌ Gagal menghubungi server. PIN belum dapat diverifikasi.");
-});
-    }
-
-  function bukaAkses() {
-      document.getElementById('login-overlay').style.display = 'none';
-      document.body.style.overflow = 'auto';
-      document.getElementById('inputPinForm').value = localStorage.getItem('verifiedPin') || ''; // Ubah ke localStorage
-      initMap(); 
-      setTimeout(() => { if(map) map.invalidateSize(); }, 300);
-    }
 
     document.getElementById('dataForm').addEventListener('submit', function(e) {
       e.preventDefault();
