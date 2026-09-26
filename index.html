@@ -837,7 +837,7 @@ function perbaruiAplikasiSekarang() {
       });
     });
 
-    // 2. Muat Data Pengumuman
+  // 2. Muat Data Pengumuman
     ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
       if (!data) return;
       var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
@@ -845,24 +845,27 @@ function perbaruiAplikasiSekarang() {
 
       baris.forEach(function(kolom) {
         if (kolom.length >= 2 && kolom[1] !== '') {
-          var status = kolom[4] ? kolom[4].trim().toUpperCase() : 'AKTIF';
+          // PERBAIKAN: Bungkus dengan String() sebelum di-trim agar tidak error pada tipe data Number/Boolean
+          var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
           if (status === 'AKTIF') {
             daftarPengumuman.push({
-              tanggal: kolom[0] || '',
-              judul: kolom[1] || '',
-              detail: kolom[2] || '',
-              lokasi: kolom[3] ? kolom[3].trim() : ''
+              tanggal: kolom[0] ? String(kolom[0]).trim() : '',
+              judul: kolom[1] ? String(kolom[1]).trim() : '',
+              detail: kolom[2] ? String(kolom[2]).trim() : '',
+              lokasi: kolom[3] ? String(kolom[3]).trim() : ''
             });
           }
         }
       });
 
       var badge = document.getElementById('badge-count');
-      if (daftarPengumuman.length > 0) {
-        badge.innerText = daftarPengumuman.length;
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
+      if (badge) {
+        if (daftarPengumuman.length > 0) {
+          badge.innerText = daftarPengumuman.length;
+          badge.style.display = 'inline-block';
+        } else {
+          badge.style.display = 'none';
+        }
       }
     });
 
@@ -898,67 +901,68 @@ function perbaruiAplikasiSekarang() {
     function bukaTutupLuar(e) { if (e.target.id === 'modal-info') tutupModalInfo(); }
 
     function sorotLokasi(lokasiEncoded) {
-      var namaLokasi = decodeURIComponent(lokasiEncoded).trim();
-      tutupModalInfo();
+  var namaLokasi = decodeURIComponent(lokasiEncoded || '').trim();
+  tutupModalInfo();
 
-      if (!namaLokasi) return;
+  if (!namaLokasi) return;
 
-      var kataKunci = namaLokasi.toLowerCase();
-      var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci) || 
-                  daftarPin.find(pin => pin.nama.includes(kataKunci));
+  var kataKunci = namaLokasi.toLowerCase();
+  // PERBAIKAN: Gunakan String(pin.namaRaw || '') sebelum di-trim agar bebas error
+  var hasil = daftarPin.find(pin => String(pin.namaRaw || '').trim().toLowerCase() === kataKunci) || 
+              daftarPin.find(pin => String(pin.nama || '').includes(kataKunci));
 
-      if (hasil) {
-        if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
-        if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
-          hasil.marker.addTo(map);
-          pinRumahAktif = hasil.marker;
-        }
-
-        var pointM = map.project([hasil.lat, hasil.lng], 19);
-        var pointC = L.point(pointM.x, pointM.y - 200);
-        map.flyTo(map.unproject(pointC, 19), 19);
-
-        map.once('moveend', function() {
-          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-          hasil.marker.openPopup();
-        });
-      }
+  if (hasil) {
+    if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
+    if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
+      hasil.marker.addTo(map);
+      pinRumahAktif = hasil.marker;
     }
 
-    function cariLokasi() {
-      var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
-      if (!kataKunci) return;
+    var pointM = map.project([hasil.lat, hasil.lng], 19);
+    var pointC = L.point(pointM.x, pointM.y - 200);
+    map.flyTo(map.unproject(pointC, 19), 19);
 
-      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+    map.once('moveend', function() {
+      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+      hasil.marker.openPopup();
+    });
+  }
+}
 
-      if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10);
-        hasil = daftarPin.find(pin => pin.nama.split(/[\s,().-]+/).some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari));
-      }
+function cariLokasi() {
+  var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
+  if (!kataKunci) return;
 
-      if (!hasil && !/^\d+$/.test(kataKunci)) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
-      }
-      
-      if (hasil) {
-        if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
-        if (!map.hasLayer(hasil.marker)) {
-          hasil.marker.addTo(map);
-          pinRumahAktif = hasil.marker;
-        }
+  var hasil = daftarPin.find(pin => String(pin.namaRaw || '').toLowerCase() === kataKunci);
 
-        var pointM = map.project([hasil.lat, hasil.lng], 19);
-        var pointC = L.point(pointM.x, pointM.y - 200);
-        map.flyTo(map.unproject(pointC, 19), 19);
+  if (!hasil && /^\d+$/.test(kataKunci)) {
+    var angkaCari = parseInt(kataKunci, 10);
+    hasil = daftarPin.find(pin => String(pin.nama || '').split(/[\s,().-]+/).some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari));
+  }
 
-        map.once('moveend', function() {
-          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-          hasil.marker.openPopup();
-        });
-      } else {
-        alert("Nomor atau nama tempat tidak ditemukan.");
-      }
+  if (!hasil && !/^\d+$/.test(kataKunci)) {
+    hasil = daftarPin.find(pin => String(pin.nama || '').includes(kataKunci));
+  }
+  
+  if (hasil) {
+    if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
+    if (!map.hasLayer(hasil.marker)) {
+      hasil.marker.addTo(map);
+      pinRumahAktif = hasil.marker;
     }
+
+    var pointM = map.project([hasil.lat, hasil.lng], 19);
+    var pointC = L.point(pointM.x, pointM.y - 200);
+    map.flyTo(map.unproject(pointC, 19), 19);
+
+    map.once('moveend', function() {
+      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+      hasil.marker.openPopup();
+    });
+  } else {
+    alert("Nomor atau nama tempat tidak ditemukan.");
+  }
+}
 
     function filterKategori(kat, btnElement) {
       document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
@@ -983,7 +987,7 @@ function perbaruiAplikasiSekarang() {
       document.getElementById('modal-foto').style.display = 'none';
     }
 
-    // 3. Muat Data Keuangan
+   // 3. Muat Data Keuangan
     function muatDataKeuangan() {
       ambilDataSheets('cache_keuangan_warga', KEUANGAN_URL, (data, fromCache) => {
         if (!data) return;
@@ -993,13 +997,18 @@ function perbaruiAplikasiSekarang() {
 
         baris.forEach(function(kolom) {
           if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
-            var tgl = kolom[1] ? kolom[1].trim() : (kolom[0] ? kolom[0].split(' ')[0] : '-');
-            var divisi = kolom[2] ? kolom[2].trim() : 'Umum';
-            var ket = kolom[3] ? kolom[3].trim() : '-';
-            var tipeRaw = kolom[4] ? kolom[4].trim().toUpperCase() : 'MASUK';
+            // PERBAIKAN: Bungkus dengan String(...) sebelum di-trim / di-split / di-replace
+            var tgl = kolom[1] ? String(kolom[1]).trim() : (kolom[0] ? String(kolom[0]).split(' ')[0] : '-');
+            var divisi = kolom[2] ? String(kolom[2]).trim() : 'Umum';
+            var ket = kolom[3] ? String(kolom[3]).trim() : '-';
+            var tipeRaw = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'MASUK';
             var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
+            
             var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
-            var nominal = parseInt(nominalRaw ? nominalRaw.replace(/[^0-9]/g, '') : '0') || 0;
+            // Aman untuk tipe data Number maupun String
+            var nominal = typeof nominalRaw === 'number' 
+              ? nominalRaw 
+              : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
 
             if (divisi) daftarDivisi.add(divisi);
             dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
