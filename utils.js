@@ -50,9 +50,16 @@ async function ambilDataSheets(urlCacheKey, targetUrl, callbackRender) {
         return;
     }
 
+    // PERBAIKAN CORS & 401: Jika URL yang dipanggil adalah export CSV dari Google Sheet (Restricted),
+    // ubah permintaan agar dialihkan secara aman lewat Apps Script Backend (GAS)
+    let fetchUrl = targetUrl;
+    if (targetUrl && targetUrl.includes("docs.google.com/spreadsheets") && targetUrl.includes("/export?format=csv")) {
+        fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+    }
+
     // 3. Ambil data terbaru di latar belakang (Background Sync)
     try {
-        const response = await fetch(targetUrl);
+        const response = await fetch(fetchUrl);
         const contentType = response.headers.get("content-type");
         
         let finalData;
@@ -160,7 +167,6 @@ function getIkonKategori(namaAsli, kategoriManual) {
     }
     return { emoji, kategori, bgStyle };
 }
-
 
 let mediaStreamSenter = null;
 let isSenterAktif = false;
