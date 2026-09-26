@@ -602,11 +602,13 @@ function cekLogin() {
   }
 
   const btnLogin = document.querySelector('.login-box button');
+
   btnLogin.innerText = "⏳ Memeriksa...";
   btnLogin.disabled = true;
 
-  // PIN TIDAK BOLEH diverifikasi secara offline
+  // LOGIN BARU WAJIB ONLINE
   if (!navigator.onLine) {
+
     btnLogin.innerText = "Buka Kunci";
     btnLogin.disabled = false;
 
@@ -614,15 +616,11 @@ function cekLogin() {
     return;
   }
 
-  const payload = {
-  token: localStorage.getItem('adminToken') || '',
-  nama: document.getElementById('inputNama').value,
-  lat: document.getElementById('inputLat').value,
-  lng: document.getElementById('inputLng').value,
-  kategori: document.getElementById('inputKategori').value,
-  hidden: document.getElementById('inputHidden').value,
-  foto: document.getElementById('inputFoto').value
-};
+  // Khusus untuk LOGIN
+  const payloadTes = {
+    action: 'cek_pin',
+    pin: input
+  };
 
   fetch(GAS_WEB_APP_URL, {
     method: 'POST',
@@ -631,7 +629,9 @@ function cekLogin() {
     },
     body: JSON.stringify(payloadTes)
   })
+
   .then(res => res.json())
+
   .then(data => {
 
     btnLogin.innerText = "Buka Kunci";
@@ -639,22 +639,25 @@ function cekLogin() {
 
     if (data.status === "SUCCESS" && data.token) {
 
-      // Simpan STATUS login
+      // Simpan status login
       localStorage.setItem('authAdmin', 'true');
 
       // Simpan TOKEN, bukan PIN
       localStorage.setItem('adminToken', data.token);
 
-      // PIN langsung dibuang dari input
+      // Bersihkan PIN dari input
       document.getElementById('adminPin').value = "";
 
       bukaAkses();
 
     } else {
+
       alert("❌ PIN salah! Akses ditolak.");
+
       document.getElementById('adminPin').value = "";
     }
   })
+
   .catch(err => {
 
     console.error("❌ Gagal memverifikasi PIN:", err);
@@ -665,6 +668,7 @@ function cekLogin() {
     alert("❌ Gagal menghubungi server. PIN belum dapat diverifikasi.");
   });
 }
+
 
 
     
@@ -683,6 +687,16 @@ function bukaAkses() {
   }, 300);
 }
 
+// ==========================================
+// AUTO LOGIN ADMIN SAAT PWA DIBUKA
+// ==========================================
+if (
+  localStorage.getItem('authAdmin') === 'true' &&
+  localStorage.getItem('adminToken')
+) {
+  bukaAkses();
+}
+
 
     document.getElementById('dataForm').addEventListener('submit', function(e) {
       e.preventDefault();
@@ -690,15 +704,17 @@ function bukaAkses() {
       btn.innerText = '⏳ Menyimpan...';
       btn.disabled = true;
 
-      const payload = {
-        pin: document.getElementById('inputPinForm').value,
-        nama: document.getElementById('inputNama').value,
-        lat: document.getElementById('inputLat').value,
-        lng: document.getElementById('inputLng').value,
-        kategori: document.getElementById('inputKategori').value,
-        hidden: document.getElementById('inputHidden').value,
-        foto: document.getElementById('inputFoto').value
-      };
+     
+const payload = {
+  token: localStorage.getItem('adminToken') || '',
+  nama: document.getElementById('inputNama').value,
+  lat: document.getElementById('inputLat').value,
+  lng: document.getElementById('inputLng').value,
+  kategori: document.getElementById('inputKategori').value,
+  hidden: document.getElementById('inputHidden').value,
+  foto: document.getElementById('inputFoto').value
+};
+
 
       if (!navigator.onLine) {
         btn.innerText = '💾 Simpan ke Google Sheet';
