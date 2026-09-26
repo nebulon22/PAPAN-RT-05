@@ -1278,10 +1278,11 @@
       return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
     }
 
-  // Konfigurasi URL CSV & GAS
+
+    // Konfigurasi URL CSV & GAS
 const URL_SHEET_RUMAH = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`; 
-const ID_SHEET_WARGA = "1uopqUvZfrK_RHWTJ3-EVd0ERWiBNzcRSFPQkFLefIuw"; // <-- GANTI dengan ID Spreadsheet 'Data Nama Warga'
-const URL_SHEET_WARGA = `https://docs.google.com/spreadsheets/d/${ID_SHEET_WARGA}/export?format=csv`;
+// Web App URL dari Apps Script Baru (Spreadsheet Data Warga)
+const URL_API_WARGA = "https://script.google.com/macros/s/AKfycbynlvYDMTMl1e_acOqOmctoGQpw9TEJnZc409LatulcmlTOzpgtUDT60VUknrOYDuqwvQ/exec";
 
 let globalDataRumah = [];
 let globalDataWarga = [];
@@ -1293,17 +1294,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 async function muatSemuaDataAdmin() {
   try {
-    const [resRumah, resWarga] = await Promise.all([
-      fetch(URL_SHEET_RUMAH).then(r => r.text()),
-      fetch(URL_SHEET_WARGA).then(r => r.text()).catch(() => "")
-    ]);
-
+    // A. Ambil Data Rumah/Koordinat dari CSV Peta
+    const resRumah = await fetch(URL_SHEET_RUMAH).then(r => r.text());
     globalDataRumah = parseCSV(resRumah).slice(1); // Abaikan Header
-    if (resWarga) globalDataWarga = parseCSV(resWarga).slice(1);
+
+    // B. Ambil Data Warga AMAN dari Apps Script Baru (Bebas CORS / 401)
+    const resWarga = await fetch(URL_API_WARGA).then(r => r.json());
+    if (Array.isArray(resWarga)) {
+      globalDataWarga = resWarga.slice(1); // Abaikan Header
+    }
 
     populateDropdownRumah();
   } catch (e) {
-    console.error("Gagal memuat data:", e);
+    console.error("Gagal memuat data admin:", e);
   }
 }
 
@@ -1316,7 +1319,7 @@ function populateDropdownRumah() {
   globalDataRumah.forEach(row => {
     if (row[0]) {
       const opt = document.createElement("option");
-      opt.value = row[0].trim(); // Nama Rumah di Sheet Peta (misal: "Rumah No 06 (Pak Bejo Nur)")
+      opt.value = row[0].trim(); // Contoh: "Rumah No 06 (Pak Bejo Nur)"
       opt.text = row[0].trim();
       select.appendChild(opt);
     }
@@ -1355,15 +1358,15 @@ function cariDetailKeluargaAdmin() {
 
   // Cari di data Warga/Keluarga
   const matchWarga = globalDataWarga.find(row => 
-    (row[0] && row[0].toLowerCase().includes(keyword)) || 
-    (row[1] && row[1].toLowerCase().includes(keyword)) ||
-    (row[2] && row[2].toLowerCase().includes(keyword))
+    (row[0] && String(row[0]).toLowerCase().includes(keyword)) || 
+    (row[1] && String(row[1]).toLowerCase().includes(keyword)) ||
+    (row[2] && String(row[2]).toLowerCase().includes(keyword))
   );
 
   // Cari di data Koordinat Peta
   const matchRumah = globalDataRumah.find(row => 
-    row[0] && row[0].toLowerCase().includes(keyword)
-  ) || (matchWarga ? globalDataRumah.find(row => row[0].toLowerCase().includes(matchWarga[0].toLowerCase())) : null);
+    row[0] && String(row[0]).toLowerCase().includes(keyword)
+  ) || (matchWarga ? globalDataRumah.find(row => String(row[0]).toLowerCase().includes(String(matchWarga[0]).toLowerCase())) : null);
 
   container.style.display = "block";
 
@@ -1374,7 +1377,7 @@ function cariDetailKeluargaAdmin() {
 
   const kepala = matchWarga ? matchWarga[0] : (matchRumah ? matchRumah[0] : '-');
   const anggota = matchWarga ? matchWarga[1] : 'Belum ada data anggota keluarga';
-  const labelRumah = matchRumah ? matchRumah[0] : 'Tidak terhubung ke titik peta';
+  const labelRumah = matchWarga && matchWarga[2] ? matchWarga[2] : (matchRumah ? matchRumah[0] : 'Tidak terhubung ke titik peta');
   const lat = matchRumah ? matchRumah[1] : null;
   const lng = matchRumah ? matchRumah[2] : null;
 
@@ -1392,7 +1395,7 @@ function cariDetailKeluargaAdmin() {
   `;
 }
 
-// 5. Simpan Data Keluarga Baru via Google Apps Script (GAS)
+// 5. Simpan Data Keluarga Baru via Apps Script Baru (URL_API_WARGA)
 async function simpanKeluargaAdmin() {
   const kepala = document.getElementById("addKepalaKeluarga").value.trim();
   const rumah = document.getElementById("selectRumahKoordinat").value;
@@ -1415,7 +1418,7 @@ async function simpanKeluargaAdmin() {
   };
 
   try {
-    await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+    await fetch(URL_API_WARGA, { // <-- Mengirim ke URL_API_WARGA
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
       body: JSON.stringify(payload)
