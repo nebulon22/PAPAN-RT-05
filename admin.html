@@ -1296,64 +1296,69 @@
       `;
     }
 
-    async function simpanKeluargaAdmin() {
-      const kepala = document.getElementById("addKepalaKeluarga").value.trim();
-      const rumah = document.getElementById("selectRumahKoordinat").value;
-      const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
+  async function simpanKeluargaAdmin() {
+  const kepala = document.getElementById("addKepalaKeluarga").value.trim();
+  const rumah = document.getElementById("selectRumahKoordinat").value;
+  const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
 
-      if (!kepala || !rumah || !anggota) {
-        alert("Mohon lengkapi semua isian form!");
-        return;
-      }
+  if (!kepala || !rumah || !anggota) {
+    alert("Mohon lengkapi semua isian form!");
+    return;
+  }
 
-      const btn = document.getElementById("btnSimpanKeluarga");
-      btn.disabled = true;
-      btn.innerText = "⏳ Menyimpan ke Sheet...";
+  const btn = document.getElementById("btnSimpanKeluarga");
+  btn.disabled = true;
+  btn.innerText = "⏳ Menyimpan ke Sheet...";
 
-      const payload = {
-        action: "tambahKeluargaWarga",
-        kepalaKeluarga: kepala,
-        namaRumah: rumah,
-        anggotaKeluarga: anggota
-      };
+  const payload = {
+    action: "tambahKeluargaWarga",
+    kepalaKeluarga: kepala,
+    namaRumah: rumah,
+    anggotaKeluarga: anggota
+  };
 
-      try {
-        await fetch(URL_API_WARGA, {
-          method: "POST",
-          headers: { "Content-Type": "text/plain;charset=utf-8" },
-          body: JSON.stringify(payload)
-        });
+  // Cek apakah sedang offline, langsung masukkan ke antrean lokal agar aman
+  if (!navigator.onLine) {
+    btn.disabled = false;
+    btn.innerText = "💾 Simpan ke Google Sheets";
+    simpanPayloadKeAntrean('Data Keluarga Warga', payload);
+    document.getElementById("formTambahKeluargaAdmin").reset();
+    switchTabAdminWarga('cari');
+    return;
+  }
 
-        alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
-        document.getElementById("formTambahKeluargaAdmin").reset();
-        btn.disabled = false;
-        btn.innerText = "💾 Simpan ke Google Sheets";
-        switchTabAdminWarga('cari');
-        muatSemuaDataAdmin();
-      } catch (err) {
-        alert("❌ Gagal menyimpan data: " + err);
-        btn.disabled = false;
-        btn.innerText = "💾 Simpan ke Google Sheets";
-      }
-    }
+  try {
+    // Beri batas waktu (timeout) 6 detik agar jika server Google lemot, tidak menggantung terlalu lama
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    document.addEventListener("DOMContentLoaded", () => {
-      perbaruiIndikatorSyncAdmin();
-      muatPeminjamanAdmin();
-      muatSemuaDataAdmin();
-      if (navigator.onLine) {
-        kirimDataPendingAdmin();
-      }
-
-      if(sessionStorage.getItem('authAdmin') === 'true') {
-        bukaAkses();
-      } else {
-        setTimeout(() => {
-          const inputPin = document.getElementById('adminPin');
-          if (inputPin) inputPin.focus();
-        }, 300);
-      }
+    const res = await fetch(URL_API_WARGA, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
+    clearTimeout(timeoutId);
+
+    const text = await res.text();
+
+    alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
+    document.getElementById("formTambahKeluargaAdmin").reset();
+    switchTabAdminWarga('cari');
+    muatSemuaDataAdmin(); // Perbarui data lokal
+
+  } catch (err) {
+    // Jika koneksi terputus atau timeout (lebih dari 6 detik), simpan ke antrean offline otomatis
+    console.warn("Gagal/Timeout, memasukkan ke antrean offline:", err);
+    simpanPayloadKeAntrean('Data Keluarga Warga', payload);
+    document.getElementById("formTambahKeluargaAdmin").reset();
+    switchTabAdminWarga('cari');
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "💾 Simpan ke Google Sheets";
+  }
+}
+    
   </script>
 
   <!-- FontAwesome Icons -->
