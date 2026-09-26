@@ -1492,20 +1492,24 @@ function muatDataJimpitan() {
     arrayTanggal = [];
     arrayBulan = [];
 
-    baris.forEach(kolom => {
+  baris.forEach(kolom => {
       if (kolom.length >= 3 && kolom[0] !== '') {
-        var tglStr = kolom[0];
+        // PERBAIKAN 1: Pastikan tanggal mutlak menjadi string agar .match() tidak memicu error
+        var tglStr = String(kolom[0] || '');
         var malamManual = '';
         var warga = '-';
         var nominal = 0;
 
-        if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
-          malamManual = kolom[1].trim(); 
-          warga = kolom[2] || '-';
+        // PERBAIKAN 2: Pastikan kolom 1 menjadi string sebelum dicek .startsWith() atau .trim()
+        var col1Str = String(kolom[1] || '');
+        
+        if (col1Str && (col1Str.startsWith('Malam') || col1Str === '-')) {
+          malamManual = col1Str.trim(); 
+          warga = String(kolom[2] || '-');
           var nominalRaw = kolom[3] ? String(kolom[3]).replace(/[^0-9]/g, '') : '0';
           nominal = parseInt(nominalRaw, 10) || 0;
         } else {
-          warga = kolom[1] || '-';
+          warga = col1Str || '-';
           var nominalRaw = kolom[2] ? String(kolom[2]).replace(/[^0-9]/g, '') : '0';
           nominal = parseInt(nominalRaw, 10) || 0;
         }
