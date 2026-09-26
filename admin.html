@@ -592,6 +592,7 @@
     }
 
 
+
 function cekLogin() {
   const input = document.getElementById('adminPin').value.trim();
 
@@ -604,8 +605,7 @@ function cekLogin() {
   btnLogin.innerText = "⏳ Memeriksa...";
   btnLogin.disabled = true;
 
-  // PIN WAJIB diverifikasi ke server.
-  // Tidak boleh ada verifikasi PIN secara offline.
+  // PIN TIDAK BOLEH diverifikasi secara offline
   if (!navigator.onLine) {
     btnLogin.innerText = "Buka Kunci";
     btnLogin.disabled = false;
@@ -614,10 +614,15 @@ function cekLogin() {
     return;
   }
 
-  const payloadTes = {
-    action: 'cek_pin',
-    pin: input
-  };
+  const payload = {
+  token: localStorage.getItem('adminToken') || '',
+  nama: document.getElementById('inputNama').value,
+  lat: document.getElementById('inputLat').value,
+  lng: document.getElementById('inputLng').value,
+  kategori: document.getElementById('inputKategori').value,
+  hidden: document.getElementById('inputHidden').value,
+  foto: document.getElementById('inputFoto').value
+};
 
   fetch(GAS_WEB_APP_URL, {
     method: 'POST',
@@ -626,18 +631,22 @@ function cekLogin() {
     },
     body: JSON.stringify(payloadTes)
   })
-  .then(res => res.text())
-  .then(result => {
+  .then(res => res.json())
+  .then(data => {
+
     btnLogin.innerText = "Buka Kunci";
     btnLogin.disabled = false;
 
-    result = result.trim();
+    if (data.status === "SUCCESS" && data.token) {
 
-    if (result === "SUCCESS") {
-
-      // HANYA simpan status login.
-      // PIN asli TIDAK disimpan.
+      // Simpan STATUS login
       localStorage.setItem('authAdmin', 'true');
+
+      // Simpan TOKEN, bukan PIN
+      localStorage.setItem('adminToken', data.token);
+
+      // PIN langsung dibuang dari input
+      document.getElementById('adminPin').value = "";
 
       bukaAkses();
 
@@ -647,6 +656,7 @@ function cekLogin() {
     }
   })
   .catch(err => {
+
     console.error("❌ Gagal memverifikasi PIN:", err);
 
     btnLogin.innerText = "Buka Kunci";
@@ -655,6 +665,7 @@ function cekLogin() {
     alert("❌ Gagal menghubungi server. PIN belum dapat diverifikasi.");
   });
 }
+
 
     
 
@@ -1388,8 +1399,10 @@ document.addEventListener("DOMContentLoaded", () => {
         kirimDataPendingAdmin();
       }
 
-      if(localStorage.getItem('authAdmin') === 'true') {
-        bukaAkses();
+      if (localStorage.getItem('authAdmin') === 'true' &&
+    localStorage.getItem('adminToken')) {
+  bukaAkses();
+}
       } else {
         setTimeout(() => {
           const inputPin = document.getElementById('adminPin');
