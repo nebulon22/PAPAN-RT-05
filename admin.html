@@ -408,6 +408,64 @@
 
       <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
     </div>
+
+    <!-- KARTU FITUR MANAJEMEN DATA WARGA & KELUARGA -->
+<div class="admin-card" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-top: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
+  <h3 style="margin-top: 0; font-size: 16px; color: #0f172a; border-bottom: 2px solid #0288d1; padding-bottom: 8px;">
+    👨‍👩‍👧‍👦 Kelola Data Keluarga & Sensus Warga
+  </h3>
+
+  <!-- TAB TOMBOL AKSI -->
+  <div style="display: flex; gap: 8px; margin-bottom: 14px;">
+    <button type="button" onclick="switchTabAdminWarga('cari')" id="btn-tab-cari" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; cursor: pointer; font-size: 12px;">
+      🔍 Cari Data Warga
+    </button>
+    <button type="button" onclick="switchTabAdminWarga('tambah')" id="btn-tab-tambah" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: bold; cursor: pointer; font-size: 12px;">
+      ➕ Tambah Keluarga Baru
+    </button>
+  </div>
+
+  <!-- PANEL 1: CARI & CONNECT KOORDINAT -->
+  <div id="panel-cari-warga">
+    <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+      <input type="text" id="inputCariWargaAdmin" placeholder="Ketik Nama Kepala / Anggota / No Rumah..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none;">
+      <button type="button" onclick="cariDetailKeluargaAdmin()" style="padding: 8px 14px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+        Cari
+      </button>
+    </div>
+
+    <!-- WADAH HASIL PENCARIAN -->
+    <div id="hasil-cari-warga" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+      <!-- Isi dinamis via JS -->
+    </div>
+  </div>
+
+  <!-- PANEL 2: FORM TAMBAH DATA KELUARGA -->
+  <div id="panel-tambah-warga" style="display: none;">
+    <form id="formTambahKeluargaAdmin">
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569;">Nama Kepala Keluarga:</label>
+        <input type="text" id="addKepalaKeluarga" placeholder="Contoh: Pak Bejo Nur" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569;">Pilih Lokasi Rumah (Integrasi Peta):</label>
+        <select id="selectRumahKoordinat" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
+          <option value="">-- Memuat daftar rumah... --</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 12px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569;">Daftar Nama Anggota Keluarga (Pisahkan koma):</label>
+        <textarea id="addAnggotaKeluarga" rows="3" placeholder="Contoh: Ibu Suprihatin (Istri), Budi (Anak), Ani (Anak)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box; resize: vertical;" required></textarea>
+      </div>
+
+      <button type="button" onclick="simpanKeluargaAdmin()" id="btnSimpanKeluarga" style="width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+        💾 Simpan ke Google Sheets
+      </button>
+    </form>
+  </div>
+</div>
   </div>
 
   <!-- JAVASCRIPT LOGIC -->
@@ -1219,6 +1277,162 @@
     function escapeHTML(str) {
       return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
     }
+
+  // Konfigurasi URL CSV & GAS
+const URL_SHEET_RUMAH = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`; 
+const ID_SHEET_WARGA = "ID_FILE_GOOGLE_SHEET_DATA_WARGA_KAMU"; // <-- GANTI dengan ID Spreadsheet 'Data Nama Warga'
+const URL_SHEET_WARGA = `https://docs.google.com/spreadsheets/d/${ID_SHEET_WARGA}/export?format=csv`;
+
+let globalDataRumah = [];
+let globalDataWarga = [];
+
+// 1. Inisialisasi Data
+document.addEventListener("DOMContentLoaded", () => {
+  muatSemuaDataAdmin();
+});
+
+async function muatSemuaDataAdmin() {
+  try {
+    const [resRumah, resWarga] = await Promise.all([
+      fetch(URL_SHEET_RUMAH).then(r => r.text()),
+      fetch(URL_SHEET_WARGA).then(r => r.text()).catch(() => "")
+    ]);
+
+    globalDataRumah = parseCSV(resRumah).slice(1); // Abaikan Header
+    if (resWarga) globalDataWarga = parseCSV(resWarga).slice(1);
+
+    populateDropdownRumah();
+  } catch (e) {
+    console.error("Gagal memuat data:", e);
+  }
+}
+
+// 2. Isi Dropdown Lokasi Rumah dari File Nomor Rumah
+function populateDropdownRumah() {
+  const select = document.getElementById("selectRumahKoordinat");
+  if (!select) return;
+  select.innerHTML = '<option value="">-- Pilih Rumah / Lokasi --</option>';
+
+  globalDataRumah.forEach(row => {
+    if (row[0]) {
+      const opt = document.createElement("option");
+      opt.value = row[0].trim(); // Nama Rumah di Sheet Peta (misal: "Rumah No 06 (Pak Bejo Nur)")
+      opt.text = row[0].trim();
+      select.appendChild(opt);
+    }
+  });
+}
+
+// 3. Switch Tab Tampilan
+function switchTabAdminWarga(tab) {
+  const pCari = document.getElementById("panel-cari-warga");
+  const pTambah = document.getElementById("panel-tambah-warga");
+  const btnCari = document.getElementById("btn-tab-cari");
+  const btnTambah = document.getElementById("btn-tab-tambah");
+
+  if (tab === 'cari') {
+    pCari.style.display = "block";
+    pTambah.style.display = "none";
+    btnCari.style.background = "#0288d1"; btnCari.style.color = "#fff";
+    btnTambah.style.background = "#f1f5f9"; btnTambah.style.color = "#64748b";
+  } else {
+    pCari.style.display = "none";
+    pTambah.style.display = "block";
+    btnTambah.style.background = "#0288d1"; btnTambah.style.color = "#fff";
+    btnCari.style.background = "#f1f5f9"; btnCari.style.color = "#64748b";
+  }
+}
+
+// 4. Fitur Cari & Sambungkan Data Warga ke Koordinat Peta
+function cariDetailKeluargaAdmin() {
+  const keyword = document.getElementById("inputCariWargaAdmin").value.toLowerCase().trim();
+  const container = document.getElementById("hasil-cari-warga");
+
+  if (!keyword) {
+    alert("Ketikkan nama atau nomor rumah yang ingin dicari!");
+    return;
+  }
+
+  // Cari di data Warga/Keluarga
+  const matchWarga = globalDataWarga.find(row => 
+    (row[0] && row[0].toLowerCase().includes(keyword)) || 
+    (row[1] && row[1].toLowerCase().includes(keyword)) ||
+    (row[2] && row[2].toLowerCase().includes(keyword))
+  );
+
+  // Cari di data Koordinat Peta
+  const matchRumah = globalDataRumah.find(row => 
+    row[0] && row[0].toLowerCase().includes(keyword)
+  ) || (matchWarga ? globalDataRumah.find(row => row[0].toLowerCase().includes(matchWarga[0].toLowerCase())) : null);
+
+  container.style.display = "block";
+
+  if (!matchWarga && !matchRumah) {
+    container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga atau rumah tidak ditemukan.</p>`;
+    return;
+  }
+
+  const kepala = matchWarga ? matchWarga[0] : (matchRumah ? matchRumah[0] : '-');
+  const anggota = matchWarga ? matchWarga[1] : 'Belum ada data anggota keluarga';
+  const labelRumah = matchRumah ? matchRumah[0] : 'Tidak terhubung ke titik peta';
+  const lat = matchRumah ? matchRumah[1] : null;
+  const lng = matchRumah ? matchRumah[2] : null;
+
+  let htmlKoor = (lat && lng) 
+    ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat (${lat}, ${lng})</a>`
+    : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
+
+  container.innerHTML = `
+    <div style="font-size: 12px; color: #334155; line-height: 1.6;">
+      <div style="font-weight: bold; font-size: 14px; color: #0288d1; margin-bottom: 4px;">🏠 ${kepala}</div>
+      <div><b>Anggota Keluarga:</b> ${anggota}</div>
+      <div style="margin-top: 4px;"><b>Titik Denah:</b> ${labelRumah}</div>
+      ${htmlKoor}
+    </div>
+  `;
+}
+
+// 5. Simpan Data Keluarga Baru via Google Apps Script (GAS)
+async function simpanKeluargaAdmin() {
+  const kepala = document.getElementById("addKepalaKeluarga").value.trim();
+  const rumah = document.getElementById("selectRumahKoordinat").value;
+  const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
+
+  if (!kepala || !rumah || !anggota) {
+    alert("Mohon lengkapi semua isian form!");
+    return;
+  }
+
+  const btn = document.getElementById("btnSimpanKeluarga");
+  btn.disabled = true;
+  btn.innerText = "⏳ Menyimpan ke Sheet...";
+
+  const payload = {
+    action: "tambahKeluargaWarga",
+    kepalaKeluarga: kepala,
+    namaRumah: rumah,
+    anggotaKeluarga: anggota
+  };
+
+  try {
+    await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain;charset=utf-8" },
+      body: JSON.stringify(payload)
+    });
+
+    alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
+    document.getElementById("formTambahKeluargaAdmin").reset();
+    btn.disabled = false;
+    btn.innerText = "💾 Simpan ke Google Sheets";
+    switchTabAdminWarga('cari');
+    muatSemuaDataAdmin(); // Refresh data lokal
+  } catch (err) {
+    alert("❌ Gagal menyimpan data: " + err);
+    btn.disabled = false;
+    btn.innerText = "💾 Simpan ke Google Sheets";
+  }
+}
     
   </script>
 </body>
