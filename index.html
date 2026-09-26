@@ -1513,9 +1513,11 @@ function muatDataJimpitan() {
           
           var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
 
-          // --- DATA HARIAN ---
-          var keyTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
+         // --- DATA HARIAN (Prioritaskan Teks Malam Manual dari Sheet) ---
           var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
+    
+          // Gabungkan Nama Malam + Tanggal sebagai Kunci Unik agar data terkelompok tepat
+          var keyTanggal = (namaMalam + '_' + shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0')).replace(/\s+/g, '_');
 
           if (!cacheDataHarian[keyTanggal]) {
             cacheDataHarian[keyTanggal] = { label: namaMalam + ' (' + labelTanggal + ')', subtotal: 0, items: [] };
@@ -1524,6 +1526,7 @@ function muatDataJimpitan() {
           cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
           cacheDataHarian[keyTanggal].subtotal += nominal;
 
+          
           // --- DATA BULANAN ---
           var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
           var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
