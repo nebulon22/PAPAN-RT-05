@@ -50,11 +50,21 @@ async function ambilDataSheets(urlCacheKey, targetUrl, callbackRender) {
         return;
     }
 
-    // PERBAIKAN CORS & 401: Jika URL yang dipanggil adalah export CSV dari Google Sheet (Restricted),
+   // PERBAIKAN CORS & 401: Jika URL yang dipanggil adalah export CSV dari Google Sheet (Restricted),
     // ubah permintaan agar dialihkan secara aman lewat Apps Script Backend (GAS)
     let fetchUrl = targetUrl;
     if (targetUrl && targetUrl.includes("docs.google.com/spreadsheets") && targetUrl.includes("/export?format=csv")) {
-        fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+        // Ekstrak parameter GID (ID Tab) dari URL
+        let matchGid = targetUrl.match(/gid=([0-9]+)/);
+        let gid = matchGid ? matchGid[1] : null;
+        
+        if (gid) {
+            // Jika URL meminta tab spesifik (Pengumuman, Keuangan, Jimpitan)
+            fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getSheetByGid&gid=${gid}`;
+        } else {
+            // Jika tidak ada GID, berarti meminta tab Peta Utama
+            fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+        }
     }
 
     // 3. Ambil data terbaru di latar belakang (Background Sync)
