@@ -682,8 +682,10 @@
       });
     });
 
-    var map, daftarPin = [], pinRumahAktif = null;
-    var SHEET_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/gviz/tq?tqx=out:csv&sheet=Peta`;
+   var map, daftarPin = [], pinRumahAktif = null;
+    
+    // PERBAIKAN 1: Arahkan URL Peta langsung ke Apps Script agar kebal CORS
+    var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
 
     function initMap() {
       if (map) return;
@@ -715,11 +717,13 @@
           if (kolom.length >= 3 && kolom[0] !== '') {
             var latClean = perbaikiKoordinat(kolom[1]);
             var lngClean = perbaikiKoordinat(kolom[2]);
-            var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
-            var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? kolom[5].trim() : '';
+            
+            // PERBAIKAN 2: Bungkus nilai dengan String() sebelum di-trim agar anti-error
+            var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
+            var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
+            var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
+            var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
 
-            var namaAsli = kolom[0].trim();
             var item = {
               name: namaAsli,
               nameAsli: namaAsli,
@@ -1279,8 +1283,10 @@
     }
 
 
-    // Konfigurasi URL CSV & GAS
-const URL_SHEET_RUMAH = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`; 
+   // Konfigurasi URL CSV & GAS
+// PERBAIKAN: Arahkan URL Rumah langsung ke Apps Script (GAS) agar aman dari CORS
+const URL_SHEET_RUMAH = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`; 
+
 // Web App URL dari Apps Script Baru (Spreadsheet Data Warga)
 const URL_API_WARGA = "https://script.google.com/macros/s/AKfycbynlvYDMTMl1e_acOqOmctoGQpw9TEJnZc409LatulcmlTOzpgtUDT60VUknrOYDuqwvQ/exec";
 
@@ -1291,12 +1297,17 @@ let globalDataWarga = [];
 document.addEventListener("DOMContentLoaded", () => {
   muatSemuaDataAdmin();
 });
-
+    
 async function muatSemuaDataAdmin() {
   try {
-    // A. Ambil Data Rumah/Koordinat dari CSV Peta
-    const resRumah = await fetch(URL_SHEET_RUMAH).then(r => r.text());
-    globalDataRumah = parseCSV(resRumah).slice(1); // Abaikan Header
+    // A. Ambil Data Rumah/Koordinat AMAN via Apps Script (Bebas CORS)
+    const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+    const resRumah = await fetch(urlPeta).then(r => r.json());
+    
+    // Karena respons dari GAS sudah berupa array JSON, langsung slice(1)
+    if (Array.isArray(resRumah)) {
+      globalDataRumah = resRumah.slice(1); // Abaikan Header
+    }
 
     // B. Ambil Data Warga AMAN dari Apps Script Baru (Bebas CORS / 401)
     const resWarga = await fetch(URL_API_WARGA).then(r => r.json());
