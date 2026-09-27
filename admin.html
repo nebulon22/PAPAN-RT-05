@@ -1263,16 +1263,21 @@ const payload = {
 
     async function muatSemuaDataAdmin() {
       try {
-        const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+        const pinAdmin = localStorage.getItem('verifiedPin') || '';
+        
+        // 1. Ambil Data Peta/Rumah
+        const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&pin=${encodeURIComponent(pinAdmin)}`;
         const resRumah = await fetch(urlPeta).then(r => r.json());
         
         if (Array.isArray(resRumah)) {
           globalDataRumah = resRumah.slice(1);
-          // Simpan daftar rumah untuk fitur pencarian interaktif
           listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? row[0].trim() : '').filter(Boolean);
         }
 
-        const resWarga = await fetch(URL_API_WARGA).then(r => r.json());
+        // 2. Ambil Data Warga Private (Kirimkan PIN & Action)
+        const urlWarga = `${URL_API_WARGA}?action=getWarga&pin=${encodeURIComponent(pinAdmin)}`;
+        const resWarga = await fetch(urlWarga).then(r => r.json());
+        
         if (Array.isArray(resWarga)) {
           globalDataWarga = resWarga.slice(1); // Abaikan Header
           
@@ -1281,11 +1286,11 @@ const payload = {
           let totalJiwa = 0;
 
           globalDataWarga.forEach(row => {
-            // Jika Kolom D (indeks 3) berisi angka, gunakan angka tersebut
+            // Kolom D (indeks 3): Jumlah Jiwa
             if (row[3] && !isNaN(parseInt(row[3]))) {
               totalJiwa += parseInt(row[3]);
             } else {
-              // Jika Kolom D kosong, hitung manual: 1 (Kepala) + Jumlah Anggota
+              // Jika Kolom D belum terisi, hitung: 1 (Kepala) + Anggota Keluarga
               let jmlAnggota = row[1] ? String(row[1]).split(',').filter(item => item.trim() !== '').length : 0;
               totalJiwa += (1 + jmlAnggota);
             }
@@ -1301,6 +1306,7 @@ const payload = {
           if (statJiwa) statJiwa.innerText = `${totalJiwa} Orang`;
         }
 
+        populateDropdownRumah();
       } catch (e) {
         console.error("Gagal memuat data admin:", e);
       }
