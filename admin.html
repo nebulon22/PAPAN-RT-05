@@ -166,9 +166,12 @@
 
       <!-- Tombol khusus untuk Kelola Data Keluarga -->
       <div class="filter-row">
-        <button type="button" class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1; width: 100%;" onclick="bukaModalKelolaWarga()">
-          👥 Kelola Data Keluarga
-        </button>
+        <button type="button" class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1; width: 100%; justify-content: space-between; padding: 8px 12px;" onclick="bukaModalKelolaWarga()">
+  <span>👥 Kelola Data Keluarga</span>
+  <span id="badge-total-jiwa" style="background: rgba(255,255,255,0.25); color: white; padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-weight: bold;">
+    0 Jiwa
+  </span>
+</button>
       </div>
     </div>
     
@@ -431,6 +434,18 @@
         <h3 style="margin-top: 0; font-size: 16px; color: #0f172a; border-bottom: 2px solid #0288d1; padding-bottom: 8px;">
           👨‍👩‍👧‍👦 Kelola Data Keluarga & Sensus Warga
         </h3>
+
+        <!-- KARTU STATISTIK RINGKASAN SENSUS -->
+<div style="display: flex; gap: 8px; margin-bottom: 12px; background: #f1f5f9; padding: 8px 12px; border-radius: 8px; border: 1px solid #e2e8f0;">
+  <div style="flex: 1; text-align: center; border-right: 1px solid #cbd5e1;">
+    <div style="font-size: 10px; color: #64748b; font-weight: bold;">TOTAL KELUARGA (KK)</div>
+    <div id="stat-total-kk" style="font-size: 16px; font-weight: bold; color: #0288d1;">0</div>
+  </div>
+  <div style="flex: 1; text-align: center;">
+    <div style="font-size: 10px; color: #64748b; font-weight: bold;">TOTAL JIWA / WARGA</div>
+    <div id="stat-total-jiwa" style="font-size: 16px; font-weight: bold; color: #10b981;">0</div>
+  </div>
+</div>
 
         <!-- TAB TOMBOL AKSI -->
         <div style="display: flex; gap: 8px; margin-bottom: 14px;">
@@ -1244,6 +1259,7 @@ const payload = {
 
     let globalDataRumah = [];
     let globalDataWarga = [];
+    let listSemuaRumahAdmin = [];
 
     async function muatSemuaDataAdmin() {
       try {
@@ -1252,42 +1268,44 @@ const payload = {
         
         if (Array.isArray(resRumah)) {
           globalDataRumah = resRumah.slice(1);
+          // Simpan daftar rumah untuk fitur pencarian interaktif
+          listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? row[0].trim() : '').filter(Boolean);
         }
 
         const resWarga = await fetch(URL_API_WARGA).then(r => r.json());
         if (Array.isArray(resWarga)) {
-          globalDataWarga = resWarga.slice(1);
+          globalDataWarga = resWarga.slice(1); // Abaikan Header
+          
+          // --- HITUNG TOTAL KK DAN TOTAL JIWA ---
+          let totalKK = globalDataWarga.length;
+          let totalJiwa = 0;
+
+          globalDataWarga.forEach(row => {
+            // Jika Kolom D (indeks 3) berisi angka, gunakan angka tersebut
+            if (row[3] && !isNaN(parseInt(row[3]))) {
+              totalJiwa += parseInt(row[3]);
+            } else {
+              // Jika Kolom D kosong, hitung manual: 1 (Kepala) + Jumlah Anggota
+              let jmlAnggota = row[1] ? String(row[1]).split(',').filter(item => item.trim() !== '').length : 0;
+              totalJiwa += (1 + jmlAnggota);
+            }
+          });
+
+          // Tampilkan ke UI Admin
+          const badgeJiwa = document.getElementById("badge-total-jiwa");
+          const statKK = document.getElementById("stat-total-kk");
+          const statJiwa = document.getElementById("stat-total-jiwa");
+
+          if (badgeJiwa) badgeJiwa.innerText = `${totalJiwa} Jiwa`;
+          if (statKK) statKK.innerText = `${totalKK} KK`;
+          if (statJiwa) statJiwa.innerText = `${totalJiwa} Orang`;
         }
 
-        populateDropdownRumah();
       } catch (e) {
         console.error("Gagal memuat data admin:", e);
       }
     }
-
-   let listSemuaRumahAdmin = [];
-
-    async function muatSemuaDataAdmin() {
-      try {
-        const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
-        const resRumah = await fetch(urlPeta).then(r => r.json());
-        
-        if (Array.isArray(resRumah)) {
-          globalDataRumah = resRumah.slice(1);
-        }
-
-        const resWarga = await fetch(URL_API_WARGA).then(r => r.json());
-        if (Array.isArray(resWarga)) {
-          globalDataWarga = resWarga.slice(1);
-        }
-
-        // Simpan data rumah untuk sistem pencarian interaktif
-        listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? row[0].trim() : '').filter(Boolean);
-      } catch (e) {
-        console.error("Gagal memuat data admin:", e);
-      }
-    }
-
+    
     // Fungsi untuk memfilter daftar rumah saat diketik
     function filterDropdownRumah(keyword) {
       const container = document.getElementById("listDropdownRumah");
