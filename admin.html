@@ -1264,8 +1264,8 @@ const payload = {
     async function muatSemuaDataAdmin() {
       try {
         const pinAdmin = localStorage.getItem('verifiedPin') || '';
-        
-        // 1. Ambil Data Peta/Rumah
+
+        // 1. Ambil Data Peta / Rumah
         const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&pin=${encodeURIComponent(pinAdmin)}`;
         const resRumah = await fetch(urlPeta).then(r => r.json());
         
@@ -1274,24 +1274,30 @@ const payload = {
           listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? row[0].trim() : '').filter(Boolean);
         }
 
-        // 2. Ambil Data Warga Private (Kirimkan PIN & Action)
-        const urlWarga = `${URL_API_WARGA}?action=getWarga&pin=${encodeURIComponent(pinAdmin)}`;
+        // 2. Ambil Data Sensus Warga
+        const urlWarga = `${URL_API_WARGA}?pin=${encodeURIComponent(pinAdmin)}`;
         const resWarga = await fetch(urlWarga).then(r => r.json());
         
-        if (Array.isArray(resWarga)) {
-          globalDataWarga = resWarga.slice(1); // Abaikan Header
+        // Debugging: Buka Console (F12) untuk melihat data yang diterima
+        console.log("Data Warga Diterima:", resWarga);
+
+        if (Array.isArray(resWarga) && resWarga.length > 1) {
+          // Ambil baris data tanpa header (mulai baris ke-2)
+          globalDataWarga = resWarga.slice(1).filter(row => row[0] && String(row[0]).trim() !== ''); 
           
-          // --- HITUNG TOTAL KK DAN TOTAL JIWA ---
           let totalKK = globalDataWarga.length;
           let totalJiwa = 0;
 
           globalDataWarga.forEach(row => {
-            // Kolom D (indeks 3): Jumlah Jiwa
-            if (row[3] && !isNaN(parseInt(row[3]))) {
-              totalJiwa += parseInt(row[3]);
+            let nilaiKolomD = row[3]; // Kolom D: Jumlah Jiwa
+            
+            if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD))) {
+              // Jika Kolom D terisi angka
+              totalJiwa += parseInt(nilaiKolomD);
             } else {
-              // Jika Kolom D belum terisi, hitung: 1 (Kepala) + Anggota Keluarga
-              let jmlAnggota = row[1] ? String(row[1]).split(',').filter(item => item.trim() !== '').length : 0;
+              // Jika Kolom D kosong, hitung: 1 (Kepala) + Jumlah Anggota (pisahkan koma)
+              let teksAnggota = row[1] ? String(row[1]) : '';
+              let jmlAnggota = teksAnggota ? teksAnggota.split(',').filter(item => item.trim() !== '').length : 0;
               totalJiwa += (1 + jmlAnggota);
             }
           });
@@ -1306,7 +1312,6 @@ const payload = {
           if (statJiwa) statJiwa.innerText = `${totalJiwa} Orang`;
         }
 
-   
       } catch (e) {
         console.error("Gagal memuat data admin:", e);
       }
