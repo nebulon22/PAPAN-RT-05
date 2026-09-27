@@ -465,12 +465,13 @@
               <input type="text" id="addKepalaKeluarga" placeholder="Contoh: Pak Bejo Nur" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
             </div>
 
-            <div style="margin-bottom: 10px;">
-              <label style="font-size: 11px; font-weight: bold; color: #475569;">Pilih Lokasi Rumah (Integrasi Peta):</label>
-              <select id="selectRumahKoordinat" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
-                <option value="">-- Memuat daftar rumah... --</option>
-              </select>
-            </div>
+            <div style="margin-bottom: 10px; position: relative;">
+  <label style="font-size: 11px; font-weight: bold; color: #475569;">Pilih Lokasi Rumah (Integrasi Peta):</label>
+  <input type="text" id="inputCariRumahPeta" placeholder="🔍 Ketik untuk mencari rumah..." autocomplete="off" oninput="filterDropdownRumah(this.value)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
+  
+  <!-- Kotak Daftar Hasil Pencarian Melayang -->
+  <div id="listDropdownRumah" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 150px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999;"></div>
+</div>
 
             <div style="margin-bottom: 12px;">
               <label style="font-size: 11px; font-weight: bold; color: #475569;">Daftar Nama Anggota Keluarga (Pisahkan koma):</label>
@@ -1264,20 +1265,70 @@ const payload = {
       }
     }
 
-    function populateDropdownRumah() {
-      const select = document.getElementById("selectRumahKoordinat");
-      if (!select) return;
-      select.innerHTML = '<option value="">-- Pilih Rumah / Lokasi --</option>';
+   let listSemuaRumahAdmin = [];
 
-      globalDataRumah.forEach(row => {
-        if (row[0]) {
-          const opt = document.createElement("option");
-          opt.value = row[0].trim();
-          opt.text = row[0].trim();
-          select.appendChild(opt);
+    async function muatSemuaDataAdmin() {
+      try {
+        const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+        const resRumah = await fetch(urlPeta).then(r => r.json());
+        
+        if (Array.isArray(resRumah)) {
+          globalDataRumah = resRumah.slice(1);
         }
-      });
+
+        const resWarga = await fetch(URL_API_WARGA).then(r => r.json());
+        if (Array.isArray(resWarga)) {
+          globalDataWarga = resWarga.slice(1);
+        }
+
+        // Simpan data rumah untuk sistem pencarian interaktif
+        listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? row[0].trim() : '').filter(Boolean);
+      } catch (e) {
+        console.error("Gagal memuat data admin:", e);
+      }
     }
+
+    // Fungsi untuk memfilter daftar rumah saat diketik
+    function filterDropdownRumah(keyword) {
+      const container = document.getElementById("listDropdownRumah");
+      const textCari = keyword.toLowerCase().trim();
+
+      if (!textCari) {
+        container.style.display = "none";
+        return;
+      }
+
+      const hasilFilter = listSemuaRumahAdmin.filter(nama => nama.toLowerCase().includes(textCari));
+
+      if (hasilFilter.length === 0) {
+        container.innerHTML = `<div style="padding: 8px; font-size: 11px; color: #94a3b8; text-align: center;">Tidak ditemukan</div>`;
+        container.style.display = "block";
+        return;
+      }
+
+      container.innerHTML = hasilFilter.map(nama => `
+        <div onclick="pilihRumahPeta('${nama.replace(/'/g, "\\'")}')" style="padding: 8px 10px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+          🏠 ${nama}
+        </div>
+      `).join('');
+
+      container.style.display = "block";
+    }
+
+    // Fungsi ketika salah satu rumah diklik dari daftar pencarian
+    function pilihRumahPeta(namaRumah) {
+      document.getElementById("inputCariRumahPeta").value = namaRumah;
+      document.getElementById("listDropdownRumah").style.display = "none";
+    }
+
+    // Menutup kotak dropdown jika pengguna mengklik di luar area
+    document.addEventListener("click", function(e) {
+      const inputCari = document.getElementById("inputCariRumahPeta");
+      const container = document.getElementById("listDropdownRumah");
+      if (inputCari && container && !inputCari.contains(e.target) && !container.contains(e.target)) {
+        container.style.display = "none";
+      }
+    });
 
     function switchTabAdminWarga(tab) {
       const pCari = document.getElementById("panel-cari-warga");
@@ -1346,7 +1397,7 @@ const payload = {
 
   async function simpanKeluargaAdmin() {
   const kepala = document.getElementById("addKepalaKeluarga").value.trim();
-  const rumah = document.getElementById("selectRumahKoordinat").value;
+  const rumah = document.getElementById("inputCariRumahPeta").value.trim(); // Mengambil dari input teks pencarian
   const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
 
   if (!kepala || !rumah || !anggota) {
@@ -1365,43 +1416,27 @@ const payload = {
     anggotaKeluarga: anggota
   };
 
-  // Cek apakah sedang offline, langsung masukkan ke antrean lokal agar aman
-  if (!navigator.onLine) {
-    btn.disabled = false;
-    btn.innerText = "💾 Simpan ke Google Sheets";
-    simpanPayloadKeAntrean('Data Keluarga Warga', payload);
-    document.getElementById("formTambahKeluargaAdmin").reset();
-    switchTabAdminWarga('cari');
-    return;
-  }
-
   try {
-    // Beri batas waktu (timeout) 6 detik agar jika server Google lemot, tidak menggantung terlalu lama
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 6000);
-
-    const res = await fetch(URL_API_WARGA, {
+    await fetch(URL_API_WARGA, {
       method: "POST",
       headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload),
-      signal: controller.signal
+      body: JSON.stringify(payload)
     });
-    clearTimeout(timeoutId);
-
-    const text = await res.text();
 
     alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
+    
+    // Mereset form standar
     document.getElementById("formTambahKeluargaAdmin").reset();
-    switchTabAdminWarga('cari');
-    muatSemuaDataAdmin(); // Perbarui data lokal
+    
+    // Kosongkan kolom pencarian rumah secara manual
+    document.getElementById("inputCariRumahPeta").value = ""; 
 
-  } catch (err) {
-    // Jika koneksi terputus atau timeout (lebih dari 6 detik), simpan ke antrean offline otomatis
-    console.warn("Gagal/Timeout, memasukkan ke antrean offline:", err);
-    simpanPayloadKeAntrean('Data Keluarga Warga', payload);
-    document.getElementById("formTambahKeluargaAdmin").reset();
+    btn.disabled = false;
+    btn.innerText = "💾 Simpan ke Google Sheets";
     switchTabAdminWarga('cari');
-  } finally {
+    muatSemuaDataAdmin();
+  } catch (err) {
+    alert("❌ Gagal menyimpan data: " + err);
     btn.disabled = false;
     btn.innerText = "💾 Simpan ke Google Sheets";
   }
