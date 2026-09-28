@@ -168,10 +168,11 @@
       🟢 Semua Data Ter-sinkron
     </div>
 
-    <div id="search-box">
-      <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
-      <button onclick="cariLokasi()">Cari</button>
-    </div>
+   <!-- KODE BARU: -->
+<div id="search-box">
+  <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
+  <button onclick="cariLokasi()">Cari</button>
+</div>
 
    <div class="filter-container">
   <!-- 1. Dropdown Filter Lokasi Bangunan (Gabungan Semua Tombol Filter) -->
@@ -1010,10 +1011,15 @@ var map, daftarPin = [], pinRumahAktif = null;
     });
   }
 
-  // 🛠️ FUNGSI PENCARIAN TUNGGAL SINKRON DENGAN LAYERGROUP
+  // 🛠️ FUNGSI PENCARIAN TUNGGAL SINKRON DENGAN LAYERGROUP & OFFSET PETA
   function cariLokasi() {
+    // Paksa keyboard HP menutup/hilang
+    if (document.activeElement) {
+      document.activeElement.blur();
+    }
+
     var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
-    var kataKunci = inputElem ? inputElem.value.toLowerCase().trim() : '';
+    var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
     if (!kataKunci) return;
 
     var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
@@ -1037,8 +1043,15 @@ var map, daftarPin = [], pinRumahAktif = null;
         markerGroup.addLayer(hasil.marker); 
       }
       
-      map.flyTo([hasil.lat, hasil.lng], 19); 
-      setTimeout(() => { hasil.marker.openPopup(); }, 500);
+      // Proyeksikan koordinat dan geser titik 200px ke bawah agar tidak tertutup panel atas
+      var pointM = map.project([hasil.lat, hasil.lng], 19);
+      var pointC = L.point(pointM.x, pointM.y - 200);
+      map.flyTo(map.unproject(pointC, 19), 19); 
+
+      map.once('moveend', function() {
+        if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+        hasil.marker.openPopup();
+      });
     } else {
       alert("Nama atau nomor rumah tidak ditemukan.");
     }
