@@ -773,27 +773,27 @@ function bukaAkses() {
 }
 
 // ==========================================
-// AUTO LOGIN ADMIN SAAT PWA DIBUKA (+ TIMEOUT 10 MENIT)
+// AUTO LOGIN ADMIN SAAT PWA DIBUKA (+ TIMEOUT 30 MENIT)
 // ==========================================
 function periksaSesiAdmin() {
   const isAuth = localStorage.getItem('authAdmin') === 'true';
   const token = localStorage.getItem('adminToken');
   const loginTime = parseInt(localStorage.getItem('admin_login_time') || '0', 10);
   
-  const BATAS_WAKTU = 10 * 60 * 1000; // 10 Menit (dalam milidetik)
+  const BATAS_WAKTU = 30 * 60 * 1000; // 30 Menit (dalam milidetik)
   const waktuSekarang = Date.now();
 
-  // 1. Jika terautentikasi TAPI sudah lewat dari 10 menit
+  // 1. Jika terautentikasi TAPI sudah lewat dari 30 menit
   if (isAuth && token && (waktuSekarang - loginTime > BATAS_WAKTU)) {
     // Hapus sesi & paksa login PIN ulang
     localStorage.removeItem('authAdmin');
     localStorage.removeItem('adminToken');
     localStorage.removeItem('admin_login_time');
-    alert("⏱️ Sesi login Anda telah berakhir (10 menit). Silakan masukkan PIN kembali.");
+    alert("⏱️ Sesi login Anda telah berakhir (30 menit). Silakan masukkan PIN kembali.");
     return false;
   }
 
-  // 2. Jika sesi masih berlaku (< 10 menit)
+  // 2. Jika sesi masih berlaku (< 30 menit)
   if (isAuth && token) {
     bukaAkses();
     return true;
@@ -1690,9 +1690,9 @@ document.addEventListener("DOMContentLoaded", () => {
   perbaruiIndikatorSyncAdmin();
   muatPeminjamanAdmin();
 
-  // Jalankan pemeriksaan sesi login + timeout 10 menit
+  // Jalankan pemeriksaan sesi login + timeout 30 menit
   if (periksaSesiAdmin()) {
-    // Hanya ambil data warga/peta jika sesi admin MASIH VALID (< 10 menit)
+    // Hanya ambil data warga/peta jika sesi admin MASIH VALID (< 30 menit)
     muatSemuaDataAdmin();
   } else {
     // Jika belum login / sesi expired, fokuskan kursor ke input PIN
