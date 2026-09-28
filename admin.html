@@ -1324,40 +1324,41 @@ function bukaTutupLuarForm(e) {
     }
 
     async function prosesPengembalian(id) {
-      if (confirm("Apakah barang ini sudah dikembalikan?")) {
-        const pinAdmin = localStorage.getItem('verifiedPin') || '';
-        const payload = {
-          pin: pinAdmin,
-          action: "kembali",
-          id: id
-        };
+  if (confirm("Apakah barang ini sudah dikembalikan?")) {
+    // PERBAIKAN: Gunakan tokenAdmin, bukan verifiedPin!
+    const tokenAdmin = localStorage.getItem('adminToken') || '';
+    const payload = {
+      token: tokenAdmin,
+      action: "kembali",
+      id: id
+    };
 
-        if (!navigator.onLine) {
-          simpanPayloadKeAntrean('Pengembalian Barang', payload);
-          muatPeminjamanAdmin();
-          return;
-        }
-
-        try {
-          const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-            method: "POST",
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(payload)
-          });
-          const text = await res.text();
-
-          if (text.includes("SUCCESS")) {
-            alert("✅ Status barang berhasil diperbarui!");
-            muatPeminjamanAdmin();
-          } else {
-            alert("❌ Gagal memperbarui: " + text);
-          }
-        } catch (err) {
-          simpanPayloadKeAntrean('Pengembalian Barang', payload);
-          muatPeminjamanAdmin();
-        }
-      }
+    if (!navigator.onLine) {
+      simpanPayloadKeAntrean('Pengembalian Barang', payload);
+      muatPeminjamanAdmin();
+      return;
     }
+
+    try {
+      const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+        method: "POST",
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const text = await res.text();
+
+      if (text.includes("SUCCESS")) {
+        alert("✅ Status barang berhasil diperbarui!");
+        muatPeminjamanAdmin();
+      } else {
+        alert("❌ Gagal memperbarui: " + text);
+      }
+    } catch (err) {
+      simpanPayloadKeAntrean('Pengembalian Barang', payload);
+      muatPeminjamanAdmin();
+    }
+  }
+}
 
     // --- FUNGSI KELOLA DATA KELUARGA & SENSUS WARGA ---
     function bukaModalKelolaWarga() {
