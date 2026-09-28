@@ -1474,10 +1474,17 @@ async function muatSemuaDataAdmin() {
       } catch(e) {}
     }
 
-    // 2. Fetch Data dari Server Utama di Latar Belakang (Cepat & Bebas 404)
+    // 2. Fetch Data Menggunakan Promise.all (Aman JSON & CSV)
     const [resRumah, resWarga] = await Promise.all([
-      fetch(urlPeta).then(r => r.json()).catch(() => null),
-      fetch(urlWarga).then(r => r.json()).catch(() => null)
+      fetch(urlPeta).then(async r => {
+        const txt = await r.text();
+        return txt.trim().startsWith('[') ? JSON.parse(txt) : parseCSV(txt);
+      }).catch(() => null),
+      
+      fetch(urlWarga).then(async r => {
+        const txt = await r.text();
+        return txt.trim().startsWith('[') ? JSON.parse(txt) : parseCSV(txt);
+      }).catch(() => null)
     ]);
     
     // Olah Data Peta / Rumah
@@ -1488,6 +1495,7 @@ async function muatSemuaDataAdmin() {
 
     // Olah Data Sensus Warga
     if (Array.isArray(resWarga) && resWarga.length > 1) {
+      globalDataWarga = resWarga.slice(1);
       localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
       prosesDanTampilkanStatistik(resWarga);
     }
