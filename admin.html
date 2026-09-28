@@ -78,16 +78,44 @@
     #searchInput { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; outline: none; }
     #search-box button { padding: 8px 12px; background: #111; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-    .filter-container { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-    .filter-row { display: flex; gap: 6px; width: 100%; justify-content: center; }
-    .filter-row:nth-child(2) { max-width: 90%; margin: 0 auto; }
-    .btn-filter {
-      flex: 1; justify-content: center; padding: 6px 8px; background: white; color: #333;
-      border: 1px solid #ccc; border-radius: 20px; font-size: 11.5px; font-weight: bold;
-      cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 3px;
-      white-space: nowrap;
-    }
-    .btn-filter.active { background: #00c853; color: white; border-color: #00c853; }
+  .filter-container { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+  width: 100%; 
+}
+
+.filter-row { 
+  display: flex; 
+  gap: 6px; 
+  width: 100%; 
+  justify-content: center; 
+}
+
+/* Hapus pembatas max-width 90% agar semua baris tombol & dropdown lebarnya seragam */
+.btn-filter {
+  flex: 1; 
+  justify-content: center; 
+  padding: 8px 10px; 
+  background: white; 
+  color: #333;
+  border: 1px solid #ccc; 
+  border-radius: 8px; /* Diubah dari 20px ke 8px agar serasi dengan dropdown */
+  font-size: 11.5px; 
+  font-weight: bold;
+  cursor: pointer; 
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+  display: flex; 
+  align-items: center; 
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.btn-purple {
+  background: #7c3aed;
+  color: white;
+  border-color: #6d28d9;
+}
 
     .modal-bg {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -145,57 +173,65 @@
       <button onclick="cariLokasi()">Cari</button>
     </div>
 
-    <div class="filter-container">
-      <div class="filter-row">
-        <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
-        <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
-        <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
-      </div>
-      <div class="filter-row">
-        <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
-        <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
-      </div>
+   <div class="filter-container">
+  <!-- 1. Dropdown Filter Lokasi Bangunan (Gabungan Semua Tombol Filter) -->
+ <div class="filter-row" style="margin-bottom: 8px;">
+  <select id="selectFilterKategori" onchange="filterKategori(this.value)" 
+          style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background-color: #ffffff; font-weight: bold; font-size: 13px; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer;">
+    <option value="semua">🌍 Filter: Tampilkan Semua Lokasi</option>
+    <option value="kost">🛏️ Filter: Kost / Kontrakan</option>
+    <option value="fasum">🏛️ Filter: Fasilitas Umum (Fasum)</option>
+    <option value="kuliner">🍽️ Filter: Kuliner / Warung</option>
+    <option value="minimarket">🏪 Filter: Minimarket / Toko</option>
+  </select>
+</div>
 
-      <div class="filter-row">
-        <button type="button" class="btn-filter btn-purple" onclick="bukaModalPinjamAdmin()">
-          📦 Pinjam Perkakas
-        </button>
-        <button type="button" class="btn-filter btn-purple" onclick="bukaModalLaporan()">
-          📊 Laporan Divisi
-        </button>
-      </div>
+  <!-- 2. Tombol Aksi Pinjam Perkakas & Laporan Divisi -->
+  <div class="filter-row">
+    <button type="button" class="btn-filter btn-purple" onclick="bukaModalPinjamAdmin()">
+      📦 Pinjam Perkakas
+    </button>
+    <button type="button" class="btn-filter btn-purple" onclick="bukaModalLaporan()">
+      📊 Laporan Divisi
+    </button>
+  </div>
 
-      <!-- Tombol khusus untuk Kelola Data Keluarga -->
-      <div class="filter-row">
-        <button type="button" class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1; width: 100%; justify-content: space-between; padding: 8px 12px;" onclick="bukaModalKelolaWarga()">
-  <span>👥 Kelola Data Keluarga</span>
-  <span id="badge-total-jiwa" style="background: rgba(255,255,255,0.25); color: white; padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-weight: bold;">
-    0 Jiwa
-  </span>
-</button>
-      </div>
-    </div>
+  <!-- 3. Tombol Kelola Data Keluarga -->
+  <div class="filter-row">
+    <button type="button" class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1; width: 100%; justify-content: space-between; padding: 8px 12px;" onclick="bukaModalKelolaWarga()">
+      <span>👥 Kelola Data Keluarga</span>
+      <span id="badge-total-jiwa" style="background: rgba(255,255,255,0.25); color: white; padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-weight: bold;">
+        0 Jiwa
+      </span>
+    </button>
+  </div>
+</div>
     
-    <!-- Section Persetujuan Chat Warga -->
-    <div style="margin-top: 12px; background-color: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 12px; color: #ffffff; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); font-family: sans-serif;">
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 8px; margin-bottom: 8px;">
-        <span style="font-size: 12px; font-weight: bold; color: #38bdf8;">👥 Persetujuan Akun Chat Warga RT 05</span>
-        <span id="pending-badge" style="background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px;">
-          0 Pending
-        </span>
-      </div>
+    <!-- Section Persetujuan Chat Warga Ringkas -->
+<div style="margin-top: 8px; background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 6px 10px; color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-family: sans-serif;">
+  <details id="details-chat-admin">
+    <summary style="display: flex; justify-content: space-between; align-items: center; cursor: pointer; user-select: none; font-size: 11.5px; font-weight: bold; color: #38bdf8; outline: none;">
+      <span style="display: flex; align-items: center; gap: 6px;">
+        <span>👥</span> Persetujuan Akun Chat Warga
+      </span>
+      <span id="pending-badge" style="background-color: rgba(245, 158, 11, 0.2); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.4); font-size: 10px; font-weight: bold; padding: 2px 8px; border-radius: 10px;">
+        0 Pending
+      </span>
+    </summary>
 
-      <div style="max-height: 160px; overflow-y: auto;">
+    <!-- Konten Utama (Hanya muncul jika panel diklik/dibuka) -->
+    <div style="margin-top: 8px; border-top: 1px solid #1e293b; padding-top: 8px;">
+      <div style="max-height: 140px; overflow-y: auto;">
         <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
           <thead>
-            <tr style="border-bottom: 1px solid #334155; color: #94a3b8; text-transform: uppercase; font-size: 10px;">
-              <th style="padding: 6px;">Nama / No Rumah / Kost</th>
-              <th style="padding: 6px; text-align: center;">Aksi</th>
+            <tr style="border-bottom: 1px solid #334155; color: #94a3b8; text-transform: uppercase; font-size: 9.5px;">
+              <th style="padding: 4px;">Nama / No Rumah</th>
+              <th style="padding: 4px; text-align: center;">Aksi</th>
             </tr>
           </thead>
           <tbody id="pending-users-list">
             <tr>
-              <td colspan="2" style="padding: 10px; text-align: center; color: #64748b; font-style: italic;">
+              <td colspan="2" style="padding: 8px; text-align: center; color: #64748b; font-style: italic;">
                 Memuat pendaftar...
               </td>
             </tr>
@@ -203,11 +239,12 @@
         </table>
       </div>
 
-      <details style="margin-top: 10px; border-top: 1px solid #1e293b; padding-top: 6px; font-size: 11px;">
+      <!-- Sub-panel Kelola Seluruh Warga -->
+      <details style="margin-top: 8px; border-top: 1px dotted #334155; padding-top: 6px; font-size: 10.5px;">
         <summary style="cursor: pointer; color: #94a3b8; font-weight: 500; user-select: none;">
           ⚙️ Kelola Akun Seluruh Warga (<span id="total-warga-count">0</span>)
         </summary>
-        <div style="max-height: 150px; overflow-y: auto; margin-top: 6px;">
+        <div style="max-height: 120px; overflow-y: auto; margin-top: 6px;">
           <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
             <tbody id="all-users-list">
             </tbody>
@@ -215,62 +252,65 @@
         </div>
       </details>
     </div>
-  </div>
+  </details>
+</div>
+    
+</div>
 
-  <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
-  <div id="modal-form" class="modal-bg" onclick="event.stopPropagation(); if(event.target === this) tutupModalForm();">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="formTitle">📍 Tambah Data Baru</h3>
-        <button class="close-btn" onclick="tutupModalForm()">&times;</button>
-      </div>
-      <form id="dataForm">
-        <input type="hidden" name="pin" id="inputPinForm">
-        
-        <div class="form-group">
-          <label for="inputNama">Nama / No. Rumah / Tempat:</label>
-          <input type="text" name="nama" id="inputNama" required>
-        </div>
-        
-        <div style="display: flex; gap: 10px;">
-          <div class="form-group" style="flex: 1;">
-            <label for="inputLat">Latitude:</label>
-            <input type="text" name="lat" id="inputLat" required>
-          </div>
-          <div class="form-group" style="flex: 1;">
-            <label for="inputLng">Longitude:</label>
-            <input type="text" name="lng" id="inputLng" required>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label for="inputKategori">Kategori:</label>
-          <select name="kategori" id="inputKategori">
-            <option value="Rumah">🏠 Rumah</option>
-            <option value="Kost">🛏️ Kost</option>
-            <option value="Fasum">🏛️ Fasum</option>
-            <option value="Kuliner">🍽️ Kuliner</option>
-            <option value="Minimarket">🏪 Minimarket</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="inputHidden">Sembunyikan dari Peta?</label>
-          <select name="hidden" id="inputHidden">
-            <option value="FALSE">Tidak (Tampil)</option>
-            <option value="TRUE">Ya (Sembunyikan)</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="inputFoto">URL Foto Depan (Opsional):</label>
-          <input type="url" name="foto" id="inputFoto">
-        </div>
-        
-        <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan ke Google Sheet</button>
-      </form>
+ <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
+<div id="modal-form" class="modal-bg" onclick="bukaTutupLuarForm(event)">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="formTitle">📍 Tambah Data Baru</h3>
+      <button class="close-btn" onclick="tutupModalForm()">&times;</button>
     </div>
+    <form id="dataForm">
+      <input type="hidden" name="pin" id="inputPinForm">
+      
+      <div class="form-group">
+        <label for="inputNama">Nama / No. Rumah / Tempat:</label>
+        <input type="text" name="nama" id="inputNama" required>
+      </div>
+      
+      <div style="display: flex; gap: 10px;">
+        <div class="form-group" style="flex: 1;">
+          <label for="inputLat">Latitude:</label>
+          <input type="text" name="lat" id="inputLat" required>
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label for="inputLng">Longitude:</label>
+          <input type="text" name="lng" id="inputLng" required>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="inputKategori">Kategori:</label>
+        <select name="kategori" id="inputKategori">
+          <option value="Rumah">🏠 Rumah</option>
+          <option value="Kost">🛏️ Kost</option>
+          <option value="Fasum">🏛️ Fasum</option>
+          <option value="Kuliner">🍽️ Kuliner</option>
+          <option value="Minimarket">🏪 Minimarket</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="inputHidden">Sembunyikan dari Peta?</label>
+        <select name="hidden" id="inputHidden">
+          <option value="FALSE">Tidak (Tampil)</option>
+          <option value="TRUE">Ya (Sembunyikan)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="inputFoto">URL Foto Depan (Opsional):</label>
+        <input type="url" name="foto" id="inputFoto">
+      </div>
+      
+      <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan ke Google Sheet</button>
+    </form>
   </div>
+</div>
 
   <!-- MODAL 2: Form Laporan Keuangan Divisi -->
   <div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
@@ -524,10 +564,17 @@
     </div>
   </div>
     
-  <!-- JAVASCRIPT LOGIC -->
+  <!-- JAVASCRIPT LOGIC SCRIP UTAMA-->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const GAS_WEB_APP_URL = RT05_CONFIG.GAS_WEB_APP_URL;
+
+    
+    // BARU (Aman untuk Angka, Null, maupun Undefined)
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
 
     // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
     let sedangMengirimAdmin = false;
@@ -820,132 +867,199 @@ const payload = {
   window.location.href = "index.html";
 }
     
-    var map, daftarPin = [], pinRumahAktif = null;
-    var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+var map, daftarPin = [], pinRumahAktif = null;
+  var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
 
-    function initMap() {
-      if (map) return;
+  // 🛠️ LAYER GROUP UNTUK MENGELOLA MARKER PETA DENGAN BERSIH
+  var markerGroup = L.layerGroup();
+  var pinHasilPencarian = null;
 
-      map = L.map('map').setView([-7.7423, 110.3842], 17);
-      L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
-      L.DomEvent.disableClickPropagation(document.getElementById('modal-admin-inventaris'));
-      L.DomEvent.disableClickPropagation(document.getElementById('modal-kelola-warga'));
-      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
+  function initMap() {
+    if (map) return;
 
-      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+    map = L.map('map').setView([-7.7423, 110.3842], 17);
+    
+    L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
+    L.DomEvent.disableClickPropagation(document.getElementById('modal-admin-inventaris'));
+    L.DomEvent.disableClickPropagation(document.getElementById('modal-kelola-warga'));
+    
+    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
 
-      map.on('click', function(e) {
-        if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex' || document.getElementById('modal-kelola-warga').style.display === 'flex') return;
-        document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
-        document.getElementById('inputNama').value = "";
-        document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
-        document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
-        document.getElementById('inputPinForm').value = localStorage.getItem('verifiedPin') || '';
-        document.getElementById('inputFoto').value = "";
-        document.getElementById('modal-form').style.display = 'flex';
-      });
+    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-      ambilDataSheets('cache_peta_admin', SHEET_URL, (data, fromCache) => {
-        var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-        daftarPin = [];
+    // Tempelkan LayerGroup utama ke peta
+    markerGroup.addTo(map);
 
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 3 && kolom[0] !== '') {
-            var latClean = perbaikiKoordinat(kolom[1]);
-            var lngClean = perbaikiKoordinat(kolom[2]);
-            
-            var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
-            var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
-            var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
+    map.on('click', function(e) {
+      if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex' || document.getElementById('modal-kelola-warga').style.display === 'flex') return;
+      document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
+      document.getElementById('inputNama').value = "";
+      document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
+      document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+      document.getElementById('inputPinForm').value = localStorage.getItem('verifiedPin') || '';
+      document.getElementById('inputFoto').value = "";
+      document.getElementById('modal-form').style.display = 'flex';
+    });
 
-            var item = {
-              name: namaAsli,
-              nameAsli: namaAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
-              hidden: statusHidden,
-              foto: urlFoto
-            };
+    ambilDataSheets('cache_peta_admin', SHEET_URL, (data, fromCache) => {
+      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+      daftarPin = [];
 
-            if (isNaN(item.lat) || isNaN(item.lng)) return;
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          var latClean = perbaikiKoordinat(kolom[1]);
+          var lngClean = perbaikiKoordinat(kolom[2]);
+          
+          var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
+          var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
+          var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
+          var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
 
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
-            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-            
-            let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+          var item = {
+            name: namaAsli,
+            nameAsli: namaAsli,
+            lat: parseFloat(latClean),
+            lng: parseFloat(lngClean),
+            hidden: statusHidden,
+            foto: urlFoto
+          };
 
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            
-            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-            if (!item.hidden) marker.addTo(map);
+          if (isNaN(item.lat) || isNaN(item.lng)) return;
 
-            daftarPin.push({ 
-              namaRaw: item.nameAsli,
-              nama: item.nameAsli.toLowerCase(), 
-              marker: marker, 
-              lat: item.lat, 
-              lng: item.lng,
-              hidden: item.hidden,
-              kategori: dataIkon.kategori 
-            });
-          }
-        });
-      });
-    }
+          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+          
+          let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
 
-    function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
+          var customIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
+            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+          });
+          
+          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-    function filterKategori(kat, btnElement) {
-      var btn = btnElement || (window.event ? window.event.currentTarget : null);
+          var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
 
-      document.querySelectorAll('.btn-filter').forEach(function(b) {
-        b.classList.remove('active');
-      });
-
-      if (btn && btn.classList) {
-        btn.classList.add('active');
-      }
-
-      daftarPin.forEach(function(pin) {
-        map.removeLayer(pin.marker);
-        if (!pin.hidden) {
-          if (kat === 'semua' || pin.kategori === kat) {
-            pin.marker.addTo(map);
-          }
+          daftarPin.push({ 
+            namaRaw: item.nameAsli,
+            nama: item.nameAsli.toLowerCase(), 
+            marker: marker, 
+            lat: item.lat, 
+            lng: item.lng,
+            hidden: item.hidden,
+            kategori: katFinal
+          });
         }
       });
-    }
 
-    function cariLokasi() {
-      var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
-      if (!kataKunci) return;
+      // Terapkan filter pertama kali setelah seluruh data siap
+      filterKategori('semua');
+    });
+  }
 
-      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+  // 🛠️ FUNGSI FILTER BERSIH MENGGUNAKAN LAYERGROUP
+  function filterKategori(kat) {
+    var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
 
-      if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10);
-        hasil = daftarPin.find(pin => {
-          var kataKata = pin.nama.split(/[\s,().-]+/);
-          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-        });
+    // 1. Bersihkan seluruh marker yang menempel di peta sekaligus
+    markerGroup.clearLayers();
+
+    daftarPin.forEach(function(pin) {
+      if (pin.hidden) return;
+
+      var teksKategori = String(pin.kategori || '').toLowerCase();
+      var teksNama = String(pin.nama || '').toLowerCase();
+      var isMatch = false;
+
+      var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
+                   teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+                   
+      var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
+                    teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
+
+      var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
+                      teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
+
+      var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
+                         teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+
+      var isPengurus = teksNama.includes('rt') || teksNama.includes('rw') || teksKategori.includes('rt') || teksKategori.includes('rw');
+
+      if (kategoriPilihan === 'semua') {
+        if (isPengurus || isFasum || isKost || isKuliner || isMinimarket) {
+          isMatch = true;
+        } else if (pinHasilPencarian && pinHasilPencarian === pin) {
+          isMatch = true;
+        }
+      } else if (kategoriPilihan === 'kost') {
+        isMatch = isKost;
+      } else if (kategoriPilihan === 'fasum') {
+        isMatch = isFasum;
+      } else if (kategoriPilihan === 'kuliner') {
+        isMatch = isKuliner;
+      } else if (kategoriPilihan === 'minimarket') {
+        isMatch = isMinimarket;
       }
 
-      if (!hasil && !/^\d+$/.test(kataKunci)) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
+      // 2. Masukkan marker yang cocok ke dalam LayerGroup
+      if (isMatch) {
+        markerGroup.addLayer(pin.marker);
       }
+    });
+  }
 
-      if (hasil) {
-        if (pinRumahAktif) map.removeLayer(pinRumahAktif);
-        if (!map.hasLayer(hasil.marker)) { hasil.marker.addTo(map); pinRumahAktif = hasil.marker; }
-        map.flyTo([hasil.lat, hasil.lng], 19); setTimeout(() => { hasil.marker.openPopup(); }, 800);
-      } else alert("Lokasi atau nomor rumah tidak ditemukan.");
+  // 🛠️ FUNGSI PENCARIAN TUNGGAL SINKRON DENGAN LAYERGROUP
+  function cariLokasi() {
+    var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
+    var kataKunci = inputElem ? inputElem.value.toLowerCase().trim() : '';
+    if (!kataKunci) return;
+
+    var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+
+    if (!hasil && /^\d+$/.test(kataKunci)) {
+      var angkaCari = parseInt(kataKunci, 10);
+      hasil = daftarPin.find(pin => {
+        var kataKata = pin.nama.split(/[\s,().-]+/);
+        return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
+      });
     }
+
+    if (!hasil) {
+      hasil = daftarPin.find(pin => pin.nama.includes(kataKunci) || pin.namaRaw.toLowerCase().includes(kataKunci));
+    }
+
+    if (hasil) {
+      pinHasilPencarian = hasil;
+
+      if (!markerGroup.hasLayer(hasil.marker)) { 
+        markerGroup.addLayer(hasil.marker); 
+      }
+      
+      map.flyTo([hasil.lat, hasil.lng], 19); 
+      setTimeout(() => { hasil.marker.openPopup(); }, 500);
+    } else {
+      alert("Nama atau nomor rumah tidak ditemukan.");
+    }
+  }
+
+  function cariNama() { cariLokasi(); }
+
+    // 🛠️ FUNGSI UNTUK MENUTUP MODAL TAMBAH DATA BARU
+function tutupModalForm() {
+  var modal = document.getElementById('modal-form');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+// Fitur Tambahan: Menutup modal jika area di luar kotak modal diklik
+function bukaTutupLuarForm(e) {
+  if (e.target.id === 'modal-form') {
+    tutupModalForm();
+  }
+}
 
     function bukaModalPinjamAdmin() {
       muatPeminjamanAdmin();
@@ -1584,140 +1698,134 @@ document.addEventListener("DOMContentLoaded", () => {
 // <!-- PENUTUP SCRIPT UTAMA PWA -->
   </script>
 
-  <!-- Script Khusus Helper & Listener Awal -->
-  <script>
-    // Pindahkan escapeHTML ke sini agar bisa diakses secara global oleh fungsi inventaris
-    // BARU (Aman untuk Angka, Null, maupun Undefined)
-function escapeHTML(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
-}
 
-    // Listener Tunggal DOMContentLoaded
-    document.addEventListener("DOMContentLoaded", () => {
-      perbaruiIndikatorSyncAdmin();
-      muatPeminjamanAdmin();
-
-      // Periksa Sesi Login Admin (Timeout 10 Menit)
-      if (periksaSesiAdmin()) {
-        muatSemuaDataAdmin();
-      } else {
-        setTimeout(() => {
-          const inputPin = document.getElementById('adminPin');
-          if (inputPin) inputPin.focus();
-        }, 300);
-      }
-
-      if (navigator.onLine) {
-        kirimDataPendingAdmin();
-      }
-    });
-  </script>
+ 
 
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <!-- MODULE FIREBASE -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+ <!-- MODULE FIREBASE -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    const app = initializeApp(RT05_CONFIG.FIREBASE);
-    const db = getDatabase(app);
+  const app = initializeApp(RT05_CONFIG.FIREBASE);
+  const db = getDatabase(app);
 
-    const usersRef = ref(db, 'users');
-    onValue(usersRef, (snapshot) => {
-      const pendingTable = document.getElementById('pending-users-list');
-      const allUsersTable = document.getElementById('all-users-list');
-      
-      if (!pendingTable || !allUsersTable) return;
+  const usersRef = ref(db, 'users');
+  onValue(usersRef, (snapshot) => {
+    const pendingTable = document.getElementById('pending-users-list');
+    const allUsersTable = document.getElementById('all-users-list');
+    
+    if (!pendingTable || !allUsersTable) return;
 
-      pendingTable.innerHTML = '';
-      allUsersTable.innerHTML = '';
+    pendingTable.innerHTML = '';
+    allUsersTable.innerHTML = '';
 
-      if (!snapshot.exists()) {
-        pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar.</td></tr>';
-        return;
+    if (!snapshot.exists()) {
+      pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar.</td></tr>';
+      return;
+    }
+
+    let pendingCount = 0;
+    let totalCount = 0;
+
+    snapshot.forEach((childSnap) => {
+      const u = childSnap.val();
+      const uid = childSnap.key;
+
+      if (u.status === 'pending') {
+        pendingCount++;
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = "1px solid #1e293b";
+        tr.innerHTML = `
+          <td style="padding: 6px;">
+            <strong style="color: #fff; display: block;">${escapeHTML(u.nama)}</strong>
+            <span style="color: #94a3b8; font-size: 10px;">${escapeHTML(u.hunian)}</span>
+          </td>
+          <td style="padding: 6px; text-align: center; white-space: nowrap;">
+            <button onclick="approveUser('${uid}')" style="background-color: #10b981; color: #022c22; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
+              ACC
+            </button>
+            <button onclick="rejectUser('${uid}')" style="background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
+              Tolak
+            </button>
+          </td>
+        `;
+        pendingTable.appendChild(tr);
+      } else if (u.status === 'aktif') {
+        totalCount++;
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = "1px solid #1e293b";
+        
+        const isAdmin = u.role === 'admin';
+        const roleBadge = isAdmin ? 
+          '<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold;">ADMIN</span>' : 
+          '<span style="background: #334155; color: #94a3b8; padding: 1px 4px; border-radius: 3px; font-size: 9px;">WARGA</span>';
+
+        tr.innerHTML = `
+          <td style="padding: 6px;">
+            <strong style="color: #e2e8f0; display: block;">${escapeHTML(u.username || u.nama)} ${roleBadge}</strong>
+            <span style="color: #64748b; font-size: 10px;">${escapeHTML(u.hunian)}</span>
+          </td>
+          <td style="padding: 6px; text-align: center; white-space: nowrap;">
+            <button onclick="toggleRole('${uid}', '${u.role}')" style="background: #334155; color: #cbd5e1; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
+              ${isAdmin ? 'Warga' : 'Jadi Admin'}
+            </button>
+            <button onclick="rejectUser('${uid}')" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
+              ❌Hapus Akun
+            </button>
+          </td>
+        `;
+        allUsersTable.appendChild(tr);
       }
-
-      let pendingCount = 0;
-      let totalCount = 0;
-
-      snapshot.forEach((childSnap) => {
-        const u = childSnap.val();
-        const uid = childSnap.key;
-
-        if (u.status === 'pending') {
-          pendingCount++;
-          const tr = document.createElement('tr');
-          tr.style.borderBottom = "1px solid #1e293b";
-          tr.innerHTML = `
-            <td style="padding: 6px;">
-              <strong style="color: #fff; display: block;">${escapeHTML(u.nama)}</strong>
-              <span style="color: #94a3b8; font-size: 10px;">${escapeHTML(u.hunian)}</span>
-            </td>
-            <td style="padding: 6px; text-align: center; white-space: nowrap;">
-              <button onclick="approveUser('${uid}')" style="background-color: #10b981; color: #022c22; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
-                ACC
-              </button>
-              <button onclick="rejectUser('${uid}')" style="background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
-                Tolak
-              </button>
-            </td>
-          `;
-          pendingTable.appendChild(tr);
-        } else if (u.status === 'aktif') {
-          totalCount++;
-          const tr = document.createElement('tr');
-          tr.style.borderBottom = "1px solid #1e293b";
-          
-          const isAdmin = u.role === 'admin';
-          const roleBadge = isAdmin ? 
-            '<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold;">ADMIN</span>' : 
-            '<span style="background: #334155; color: #94a3b8; padding: 1px 4px; border-radius: 3px; font-size: 9px;">WARGA</span>';
-
-          tr.innerHTML = `
-            <td style="padding: 6px;">
-              <strong style="color: #e2e8f0; display: block;">${escapeHTML(u.username || u.nama)} ${roleBadge}</strong>
-              <span style="color: #64748b; font-size: 10px;">${escapeHTML(u.hunian)}</span>
-            </td>
-            <td style="padding: 6px; text-align: center; white-space: nowrap;">
-              <button onclick="toggleRole('${uid}', '${u.role}')" style="background: #334155; color: #cbd5e1; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
-                ${isAdmin ? 'Warga' : 'Jadi Admin'}
-              </button>
-              <button onclick="rejectUser('${uid}')" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
-                ❌Hapus Akun
-              </button>
-            </td>
-          `;
-          allUsersTable.appendChild(tr);
-        }
-      });
-
-      if (pendingCount === 0) {
-        pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar pending.</td></tr>';
-      }
-
-      const pBadge = document.getElementById('pending-badge');
-      const tWarga = document.getElementById('total-warga-count');
-      if (pBadge) pBadge.innerText = `${pendingCount} Pending`;
-      if (tWarga) tWarga.innerText = totalCount;
     });
 
-    window.approveUser = (uid) => {
-      update(ref(db, `users/${uid}`), { status: 'aktif' });
-    };
+    if (pendingCount === 0) {
+      pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar pending.</td></tr>';
+    }
 
-    window.rejectUser = (uid) => {
-      if (confirm("Hapus / Tolak pendaftaran warga ini?")) {
-        remove(ref(db, `users/${uid}`));
+    const pBadge = document.getElementById('pending-badge');
+    const tWarga = document.getElementById('total-warga-count');
+    const detailsElem = document.getElementById('details-chat-admin');
+
+    if (pBadge) pBadge.innerText = `${pendingCount} Pending`;
+    if (tWarga) tWarga.innerText = totalCount;
+
+    // 🛠️ LOGIKA OTOMATISASI BUKA/TUTUP & UBAH WARNA BADGE
+    if (detailsElem) {
+      if (pendingCount > 0) {
+        detailsElem.open = true; // Otomatis mengembang jika ada pendaftar baru
+        if (pBadge) {
+          pBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.2)'; // Merah menyala
+          pBadge.style.color = '#f87171';
+          pBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
+        }
+      } else {
+        detailsElem.open = false; // Otomatis menutup menjadi 1 baris jika 0 Pending
+        if (pBadge) {
+          pBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.2)'; // Kuning biasa
+          pBadge.style.color = '#fbbf24';
+          pBadge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
+        }
       }
-    };
+    }
+  });
 
-    window.toggleRole = (uid, currentRole) => {
-      const newRole = currentRole === 'admin' ? 'warga' : 'admin';
-      update(ref(db, `users/${uid}`), { role: newRole });
-    };
-  </script>
+  window.approveUser = (uid) => {
+    update(ref(db, `users/${uid}`), { status: 'aktif' });
+  };
+
+  window.rejectUser = (uid) => {
+    if (confirm("Hapus / Tolak pendaftaran warga ini?")) {
+      remove(ref(db, `users/${uid}`));
+    }
+  };
+
+  window.toggleRole = (uid, currentRole) => {
+    const newRole = currentRole === 'admin' ? 'warga' : 'admin';
+    update(ref(db, `users/${uid}`), { role: newRole });
+  };
+</script>
 </body>
 </html>
