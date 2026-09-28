@@ -649,14 +649,14 @@ function escapeHTML(str) {
     }
 
     function simpanPayloadKeAntrean(label, payload) {
-      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-      antrean.push({ label: label, payload: payload, time: Date.now() });
-      localStorage.setItem('antrean_admin', JSON.stringify(antrean));
-      perbaruiIndikatorSyncAdmin();
-      alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
-      kirimDataPendingAdmin();
-    }
-
+  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+  payload.token = payload.token || localStorage.getItem('adminToken') || '';
+  antrean.push({ label: label, payload: payload, time: Date.now() });
+  localStorage.setItem('antrean_admin', JSON.stringify(antrean));
+  perbaruiIndikatorSyncAdmin();
+  alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
+  kirimDataPendingAdmin();
+}
     window.addEventListener('online', () => {
       console.log("Jaringan online kembali. Mengirim data admin pending...");
       perbaruiIndikatorSyncAdmin();
@@ -871,15 +871,19 @@ const payload = {
 }
     
 var map, daftarPin = [], pinRumahAktif = null;
-  var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
 
-  // 🛠️ LAYER GROUP UNTUK MENGELOLA MARKER PETA DENGAN BERSIH
-  var markerGroup = L.layerGroup();
-  var pinHasilPencarian = null;
+// 🛠️ LAYER GROUP UNTUK MENGELOLA MARKER PETA DENGAN BERSIH
+var markerGroup = L.layerGroup();
+var pinHasilPencarian = null;
 
-  function initMap() {
-    if (map) return;
+function initMap() {
+  if (map) return;
 
+  // SERTAKAN TOKEN DI SINI AGAR BEBAS ERROR 401/403 SAAT MENGAMBIL DATA PETA
+  const tokenAdmin = localStorage.getItem('adminToken') || '';
+  var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
+
+ 
     map = L.map('map').setView([-7.7423, 110.3842], 17);
     
     L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
