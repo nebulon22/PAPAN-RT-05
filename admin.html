@@ -702,26 +702,38 @@ function bukaAkses() {
 }
 
 // ==========================================
-// AUTO LOGIN ADMIN SAAT PWA DIBUKA
+// AUTO LOGIN ADMIN SAAT PWA DIBUKA (+ TIMEOUT 10 MENIT)
 // ==========================================
-if (
-  localStorage.getItem('authAdmin') === 'true' &&
-  localStorage.getItem('adminToken')
-) {
-  bukaAkses();
+function periksaSesiAdmin() {
+  const isAuth = localStorage.getItem('authAdmin') === 'true';
+  const token = localStorage.getItem('adminToken');
+  const loginTime = parseInt(localStorage.getItem('admin_login_time') || '0', 10);
+  
+  const BATAS_WAKTU = 10 * 60 * 1000; // 10 Menit (dalam milidetik)
+  const waktuSekarang = Date.now();
+
+  // 1. Jika terautentikasi TAPI sudah lewat dari 10 menit
+  if (isAuth && token && (waktuSekarang - loginTime > BATAS_WAKTU)) {
+    // Hapus sesi & paksa login PIN ulang
+    localStorage.removeItem('authAdmin');
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('admin_login_time');
+    alert("⏱️ Sesi login Anda telah berakhir (10 menit). Silakan masukkan PIN kembali.");
+    return false;
+  }
+
+  // 2. Jika sesi masih berlaku (< 10 menit)
+  if (isAuth && token) {
+    bukaAkses();
+    return true;
+  }
+
+  return false;
 }
 
-  function logoutAdmin() {
-  // Hapus kredensial & cache sensitif dari memori browser
-  localStorage.removeItem('authAdmin');
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('verifiedPin');
-  localStorage.removeItem('cache_data_warga');
-  localStorage.removeItem('admin_login_time');
-  
-  // Arahkan kembali ke Mode Warga / Publik
-  window.location.href = "index.html";
-}
+// Jalankan pemeriksaan sesi
+periksaSesiAdmin();
+ 
 
     document.getElementById('dataForm').addEventListener('submit', function(e) {
       e.preventDefault();
@@ -774,6 +786,18 @@ const payload = {
       });
     });
 
+ function logoutAdmin() {
+  // Hapus kredensial & cache sensitif dari memori browser
+  localStorage.removeItem('authAdmin');
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('verifiedPin');
+  localStorage.removeItem('cache_data_warga');
+  localStorage.removeItem('admin_login_time');
+  
+  // Arahkan kembali ke Mode Warga / Publik
+  window.location.href = "index.html";
+}
+    
     var map, daftarPin = [], pinRumahAktif = null;
     var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
 
