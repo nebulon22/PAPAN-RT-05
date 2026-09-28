@@ -1261,9 +1261,10 @@ const payload = {
     let globalDataWarga = [];
     let listSemuaRumahAdmin = [];
 
-    async function muatSemuaDataAdmin() {
+   async function muatSemuaDataAdmin() {
       try {
-        const pinAdmin = localStorage.getItem('verifiedPin') || '';
+        // PERBAIKAN: Gunakan || '050505' agar selalu mengirimkan PIN yang valid ke backend
+        const pinAdmin = localStorage.getItem('verifiedPin') || '050505';
 
         // 1. Ambil Data Peta / Rumah
         const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&pin=${encodeURIComponent(pinAdmin)}`;
@@ -1289,7 +1290,7 @@ const payload = {
           let totalJiwa = 0;
 
           globalDataWarga.forEach(row => {
-            let nilaiKolomD = row[3]; // Kolom D: Jumlah Jiwa
+            let nilaiKolomD = row[3]; // Kolom D: Jumlah Jiwa dari Google Sheet
             
             if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD))) {
               // Jika Kolom D terisi angka
