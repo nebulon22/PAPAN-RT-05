@@ -908,38 +908,38 @@ const payload = {
   var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
 
   daftarPin.forEach(function(pin) {
-    // 1. Sembunyikan semua marker terlebih dahulu
+    // 1. Selalu copot/sembunyikan marker terlebih dahulu dari peta
     if (map.hasLayer(pin.marker)) {
       map.removeLayer(pin.marker);
     }
 
-    if (!pin.hidden) {
-      // Ambil nilai kategori atau jenis dari data pin
-      var pinKat = String(pin.kategori || pin.jenis || '').trim().toLowerCase();
-      
-      // Cek pencocokan fleksibel
-      var isMatch = false;
+    // Jika pin di-hide secara sistem, lewati
+    if (pin.hidden) return;
 
-      if (kategoriPilihan === 'semua') {
-        isMatch = true;
-      } else if (kategoriPilihan === 'kost') {
-        // Cocokkan jika memuat kata kost, kos, atau kontrakan
-        isMatch = pinKat.includes('kost') || pinKat.includes('kos') || pinKat.includes('kontrakan');
-      } else if (kategoriPilihan === 'fasum') {
-        isMatch = pinKat.includes('fasum') || pinKat.includes('fasilitas') || pinKat.includes('umum');
-      } else if (kategoriPilihan === 'kuliner') {
-        isMatch = pinKat.includes('kuliner') || pinKat.includes('warung') || pinKat.includes('makan');
-      } else if (kategoriPilihan === 'minimarket') {
-        isMatch = pinKat.includes('minimarket') || pinKat.includes('toko') || pinKat.includes('swalayan');
-      } else {
-        // Pencocokan persis jika kategori lain
-        isMatch = (pinKat === kategoriPilihan);
-      }
+    // 2. Ambil kategori dari data pin (pastikan string bersih)
+    var pinKat = pin.kategori ? String(pin.kategori).trim().toLowerCase() : '';
+    var pinJenis = pin.jenis ? String(pin.jenis).trim().toLowerCase() : '';
+    
+    // Gabungkan untuk pencarian kata kunci
+    var gabungKat = pinKat + ' ' + pinJenis;
 
-      // Tampilkan ke peta jika cocok
-      if (isMatch) {
-        pin.marker.addTo(map);
-      }
+    var isMatch = false;
+
+    if (kategoriPilihan === 'semua') {
+      isMatch = true;
+    } else if (kategoriPilihan === 'kost') {
+      isMatch = gabungKat.includes('kost') || gabungKat.includes('kos') || gabungKat.includes('kontrakan');
+    } else if (kategoriPilihan === 'fasum') {
+      isMatch = gabungKat.includes('fasum') || gabungKat.includes('fasilitas') || gabungKat.includes('umum');
+    } else if (kategoriPilihan === 'kuliner') {
+      isMatch = gabungKat.includes('kuliner') || gabungKat.includes('warung') || gabungKat.includes('makan');
+    } else if (kategoriPilihan === 'minimarket') {
+      isMatch = gabungKat.includes('minimarket') || gabungKat.includes('toko') || gabungKat.includes('swalayan');
+    }
+
+    // 3. Hanya tampilkan jika benar-benar cocok (isMatch = true)
+    if (isMatch) {
+      pin.marker.addTo(map);
     }
   });
 }
