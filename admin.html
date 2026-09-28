@@ -1261,9 +1261,9 @@ const payload = {
     let globalDataWarga = [];
     let listSemuaRumahAdmin = [];
 
-  async function muatSemuaDataAdmin() {
+async function muatSemuaDataAdmin() {
       try {
-        // AMBIL TOKEN (Bukan PIN hardcode!)
+        // Ambil adminToken hasil login (Bukan PIN hardcode!)
         const tokenAdmin = localStorage.getItem('adminToken') || '';
 
         // 1. Ambil Data Peta / Rumah dengan Token
@@ -1275,7 +1275,7 @@ const payload = {
           listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? row[0].trim() : '').filter(Boolean);
         }
 
-        // 2. Ambil Data Sensus Warga dengan Token
+        // 2. Ambil Data Sensus Warga dengan Token (Aman tanpa menyisipkan PIN di HTML)
         const urlWarga = `${URL_API_WARGA}?token=${encodeURIComponent(tokenAdmin)}`;
         const resWarga = await fetch(urlWarga).then(r => r.json());
         
@@ -1288,7 +1288,7 @@ const payload = {
           let totalJiwa = 0;
 
           globalDataWarga.forEach(row => {
-            let nilaiKolomD = row[3];
+            let nilaiKolomD = row[3]; // Kolom D: Jumlah Jiwa
             
             if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD))) {
               totalJiwa += parseInt(nilaiKolomD);
