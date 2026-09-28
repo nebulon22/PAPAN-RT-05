@@ -145,36 +145,39 @@
       <button onclick="cariLokasi()">Cari</button>
     </div>
 
-    <div class="filter-container">
-      <div class="filter-row">
-        <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
-        <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
-        <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
-      </div>
-      <div class="filter-row">
-        <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
-        <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
-      </div>
+   <div class="filter-container">
+  <!-- 1. Dropdown Filter Lokasi Bangunan (Gabungan Semua Tombol Filter) -->
+  <div class="filter-row" style="margin-bottom: 8px;">
+    <select id="selectFilterKategori" onchange="filterKategori(this.value, this)" 
+            style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background-color: #ffffff; font-weight: bold; font-size: 13px; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer;">
+      <option value="semua">🌍 Filter: Tampilkan Semua Lokasi</option>
+      <option value="kost">🛏️ Filter: Kost / Kontrakan</option>
+      <option value="fasum">🏛️ Filter: Fasilitas Umum (Fasum)</option>
+      <option value="kuliner">🍽️ Filter: Kuliner / Warung</option>
+      <option value="minimarket">🏪 Filter: Minimarket / Toko</option>
+    </select>
+  </div>
 
-      <div class="filter-row">
-        <button type="button" class="btn-filter btn-purple" onclick="bukaModalPinjamAdmin()">
-          📦 Pinjam Perkakas
-        </button>
-        <button type="button" class="btn-filter btn-purple" onclick="bukaModalLaporan()">
-          📊 Laporan Divisi
-        </button>
-      </div>
+  <!-- 2. Tombol Aksi Pinjam Perkakas & Laporan Divisi -->
+  <div class="filter-row">
+    <button type="button" class="btn-filter btn-purple" onclick="bukaModalPinjamAdmin()">
+      📦 Pinjam Perkakas
+    </button>
+    <button type="button" class="btn-filter btn-purple" onclick="bukaModalLaporan()">
+      📊 Laporan Divisi
+    </button>
+  </div>
 
-      <!-- Tombol khusus untuk Kelola Data Keluarga -->
-      <div class="filter-row">
-        <button type="button" class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1; width: 100%; justify-content: space-between; padding: 8px 12px;" onclick="bukaModalKelolaWarga()">
-  <span>👥 Kelola Data Keluarga</span>
-  <span id="badge-total-jiwa" style="background: rgba(255,255,255,0.25); color: white; padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-weight: bold;">
-    0 Jiwa
-  </span>
-</button>
-      </div>
-    </div>
+  <!-- 3. Tombol Kelola Data Keluarga -->
+  <div class="filter-row">
+    <button type="button" class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1; width: 100%; justify-content: space-between; padding: 8px 12px;" onclick="bukaModalKelolaWarga()">
+      <span>👥 Kelola Data Keluarga</span>
+      <span id="badge-total-jiwa" style="background: rgba(255,255,255,0.25); color: white; padding: 2px 8px; border-radius: 12px; font-size: 10.5px; font-weight: bold;">
+        0 Jiwa
+      </span>
+    </button>
+  </div>
+</div>
     
     <!-- Section Persetujuan Chat Warga -->
     <div style="margin-top: 12px; background-color: #0f172a; border: 1px solid #334155; border-radius: 12px; padding: 12px; color: #ffffff; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); font-family: sans-serif;">
@@ -901,26 +904,21 @@ const payload = {
 
     function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
 
-    function filterKategori(kat, btnElement) {
-      var btn = btnElement || (window.event ? window.event.currentTarget : null);
+   function filterKategori(kat) {
+  var kategoriPilihan = String(kat || 'semua').toLowerCase();
 
-      document.querySelectorAll('.btn-filter').forEach(function(b) {
-        b.classList.remove('active');
-      });
-
-      if (btn && btn.classList) {
-        btn.classList.add('active');
+  daftarPin.forEach(function(pin) {
+    map.removeLayer(pin.marker);
+    if (!pin.hidden) {
+      // Cek kategori pin (dikonversi ke lowercase agar aman dari beda huruf kapital)
+      var pinKat = String(pin.kategori || '').toLowerCase();
+      
+      if (kategoriPilihan === 'semua' || pinKat === kategoriPilihan) {
+        pin.marker.addTo(map);
       }
-
-      daftarPin.forEach(function(pin) {
-        map.removeLayer(pin.marker);
-        if (!pin.hidden) {
-          if (kat === 'semua' || pin.kategori === kat) {
-            pin.marker.addTo(map);
-          }
-        }
-      });
     }
+  });
+}
 
     function cariLokasi() {
       var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
