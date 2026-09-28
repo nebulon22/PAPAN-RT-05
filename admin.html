@@ -649,14 +649,14 @@ function escapeHTML(str) {
     }
 
     function simpanPayloadKeAntrean(label, payload) {
-      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-      antrean.push({ label: label, payload: payload, time: Date.now() });
-      localStorage.setItem('antrean_admin', JSON.stringify(antrean));
-      perbaruiIndikatorSyncAdmin();
-      alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
-      kirimDataPendingAdmin();
-    }
-
+  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+  payload.token = payload.token || localStorage.getItem('adminToken') || '';
+  antrean.push({ label: label, payload: payload, time: Date.now() });
+  localStorage.setItem('antrean_admin', JSON.stringify(antrean));
+  perbaruiIndikatorSyncAdmin();
+  alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
+  kirimDataPendingAdmin();
+}
     window.addEventListener('online', () => {
       console.log("Jaringan online kembali. Mengirim data admin pending...");
       perbaruiIndikatorSyncAdmin();
@@ -757,43 +757,46 @@ function cekLogin() {
 
 // BARU (Otomatis muat data begitu PIN berhasil di-ACC):
 function bukaAkses() {
+  // 1. Langsung sembunyikan overlay login (Instan < 0.1 detik)
   document.getElementById('login-overlay').style.display = 'none';
   document.body.style.overflow = 'auto';
-
   document.getElementById('inputPinForm').value = '';
 
+  // 2. Inisialisasi Peta
   initMap();
 
-  // 🛠️ TAMBAHKAN INI: Langsung muat data Warga & Peta begitu overlay login hilang
-  muatSemuaDataAdmin();
-
+  // 3. Tampilkan Peta Dulu & Atur Ukuran
   setTimeout(() => {
     if (map) map.invalidateSize();
-  }, 300);
-}
+  }, 200);
 
+  // 4. Muat Data Berat (Warga & Peta) di LATAR BELAKANG setelah UI/Peta Selesai Tampil
+  setTimeout(() => {
+    muatSemuaDataAdmin();
+  }, 500);
+}
 // ==========================================
-// AUTO LOGIN ADMIN SAAT PWA DIBUKA (+ TIMEOUT 10 MENIT)
+// AUTO LOGIN ADMIN SAAT PWA DIBUKA (+ TIMEOUT 30 MENIT)
 // ==========================================
 function periksaSesiAdmin() {
   const isAuth = localStorage.getItem('authAdmin') === 'true';
   const token = localStorage.getItem('adminToken');
   const loginTime = parseInt(localStorage.getItem('admin_login_time') || '0', 10);
   
-  const BATAS_WAKTU = 10 * 60 * 1000; // 10 Menit (dalam milidetik)
+  const BATAS_WAKTU = 30 * 60 * 1000; // 30 Menit (dalam milidetik)
   const waktuSekarang = Date.now();
 
-  // 1. Jika terautentikasi TAPI sudah lewat dari 10 menit
+  // 1. Jika terautentikasi TAPI sudah lewat dari 30 menit
   if (isAuth && token && (waktuSekarang - loginTime > BATAS_WAKTU)) {
     // Hapus sesi & paksa login PIN ulang
     localStorage.removeItem('authAdmin');
     localStorage.removeItem('adminToken');
     localStorage.removeItem('admin_login_time');
-    alert("⏱️ Sesi login Anda telah berakhir (10 menit). Silakan masukkan PIN kembali.");
+    alert("⏱️ Sesi login Anda telah berakhir (30 menit). Silakan masukkan PIN kembali.");
     return false;
   }
 
-  // 2. Jika sesi masih berlaku (< 10 menit)
+  // 2. Jika sesi masih berlaku (< 30 menit)
   if (isAuth && token) {
     bukaAkses();
     return true;
@@ -861,7 +864,6 @@ const payload = {
   localStorage.removeItem('authAdmin');
   localStorage.removeItem('adminToken');
   localStorage.removeItem('verifiedPin');
-  localStorage.removeItem('cache_data_warga');
   localStorage.removeItem('admin_login_time');
   
   // Arahkan kembali ke Mode Warga / Publik
@@ -869,15 +871,19 @@ const payload = {
 }
     
 var map, daftarPin = [], pinRumahAktif = null;
-  var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
 
-  // 🛠️ LAYER GROUP UNTUK MENGELOLA MARKER PETA DENGAN BERSIH
-  var markerGroup = L.layerGroup();
-  var pinHasilPencarian = null;
+// 🛠️ LAYER GROUP UNTUK MENGELOLA MARKER PETA DENGAN BERSIH
+var markerGroup = L.layerGroup();
+var pinHasilPencarian = null;
 
-  function initMap() {
-    if (map) return;
+function initMap() {
+  if (map) return;
 
+  // SERTAKAN TOKEN DI SINI AGAR BEBAS ERROR 401/403 SAAT MENGAMBIL DATA PETA
+  const tokenAdmin = localStorage.getItem('adminToken') || '';
+  var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
+
+ 
     map = L.map('map').setView([-7.7423, 110.3842], 17);
     
     L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
@@ -1118,25 +1124,28 @@ function bukaTutupLuarForm(e) {
     let cachePerkakas = [];
     let cachePeminjaman = [];
 
-    async function muatPeminjamanAdmin() {
-      const container = document.getElementById("tabel-peminjaman-admin");
-      if (!container) return;
+  async function muatPeminjamanAdmin() {
+  const container = document.getElementById("tabel-peminjaman-admin");
+  if (!container) return;
 
-      if (!localStorage.getItem('cache_inventaris_admin')) {
-        container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
-      }
+  if (!localStorage.getItem('cache_inventaris_admin')) {
+    container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
+  }
 
-      ambilDataSheets('cache_inventaris_admin', RT05_CONFIG.GAS_WEB_APP_URL, (data, fromCache) => {
-        if (data && (data.perkakas || data.peminjaman)) {
-          cachePeminjaman = Array.isArray(data) ? data : (data.peminjaman || []);
-          cachePerkakas = data.perkakas || [];
-          renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
-        } else if (!fromCache && (!data || data.length === 0)) {
-          container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Mode Offline: Gagal memuat data.</td></tr>`;
-        }
-      });
+  // UBAH BARIS INI: Panggil URL polosan tanpa action=getPeta agar Apps Script merespon payload Perkakas & Peminjaman
+  const tokenAdmin = localStorage.getItem('adminToken') || '';
+  const targetUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(tokenAdmin)}`;
+
+  ambilDataSheets('cache_inventaris_admin', targetUrl, (data, fromCache) => {
+    if (data && (data.perkakas || data.peminjaman)) {
+      cachePeminjaman = Array.isArray(data) ? data : (data.peminjaman || []);
+      cachePerkakas = data.perkakas || [];
+      renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
+    } else if (!fromCache && (!data || data.length === 0)) {
+      container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Mode Offline: Gagal memuat data.</td></tr>`;
     }
-
+  });
+}
     function renderTabelDanDropdown(perkakas, peminjaman) {
       const container = document.getElementById("tabel-peminjaman-admin");
       const selectBarang = document.getElementById("pinjamPilihBarang");
@@ -1314,40 +1323,41 @@ function bukaTutupLuarForm(e) {
     }
 
     async function prosesPengembalian(id) {
-      if (confirm("Apakah barang ini sudah dikembalikan?")) {
-        const pinAdmin = localStorage.getItem('verifiedPin') || '';
-        const payload = {
-          pin: pinAdmin,
-          action: "kembali",
-          id: id
-        };
+  if (confirm("Apakah barang ini sudah dikembalikan?")) {
+    // PERBAIKAN: Gunakan tokenAdmin, bukan verifiedPin!
+    const tokenAdmin = localStorage.getItem('adminToken') || '';
+    const payload = {
+      token: tokenAdmin,
+      action: "kembali",
+      id: id
+    };
 
-        if (!navigator.onLine) {
-          simpanPayloadKeAntrean('Pengembalian Barang', payload);
-          muatPeminjamanAdmin();
-          return;
-        }
-
-        try {
-          const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-            method: "POST",
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(payload)
-          });
-          const text = await res.text();
-
-          if (text.includes("SUCCESS")) {
-            alert("✅ Status barang berhasil diperbarui!");
-            muatPeminjamanAdmin();
-          } else {
-            alert("❌ Gagal memperbarui: " + text);
-          }
-        } catch (err) {
-          simpanPayloadKeAntrean('Pengembalian Barang', payload);
-          muatPeminjamanAdmin();
-        }
-      }
+    if (!navigator.onLine) {
+      simpanPayloadKeAntrean('Pengembalian Barang', payload);
+      muatPeminjamanAdmin();
+      return;
     }
+
+    try {
+      const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+        method: "POST",
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const text = await res.text();
+
+      if (text.includes("SUCCESS")) {
+        alert("✅ Status barang berhasil diperbarui!");
+        muatPeminjamanAdmin();
+      } else {
+        alert("❌ Gagal memperbarui: " + text);
+      }
+    } catch (err) {
+      simpanPayloadKeAntrean('Pengembalian Barang', payload);
+      muatPeminjamanAdmin();
+    }
+  }
+}
 
     // --- FUNGSI KELOLA DATA KELUARGA & SENSUS WARGA ---
     function bukaModalKelolaWarga() {
@@ -1451,10 +1461,7 @@ function tutupModalLaporan() {
 }
 
     
-    // Konfigurasi URL CSV & GAS
-    const URL_SHEET_RUMAH = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`; 
-    const URL_API_WARGA = "https://script.google.com/macros/s/AKfycbynlvYDMTMl1e_acOqOmctoGQpw9TEJnZc409LatulcmlTOzpgtUDT60VUknrOYDuqwvQ/exec";
-
+    
     let globalDataRumah = [];
     let globalDataWarga = [];
     let listSemuaRumahAdmin = [];
@@ -1463,8 +1470,9 @@ async function muatSemuaDataAdmin() {
   try {
     const tokenAdmin = localStorage.getItem('adminToken') || '';
     const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
-    const urlWarga = `${URL_API_WARGA}?action=getWarga&token=${encodeURIComponent(tokenAdmin)}`;
-    // 1. Tampilkan dari Cache Lokal dulu (jika ada)
+    const urlWarga = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getWarga&token=${encodeURIComponent(tokenAdmin)}`;
+
+    // 1. Tampilkan instan dari Cache Lokal dulu (0 Detik)
     const cacheWarga = localStorage.getItem('cache_data_warga');
     if (cacheWarga) {
       try {
@@ -1473,13 +1481,20 @@ async function muatSemuaDataAdmin() {
       } catch(e) {}
     }
 
-    // 2. Fetch Data dari Server
+    // 2. Fetch Data Menggunakan Promise.all (Aman JSON & CSV)
     const [resRumah, resWarga] = await Promise.all([
-      fetch(urlPeta).then(r => r.json()).catch(() => null),
-      fetch(urlWarga).then(r => r.json()).catch(() => null)
+      fetch(urlPeta).then(async r => {
+        const txt = await r.text();
+        return txt.trim().startsWith('[') ? JSON.parse(txt) : parseCSV(txt);
+      }).catch(() => null),
+      
+      fetch(urlWarga).then(async r => {
+        const txt = await r.text();
+        return txt.trim().startsWith('[') ? JSON.parse(txt) : parseCSV(txt);
+      }).catch(() => null)
     ]);
     
-      // Olah Data Peta / Rumah
+    // Olah Data Peta / Rumah
     if (Array.isArray(resRumah)) {
       globalDataRumah = resRumah.slice(1);
       listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
@@ -1487,48 +1502,45 @@ async function muatSemuaDataAdmin() {
 
     // Olah Data Sensus Warga
     if (Array.isArray(resWarga) && resWarga.length > 1) {
+      globalDataWarga = resWarga.slice(1);
       localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
       prosesDanTampilkanStatistik(resWarga);
-    } else {
-      console.warn("Data Warga tidak dalam format Array atau hanya berisi Header:", resWarga);
     }
 
   } catch (e) {
     console.error("Gagal memuat data admin:", e);
   }
 }
+   
+function prosesDanTampilkanStatistik(resWarga) {
+  if (!Array.isArray(resWarga) || resWarga.length <= 1) {
+    document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+    document.getElementById("stat-total-kk").innerText = "0 KK";
+    document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+    return;
+  }
 
-    // Helper khusus kalkulasi statistik
-   function prosesDanTampilkanStatistik(resWarga) {
-  if (!Array.isArray(resWarga) || resWarga.length <= 1) return;
+  // Baris data (abaikan header)
+  const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
 
-  // Filter baris yang memiliki nama Kepala Keluarga
-  globalDataWarga = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== ''); 
-  
-  let totalKK = globalDataWarga.length;
-  let totalJiwa = 0;
+  // 1. Total KK = Jumlah baris terisi
+  const totalKK = barisData.length;
 
-  globalDataWarga.forEach(row => {
-    let nilaiKolomD = row[3];
-    
-    // Jika kolom D berisi angka total jiwa
-    if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD, 10))) {
-      totalJiwa += parseInt(nilaiKolomD, 10);
-    } else {
-      // Jika kolom D kosong, hitung manual: 1 Kepala Keluarga + Jumlah Anggota (dipisah koma)
-      let teksAnggota = row[1] ? String(row[1]) : '';
-      let jmlAnggota = teksAnggota ? teksAnggota.split(',').filter(item => item.trim() !== '').length : 0;
-      totalJiwa += (1 + jmlAnggota);
+  // 2. Total Jiwa = Baca Kolom D (row[3]), jika kosong hitung jumlah nama di Kolom B (row[1]) + 1
+  const totalJiwa = barisData.reduce((total, row) => {
+    let val = parseInt(row[3], 10);
+    if (isNaN(val) || val <= 0) {
+      // Jika kolom D di sheet tidak diisi angka, hitung dari koma anggota + 1 kepala
+      let JmlAnggota = row[1] ? String(row[1]).split(',').filter(Boolean).length : 0;
+      val = 1 + JmlAnggota;
     }
-  });
+    return total + val;
+  }, 0);
 
-  const badgeJiwa = document.getElementById("badge-total-jiwa");
-  const statKK = document.getElementById("stat-total-kk");
-  const statJiwa = document.getElementById("stat-total-jiwa");
-
-  if (badgeJiwa) badgeJiwa.innerText = `${totalJiwa} Jiwa`;
-  if (statKK) statKK.innerText = `${totalKK} KK`;
-  if (statJiwa) statJiwa.innerText = `${totalJiwa} Orang`;
+  // Render ke UI
+  document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
+  document.getElementById("stat-total-kk").innerText = totalKK + " KK";
+  document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
 }
     
     // Fungsi untuk memfilter daftar rumah saat diketik
@@ -1638,61 +1650,60 @@ async function muatSemuaDataAdmin() {
       `;
     }
 
-  async function simpanKeluargaAdmin() {
-  const kepala = document.getElementById("addKepalaKeluarga").value.trim();
-  const rumah = document.getElementById("inputCariRumahPeta").value.trim(); // Mengambil dari input teks pencarian
-  const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
+ async function simpanKeluargaAdmin() {
+    const kepala = document.getElementById("addKepalaKeluarga").value.trim();
+    const rumah = document.getElementById("inputCariRumahPeta").value.trim();
+    const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
+    const tokenAdmin = localStorage.getItem('adminToken') || '';
 
-  if (!kepala || !rumah || !anggota) {
-    alert("Mohon lengkapi semua isian form!");
-    return;
+    if (!kepala || !rumah || !anggota) {
+      alert("Mohon lengkapi semua isian form!");
+      return;
+    }
+
+    const btn = document.getElementById("btnSimpanKeluarga");
+    btn.disabled = true;
+    btn.innerText = "⏳ Menyimpan ke Sheet...";
+
+    const payload = {
+      token: tokenAdmin, // PERBAIKAN: Sertakan token agar lolos verifikasi backend
+      action: "tambahKeluargaWarga",
+      kepalaKeluarga: kepala,
+      namaRumah: rumah,
+      anggotaKeluarga: anggota
+    };
+
+    try {
+      await fetch(RT05_CONFIG.GAS_WEB_APP_URL, { // PERBAIKAN: Gunakan GAS_WEB_APP_URL langsung
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+
+      alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
+      
+      document.getElementById("formTambahKeluargaAdmin").reset();
+      document.getElementById("inputCariRumahPeta").value = ""; 
+
+      btn.disabled = false;
+      btn.innerText = "💾 Simpan ke Google Sheets";
+      switchTabAdminWarga('cari');
+      muatSemuaDataAdmin();
+    } catch (err) {
+      alert("❌ Gagal menyimpan data: " + err);
+      btn.disabled = false;
+      btn.innerText = "💾 Simpan ke Google Sheets";
+    }
   }
-
-  const btn = document.getElementById("btnSimpanKeluarga");
-  btn.disabled = true;
-  btn.innerText = "⏳ Menyimpan ke Sheet...";
-
-  const payload = {
-    action: "tambahKeluargaWarga",
-    kepalaKeluarga: kepala,
-    namaRumah: rumah,
-    anggotaKeluarga: anggota
-  };
-
-  try {
-    await fetch(URL_API_WARGA, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    });
-
-    alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
-    
-    // Mereset form standar
-    document.getElementById("formTambahKeluargaAdmin").reset();
-    
-    // Kosongkan kolom pencarian rumah secara manual
-    document.getElementById("inputCariRumahPeta").value = ""; 
-
-    btn.disabled = false;
-    btn.innerText = "💾 Simpan ke Google Sheets";
-    switchTabAdminWarga('cari');
-    muatSemuaDataAdmin();
-  } catch (err) {
-    alert("❌ Gagal menyimpan data: " + err);
-    btn.disabled = false;
-    btn.innerText = "💾 Simpan ke Google Sheets";
-  }
-}
 
 
 document.addEventListener("DOMContentLoaded", () => {
   perbaruiIndikatorSyncAdmin();
   muatPeminjamanAdmin();
 
-  // Jalankan pemeriksaan sesi login + timeout 10 menit
+  // Jalankan pemeriksaan sesi login + timeout 30 menit
   if (periksaSesiAdmin()) {
-    // Hanya ambil data warga/peta jika sesi admin MASIH VALID (< 10 menit)
+    // Hanya ambil data warga/peta jika sesi admin MASIH VALID (< 30 menit)
     muatSemuaDataAdmin();
   } else {
     // Jika belum login / sesi expired, fokuskan kursor ke input PIN

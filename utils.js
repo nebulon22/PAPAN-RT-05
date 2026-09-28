@@ -1,8 +1,8 @@
 // utils.js - Kumpulan Variabel dan Fungsi Global RT 05 (Optimized & Complete)
 
 const RT05_CONFIG = {
-    // Ganti URL ini jika script GAS Anda diperbarui
-    GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec",
+    // ⚠️ PASTI KAN URL INI ADALAH URL DEPLOYMENT APPS SCRIPT UTAMA TERBARU ANDA (/exec)
+    GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbz5RqSEYxjwq_wr3ItVkLRexeGWjKLUtxmhVdqbm7kIFdngulFWdBCLU0xqBOichmMQuw/exec",
     SHEET_ID: "1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y",
     
     // Konfigurasi Firebase (Dipakai di admin.html & chat.html)
@@ -39,7 +39,7 @@ async function ambilDataSheets(urlCacheKey, targetUrl, callbackRender) {
                 ? JSON.parse(cachedString) 
                 : parseCSV(cachedString);
             
-            callbackRender(parsedData, true); // true = data bersumber dari cache lokal
+            callbackRender(parsedData, true); // true = bersumber dari cache
         } catch (e) {
             console.error("Gagal membaca cache lokal:", e);
         }
@@ -50,32 +50,33 @@ async function ambilDataSheets(urlCacheKey, targetUrl, callbackRender) {
         return;
     }
 
-   // PERBAIKAN CORS & 401: Jika URL yang dipanggil adalah export CSV dari Google Sheet (Restricted),
-    // ubah permintaan agar dialihkan secara aman lewat Apps Script Backend (GAS)
+    // PERBAIKAN: Dialihkan secara aman ke Web App Backend (GAS)
     let fetchUrl = targetUrl;
+    const tokenAdmin = localStorage.getItem('adminToken') || '';
+    
     if (targetUrl && targetUrl.includes("docs.google.com/spreadsheets") && targetUrl.includes("/export?format=csv")) {
-        // Ekstrak parameter GID (ID Tab) dari URL
         let matchGid = targetUrl.match(/gid=([0-9]+)/);
         let gid = matchGid ? matchGid[1] : null;
         
         if (gid) {
-            // Jika URL meminta tab spesifik (Pengumuman, Keuangan, Jimpitan)
-            fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getSheetByGid&gid=${gid}`;
+            fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getSheetByGid&gid=${gid}&token=${encodeURIComponent(tokenAdmin)}`;
         } else {
-            // Jika tidak ada GID, berarti meminta tab Peta Utama
-            fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+            fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
         }
     }
 
     // 3. Ambil data terbaru di latar belakang (Background Sync)
     try {
         const response = await fetch(fetchUrl);
-        const contentType = response.headers.get("content-type");
         
+        if (!response.ok) {
+            throw new Error(`HTTP Error Status: ${response.status}`);
+        }
+
+        const contentType = response.headers.get("content-type");
         let finalData;
         let rawCacheContent;
 
-        // Cek apakah respons dari server berformat JSON
         if (contentType && contentType.includes("application/json")) {
             finalData = await response.json();
             rawCacheContent = JSON.stringify(finalData);
@@ -85,17 +86,14 @@ async function ambilDataSheets(urlCacheKey, targetUrl, callbackRender) {
             finalData = parseCSV(textData);
         }
         
-        // Simpan data terbaru ke localStorage untuk mode offline berikutnya
         localStorage.setItem(urlCacheKey, rawCacheContent);
-        
-        // Update tampilan dengan data segar dari server
-        callbackRender(finalData, false); // false = data baru dari web/server
+        callbackRender(finalData, false); // false = data segar dari server
     } catch (err) {
         console.warn("Jaringan bermasalah, tetap menggunakan data cadangan lokal:", err);
     }
 }
 
-// Fungsi Parsing CSV yang Dioptimalkan (Cepat & Minim Alokasi Memori)
+// Fungsi Parsing CSV yang Dioptimalkan
 function parseCSV(text) {
     if (!text) return [];
     var lines = text.replace(/\r/g, '').split('\n');
@@ -123,7 +121,7 @@ function parseCSV(text) {
     return result;
 }
 
-// Fungsi Normalisasi Koordinat (Ringan & Cepat)
+// Fungsi Normalisasi Koordinat
 function perbaikiKoordinat(val) {
     if (!val) return "";
     var str = val.toString().replace(/,/g, '.').replace(/\s+/g, '');
@@ -141,12 +139,13 @@ function perbaikiKoordinat(val) {
     return str;
 }
 
-// Fungsi Pengaman Text (Mencegah XSS/Error rendering html)
+// Fungsi Pengaman Text (Universal & Safe)
 function escapeHTML(str) {
-    return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
-// Fungsi Penentuan Gaya & Ikon Pin Peta (Menggunakan percabangan ringkas)
+// Fungsi Penentuan Gaya & Ikon Pin Peta
 function getIkonKategori(namaAsli, kategoriManual) {
     let emoji = '🏠'; let kategori = 'rumah';
     let namaUpper = namaAsli ? namaAsli.toUpperCase() : '';
@@ -161,7 +160,7 @@ function getIkonKategori(namaAsli, kategoriManual) {
         kategori = 'minimarket'; emoji = '🏪';
         bgStyle = 'background: #FFFF00; border: 2px solid #FFEA00; color: black; width: 22px; height: 22px; font-size: 12px;';
     } 
-    else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || namaUpper.includes('KOS') || namaUpper.includes('KONTRAKAN') || namaUpper.includes('WISMA')) {
+    else if (kategoriManual.includes('kost') || kategoriManual.includes('kos') || namaUpper.includes('KOST') || kategoriManual.includes('kontrakan') || namaUpper.includes('WISMA')) {
         kategori = 'kost'; emoji = '🛏️';
         bgStyle = 'background: #f3e8ff; border: 2px solid #a855f7; color: black; width: 22px; height: 22px; font-size: 12px;';
     }
@@ -178,6 +177,7 @@ function getIkonKategori(namaAsli, kategoriManual) {
     return { emoji, kategori, bgStyle };
 }
 
+// Fitur Senter Ronda
 let mediaStreamSenter = null;
 let isSenterAktif = false;
 
@@ -188,24 +188,22 @@ window.toggleSenterRonda = async function() {
 
   try {
     if (!isSenterAktif) {
-      // Nyalakan Senter
       mediaStreamSenter = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: 'environment', advanced: [{ torch: true }] }
       });
       isSenterAktif = true;
 
       if (btn) {
-        btn.style.background = '#fbbf24'; // Background Kuning
-        btn.style.color = '#0f172a';      // Teks Hitam
+        btn.style.background = '#fbbf24';
+        btn.style.color = '#0f172a';
         btn.style.borderColor = '#f59e0b';
       }
       if (icon) {
-        icon.style.color = '#0f172a';      // Ikon Bohlam Hitam di atas background Kuning
+        icon.style.color = '#0f172a';
       }
       if (status) status.innerText = 'ON';
 
     } else {
-      // Matikan Senter
       if (mediaStreamSenter) {
         mediaStreamSenter.getTracks().forEach(track => track.stop());
         mediaStreamSenter = null;
@@ -213,13 +211,13 @@ window.toggleSenterRonda = async function() {
       isSenterAktif = false;
 
       if (btn) {
-        btn.style.background = '#1e293b'; // Background Gelap
-        btn.style.color = '#fbbf24';      // Teks Kuning
+        btn.style.background = '#1e293b';
+        btn.style.color = '#fbbf24';
         btn.style.borderColor = '#334155';
       }
       if (icon) {
-        icon.className = 'fa-solid fa-lightbulb'; // Tetap pertahankan class ikon bohlam
-        icon.style.color = '#fbbf24';              // Ikon Bohlam Kuning Emas
+        icon.className = 'fa-solid fa-lightbulb';
+        icon.style.color = '#fbbf24';
       }
       if (status) status.innerText = 'OFF';
     }

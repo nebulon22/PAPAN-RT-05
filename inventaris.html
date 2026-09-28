@@ -63,7 +63,7 @@
     Klik untuk pinjam perkakas via WA
   </a>
 
-  <script>
+<script>
     const CACHE_KEY = 'cache_inventaris_rt05';
 
     document.addEventListener("DOMContentLoaded", () => {
@@ -93,38 +93,19 @@
       const container = document.getElementById("daftar-inventaris");  
       if (!container) return;
 
-      // 1. AMBIL DARI LOCALSTORAGE AGAR TAMPIL INSTAN TANPA MEMBEBANI RAM
-      const cachedData = localStorage.getItem(CACHE_KEY);
-      if (cachedData) {
-        try {
-          renderHTML(JSON.parse(cachedData));
-        } catch (e) {
-          console.error("Gagal memparsing cache:", e);
-        }
-      } else {
-        container.innerHTML = `<div style="text-align:center; padding: 20px; color:#666;">⏳ Memuat data stok...</div>`;
-      }
+      // Panggil URL Polos agar backend mengembalikan objek { perkakas: [...], peminjaman: [...] }
+      const urlInventaris = RT05_CONFIG.GAS_WEB_APP_URL;
 
-      // 2. JIKA ONLINE, TARIK DATA TERBARU DARI GOOGLE SHEETS DI LATAR BELAKANG
-      if (!navigator.onLine) return;
-
-      try {
-        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL);
-        const data = await res.json();
-
+      ambilDataSheets(CACHE_KEY, urlInventaris, (data, fromCache) => {
         if (data && data.perkakas) {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(data));
           renderHTML(data);
+        } else if (!fromCache && (!data || !data.perkakas)) {
+          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris.</div>`;
         }
-      } catch (err) {
-        console.warn("Gagal memperbarui data dari server, menggunakan cache lokal.", err);
-        if (!cachedData) {
-          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data dan tidak ada data tersimpan.</div>`;
-        }
-      }
+      });
     }
 
-    // Fungsi Render Tampilan yang Ringan
+    // Fungsi Render Tampilan
     function renderHTML(data) {
       const container = document.getElementById("daftar-inventaris");
       const daftarPerkakas = data.perkakas || [];
@@ -136,17 +117,17 @@
       }
 
       // Buat pemetaan peminjaman aktif secara efisien
-const dipinjamAktif = dataPinjaman.filter(row => row && String(row[5] || '').trim().toLowerCase() === "dipinjam");
-const rekapDipinjam = {};
-dipinjamAktif.forEach(row => {
-  const namaBarang = String(row[2] || '').trim();
-  const jumlah = parseInt(row[3], 10) || 0;
-  if (namaBarang) {
-    rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
-  }
-});
+      const dipinjamAktif = dataPinjaman.filter(row => row && String(row[5] || '').trim().toLowerCase() === "dipinjam");
+      const rekapDipinjam = {};
+      dipinjamAktif.forEach(row => {
+        const namaBarang = String(row[2] || '').trim();
+        const jumlah = parseInt(row[3], 10) || 0;
+        if (namaBarang) {
+          rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
+        }
+      });
 
-      // Render Kartu Barang menggunakan map string
+      // Render Kartu Barang
       container.innerHTML = daftarPerkakas.map(item => {
         const terpakai = rekapDipinjam[item.nama] || 0;
         const sisaStok = parseInt(item.total) || 0;
