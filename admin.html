@@ -1506,40 +1506,17 @@ async function muatSemuaDataAdmin() {
 function prosesDanTampilkanStatistik(resWarga) {
   if (!Array.isArray(resWarga) || resWarga.length <= 1) return;
 
-  // 1. Filter hanya baris yang memiliki Nama Kepala Keluarga di Kolom A (Row[0])
-  globalDataWarga = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== ''); 
-  
-  let totalKK = globalDataWarga.length; // Menghitung baris valid (4 KK)
-  let totalJiwa = 0;
+  // 1. Ambil baris data warga (abaikan header/baris kosong)
+  const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
 
-  globalDataWarga.forEach(row => {
-    // Ambil nilai dari Kolom D (row[3])
-    let valD = row[3] !== undefined && row[3] !== null ? parseInt(String(row[3]).trim(), 10) : NaN;
+  // 2. Hitung KK (jumlah baris) & Sum Kolom D (row[3])
+  const totalKK = barisData.length;
+  const totalJiwa = barisData.reduce((total, row) => total + (Number(row[3]) || 0), 0);
 
-    if (!isNaN(valD) && valD > 0) {
-      // Prioritas 1: Jika Kolom D ada angkanya (3, 2, 3, 4), gunakan angka murni tersebut
-      totalJiwa += valD;
-    } else {
-      // Prioritas 2: Jika Kolom D kosong, hitung manual: 1 Kepala Keluarga + Jumlah Anggota di Kolom B
-      let teksAnggota = row[1] ? String(row[1]).trim() : '';
-      let jmlAnggota = 0;
-      
-      if (teksAnggota !== '') {
-        jmlAnggota = teksAnggota.split(',').filter(item => item.trim() !== '').length;
-      }
-      
-      totalJiwa += (1 + jmlAnggota);
-    }
-  });
-
-  // Update Tampilan Badge & Card Statistik
-  const badgeJiwa = document.getElementById("badge-total-jiwa");
-  const statKK = document.getElementById("stat-total-kk");
-  const statJiwa = document.getElementById("stat-total-jiwa");
-
-  if (badgeJiwa) badgeJiwa.innerText = totalJiwa + " Jiwa";
-  if (statKK) statKK.innerText = totalKK + " KK";
-  if (statJiwa) statJiwa.innerText = totalJiwa + " Orang";
+  // 3. Tampilkan ke UI
+  document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
+  document.getElementById("stat-total-kk").innerText = totalKK + " KK";
+  document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
 }
     
     // Fungsi untuk memfilter daftar rumah saat diketik
