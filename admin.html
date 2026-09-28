@@ -1452,9 +1452,10 @@ function tutupModalLaporan() {
 
     
     // Konfigurasi URL CSV & GAS
-    const URL_SHEET_RUMAH = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`; 
-    const URL_API_WARGA = "https://script.google.com/macros/s/AKfycbynlvYDMTMl1e_acOqOmctoGQpw9TEJnZc409LatulcmlTOzpgtUDT60VUknrOYDuqwvQ/exec";
-
+// KODE BARU (SATUKAN KE GAS_WEB_APP_URL):
+const URL_SHEET_RUMAH = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`; 
+const URL_API_WARGA = RT05_CONFIG.GAS_WEB_APP_URL;
+    
     let globalDataRumah = [];
     let globalDataWarga = [];
     let listSemuaRumahAdmin = [];
@@ -1638,52 +1639,51 @@ async function muatSemuaDataAdmin() {
       `;
     }
 
-  async function simpanKeluargaAdmin() {
-  const kepala = document.getElementById("addKepalaKeluarga").value.trim();
-  const rumah = document.getElementById("inputCariRumahPeta").value.trim(); // Mengambil dari input teks pencarian
-  const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
+ async function simpanKeluargaAdmin() {
+    const kepala = document.getElementById("addKepalaKeluarga").value.trim();
+    const rumah = document.getElementById("inputCariRumahPeta").value.trim();
+    const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
+    const tokenAdmin = localStorage.getItem('adminToken') || '';
 
-  if (!kepala || !rumah || !anggota) {
-    alert("Mohon lengkapi semua isian form!");
-    return;
+    if (!kepala || !rumah || !anggota) {
+      alert("Mohon lengkapi semua isian form!");
+      return;
+    }
+
+    const btn = document.getElementById("btnSimpanKeluarga");
+    btn.disabled = true;
+    btn.innerText = "⏳ Menyimpan ke Sheet...";
+
+    const payload = {
+      token: tokenAdmin, // PERBAIKAN: Sertakan token agar lolos verifikasi backend
+      action: "tambahKeluargaWarga",
+      kepalaKeluarga: kepala,
+      namaRumah: rumah,
+      anggotaKeluarga: anggota
+    };
+
+    try {
+      await fetch(RT05_CONFIG.GAS_WEB_APP_URL, { // PERBAIKAN: Gunakan GAS_WEB_APP_URL langsung
+        method: "POST",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload)
+      });
+
+      alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
+      
+      document.getElementById("formTambahKeluargaAdmin").reset();
+      document.getElementById("inputCariRumahPeta").value = ""; 
+
+      btn.disabled = false;
+      btn.innerText = "💾 Simpan ke Google Sheets";
+      switchTabAdminWarga('cari');
+      muatSemuaDataAdmin();
+    } catch (err) {
+      alert("❌ Gagal menyimpan data: " + err);
+      btn.disabled = false;
+      btn.innerText = "💾 Simpan ke Google Sheets";
+    }
   }
-
-  const btn = document.getElementById("btnSimpanKeluarga");
-  btn.disabled = true;
-  btn.innerText = "⏳ Menyimpan ke Sheet...";
-
-  const payload = {
-    action: "tambahKeluargaWarga",
-    kepalaKeluarga: kepala,
-    namaRumah: rumah,
-    anggotaKeluarga: anggota
-  };
-
-  try {
-    await fetch(URL_API_WARGA, {
-      method: "POST",
-      headers: { "Content-Type": "text/plain;charset=utf-8" },
-      body: JSON.stringify(payload)
-    });
-
-    alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
-    
-    // Mereset form standar
-    document.getElementById("formTambahKeluargaAdmin").reset();
-    
-    // Kosongkan kolom pencarian rumah secara manual
-    document.getElementById("inputCariRumahPeta").value = ""; 
-
-    btn.disabled = false;
-    btn.innerText = "💾 Simpan ke Google Sheets";
-    switchTabAdminWarga('cari');
-    muatSemuaDataAdmin();
-  } catch (err) {
-    alert("❌ Gagal menyimpan data: " + err);
-    btn.disabled = false;
-    btn.innerText = "💾 Simpan ke Google Sheets";
-  }
-}
 
 
 document.addEventListener("DOMContentLoaded", () => {
