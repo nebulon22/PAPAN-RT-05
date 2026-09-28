@@ -1465,7 +1465,7 @@ async function muatSemuaDataAdmin() {
     const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
     const urlWarga = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getWarga&token=${encodeURIComponent(tokenAdmin)}`;
 
-    // 1. Tampilkan dari Cache Lokal dulu
+    // 1. Tampilkan instan dari Cache Lokal dulu (0 Detik)
     const cacheWarga = localStorage.getItem('cache_data_warga');
     if (cacheWarga) {
       try {
@@ -1474,29 +1474,22 @@ async function muatSemuaDataAdmin() {
       } catch(e) {}
     }
 
-    // 2. Fetch Data secara aman (Gunakan r.text() + JSON.parse agar tidak error muter-muter)
-    const [resRumahRaw, resWargaRaw] = await Promise.all([
-      fetch(urlPeta).then(r => r.text()).catch(() => null),
-      fetch(urlWarga).then(r => r.text()).catch(() => null)
+    // 2. Fetch Data dari Server Utama di Latar Belakang (Cepat & Bebas 404)
+    const [resRumah, resWarga] = await Promise.all([
+      fetch(urlPeta).then(r => r.json()).catch(() => null),
+      fetch(urlWarga).then(r => r.json()).catch(() => null)
     ]);
     
-    // Olah Data Rumah / Peta
-    if (resRumahRaw) {
-      let resRumah = resRumahRaw.trim().startsWith('[') ? JSON.parse(resRumahRaw) : parseCSV(resRumahRaw);
-      if (Array.isArray(resRumah)) {
-        globalDataRumah = resRumah.slice(1);
-        listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
-      }
+    // Olah Data Peta / Rumah
+    if (Array.isArray(resRumah)) {
+      globalDataRumah = resRumah.slice(1);
+      listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
     }
 
     // Olah Data Sensus Warga
-    if (resWargaRaw) {
-      let resWarga = resWargaRaw.trim().startsWith('[') ? JSON.parse(resWargaRaw) : parseCSV(resWargaRaw);
-      if (Array.isArray(resWarga) && resWarga.length > 1) {
-        globalDataWarga = resWarga.slice(1);
-        localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
-        prosesDanTampilkanStatistik(resWarga);
-      }
+    if (Array.isArray(resWarga) && resWarga.length > 1) {
+      localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
+      prosesDanTampilkanStatistik(resWarga);
     }
 
   } catch (e) {
