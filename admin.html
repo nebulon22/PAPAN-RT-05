@@ -1498,17 +1498,34 @@ async function muatSemuaDataAdmin() {
 }
 
     // Helper khusus kalkulasi statistik
+// Helper khusus kalkulasi statistik yang sudah diperbaiki
 function prosesDanTampilkanStatistik(resWarga) {
-  if (!Array.isArray(resWarga) || resWarga.length <= 1) return;
+  if (!Array.isArray(resWarga) || resWarga.length <= 1) {
+    document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+    document.getElementById("stat-total-kk").innerText = "0 KK";
+    document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+    return;
+  }
 
-  // 1. Ambil baris data warga (abaikan header/baris kosong)
+  // 1. Ambil baris data warga (abaikan header)
   const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
 
-  // 2. Hitung KK (jumlah baris) & Sum Kolom D (row[3])
+  // 2. Hitung KK (jumlah baris KK terdaftar)
   const totalKK = barisData.length;
-  const totalJiwa = barisData.reduce((total, row) => total + (Number(row[3]) || 0), 0);
 
-  // 3. Tampilkan ke UI
+  // 3. Hitung Total Jiwa dengan penanganan tipe data murni
+  const totalJiwa = barisData.reduce((total, row) => {
+    // Cek jika kolom ke-4 (indeks 3) berisi angka murni (Total Jiwa)
+    let val = Number(row[3]);
+    
+    // Jika NaN / bukan angka murni (misal kolom No HP / Teks), default-kan ke 1 Jiwa per KK
+    if (isNaN(val) || val <= 0) {
+      val = 1;
+    }
+    return total + val;
+  }, 0);
+
+  // 4. Tampilkan ke UI
   document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
   document.getElementById("stat-total-kk").innerText = totalKK + " KK";
   document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
