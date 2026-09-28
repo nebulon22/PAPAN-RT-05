@@ -136,13 +136,15 @@
       }
 
       // Buat pemetaan peminjaman aktif secara efisien
-      const dipinjamAktif = dataPinjaman.filter(row => row[5] === "Dipinjam");
-      const rekapDipinjam = {};
-      dipinjamAktif.forEach(row => {
-        const namaBarang = row[2];
-        const jumlah = parseInt(row[3]) || 0;
-        rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
-      });
+const dipinjamAktif = dataPinjaman.filter(row => row && String(row[5] || '').trim().toLowerCase() === "dipinjam");
+const rekapDipinjam = {};
+dipinjamAktif.forEach(row => {
+  const namaBarang = String(row[2] || '').trim();
+  const jumlah = parseInt(row[3], 10) || 0;
+  if (namaBarang) {
+    rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
+  }
+});
 
       // Render Kartu Barang menggunakan map string
       container.innerHTML = daftarPerkakas.map(item => {
