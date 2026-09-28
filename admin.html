@@ -1263,55 +1263,70 @@ const payload = {
 
 async function muatSemuaDataAdmin() {
       try {
-        // Ambil adminToken hasil login (Bukan PIN hardcode!)
         const tokenAdmin = localStorage.getItem('adminToken') || '';
-
-        // 1. Ambil Data Peta / Rumah dengan Token
         const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
-        const resRumah = await fetch(urlPeta).then(r => r.json());
-        
-        if (Array.isArray(resRumah)) {
-          globalDataRumah = resRumah.slice(1);
-          listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? row[0].trim() : '').filter(Boolean);
+        const urlWarga = `${URL_API_WARGA}?token=${encodeURIComponent(tokenAdmin)}`;
+
+        // 1. OPSI CACHE INSTAN: Tampilkan data dari memori browser lebih dulu (0.1 detik)
+        const cacheWarga = localStorage.getItem('cache_data_warga');
+        if (cacheWarga) {
+          try {
+            const dataCached = JSON.parse(cacheWarga);
+            prosesDanTampilkanStatistik(dataCached);
+          } catch(e) {}
         }
 
-        // 2. Ambil Data Sensus Warga dengan Token (Aman tanpa menyisipkan PIN di HTML)
-        const urlWarga = `${URL_API_WARGA}?token=${encodeURIComponent(tokenAdmin)}`;
-        const resWarga = await fetch(urlWarga).then(r => r.json());
+        // 2. PARALLEL FETCH: Ambil data Peta & Warga secara bersamaan dari server Google
+        const [resRumah, resWarga] = await Promise.all([
+          fetch(urlPeta).then(r => r.json()).catch(() => null),
+          fetch(urlWarga).then(r => r.json()).catch(() => null)
+        ]);
         
-        console.log("Data Warga Diterima:", resWarga);
+        // Olah Data Peta / Rumah
+        if (Array.isArray(resRumah)) {
+          globalDataRumah = resRumah.slice(1);
+          listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
+        }
 
+        // Olah Data Sensus Warga & Simpan Cache Terbaru
         if (Array.isArray(resWarga) && resWarga.length > 1) {
-          globalDataWarga = resWarga.slice(1).filter(row => row[0] && String(row[0]).trim() !== ''); 
-          
-          let totalKK = globalDataWarga.length;
-          let totalJiwa = 0;
-
-          globalDataWarga.forEach(row => {
-            let nilaiKolomD = row[3]; // Kolom D: Jumlah Jiwa
-            
-            if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD))) {
-              totalJiwa += parseInt(nilaiKolomD);
-            } else {
-              let teksAnggota = row[1] ? String(row[1]) : '';
-              let jmlAnggota = teksAnggota ? teksAnggota.split(',').filter(item => item.trim() !== '').length : 0;
-              totalJiwa += (1 + jmlAnggota);
-            }
-          });
-
-          // Tampilkan ke UI Admin
-          const badgeJiwa = document.getElementById("badge-total-jiwa");
-          const statKK = document.getElementById("stat-total-kk");
-          const statJiwa = document.getElementById("stat-total-jiwa");
-
-          if (badgeJiwa) badgeJiwa.innerText = `${totalJiwa} Jiwa`;
-          if (statKK) statKK.innerText = `${totalKK} KK`;
-          if (statJiwa) statJiwa.innerText = `${totalJiwa} Orang`;
+          localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
+          prosesDanTampilkanStatistik(resWarga);
         }
 
       } catch (e) {
         console.error("Gagal memuat data admin:", e);
       }
+    }
+
+    // Helper khusus kalkulasi statistik
+    function prosesDanTampilkanStatistik(resWarga) {
+      if (!Array.isArray(resWarga) || resWarga.length <= 1) return;
+
+      globalDataWarga = resWarga.slice(1).filter(row => row[0] && String(row[0]).trim() !== ''); 
+      
+      let totalKK = globalDataWarga.length;
+      let totalJiwa = 0;
+
+      globalDataWarga.forEach(row => {
+        let nilaiKolomD = row[3];
+        
+        if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD))) {
+          totalJiwa += parseInt(nilaiKolomD);
+        } else {
+          let teksAnggota = row[1] ? String(row[1]) : '';
+          let jmlAnggota = teksAnggota ? teksAnggota.split(',').filter(item => item.trim() !== '').length : 0;
+          totalJiwa += (1 + jmlAnggota);
+        }
+      });
+
+      const badgeJiwa = document.getElementById("badge-total-jiwa");
+      const statKK = document.getElementById("stat-total-kk");
+      const statJiwa = document.getElementById("stat-total-jiwa");
+
+      if (badgeJiwa) badgeJiwa.innerText = `${totalJiwa} Jiwa`;
+      if (statKK) statKK.innerText = `${totalKK} KK`;
+      if (statJiwa) statJiwa.innerText = `${totalJiwa} Orang`;
     }
     
     // Fungsi untuk memfilter daftar rumah saat diketik
