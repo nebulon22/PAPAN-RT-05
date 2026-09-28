@@ -89,21 +89,23 @@
       }
     }
 
-    async function muatStokInventaris() {
-      const container = document.getElementById("daftar-inventaris");  
-      if (!container) return;
+   async function muatStokInventaris() {
+  const container = document.getElementById("daftar-inventaris");  
+  if (!container) return;
 
-      const urlInventaris = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+  // GUNAKAN URL POLOS AGAR BACKEND MENGIRIM DATA PERKAKAS
+  const urlInventaris = RT05_CONFIG.GAS_WEB_APP_URL;
 
-      // Gunakan helper ambilDataSheets dari utils.js agar aman dari CORS & fallback ke Cache otomatis
-      ambilDataSheets(CACHE_KEY, urlInventaris, (data, fromCache) => {
-        if (data && (data.perkakas || data.peminjaman)) {
-          renderHTML(data);
-        } else if (!fromCache && (!data || data.length === 0)) {
-          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris.</div>`;
-        }
-      });
+  ambilDataSheets(CACHE_KEY, urlInventaris, (data, fromCache) => {
+    if (data && data.perkakas) {
+      renderHTML(data);
+    } else if (!fromCache && (!data || !data.perkakas)) {
+      container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris.</div>`;
     }
+  });
+}
+
+    
       // 2. JIKA ONLINE, TARIK DATA TERBARU DARI GOOGLE SHEETS DI LATAR BELAKANG
       if (!navigator.onLine) return;
 
