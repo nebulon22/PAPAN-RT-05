@@ -1500,23 +1500,24 @@ async function muatSemuaDataAdmin() {
 }
 
     // Helper khusus kalkulasi statistik
-   function prosesDanTampilkanStatistik(resWarga) {
+  function prosesDanTampilkanStatistik(resWarga) {
   if (!Array.isArray(resWarga) || resWarga.length <= 1) return;
 
-  // Filter baris yang memiliki nama Kepala Keluarga
   globalDataWarga = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== ''); 
   
   let totalKK = globalDataWarga.length;
-  let totalJiwa = 0;
+  let totalJiwa = 0; // Pastikan berupa number
 
   globalDataWarga.forEach(row => {
     let nilaiKolomD = row[3];
     
-    // Jika kolom D berisi angka total jiwa
-    if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD, 10))) {
-      totalJiwa += parseInt(nilaiKolomD, 10);
+    // PERBAIKAN: Gunakan Number() & parseInt() agar pasti dijumlahkan secara matematika
+    let angkaKolomD = parseInt(nilaiKolomD, 10);
+
+    if (!isNaN(angkaKolomD) && angkaKolomD > 0) {
+      totalJiwa += angkaKolomD; // Penjumlahan angka
     } else {
-      // Jika kolom D kosong, hitung manual: 1 Kepala Keluarga + Jumlah Anggota (dipisah koma)
+      // Jika kolom D kosong/bukan angka, hitung dari jumlah koma anggota
       let teksAnggota = row[1] ? String(row[1]) : '';
       let jmlAnggota = teksAnggota ? teksAnggota.split(',').filter(item => item.trim() !== '').length : 0;
       totalJiwa += (1 + jmlAnggota);
