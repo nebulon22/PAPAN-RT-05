@@ -1500,28 +1500,27 @@ async function muatSemuaDataAdmin() {
 }
 
     // Helper khusus kalkulasi statistik
- function prosesDanTampilkanStatistik(resWarga) {
+function prosesDanTampilkanStatistik(resWarga) {
   if (!Array.isArray(resWarga) || resWarga.length <= 1) return;
 
-  // Ambil hanya baris yang memiliki Nama Kepala Keluarga
+  // Filter baris yang memiliki Nama Kepala Keluarga saja (Abaikan baris kosong)
   globalDataWarga = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== ''); 
   
-  let totalKK = globalDataWarga.length;
+  let totalKK = globalDataWarga.length; // Otomatis bernilai 4 KK
   let totalJiwa = 0;
 
   globalDataWarga.forEach(row => {
-    // row[0] = Kepala Keluarga (1 orang)
-    // row[1] = Anggota Keluarga (dipisah koma)
-    let teksAnggota = row[1] ? String(row[1]).trim() : '';
-    
-    // Hitung berapa nama anggota yang dipisahkan koma
-    let jmlAnggota = 0;
-    if (teksAnggota) {
-      jmlAnggota = teksAnggota.split(',').filter(item => item.trim() !== '').length;
-    }
+    // Ambil angka dari Kolom D (row[3])
+    let valD = parseInt(row[3], 10);
 
-    // 1 Kepala Keluarga + Jumlah Anggota Keluarga
-    totalJiwa += (1 + jmlAnggota);
+    if (!isNaN(valD) && valD > 0) {
+      totalJiwa += valD; // Menjumlahkan: 3 + 2 + 3 + 4 = 12 Jiwa
+    } else {
+      // Fallback jika Kolom D di sheet belum diisi angka
+      let teksAnggota = row[1] ? String(row[1]).trim() : '';
+      let jmlAnggota = teksAnggota ? teksAnggota.split(',').filter(item => item.trim() !== '').length : 0;
+      totalJiwa += (1 + jmlAnggota);
+    }
   });
 
   const badgeJiwa = document.getElementById("badge-total-jiwa");
