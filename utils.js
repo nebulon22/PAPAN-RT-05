@@ -2,7 +2,7 @@
 
 const RT05_CONFIG = {
     // ⚠️ PASTI KAN URL INI ADALAH URL DEPLOYMENT APPS SCRIPT UTAMA TERBARU ANDA (/exec)
-    GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbwfw0-V4hiZNnqwmDCLQMhOhZgWKpuGhDh1Rasb7PlswuJtNOqyHJJwSWFdpvIo7ET7aw/exec",
+    GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbz5RqSEYxjwq_wr3ItVkLRexeGWjKLUtxmhVdqbm7kIFdngulFWdBCLU0xqBOichmMQuw/exec",
     SHEET_ID: "1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y",
     
     // Konfigurasi Firebase (Dipakai di admin.html & chat.html)
