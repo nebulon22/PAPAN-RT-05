@@ -317,6 +317,18 @@
           <input type="text" id="laporanNominal" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" oninput="formatRibuanInput(this)" required>
         </div>
 
+        <!-- Input Tambahan: PIN Khusus Divisi -->
+<div style="margin-top: 12px;">
+  <label style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+    🔒 PIN Khusus Divisi:
+  </label>
+  <input type="password" id="laporanPinDivisi" maxlength="6" placeholder="Masukkan PIN Divisi Anda" 
+    style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+  <span style="font-size: 10px; color: #64748b; margin-top: 2px; display: block;">
+    *Setiap divisi memiliki PIN pelaporan tersendiri.
+  </span>
+</div>
+
         <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; margin-top: 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
           📤 Kirim Laporan Keuangan
         </button>
@@ -1225,78 +1237,85 @@ const payload = {
       document.getElementById('modal-laporan').style.display = 'flex';
     }
 
-    function tutupModalLaporan() {
-      document.getElementById('modal-laporan').style.display = 'none';
-      document.getElementById('formLaporanDivisi').reset();
-    }
-
+   
     function simpanLaporanDivisi() {
-      const tglInput = document.getElementById('laporanTanggal').value;
-      const divisi = document.getElementById('laporanNamaDivisi').value;
-      const jenis = document.getElementById('laporanJenis').value;
-      const ket = document.getElementById('laporanKeterangan').value;
-      
-      const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
-      const nominal = parseInt(rawNominal, 10);
+  const tglInput = document.getElementById('laporanTanggal').value;
+  const divisi = document.getElementById('laporanNamaDivisi').value;
+  const jenis = document.getElementById('laporanJenis').value;
+  const ket = document.getElementById('laporanKeterangan').value;
+  const pinDivisi = document.getElementById('laporanPinDivisi').value.trim(); // Ambil PIN Divisi
+  
+  const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
+  const nominal = parseInt(rawNominal, 10);
 
-      // Ambil TOKEN (Bukan PIN hardcode!)
-      const tokenAdmin = localStorage.getItem('adminToken') || '';
+  const tokenAdmin = localStorage.getItem('adminToken') || '';
 
-      if (!divisi || !ket || isNaN(nominal) || !tglInput) {
-        alert('Harap isi semua kolom dengan benar!');
-        return;
-      }
+  // Validasi wajib isi PIN Divisi
+  if (!divisi || !ket || isNaN(nominal) || !tglInput || !pinDivisi) {
+    alert('Harap isi semua kolom, termasuk PIN Khusus Divisi!');
+    return;
+  }
 
-      const parts = tglInput.split('-');
-      const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const parts = tglInput.split('-');
+  const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
-      const btnSimpan = document.getElementById('btnSimpanLaporan');
-      btnSimpan.disabled = true;
-      btnSimpan.innerText = 'Mengirim...';
+  const btnSimpan = document.getElementById('btnSimpanLaporan');
+  btnSimpan.disabled = true;
+  btnSimpan.innerText = 'Mengirim...';
 
-      // Payload bersih berbasis token
-      const payload = {
-        token: tokenAdmin,
-        action: 'tambahKeuangan',
-        tanggalInput: tglFormatted,
-        divisi: divisi,
-        keterangan: ket,
-        jenisTransaksi: jenis,
-        nominal: parseInt(nominal)
-      };
-    
-      if (!navigator.onLine) {
-        btnSimpan.disabled = false;
-        btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
-        simpanPayloadKeAntrean('Laporan Keuangan', payload);
-        tutupModalLaporan();
-        return;
-      }
+  // Kirim pinDivisi bersama payload
+  const payload = {
+    token: tokenAdmin,
+    pinDivisi: pinDivisi, // PIN khusus untuk verifikasi divisi di backend
+    action: 'tambahKeuangan',
+    tanggalInput: tglFormatted,
+    divisi: divisi,
+    keterangan: ket,
+    jenisTransaksi: jenis,
+    nominal: parseInt(nominal)
+  };
 
-      fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.text())
-      .then(result => {
-        if(result.includes('SUCCESS')) {
-          alert('✅ Laporan Keuangan berhasil dicatat!');
-          tutupModalLaporan();
-        } else {
-          alert('❌ Gagal mengirim: ' + result);
-        }
-      })
-      .catch(err => {
-        simpanPayloadKeAntrean('Laporan Keuangan', payload);
-        tutupModalLaporan();
-      })
-      .finally(() => {
-        btnSimpan.disabled = false;
-        btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
-      });
+  if (!navigator.onLine) {
+    btnSimpan.disabled = false;
+    btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
+    simpanPayloadKeAntrean('Laporan Keuangan', payload);
+    tutupModalLaporan();
+    return;
+  }
+
+  fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.text())
+  .then(result => {
+    if(result.includes('SUCCESS')) {
+      alert('✅ Laporan Keuangan ' + divisi + ' berhasil dicatat!');
+      tutupModalLaporan();
+    } else {
+      alert('❌ Gagal mengirim: ' + result);
     }
+  })
+  .catch(err => {
+    simpanPayloadKeAntrean('Laporan Keuangan', payload);
+    tutupModalLaporan();
+  })
+  .finally(() => {
+    btnSimpan.disabled = false;
+    btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
+  });
+}
 
+// Tambahkan reset kolom PIN saat modal ditutup
+function tutupModalLaporan() {
+  document.getElementById('modal-laporan').style.display = 'none';
+  document.getElementById('formLaporanDivisi').reset();
+  const inputPinDiv = document.getElementById('laporanPinDivisi');
+  if (inputPinDiv) inputPinDiv.value = '';
+}
+
+    
     // Konfigurasi URL CSV & GAS
     const URL_SHEET_RUMAH = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`; 
     const URL_API_WARGA = "https://script.google.com/macros/s/AKfycbynlvYDMTMl1e_acOqOmctoGQpw9TEJnZc409LatulcmlTOzpgtUDT60VUknrOYDuqwvQ/exec";
