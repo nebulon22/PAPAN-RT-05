@@ -1465,7 +1465,7 @@ async function muatSemuaDataAdmin() {
     const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
     const urlWarga = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getWarga&token=${encodeURIComponent(tokenAdmin)}`;
 
-    // 1. Tampilkan instan dari Cache Lokal dulu (0 Detik)
+    // 1. Tampilkan dari Cache Lokal dulu
     const cacheWarga = localStorage.getItem('cache_data_warga');
     if (cacheWarga) {
       try {
@@ -1474,31 +1474,36 @@ async function muatSemuaDataAdmin() {
       } catch(e) {}
     }
 
-    // 2. Fetch Data dari Server Utama di Latar Belakang (Cepat & Bebas 404)
-    const [resRumah, resWarga] = await Promise.all([
-      fetch(urlPeta).then(r => r.json()).catch(() => null),
-      fetch(urlWarga).then(r => r.json()).catch(() => null)
+    // 2. Fetch Data secara aman (Gunakan r.text() + JSON.parse agar tidak error muter-muter)
+    const [resRumahRaw, resWargaRaw] = await Promise.all([
+      fetch(urlPeta).then(r => r.text()).catch(() => null),
+      fetch(urlWarga).then(r => r.text()).catch(() => null)
     ]);
     
-    // Olah Data Peta / Rumah
-    if (Array.isArray(resRumah)) {
-      globalDataRumah = resRumah.slice(1);
-      listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
+    // Olah Data Rumah / Peta
+    if (resRumahRaw) {
+      let resRumah = resRumahRaw.trim().startsWith('[') ? JSON.parse(resRumahRaw) : parseCSV(resRumahRaw);
+      if (Array.isArray(resRumah)) {
+        globalDataRumah = resRumah.slice(1);
+        listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
+      }
     }
 
     // Olah Data Sensus Warga
-    if (Array.isArray(resWarga) && resWarga.length > 1) {
-      localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
-      prosesDanTampilkanStatistik(resWarga);
+    if (resWargaRaw) {
+      let resWarga = resWargaRaw.trim().startsWith('[') ? JSON.parse(resWargaRaw) : parseCSV(resWargaRaw);
+      if (Array.isArray(resWarga) && resWarga.length > 1) {
+        globalDataWarga = resWarga.slice(1);
+        localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
+        prosesDanTampilkanStatistik(resWarga);
+      }
     }
 
   } catch (e) {
     console.error("Gagal memuat data admin:", e);
   }
 }
-
     // Helper khusus kalkulasi statistik
-// Helper khusus kalkulasi statistik yang sudah diperbaiki
 function prosesDanTampilkanStatistik(resWarga) {
   if (!Array.isArray(resWarga) || resWarga.length <= 1) {
     document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
@@ -1507,25 +1512,51 @@ function prosesDanTampilkanStatistik(resWarga) {
     return;
   }
 
-  // 1. Ambil baris data warga (abaikan header)
+  // 1. Ambil baris data (abaikan header dan baris kosong)
   const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
 
-  // 2. Hitung KK (jumlah baris KK terdaftar)
   const totalKK = barisData.length;
 
-  // 3. Hitung Total Jiwa dengan penanganan tipe data murni
+  // 2. Hitung Total Jiwa dari Kolom D (row[3])
   const totalJiwa = barisData.reduce((total, row) => {
-    // Cek jika kolom ke-4 (indeks 3) berisi angka murni (Total Jiwa)
-    let val = Number(row[3]);
-    
-    // Jika NaN / bukan angka murni (misal kolom No HP / Teks), default-kan ke 1 Jiwa per KK
-    if (isNaN(val) || val <= 0) {
-      val = 1;
+    let jml = parseInt(row[3], 10);
+    // Jika di kolom D belum diisi angka, hitung dari jumlah anggota keluarga + 1 (Kepala Keluarga)
+    if (isNaN(jml) || jml <= 0) {
+      let anggota = row[1] ? String(row[1]).split(',').filter(Boolean).length : 0;
+      jml = 1 + anggota;
     }
-    return total + val;
+    return total + jml;
   }, 0);
 
-  // 4. Tampilkan ke UI
+  // 3. Tampilkan Hasil Pas ke UI
+  document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
+  document.getElementById("stat-total-kk").innerText = totalKK + " KK";
+  document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
+}function prosesDanTampilkanStatistik(resWarga) {
+  if (!Array.isArray(resWarga) || resWarga.length <= 1) {
+    document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+    document.getElementById("stat-total-kk").innerText = "0 KK";
+    document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+    return;
+  }
+
+  // 1. Ambil baris data (abaikan header dan baris kosong)
+  const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
+
+  const totalKK = barisData.length;
+
+  // 2. Hitung Total Jiwa dari Kolom D (row[3])
+  const totalJiwa = barisData.reduce((total, row) => {
+    let jml = parseInt(row[3], 10);
+    // Jika di kolom D belum diisi angka, hitung dari jumlah anggota keluarga + 1 (Kepala Keluarga)
+    if (isNaN(jml) || jml <= 0) {
+      let anggota = row[1] ? String(row[1]).split(',').filter(Boolean).length : 0;
+      jml = 1 + anggota;
+    }
+    return total + jml;
+  }, 0);
+
+  // 3. Tampilkan Hasil Pas ke UI
   document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
   document.getElementById("stat-total-kk").innerText = totalKK + " KK";
   document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
