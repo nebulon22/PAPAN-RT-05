@@ -1496,7 +1496,7 @@ async function muatSemuaDataAdmin() {
     console.error("Gagal memuat data admin:", e);
   }
 }
-    // Helper khusus kalkulasi statistik
+   
 function prosesDanTampilkanStatistik(resWarga) {
   if (!Array.isArray(resWarga) || resWarga.length <= 1) {
     document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
@@ -1505,51 +1505,24 @@ function prosesDanTampilkanStatistik(resWarga) {
     return;
   }
 
-  // 1. Ambil baris data (abaikan header dan baris kosong)
+  // Baris data (abaikan header)
   const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
 
+  // 1. Total KK = Jumlah baris terisi
   const totalKK = barisData.length;
 
-  // 2. Hitung Total Jiwa dari Kolom D (row[3])
+  // 2. Total Jiwa = Baca Kolom D (row[3]), jika kosong hitung jumlah nama di Kolom B (row[1]) + 1
   const totalJiwa = barisData.reduce((total, row) => {
-    let jml = parseInt(row[3], 10);
-    // Jika di kolom D belum diisi angka, hitung dari jumlah anggota keluarga + 1 (Kepala Keluarga)
-    if (isNaN(jml) || jml <= 0) {
-      let anggota = row[1] ? String(row[1]).split(',').filter(Boolean).length : 0;
-      jml = 1 + anggota;
+    let val = parseInt(row[3], 10);
+    if (isNaN(val) || val <= 0) {
+      // Jika kolom D di sheet tidak diisi angka, hitung dari koma anggota + 1 kepala
+      let JmlAnggota = row[1] ? String(row[1]).split(',').filter(Boolean).length : 0;
+      val = 1 + JmlAnggota;
     }
-    return total + jml;
+    return total + val;
   }, 0);
 
-  // 3. Tampilkan Hasil Pas ke UI
-  document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
-  document.getElementById("stat-total-kk").innerText = totalKK + " KK";
-  document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
-}function prosesDanTampilkanStatistik(resWarga) {
-  if (!Array.isArray(resWarga) || resWarga.length <= 1) {
-    document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
-    document.getElementById("stat-total-kk").innerText = "0 KK";
-    document.getElementById("stat-total-jiwa").innerText = "0 Orang";
-    return;
-  }
-
-  // 1. Ambil baris data (abaikan header dan baris kosong)
-  const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
-
-  const totalKK = barisData.length;
-
-  // 2. Hitung Total Jiwa dari Kolom D (row[3])
-  const totalJiwa = barisData.reduce((total, row) => {
-    let jml = parseInt(row[3], 10);
-    // Jika di kolom D belum diisi angka, hitung dari jumlah anggota keluarga + 1 (Kepala Keluarga)
-    if (isNaN(jml) || jml <= 0) {
-      let anggota = row[1] ? String(row[1]).split(',').filter(Boolean).length : 0;
-      jml = 1 + anggota;
-    }
-    return total + jml;
-  }, 0);
-
-  // 3. Tampilkan Hasil Pas ke UI
+  // Render ke UI
   document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
   document.getElementById("stat-total-kk").innerText = totalKK + " KK";
   document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
