@@ -731,8 +731,7 @@ function periksaSesiAdmin() {
   return false;
 }
 
-// Jalankan pemeriksaan sesi
-periksaSesiAdmin();
+
  
 
     document.getElementById('dataForm').addEventListener('submit', function(e) {
@@ -1520,26 +1519,30 @@ async function muatSemuaDataAdmin() {
 document.addEventListener("DOMContentLoaded", () => {
   perbaruiIndikatorSyncAdmin();
   muatPeminjamanAdmin();
-  muatSemuaDataAdmin();
 
-  if (navigator.onLine) {
-    kirimDataPendingAdmin();
-  }
-
-  if (
-    localStorage.getItem('authAdmin') === 'true' &&
-    localStorage.getItem('adminToken')
-  ) {
-    bukaAkses();
+  // Jalankan pemeriksaan sesi login + timeout 10 menit
+  if (periksaSesiAdmin()) {
+    // Hanya ambil data warga/peta jika sesi admin MASIH VALID (< 10 menit)
+    muatSemuaDataAdmin();
   } else {
+    // Jika belum login / sesi expired, fokuskan kursor ke input PIN
     setTimeout(() => {
       const inputPin = document.getElementById('adminPin');
       if (inputPin) inputPin.focus();
     }, 300);
   }
-});
 
-    
+  if (navigator.onLine) {
+    kirimDataPendingAdmin();
+  }
+});
+  
+
+<script>
+    // Taruh di script biasa agar bisa dipanggil global oleh tabel inventaris
+    function escapeHTML(str) {
+      return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
+    }
   </script>
 
   <!-- FontAwesome Icons -->
@@ -1641,10 +1644,9 @@ document.addEventListener("DOMContentLoaded", () => {
       const newRole = currentRole === 'admin' ? 'warga' : 'admin';
       update(ref(db, `users/${uid}`), { role: newRole });
     };
-
-    function escapeHTML(str) {
-      return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
-    }
   </script>
+
+  
+  
 </body>
 </html>
