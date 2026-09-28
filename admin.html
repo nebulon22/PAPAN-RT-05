@@ -851,8 +851,11 @@ const payload = {
   window.location.href = "index.html";
 }
     
-  var map, daftarPin = [], pinRumahAktif = null;
+var map, daftarPin = [], pinRumahAktif = null;
   var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+
+  // Variabel penyimpan hasil cari aktif
+  var pinHasilPencarian = null;
 
   function initMap() {
     if (map) return;
@@ -914,12 +917,10 @@ const payload = {
           });
           
           var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-          if (!item.hidden) marker.addTo(map);
 
-          // 🛠️ PERBAIKAN: Gabungkan Nama Asli + Kategori Manual + Kategori Ikon untuk pencarian presisi
           var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
 
-          daftarPin.push({ 
+          var pinObj = { 
             namaRaw: item.nameAsli,
             nama: item.nameAsli.toLowerCase(), 
             marker: marker, 
@@ -927,79 +928,109 @@ const payload = {
             lng: item.lng,
             hidden: item.hidden,
             kategori: katFinal
-          });
+          };
+
+          daftarPin.push(pinObj);
         }
       });
+
+      // 🛠️ TERAPKAN FILTER DEFAULT SETELAH DATA SELESAI DIMUAT
+      filterKategori('semua');
     });
   }
 
   function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
 
-  // 🛠️ PERBAIKAN FUNGSI FILTER: Pencocokan Terisolasi & Presisi
+  // 🛠️ FUNGSI FILTER DENGAN ATURAN BARU
   function filterKategori(kat) {
     var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
 
     daftarPin.forEach(function(pin) {
-      // 1. Sembunyikan semua marker dari peta lebih dulu
       if (map.hasLayer(pin.marker)) {
         map.removeLayer(pin.marker);
       }
 
       if (pin.hidden) return;
 
-      // 2. Tentukan teks yang akan diuji
       var teksKategori = String(pin.kategori || '').toLowerCase();
       var teksNama = String(pin.nama || '').toLowerCase();
       var isMatch = false;
 
+      var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
+                   teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+                   
+      var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
+                    teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
+
+      var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
+                      teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
+
+      var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
+                         teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+
+      var isPengurus = teksNama.includes('rt') || teksNama.includes('rw') || teksKategori.includes('rt') || teksKategori.includes('rw');
+
       if (kategoriPilihan === 'semua') {
-        isMatch = true;
+        if (isPengurus || isFasum || isKost || isKuliner || isMinimarket) {
+          isMatch = true;
+        } else if (pinHasilPencarian && pinHasilPencarian === pin) {
+          isMatch = true; // Munculkan rumah warga jika sedang dicari
+        }
       } else if (kategoriPilihan === 'kost') {
-        // Hanya cocok jika kategori atau nama bangunan secara eksplisit mengandung 'kost', 'kos', atau 'kontrakan'
-        isMatch = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
-                  teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+        isMatch = isKost;
       } else if (kategoriPilihan === 'fasum') {
-        isMatch = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
-                  teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
+        isMatch = isFasum;
       } else if (kategoriPilihan === 'kuliner') {
-        isMatch = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
-                  teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
+        isMatch = isKuliner;
       } else if (kategoriPilihan === 'minimarket') {
-        isMatch = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
-                  teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+        isMatch = isMinimarket;
       }
 
-      // 3. Tampilkan kembali jika cocok
       if (isMatch) {
         pin.marker.addTo(map);
       }
     });
   }
 
-    function cariLokasi() {
-      var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
-      if (!kataKunci) return;
+  // 🛠️ FUNGSI PENCARIAN TUNGGAL & LENGKAP (Memilih nama & No Rumah)
+  function cariLokasi() {
+    var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
+    var kataKunci = inputElem ? inputElem.value.toLowerCase().trim() : '';
+    if (!kataKunci) return;
 
-      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+    // 1. Pencarian Persis Nama
+    var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
 
-      if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10);
-        hasil = daftarPin.find(pin => {
-          var kataKata = pin.nama.split(/[\s,().-]+/);
-          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-        });
-      }
-
-      if (!hasil && !/^\d+$/.test(kataKunci)) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
-      }
-
-      if (hasil) {
-        if (pinRumahAktif) map.removeLayer(pinRumahAktif);
-        if (!map.hasLayer(hasil.marker)) { hasil.marker.addTo(map); pinRumahAktif = hasil.marker; }
-        map.flyTo([hasil.lat, hasil.lng], 19); setTimeout(() => { hasil.marker.openPopup(); }, 800);
-      } else alert("Lokasi atau nomor rumah tidak ditemukan.");
+    // 2. Pencarian Angka (Nomor Rumah)
+    if (!hasil && /^\d+$/.test(kataKunci)) {
+      var angkaCari = parseInt(kataKunci, 10);
+      hasil = daftarPin.find(pin => {
+        var kataKata = pin.nama.split(/[\s,().-]+/);
+        return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
+      });
     }
+
+    // 3. Pencarian Teks Parsial (Mengandung kata)
+    if (!hasil) {
+      hasil = daftarPin.find(pin => pin.nama.includes(kataKunci) || pin.namaRaw.toLowerCase().includes(kataKunci));
+    }
+
+    if (hasil) {
+      pinHasilPencarian = hasil; // 📌 Kunci pin hasil pencarian agar tidak hilang saat re-filter
+
+      if (!map.hasLayer(hasil.marker)) { 
+        hasil.marker.addTo(map); 
+      }
+      
+      map.flyTo([hasil.lat, hasil.lng], 19); 
+      setTimeout(() => { hasil.marker.openPopup(); }, 500);
+    } else {
+      alert("Nama atau nomor rumah tidak ditemukan.");
+    }
+  }
+
+  // Alias agar panggilan 'cariNama()' pada tombol cari lama tetap berfungsi
+  function cariNama() { cariLokasi(); }
 
     function bukaModalPinjamAdmin() {
       muatPeminjamanAdmin();
