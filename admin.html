@@ -1303,72 +1303,79 @@ const payload = {
     let listSemuaRumahAdmin = [];
 
 async function muatSemuaDataAdmin() {
+  try {
+    const tokenAdmin = localStorage.getItem('adminToken') || '';
+    const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
+    const urlWarga = `${URL_API_WARGA}?action=getWarga&token=${encodeURIComponent(tokenAdmin)}`;
+    // 1. Tampilkan dari Cache Lokal dulu (jika ada)
+    const cacheWarga = localStorage.getItem('cache_data_warga');
+    if (cacheWarga) {
       try {
-        const tokenAdmin = localStorage.getItem('adminToken') || '';
-        const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
-        const urlWarga = `${URL_API_WARGA}?token=${encodeURIComponent(tokenAdmin)}`;
-
-        // 1. OPSI CACHE INSTAN: Tampilkan data dari memori browser lebih dulu (0.1 detik)
-        const cacheWarga = localStorage.getItem('cache_data_warga');
-        if (cacheWarga) {
-          try {
-            const dataCached = JSON.parse(cacheWarga);
-            prosesDanTampilkanStatistik(dataCached);
-          } catch(e) {}
-        }
-
-        // 2. PARALLEL FETCH: Ambil data Peta & Warga secara bersamaan dari server Google
-        const [resRumah, resWarga] = await Promise.all([
-          fetch(urlPeta).then(r => r.json()).catch(() => null),
-          fetch(urlWarga).then(r => r.json()).catch(() => null)
-        ]);
-        
-        // Olah Data Peta / Rumah
-        if (Array.isArray(resRumah)) {
-          globalDataRumah = resRumah.slice(1);
-          listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
-        }
-
-        // Olah Data Sensus Warga & Simpan Cache Terbaru
-        if (Array.isArray(resWarga) && resWarga.length > 1) {
-          localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
-          prosesDanTampilkanStatistik(resWarga);
-        }
-
-      } catch (e) {
-        console.error("Gagal memuat data admin:", e);
-      }
+        const dataCached = JSON.parse(cacheWarga);
+        prosesDanTampilkanStatistik(dataCached);
+      } catch(e) {}
     }
+
+    // 2. Fetch Data dari Server
+    const [resRumah, resWarga] = await Promise.all([
+      fetch(urlPeta).then(r => r.json()).catch(() => null),
+      fetch(urlWarga).then(r => r.json()).catch(() => null)
+    ]);
+    
+    console.log("Response Data Rumah:", resRumah);
+    console.log("Response Data Warga:", resWarga);
+
+    // Olah Data Peta / Rumah
+    if (Array.isArray(resRumah)) {
+      globalDataRumah = resRumah.slice(1);
+      listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
+    }
+
+    // Olah Data Sensus Warga
+    if (Array.isArray(resWarga) && resWarga.length > 1) {
+      localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
+      prosesDanTampilkanStatistik(resWarga);
+    } else {
+      console.warn("Data Warga tidak dalam format Array atau hanya berisi Header:", resWarga);
+    }
+
+  } catch (e) {
+    console.error("Gagal memuat data admin:", e);
+  }
+}
 
     // Helper khusus kalkulasi statistik
-    function prosesDanTampilkanStatistik(resWarga) {
-      if (!Array.isArray(resWarga) || resWarga.length <= 1) return;
+   function prosesDanTampilkanStatistik(resWarga) {
+  if (!Array.isArray(resWarga) || resWarga.length <= 1) return;
 
-      globalDataWarga = resWarga.slice(1).filter(row => row[0] && String(row[0]).trim() !== ''); 
-      
-      let totalKK = globalDataWarga.length;
-      let totalJiwa = 0;
+  // Filter baris yang memiliki nama Kepala Keluarga
+  globalDataWarga = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== ''); 
+  
+  let totalKK = globalDataWarga.length;
+  let totalJiwa = 0;
 
-      globalDataWarga.forEach(row => {
-        let nilaiKolomD = row[3];
-        
-        if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD))) {
-          totalJiwa += parseInt(nilaiKolomD);
-        } else {
-          let teksAnggota = row[1] ? String(row[1]) : '';
-          let jmlAnggota = teksAnggota ? teksAnggota.split(',').filter(item => item.trim() !== '').length : 0;
-          totalJiwa += (1 + jmlAnggota);
-        }
-      });
-
-      const badgeJiwa = document.getElementById("badge-total-jiwa");
-      const statKK = document.getElementById("stat-total-kk");
-      const statJiwa = document.getElementById("stat-total-jiwa");
-
-      if (badgeJiwa) badgeJiwa.innerText = `${totalJiwa} Jiwa`;
-      if (statKK) statKK.innerText = `${totalKK} KK`;
-      if (statJiwa) statJiwa.innerText = `${totalJiwa} Orang`;
+  globalDataWarga.forEach(row => {
+    let nilaiKolomD = row[3];
+    
+    // Jika kolom D berisi angka total jiwa
+    if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD, 10))) {
+      totalJiwa += parseInt(nilaiKolomD, 10);
+    } else {
+      // Jika kolom D kosong, hitung manual: 1 Kepala Keluarga + Jumlah Anggota (dipisah koma)
+      let teksAnggota = row[1] ? String(row[1]) : '';
+      let jmlAnggota = teksAnggota ? teksAnggota.split(',').filter(item => item.trim() !== '').length : 0;
+      totalJiwa += (1 + jmlAnggota);
     }
+  });
+
+  const badgeJiwa = document.getElementById("badge-total-jiwa");
+  const statKK = document.getElementById("stat-total-kk");
+  const statJiwa = document.getElementById("stat-total-jiwa");
+
+  if (badgeJiwa) badgeJiwa.innerText = `${totalJiwa} Jiwa`;
+  if (statKK) statKK.innerText = `${totalKK} KK`;
+  if (statJiwa) statJiwa.innerText = `${totalJiwa} Orang`;
+}
     
     // Fungsi untuk memfilter daftar rumah saat diketik
     function filterDropdownRumah(keyword) {
