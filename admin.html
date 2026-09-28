@@ -78,16 +78,44 @@
     #searchInput { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; outline: none; }
     #search-box button { padding: 8px 12px; background: #111; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-    .filter-container { display: flex; flex-direction: column; gap: 6px; width: 100%; }
-    .filter-row { display: flex; gap: 6px; width: 100%; justify-content: center; }
-    .filter-row:nth-child(2) { max-width: 90%; margin: 0 auto; }
-    .btn-filter {
-      flex: 1; justify-content: center; padding: 6px 8px; background: white; color: #333;
-      border: 1px solid #ccc; border-radius: 20px; font-size: 11.5px; font-weight: bold;
-      cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.1); display: flex; align-items: center; gap: 3px;
-      white-space: nowrap;
-    }
-    .btn-filter.active { background: #00c853; color: white; border-color: #00c853; }
+  .filter-container { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+  width: 100%; 
+}
+
+.filter-row { 
+  display: flex; 
+  gap: 6px; 
+  width: 100%; 
+  justify-content: center; 
+}
+
+/* Hapus pembatas max-width 90% agar semua baris tombol & dropdown lebarnya seragam */
+.btn-filter {
+  flex: 1; 
+  justify-content: center; 
+  padding: 8px 10px; 
+  background: white; 
+  color: #333;
+  border: 1px solid #ccc; 
+  border-radius: 8px; /* Diubah dari 20px ke 8px agar serasi dengan dropdown */
+  font-size: 11.5px; 
+  font-weight: bold;
+  cursor: pointer; 
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+  display: flex; 
+  align-items: center; 
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.btn-purple {
+  background: #7c3aed;
+  color: white;
+  border-color: #6d28d9;
+}
 
     .modal-bg {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -192,7 +220,7 @@
         <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
           <thead>
             <tr style="border-bottom: 1px solid #334155; color: #94a3b8; text-transform: uppercase; font-size: 10px;">
-              <th style="padding: 6px;">Nama / No Rumah / Kost</th>
+              <th style="padding: 6px;">Nama / No Rumah / </th>
               <th style="padding: 6px; text-align: center;">Aksi</th>
             </tr>
           </thead>
@@ -250,7 +278,7 @@
           <label for="inputKategori">Kategori:</label>
           <select name="kategori" id="inputKategori">
             <option value="Rumah">🏠 Rumah</option>
-            <option value="Kost">🛏️ Kost</option>
+            <option value="">🛏️ Kost</option>
             <option value="Fasum">🏛️ Fasum</option>
             <option value="Kuliner">🍽️ Kuliner</option>
             <option value="Minimarket">🏪 Minimarket</option>
@@ -823,126 +851,130 @@ const payload = {
   window.location.href = "index.html";
 }
     
-    var map, daftarPin = [], pinRumahAktif = null;
-    var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
+  var map, daftarPin = [], pinRumahAktif = null;
+  var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
 
-    function initMap() {
-      if (map) return;
+  function initMap() {
+    if (map) return;
 
-      map = L.map('map').setView([-7.7423, 110.3842], 17);
-      L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
-      L.DomEvent.disableClickPropagation(document.getElementById('modal-admin-inventaris'));
-      L.DomEvent.disableClickPropagation(document.getElementById('modal-kelola-warga'));
-      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
+    map = L.map('map').setView([-7.7423, 110.3842], 17);
+    L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
+    L.DomEvent.disableClickPropagation(document.getElementById('modal-admin-inventaris'));
+    L.DomEvent.disableClickPropagation(document.getElementById('modal-kelola-warga'));
+    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
 
-      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-      map.on('click', function(e) {
-        if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex' || document.getElementById('modal-kelola-warga').style.display === 'flex') return;
-        document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
-        document.getElementById('inputNama').value = "";
-        document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
-        document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
-        document.getElementById('inputPinForm').value = localStorage.getItem('verifiedPin') || '';
-        document.getElementById('inputFoto').value = "";
-        document.getElementById('modal-form').style.display = 'flex';
+    map.on('click', function(e) {
+      if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex' || document.getElementById('modal-kelola-warga').style.display === 'flex') return;
+      document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
+      document.getElementById('inputNama').value = "";
+      document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
+      document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+      document.getElementById('inputPinForm').value = localStorage.getItem('verifiedPin') || '';
+      document.getElementById('inputFoto').value = "";
+      document.getElementById('modal-form').style.display = 'flex';
+    });
+
+    ambilDataSheets('cache_peta_admin', SHEET_URL, (data, fromCache) => {
+      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+      daftarPin = [];
+
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 3 && kolom[0] !== '') {
+          var latClean = perbaikiKoordinat(kolom[1]);
+          var lngClean = perbaikiKoordinat(kolom[2]);
+          
+          var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
+          var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
+          var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
+          var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
+
+          var item = {
+            name: namaAsli,
+            nameAsli: namaAsli,
+            lat: parseFloat(latClean),
+            lng: parseFloat(lngClean),
+            hidden: statusHidden,
+            foto: urlFoto
+          };
+
+          if (isNaN(item.lat) || isNaN(item.lng)) return;
+
+          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+          
+          let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+
+          var customIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
+            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+          });
+          
+          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+          if (!item.hidden) marker.addTo(map);
+
+          // 🛠️ PERBAIKAN: Gabungkan Nama Asli + Kategori Manual + Kategori Ikon untuk pencarian presisi
+          var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
+
+          daftarPin.push({ 
+            namaRaw: item.nameAsli,
+            nama: item.nameAsli.toLowerCase(), 
+            marker: marker, 
+            lat: item.lat, 
+            lng: item.lng,
+            hidden: item.hidden,
+            kategori: katFinal
+          });
+        }
       });
+    });
+  }
 
-      ambilDataSheets('cache_peta_admin', SHEET_URL, (data, fromCache) => {
-        var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-        daftarPin = [];
+  function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
 
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 3 && kolom[0] !== '') {
-            var latClean = perbaikiKoordinat(kolom[1]);
-            var lngClean = perbaikiKoordinat(kolom[2]);
-            
-            var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
-            var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
-            var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
-
-            var item = {
-              name: namaAsli,
-              nameAsli: namaAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
-              hidden: statusHidden,
-              foto: urlFoto
-            };
-
-            if (isNaN(item.lat) || isNaN(item.lng)) return;
-
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
-            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-            
-            let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
-
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            
-            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-            if (!item.hidden) marker.addTo(map);
-
-            daftarPin.push({ 
-              namaRaw: item.nameAsli,
-              nama: item.nameAsli.toLowerCase(), 
-              marker: marker, 
-              lat: item.lat, 
-              lng: item.lng,
-              hidden: item.hidden,
-              kategori: dataIkon.kategori 
-            });
-          }
-        });
-      });
-    }
-
-    function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
-
+  // 🛠️ PERBAIKAN FUNGSI FILTER: Pencocokan Terisolasi & Presisi
   function filterKategori(kat) {
-  var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
+    var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
 
-  daftarPin.forEach(function(pin) {
-    // 1. Selalu copot/sembunyikan marker terlebih dahulu dari peta
-    if (map.hasLayer(pin.marker)) {
-      map.removeLayer(pin.marker);
-    }
+    daftarPin.forEach(function(pin) {
+      // 1. Sembunyikan semua marker dari peta lebih dulu
+      if (map.hasLayer(pin.marker)) {
+        map.removeLayer(pin.marker);
+      }
 
-    // Jika pin di-hide secara sistem, lewati
-    if (pin.hidden) return;
+      if (pin.hidden) return;
 
-    // 2. Ambil kategori dari data pin (pastikan string bersih)
-    var pinKat = pin.kategori ? String(pin.kategori).trim().toLowerCase() : '';
-    var pinJenis = pin.jenis ? String(pin.jenis).trim().toLowerCase() : '';
-    
-    // Gabungkan untuk pencarian kata kunci
-    var gabungKat = pinKat + ' ' + pinJenis;
+      // 2. Tentukan teks yang akan diuji
+      var teksKategori = String(pin.kategori || '').toLowerCase();
+      var teksNama = String(pin.nama || '').toLowerCase();
+      var isMatch = false;
 
-    var isMatch = false;
+      if (kategoriPilihan === 'semua') {
+        isMatch = true;
+      } else if (kategoriPilihan === 'kost') {
+        // Hanya cocok jika kategori atau nama bangunan secara eksplisit mengandung 'kost', 'kos', atau 'kontrakan'
+        isMatch = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
+                  teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+      } else if (kategoriPilihan === 'fasum') {
+        isMatch = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
+                  teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
+      } else if (kategoriPilihan === 'kuliner') {
+        isMatch = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
+                  teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
+      } else if (kategoriPilihan === 'minimarket') {
+        isMatch = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
+                  teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+      }
 
-    if (kategoriPilihan === 'semua') {
-      isMatch = true;
-    } else if (kategoriPilihan === 'kost') {
-      isMatch = gabungKat.includes('kost') || gabungKat.includes('kos') || gabungKat.includes('kontrakan');
-    } else if (kategoriPilihan === 'fasum') {
-      isMatch = gabungKat.includes('fasum') || gabungKat.includes('fasilitas') || gabungKat.includes('umum');
-    } else if (kategoriPilihan === 'kuliner') {
-      isMatch = gabungKat.includes('kuliner') || gabungKat.includes('warung') || gabungKat.includes('makan');
-    } else if (kategoriPilihan === 'minimarket') {
-      isMatch = gabungKat.includes('minimarket') || gabungKat.includes('toko') || gabungKat.includes('swalayan');
-    }
-
-    // 3. Hanya tampilkan jika benar-benar cocok (isMatch = true)
-    if (isMatch) {
-      pin.marker.addTo(map);
-    }
-  });
-}
+      // 3. Tampilkan kembali jika cocok
+      if (isMatch) {
+        pin.marker.addTo(map);
+      }
+    });
+  }
 
     function cariLokasi() {
       var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
