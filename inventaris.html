@@ -93,18 +93,17 @@
       const container = document.getElementById("daftar-inventaris");  
       if (!container) return;
 
-      // 1. AMBIL DARI LOCALSTORAGE AGAR TAMPIL INSTAN TANPA MEMBEBANI RAM
-      const cachedData = localStorage.getItem(CACHE_KEY);
-      if (cachedData) {
-        try {
-          renderHTML(JSON.parse(cachedData));
-        } catch (e) {
-          console.error("Gagal memparsing cache:", e);
-        }
-      } else {
-        container.innerHTML = `<div style="text-align:center; padding: 20px; color:#666;">⏳ Memuat data stok...</div>`;
-      }
+      const urlInventaris = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
 
+      // Gunakan helper ambilDataSheets dari utils.js agar aman dari CORS & fallback ke Cache otomatis
+      ambilDataSheets(CACHE_KEY, urlInventaris, (data, fromCache) => {
+        if (data && (data.perkakas || data.peminjaman)) {
+          renderHTML(data);
+        } else if (!fromCache && (!data || data.length === 0)) {
+          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris.</div>`;
+        }
+      });
+    }
       // 2. JIKA ONLINE, TARIK DATA TERBARU DARI GOOGLE SHEETS DI LATAR BELAKANG
       if (!navigator.onLine) return;
 
