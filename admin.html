@@ -130,7 +130,8 @@
     </div>
   </div>
 
-  <a href="index.html" class="btn-back-floating">⬅️ Mode Warga</a>
+ <!-- BARU: Panggil fungsi logoutAdmin() -->
+ <a href="javascript:void(0)" onclick="logoutAdmin()" class="btn-back-floating">⬅️ Mode Warga (Logout)</a>
   <div id="map"></div>
 
   <!-- PANEL ATAS -->
@@ -624,7 +625,6 @@ function cekLogin() {
 
   // LOGIN BARU WAJIB ONLINE
   if (!navigator.onLine) {
-
     btnLogin.innerText = "Buka Kunci";
     btnLogin.disabled = false;
 
@@ -649,17 +649,19 @@ function cekLogin() {
   .then(res => res.json())
 
   .then(data => {
-
     btnLogin.innerText = "Buka Kunci";
     btnLogin.disabled = false;
 
     if (data.status === "SUCCESS" && data.token) {
 
-      // Simpan status login
+      // 1. Simpan status login
       localStorage.setItem('authAdmin', 'true');
 
-      // Simpan TOKEN, bukan PIN
+      // 2. Simpan TOKEN
       localStorage.setItem('adminToken', data.token);
+
+      // 3. TAMBAHKAN INI: Catat Waktu Login Sekarang (Timestamp)
+      localStorage.setItem('admin_login_time', Date.now().toString());
 
       // Bersihkan PIN dari input
       document.getElementById('adminPin').value = "";
@@ -667,15 +669,12 @@ function cekLogin() {
       bukaAkses();
 
     } else {
-
       alert("❌ PIN salah! Akses ditolak.");
-
       document.getElementById('adminPin').value = "";
     }
   })
 
   .catch(err => {
-
     console.error("❌ Gagal memverifikasi PIN:", err);
 
     btnLogin.innerText = "Buka Kunci";
@@ -684,7 +683,6 @@ function cekLogin() {
     alert("❌ Gagal menghubungi server. PIN belum dapat diverifikasi.");
   });
 }
-
 
 
     
@@ -713,6 +711,17 @@ if (
   bukaAkses();
 }
 
+  function logoutAdmin() {
+  // Hapus kredensial & cache sensitif dari memori browser
+  localStorage.removeItem('authAdmin');
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('verifiedPin');
+  localStorage.removeItem('cache_data_warga');
+  localStorage.removeItem('admin_login_time');
+  
+  // Arahkan kembali ke Mode Warga / Publik
+  window.location.href = "index.html";
+}
 
     document.getElementById('dataForm').addEventListener('submit', function(e) {
       e.preventDefault();
