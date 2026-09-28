@@ -1026,12 +1026,13 @@ const payload = {
       `).join('');
     }
     
-    async function simpanPeminjamanAdmin() {
+   async function simpanPeminjamanAdmin() {
       const peminjam = document.getElementById("pinjamNamaWarga").value;
       const barang = document.getElementById("pinjamPilihBarang").value;
       const jumlah = document.getElementById("pinjamJumlah").value;
+      
+      // Ambil TOKEN (Bukan PIN hardcode!)
       const tokenAdmin = localStorage.getItem('adminToken') || '';
-      const pinAdmin = localStorage.getItem('verifiedPin') || '050505';
 
       if (!peminjam || !barang || !jumlah) {
         alert("Mohon lengkapi semua data!");
@@ -1042,8 +1043,10 @@ const payload = {
       if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
 
       const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      
+      // Gunakan token di dalam payload
       const payload = {
-        pin: pinAdmin,
+        token: tokenAdmin,
         action: "pinjam",
         id: "ID-" + Date.now(),
         peminjam: peminjam,
@@ -1089,13 +1092,14 @@ const payload = {
       }
     }
 
-    async function simpanBarangStokAdmin() {
+   async function simpanBarangStokAdmin() {
       const pilihPilihan = document.getElementById('stokPilihBarang').value;
       const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
       const jenisAksi = document.getElementById('stokJenisAksi').value;
       const jumlahUnit = document.getElementById('stokJumlahTotal').value;
+      
+      // Ambil TOKEN (Bukan PIN hardcode!)
       const tokenAdmin = localStorage.getItem('adminToken') || '';
-      const pinAdmin = localStorage.getItem('verifiedPin') || '050505';
       
       let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
 
@@ -1107,14 +1111,15 @@ const payload = {
       const btn = document.querySelector('#formStokBarang button');
       if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
 
+      // Payload bersih berbasis token
       const payload = {
-        pin: pinAdmin,
+        token: tokenAdmin,
         action: 'tambahBarangPerkakas',
         namaBarang: namaBarang,
         jenisAksi: jenisAksi,
         jumlahUnit: parseInt(jumlahUnit)
       };
-
+     
       if (!navigator.onLine) {
         if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
         simpanPayloadKeAntrean('Perubahan Stok Inventaris', payload);
@@ -1231,8 +1236,8 @@ const payload = {
       const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
       const nominal = parseInt(rawNominal, 10);
 
+      // Ambil TOKEN (Bukan PIN hardcode!)
       const tokenAdmin = localStorage.getItem('adminToken') || '';
-      const pinAdmin = localStorage.getItem('verifiedPin') || '050505';
 
       if (!divisi || !ket || isNaN(nominal) || !tglInput) {
         alert('Harap isi semua kolom dengan benar!');
@@ -1246,8 +1251,9 @@ const payload = {
       btnSimpan.disabled = true;
       btnSimpan.innerText = 'Mengirim...';
 
+      // Payload bersih berbasis token
       const payload = {
-        pin: pinAdmin,
+        token: tokenAdmin,
         action: 'tambahKeuangan',
         tanggalInput: tglFormatted,
         divisi: divisi,
@@ -1255,7 +1261,7 @@ const payload = {
         jenisTransaksi: jenis,
         nominal: parseInt(nominal)
       };
-
+    
       if (!navigator.onLine) {
         btnSimpan.disabled = false;
         btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
