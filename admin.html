@@ -757,21 +757,24 @@ function cekLogin() {
 
 // BARU (Otomatis muat data begitu PIN berhasil di-ACC):
 function bukaAkses() {
+  // 1. Langsung sembunyikan overlay login (Instan < 0.1 detik)
   document.getElementById('login-overlay').style.display = 'none';
   document.body.style.overflow = 'auto';
-
   document.getElementById('inputPinForm').value = '';
 
+  // 2. Inisialisasi Peta
   initMap();
 
-  // 🛠️ TAMBAHKAN INI: Langsung muat data Warga & Peta begitu overlay login hilang
-  muatSemuaDataAdmin();
-
+  // 3. Tampilkan Peta Dulu & Atur Ukuran
   setTimeout(() => {
     if (map) map.invalidateSize();
-  }, 300);
-}
+  }, 200);
 
+  // 4. Muat Data Berat (Warga & Peta) di LATAR BELAKANG setelah UI/Peta Selesai Tampil
+  setTimeout(() => {
+    muatSemuaDataAdmin();
+  }, 500);
+}
 // ==========================================
 // AUTO LOGIN ADMIN SAAT PWA DIBUKA (+ TIMEOUT 30 MENIT)
 // ==========================================
@@ -1464,8 +1467,10 @@ async function muatSemuaDataAdmin() {
   try {
     const tokenAdmin = localStorage.getItem('adminToken') || '';
     const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
-    const urlWarga = `${URL_API_WARGA}?action=getWarga&token=${encodeURIComponent(tokenAdmin)}`;
-    // 1. Tampilkan dari Cache Lokal dulu (jika ada)
+    // PERBAIKAN: Ganti URL_API_WARGA menjadi RT05_CONFIG.GAS_WEB_APP_URL
+    const urlWarga = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getWarga&token=${encodeURIComponent(tokenAdmin)}`;
+
+    // 1. Tampilkan instan dari Cache Lokal dulu (0 Detik)
     const cacheWarga = localStorage.getItem('cache_data_warga');
     if (cacheWarga) {
       try {
@@ -1474,13 +1479,13 @@ async function muatSemuaDataAdmin() {
       } catch(e) {}
     }
 
-    // 2. Fetch Data dari Server
+    // 2. Fetch Data dari Server Utama di Latar Belakang (Cepat & Bebas 404)
     const [resRumah, resWarga] = await Promise.all([
       fetch(urlPeta).then(r => r.json()).catch(() => null),
       fetch(urlWarga).then(r => r.json()).catch(() => null)
     ]);
     
-      // Olah Data Peta / Rumah
+    // Olah Data Peta / Rumah
     if (Array.isArray(resRumah)) {
       globalDataRumah = resRumah.slice(1);
       listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
@@ -1490,8 +1495,6 @@ async function muatSemuaDataAdmin() {
     if (Array.isArray(resWarga) && resWarga.length > 1) {
       localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
       prosesDanTampilkanStatistik(resWarga);
-    } else {
-      console.warn("Data Warga tidak dalam format Array atau hanya berisi Header:", resWarga);
     }
 
   } catch (e) {
