@@ -257,60 +257,60 @@
     
 </div>
 
-  <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
-  <div id="modal-form" class="modal-bg" onclick="event.stopPropagation(); if(event.target === this) tutupModalForm();">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="formTitle">📍 Tambah Data Baru</h3>
-        <button class="close-btn" onclick="tutupModalForm()">&times;</button>
-      </div>
-      <form id="dataForm">
-        <input type="hidden" name="pin" id="inputPinForm">
-        
-        <div class="form-group">
-          <label for="inputNama">Nama / No. Rumah / Tempat:</label>
-          <input type="text" name="nama" id="inputNama" required>
-        </div>
-        
-        <div style="display: flex; gap: 10px;">
-          <div class="form-group" style="flex: 1;">
-            <label for="inputLat">Latitude:</label>
-            <input type="text" name="lat" id="inputLat" required>
-          </div>
-          <div class="form-group" style="flex: 1;">
-            <label for="inputLng">Longitude:</label>
-            <input type="text" name="lng" id="inputLng" required>
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label for="inputKategori">Kategori:</label>
-          <select name="kategori" id="inputKategori">
-            <option value="Rumah">🏠 Rumah</option>
-            <option value="">🛏️ Kost</option>
-            <option value="Fasum">🏛️ Fasum</option>
-            <option value="Kuliner">🍽️ Kuliner</option>
-            <option value="Minimarket">🏪 Minimarket</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="inputHidden">Sembunyikan dari Peta?</label>
-          <select name="hidden" id="inputHidden">
-            <option value="FALSE">Tidak (Tampil)</option>
-            <option value="TRUE">Ya (Sembunyikan)</option>
-          </select>
-        </div>
-        
-        <div class="form-group">
-          <label for="inputFoto">URL Foto Depan (Opsional):</label>
-          <input type="url" name="foto" id="inputFoto">
-        </div>
-        
-        <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan ke Google Sheet</button>
-      </form>
+ <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
+<div id="modal-form" class="modal-bg" onclick="bukaTutupLuarForm(event)">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="formTitle">📍 Tambah Data Baru</h3>
+      <button class="close-btn" onclick="tutupModalForm()">&times;</button>
     </div>
+    <form id="dataForm">
+      <input type="hidden" name="pin" id="inputPinForm">
+      
+      <div class="form-group">
+        <label for="inputNama">Nama / No. Rumah / Tempat:</label>
+        <input type="text" name="nama" id="inputNama" required>
+      </div>
+      
+      <div style="display: flex; gap: 10px;">
+        <div class="form-group" style="flex: 1;">
+          <label for="inputLat">Latitude:</label>
+          <input type="text" name="lat" id="inputLat" required>
+        </div>
+        <div class="form-group" style="flex: 1;">
+          <label for="inputLng">Longitude:</label>
+          <input type="text" name="lng" id="inputLng" required>
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label for="inputKategori">Kategori:</label>
+        <select name="kategori" id="inputKategori">
+          <option value="Rumah">🏠 Rumah</option>
+          <option value="Kost">🛏️ Kost</option>
+          <option value="Fasum">🏛️ Fasum</option>
+          <option value="Kuliner">🍽️ Kuliner</option>
+          <option value="Minimarket">🏪 Minimarket</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="inputHidden">Sembunyikan dari Peta?</label>
+        <select name="hidden" id="inputHidden">
+          <option value="FALSE">Tidak (Tampil)</option>
+          <option value="TRUE">Ya (Sembunyikan)</option>
+        </select>
+      </div>
+      
+      <div class="form-group">
+        <label for="inputFoto">URL Foto Depan (Opsional):</label>
+        <input type="url" name="foto" id="inputFoto">
+      </div>
+      
+      <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan ke Google Sheet</button>
+    </form>
   </div>
+</div>
 
   <!-- MODAL 2: Form Laporan Keuangan Divisi -->
   <div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
@@ -564,10 +564,17 @@
     </div>
   </div>
     
-  <!-- JAVASCRIPT LOGIC -->
+  <!-- JAVASCRIPT LOGIC SCRIP UTAMA-->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
     const GAS_WEB_APP_URL = RT05_CONFIG.GAS_WEB_APP_URL;
+
+    
+    // BARU (Aman untuk Angka, Null, maupun Undefined)
+function escapeHTML(str) {
+  if (str === null || str === undefined) return '';
+  return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
 
     // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
     let sedangMengirimAdmin = false;
@@ -1691,35 +1698,8 @@ document.addEventListener("DOMContentLoaded", () => {
 // <!-- PENUTUP SCRIPT UTAMA PWA -->
   </script>
 
-  <!-- Script Khusus Helper & Listener Awal -->
-  <script>
-    // Pindahkan escapeHTML ke sini agar bisa diakses secara global oleh fungsi inventaris
-    // BARU (Aman untuk Angka, Null, maupun Undefined)
-function escapeHTML(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
-}
 
-    // Listener Tunggal DOMContentLoaded
-    document.addEventListener("DOMContentLoaded", () => {
-      perbaruiIndikatorSyncAdmin();
-      muatPeminjamanAdmin();
-
-      // Periksa Sesi Login Admin (Timeout 10 Menit)
-      if (periksaSesiAdmin()) {
-        muatSemuaDataAdmin();
-      } else {
-        setTimeout(() => {
-          const inputPin = document.getElementById('adminPin');
-          if (inputPin) inputPin.focus();
-        }, 300);
-      }
-
-      if (navigator.onLine) {
-        kirimDataPendingAdmin();
-      }
-    });
-  </script>
+ 
 
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
