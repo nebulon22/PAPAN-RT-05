@@ -997,102 +997,120 @@ function cariLokasi() {
       document.getElementById('modal-foto').style.display = 'none';
     }
 
-   // 3. Muat Data Keuangan
-    function muatDataKeuangan() {
-      ambilDataSheets('cache_keuangan_warga', KEUANGAN_URL, (data, fromCache) => {
-        if (!data) return;
-        var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-        dataKeuangan = [];
-        var daftarDivisi = new Set();
-
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
-            // PERBAIKAN: Bungkus dengan String(...) sebelum di-trim / di-split / di-replace
-            var tgl = kolom[1] ? String(kolom[1]).trim() : (kolom[0] ? String(kolom[0]).split(' ')[0] : '-');
-            var divisi = kolom[2] ? String(kolom[2]).trim() : 'Umum';
-            var ket = kolom[3] ? String(kolom[3]).trim() : '-';
-            var tipeRaw = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'MASUK';
-            var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
-            
-            var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
-            // Aman untuk tipe data Number maupun String
-            var nominal = typeof nominalRaw === 'number' 
-              ? nominalRaw 
-              : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
-
-            if (divisi) daftarDivisi.add(divisi);
-            dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
-          }
-        });
-
-        var selectDivisi = document.getElementById('filterDivisi');
-        var divisiSebelumnya = selectDivisi.value;
-        selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
-        
-        daftarDivisi.forEach(div => {
-          selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
-        });
-        
-        if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
-          selectDivisi.value = divisiSebelumnya;
-        } else {
-          selectDivisi.value = 'semua';
-        }
-        tampilkanRekeningKoran();
-      });
-    }
-
-    function tampilkanRekeningKoran() {
-      var selectDivisi = document.getElementById('filterDivisi');
-      var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
-
-      var dataFilter = (divisiTerpilih === 'semua')
-        ? dataKeuangan
-        : dataKeuangan.filter(item => item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
-
-      var totMasuk = 0;
-      var totKeluar = 0;
-
-      dataFilter.forEach(item => {
-        if (item.tipe === 'MASUK') totMasuk += item.nominal;
-        if (item.tipe === 'KELUAR') totKeluar += item.nominal;
-      });
-
-      var saldoAkhir = totMasuk - totKeluar;
-      document.getElementById('saldo-kas').innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
-
-      var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
-      renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
-
-      var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
-      renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
-    }
+ // 3. Muat Data Keuangan
+  function muatDataKeuangan() {
+    ambilDataSheets('cache_keuangan_warga', KEUANGAN_URL, (data, fromCache) => {
+      if (!data) return;
+      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+      dataKeuangan = [];
       
-    function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
-      var tbody = document.getElementById(elementId);
-      tbody.innerHTML = '';
+      // 🛠️ Gunakan Map agar terhindar dari duplikat huruf besar/kecil (Case-Insensitive Deduplication)
+      var divisiMap = new Map();
 
-      if (dataset.length === 0) {
-        tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
-        return;
-      }
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
+          var tglRaw = kolom[1] ? String(kolom[1]).trim() : (kolom[0] ? String(kolom[0]).split(' ')[0] : '-');
+          var divisi = kolom[2] ? String(kolom[2]).trim() : 'Umum';
+          var ket = kolom[3] ? String(kolom[3]).trim() : '-';
+          var tipeRaw = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'MASUK';
+          var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
+          
+          var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
+          var nominal = typeof nominalRaw === 'number' 
+            ? nominalRaw 
+            : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
 
-      dataset.forEach(item => {
-        var tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
-        tr.innerHTML = `
-          <td style="padding:6px 0;">
-            <span style="color:#666; font-size:10px;">${escapeHtml(item.tgl)}</span><br>
-            <b>${escapeHtml(item.ket)}</b>
-          </td>
-          <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
-            ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
-          </td>
-        `;
-        tbody.appendChild(tr);
+          // 🛠️ PERBAIKAN FORMAT TANGGAL ISO: Mengubah "2026-09-27T17:00:00.000Z" menjadi "27/09/2026"
+          var tgl = tglRaw;
+          if (tgl.includes('T')) {
+            var parts = tgl.split('T')[0].split('-');
+            if (parts.length === 3) {
+              tgl = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+          }
+
+          // 🛠️ DEDUPLIKASI DROPDOWN: Simpan nama divisi versi huruf rapi (Title Case)
+          if (divisi) {
+            var kunciLower = divisi.toLowerCase();
+            if (!divisiMap.has(kunciLower) || divisi !== kunciLower) {
+              divisiMap.set(kunciLower, divisi);
+            }
+          }
+
+          dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
+        }
       });
+
+      var selectDivisi = document.getElementById('filterDivisi');
+      var divisiSebelumnya = selectDivisi.value;
+      selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
+      
+      // 🛠️ Urutkan dan masukkan nama divisi rapi tanpa duplikat
+      Array.from(divisiMap.values()).sort().forEach(div => {
+        selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
+      });
+      
+      if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
+        selectDivisi.value = divisiSebelumnya;
+      } else {
+        selectDivisi.value = 'semua';
+      }
+      tampilkanRekeningKoran();
+    });
+  }
+
+  function tampilkanRekeningKoran() {
+    var selectDivisi = document.getElementById('filterDivisi');
+    var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+
+    var dataFilter = (divisiTerpilih === 'semua')
+      ? dataKeuangan
+      : dataKeuangan.filter(item => item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
+
+    var totMasuk = 0;
+    var totKeluar = 0;
+
+    dataFilter.forEach(item => {
+      if (item.tipe === 'MASUK') totMasuk += item.nominal;
+      if (item.tipe === 'KELUAR') totKeluar += item.nominal;
+    });
+
+    var saldoAkhir = totMasuk - totKeluar;
+    document.getElementById('saldo-kas').innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
+
+    var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
+    renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
+
+    var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
+    renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
+  }
+    
+  function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
+    var tbody = document.getElementById(elementId);
+    tbody.innerHTML = '';
+
+    if (dataset.length === 0) {
+      tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
+      return;
     }
 
+    dataset.forEach(item => {
+      var tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+      tr.innerHTML = `
+        <td style="padding:6px 0;">
+          <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHtml(item.tgl)}</span><br>
+          <b>${escapeHtml(item.ket)}</b>
+        </td>
+        <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
+          ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+    
     function bukaModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'flex';
       muatDataKeuangan();
