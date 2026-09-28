@@ -1261,13 +1261,13 @@ const payload = {
     let globalDataWarga = [];
     let listSemuaRumahAdmin = [];
 
-   async function muatSemuaDataAdmin() {
+  async function muatSemuaDataAdmin() {
       try {
-        // PERBAIKAN: Gunakan || '050505' agar selalu mengirimkan PIN yang valid ke backend
-        const pinAdmin = localStorage.getItem('verifiedPin') || '050505';
+        // AMBIL TOKEN (Bukan PIN hardcode!)
+        const tokenAdmin = localStorage.getItem('adminToken') || '';
 
-        // 1. Ambil Data Peta / Rumah
-        const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&pin=${encodeURIComponent(pinAdmin)}`;
+        // 1. Ambil Data Peta / Rumah dengan Token
+        const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
         const resRumah = await fetch(urlPeta).then(r => r.json());
         
         if (Array.isArray(resRumah)) {
@@ -1275,28 +1275,24 @@ const payload = {
           listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? row[0].trim() : '').filter(Boolean);
         }
 
-        // 2. Ambil Data Sensus Warga
-        const urlWarga = `${URL_API_WARGA}?pin=${encodeURIComponent(pinAdmin)}`;
+        // 2. Ambil Data Sensus Warga dengan Token
+        const urlWarga = `${URL_API_WARGA}?token=${encodeURIComponent(tokenAdmin)}`;
         const resWarga = await fetch(urlWarga).then(r => r.json());
         
-        // Debugging: Buka Console (F12) untuk melihat data yang diterima
         console.log("Data Warga Diterima:", resWarga);
 
         if (Array.isArray(resWarga) && resWarga.length > 1) {
-          // Ambil baris data tanpa header (mulai baris ke-2)
           globalDataWarga = resWarga.slice(1).filter(row => row[0] && String(row[0]).trim() !== ''); 
           
           let totalKK = globalDataWarga.length;
           let totalJiwa = 0;
 
           globalDataWarga.forEach(row => {
-            let nilaiKolomD = row[3]; // Kolom D: Jumlah Jiwa dari Google Sheet
+            let nilaiKolomD = row[3];
             
             if (nilaiKolomD !== undefined && nilaiKolomD !== null && String(nilaiKolomD).trim() !== '' && !isNaN(parseInt(nilaiKolomD))) {
-              // Jika Kolom D terisi angka
               totalJiwa += parseInt(nilaiKolomD);
             } else {
-              // Jika Kolom D kosong, hitung: 1 (Kepala) + Jumlah Anggota (pisahkan koma)
               let teksAnggota = row[1] ? String(row[1]) : '';
               let jmlAnggota = teksAnggota ? teksAnggota.split(',').filter(item => item.trim() !== '').length : 0;
               totalJiwa += (1 + jmlAnggota);
