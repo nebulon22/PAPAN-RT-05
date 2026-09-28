@@ -1120,7 +1120,7 @@ function bukaTutupLuarForm(e) {
     let cachePerkakas = [];
     let cachePeminjaman = [];
 
-    async function muatPeminjamanAdmin() {
+   async function muatPeminjamanAdmin() {
       const container = document.getElementById("tabel-peminjaman-admin");
       if (!container) return;
 
@@ -1128,7 +1128,11 @@ function bukaTutupLuarForm(e) {
         container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
       }
 
-      ambilDataSheets('cache_inventaris_admin', RT05_CONFIG.GAS_WEB_APP_URL, (data, fromCache) => {
+      // TAMBAHKAN TOKEN DI SINI AGAR TIDAK DITOLAK BACKEND
+      const tokenAdmin = localStorage.getItem('adminToken') || '';
+      const targetUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
+
+      ambilDataSheets('cache_inventaris_admin', targetUrl, (data, fromCache) => {
         if (data && (data.perkakas || data.peminjaman)) {
           cachePeminjaman = Array.isArray(data) ? data : (data.peminjaman || []);
           cachePerkakas = data.perkakas || [];
