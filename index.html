@@ -8,7 +8,7 @@
    <!-- FontAwesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.4.6">
+  <link rel="manifest" href="manifest.json?v=1.4.8">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
  
@@ -468,12 +468,22 @@ function perbaruiAplikasiSekarang() {
         <button class="close-btn" onclick="tutupModalKeuangan()">&times;</button>
       </div>
       
-      <div style="margin-bottom: 12px;">
-        <label for="filterDivisi" style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
-        <select id="filterDivisi" onchange="tampilkanRekeningKoran()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
-          <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
-        </select>
-      </div>
+     <div style="margin-bottom: 12px;">
+  <label for="filterDivisi" style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
+  <select id="filterDivisi" onchange="tampilkanRekeningKoran()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
+    <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
+    <option value="tenda dan perkakas">Tenda dan Perkakas</option>
+    <option value="sound system">Sound System</option>
+    <option value="sosial">Sosial</option>
+    <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
+    <option value="pondokan rt 05">Pondokan RT 05</option>
+    <option value="pekerjaan umum & kelistrikan">Pekerjaan Umum & Kelistrikan</option>
+    <option value="jimpitan harian & keamanan">Jimpitan Harian & Keamanan</option>
+    <option value="bendahara umum">Bendahara Umum</option>
+    <option value="tata ruang">Tata Ruang</option>
+    <option value="transportasi">Transportasi</option>
+  </select>
+</div>
 
       <div style="background:#0288d1; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
         <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Saldo Saat Ini</span>
@@ -778,7 +788,7 @@ function perbaruiAplikasiSekarang() {
     // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
     // ==========================================
 
-    // 1. Muat Data Peta (Offline Ready & Auto Update)
+ // 1. Muat Data Peta (Offline Ready & Auto Update)
     ambilDataSheets('cache_peta_warga', SHEET_URL, (data, fromCache) => {
       if (!data) return;
       var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
@@ -791,11 +801,13 @@ function perbaruiAplikasiSekarang() {
         if (kolom.length >= 3 && kolom[0] !== '') {
           var latClean = perbaikiKoordinat(kolom[1]);
           var lngClean = perbaikiKoordinat(kolom[2]);
-          var statusHidden = kolom[3] ? kolom[3].trim().toUpperCase() === 'TRUE' : false;
-          var kategoriManual = kolom[4] ? kolom[4].trim().toLowerCase() : '';
-          var urlFoto = kolom[5] ? kolom[5].trim() : '';
+          
+          // PERBAIKAN: Bungkus dengan String() sebelum di-trim agar tidak error jika tipe data Boolean/Number
+          var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
+          var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
+          var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
+          var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
 
-          var namaAsli = kolom[0].trim();
           var item = {
             name: namaAsli,
             nameAsli: namaAsli,
@@ -835,128 +847,143 @@ function perbaruiAplikasiSekarang() {
       });
     });
 
-    // 2. Muat Data Pengumuman
-    ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
-      if (!data) return;
-      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-      daftarPengumuman = [];
+  // 2. Muat Data Pengumuman
+ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
+  if (!data) return;
+  var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+  daftarPengumuman = [];
 
-      baris.forEach(function(kolom) {
-        if (kolom.length >= 2 && kolom[1] !== '') {
-          var status = kolom[4] ? kolom[4].trim().toUpperCase() : 'AKTIF';
-          if (status === 'AKTIF') {
-            daftarPengumuman.push({
-              tanggal: kolom[0] || '',
-              judul: kolom[1] || '',
-              detail: kolom[2] || '',
-              lokasi: kolom[3] ? kolom[3].trim() : ''
-            });
+  baris.forEach(function(kolom) {
+    if (kolom.length >= 2 && kolom[1] !== '') {
+      var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
+      if (status === 'AKTIF') {
+        
+        // 🛠️ PERBAIKAN FORMAT TANGGAL ISO:
+        var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
+        var tglRapi = tglRaw;
+        
+        if (tglRapi.includes('T')) {
+          var parts = tglRapi.split('T')[0].split('-');
+          if (parts.length === 3) {
+            tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah "2026-09-14T..." menjadi "14/09/2026"
           }
         }
-      });
 
-      var badge = document.getElementById('badge-count');
-      if (daftarPengumuman.length > 0) {
-        badge.innerText = daftarPengumuman.length;
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
+        daftarPengumuman.push({
+          tanggal: tglRapi, // Simpan tanggal yang sudah bersih
+          judul: kolom[1] ? String(kolom[1]).trim() : '',
+          detail: kolom[2] ? String(kolom[2]).trim() : '',
+          lokasi: kolom[3] ? String(kolom[3]).trim() : ''
+        });
       }
+    }
+  });
+
+  var badge = document.getElementById('badge-count');
+  if (badge) {
+    if (daftarPengumuman.length > 0) {
+      badge.innerText = daftarPengumuman.length;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+});
+
+function escapeHtml(text) {
+  if (!text) return '';
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function bukaModalInfo() {
+  var container = document.getElementById('list-pengumuman');
+  container.innerHTML = '';
+
+  if (daftarPengumuman.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
+  } else {
+    daftarPengumuman.forEach(function(info) {
+      var lokasiParam = encodeURIComponent(info.lokasi);
+      var html = `
+        <div class="card-info">
+          ${info.tanggal ? `<div class="tgl">📅 ${escapeHtml(info.tanggal)}</div>` : ''}
+          <div class="judul">${escapeHtml(info.judul)}</div>
+          <div class="detail">${escapeHtml(info.detail)}</div>
+          ${info.lokasi ? `<button class="btn-lihat-lokasi" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHtml(info.lokasi)})</button>` : ''}
+        </div>
+      `;
+      container.innerHTML += html;
     });
+  }
+  document.getElementById('modal-info').style.display = 'flex';
+}
 
-    function escapeHtml(text) {
-      if (!text) return '';
-      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-    }
-
-    function bukaModalInfo() {
-      var container = document.getElementById('list-pengumuman');
-      container.innerHTML = '';
-
-      if (daftarPengumuman.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
-      } else {
-        daftarPengumuman.forEach(function(info) {
-          var lokasiParam = encodeURIComponent(info.lokasi);
-          var html = `
-            <div class="card-info">
-              ${info.tanggal ? `<div class="tgl">📅 ${escapeHtml(info.tanggal)}</div>` : ''}
-              <div class="judul">${escapeHtml(info.judul)}</div>
-              <div class="detail">${escapeHtml(info.detail)}</div>
-              ${info.lokasi ? `<button class="btn-lihat-lokasi" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHtml(info.lokasi)})</button>` : ''}
-            </div>
-          `;
-          container.innerHTML += html;
-        });
-      }
-      document.getElementById('modal-info').style.display = 'flex';
-    }
-
-    function tutupModalInfo() { document.getElementById('modal-info').style.display = 'none'; }
-    function bukaTutupLuar(e) { if (e.target.id === 'modal-info') tutupModalInfo(); }
-
+function tutupModalInfo() { document.getElementById('modal-info').style.display = 'none'; }
+function bukaTutupLuar(e) { if (e.target.id === 'modal-info') tutupModalInfo(); }
+    
     function sorotLokasi(lokasiEncoded) {
-      var namaLokasi = decodeURIComponent(lokasiEncoded).trim();
-      tutupModalInfo();
+  var namaLokasi = decodeURIComponent(lokasiEncoded || '').trim();
+  tutupModalInfo();
 
-      if (!namaLokasi) return;
+  if (!namaLokasi) return;
 
-      var kataKunci = namaLokasi.toLowerCase();
-      var hasil = daftarPin.find(pin => pin.namaRaw.trim().toLowerCase() === kataKunci) || 
-                  daftarPin.find(pin => pin.nama.includes(kataKunci));
+  var kataKunci = namaLokasi.toLowerCase();
+  // PERBAIKAN: Gunakan String(pin.namaRaw || '') sebelum di-trim agar bebas error
+  var hasil = daftarPin.find(pin => String(pin.namaRaw || '').trim().toLowerCase() === kataKunci) || 
+              daftarPin.find(pin => String(pin.nama || '').includes(kataKunci));
 
-      if (hasil) {
-        if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
-        if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
-          hasil.marker.addTo(map);
-          pinRumahAktif = hasil.marker;
-        }
-
-        var pointM = map.project([hasil.lat, hasil.lng], 19);
-        var pointC = L.point(pointM.x, pointM.y - 200);
-        map.flyTo(map.unproject(pointC, 19), 19);
-
-        map.once('moveend', function() {
-          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-          hasil.marker.openPopup();
-        });
-      }
+  if (hasil) {
+    if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
+    if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
+      hasil.marker.addTo(map);
+      pinRumahAktif = hasil.marker;
     }
 
-    function cariLokasi() {
-      var kataKunci = document.getElementById('searchInput').value.toLowerCase().trim();
-      if (!kataKunci) return;
+    var pointM = map.project([hasil.lat, hasil.lng], 19);
+    var pointC = L.point(pointM.x, pointM.y - 200);
+    map.flyTo(map.unproject(pointC, 19), 19);
 
-      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+    map.once('moveend', function() {
+      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+      hasil.marker.openPopup();
+    });
+  }
+}
 
-      if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10);
-        hasil = daftarPin.find(pin => pin.nama.split(/[\s,().-]+/).some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari));
-      }
+function cariLokasi() {
+  var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
+  if (!kataKunci) return;
 
-      if (!hasil && !/^\d+$/.test(kataKunci)) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci));
-      }
-      
-      if (hasil) {
-        if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
-        if (!map.hasLayer(hasil.marker)) {
-          hasil.marker.addTo(map);
-          pinRumahAktif = hasil.marker;
-        }
+  var hasil = daftarPin.find(pin => String(pin.namaRaw || '').toLowerCase() === kataKunci);
 
-        var pointM = map.project([hasil.lat, hasil.lng], 19);
-        var pointC = L.point(pointM.x, pointM.y - 200);
-        map.flyTo(map.unproject(pointC, 19), 19);
+  if (!hasil && /^\d+$/.test(kataKunci)) {
+    var angkaCari = parseInt(kataKunci, 10);
+    hasil = daftarPin.find(pin => String(pin.nama || '').split(/[\s,().-]+/).some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari));
+  }
 
-        map.once('moveend', function() {
-          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-          hasil.marker.openPopup();
-        });
-      } else {
-        alert("Nomor atau nama tempat tidak ditemukan.");
-      }
+  if (!hasil && !/^\d+$/.test(kataKunci)) {
+    hasil = daftarPin.find(pin => String(pin.nama || '').includes(kataKunci));
+  }
+  
+  if (hasil) {
+    if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
+    if (!map.hasLayer(hasil.marker)) {
+      hasil.marker.addTo(map);
+      pinRumahAktif = hasil.marker;
     }
+
+    var pointM = map.project([hasil.lat, hasil.lng], 19);
+    var pointC = L.point(pointM.x, pointM.y - 200);
+    map.flyTo(map.unproject(pointC, 19), 19);
+
+    map.once('moveend', function() {
+      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+      hasil.marker.openPopup();
+    });
+  } else {
+    alert("Nomor atau nama tempat tidak ditemukan.");
+  }
+}
 
     function filterKategori(kat, btnElement) {
       document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
@@ -981,97 +1008,120 @@ function perbaruiAplikasiSekarang() {
       document.getElementById('modal-foto').style.display = 'none';
     }
 
-    // 3. Muat Data Keuangan
-    function muatDataKeuangan() {
-      ambilDataSheets('cache_keuangan_warga', KEUANGAN_URL, (data, fromCache) => {
-        if (!data) return;
-        var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-        dataKeuangan = [];
-        var daftarDivisi = new Set();
-
-        baris.forEach(function(kolom) {
-          if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
-            var tgl = kolom[1] ? kolom[1].trim() : (kolom[0] ? kolom[0].split(' ')[0] : '-');
-            var divisi = kolom[2] ? kolom[2].trim() : 'Umum';
-            var ket = kolom[3] ? kolom[3].trim() : '-';
-            var tipeRaw = kolom[4] ? kolom[4].trim().toUpperCase() : 'MASUK';
-            var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
-            var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
-            var nominal = parseInt(nominalRaw ? nominalRaw.replace(/[^0-9]/g, '') : '0') || 0;
-
-            if (divisi) daftarDivisi.add(divisi);
-            dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
-          }
-        });
-
-        var selectDivisi = document.getElementById('filterDivisi');
-        var divisiSebelumnya = selectDivisi.value;
-        selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
-        
-        daftarDivisi.forEach(div => {
-          selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
-        });
-        
-        if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
-          selectDivisi.value = divisiSebelumnya;
-        } else {
-          selectDivisi.value = 'semua';
-        }
-        tampilkanRekeningKoran();
-      });
-    }
-
-    function tampilkanRekeningKoran() {
-      var selectDivisi = document.getElementById('filterDivisi');
-      var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
-
-      var dataFilter = (divisiTerpilih === 'semua')
-        ? dataKeuangan
-        : dataKeuangan.filter(item => item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
-
-      var totMasuk = 0;
-      var totKeluar = 0;
-
-      dataFilter.forEach(item => {
-        if (item.tipe === 'MASUK') totMasuk += item.nominal;
-        if (item.tipe === 'KELUAR') totKeluar += item.nominal;
-      });
-
-      var saldoAkhir = totMasuk - totKeluar;
-      document.getElementById('saldo-kas').innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
-
-      var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
-      renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
-
-      var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
-      renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
-    }
+ // 3. Muat Data Keuangan
+  function muatDataKeuangan() {
+    ambilDataSheets('cache_keuangan_warga', KEUANGAN_URL, (data, fromCache) => {
+      if (!data) return;
+      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+      dataKeuangan = [];
       
-    function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
-      var tbody = document.getElementById(elementId);
-      tbody.innerHTML = '';
+      // 🛠️ Gunakan Map agar terhindar dari duplikat huruf besar/kecil (Case-Insensitive Deduplication)
+      var divisiMap = new Map();
 
-      if (dataset.length === 0) {
-        tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
-        return;
-      }
+      baris.forEach(function(kolom) {
+        if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
+          var tglRaw = kolom[1] ? String(kolom[1]).trim() : (kolom[0] ? String(kolom[0]).split(' ')[0] : '-');
+          var divisi = kolom[2] ? String(kolom[2]).trim() : 'Umum';
+          var ket = kolom[3] ? String(kolom[3]).trim() : '-';
+          var tipeRaw = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'MASUK';
+          var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
+          
+          var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
+          var nominal = typeof nominalRaw === 'number' 
+            ? nominalRaw 
+            : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
 
-      dataset.forEach(item => {
-        var tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
-        tr.innerHTML = `
-          <td style="padding:6px 0;">
-            <span style="color:#666; font-size:10px;">${escapeHtml(item.tgl)}</span><br>
-            <b>${escapeHtml(item.ket)}</b>
-          </td>
-          <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
-            ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
-          </td>
-        `;
-        tbody.appendChild(tr);
+          // 🛠️ PERBAIKAN FORMAT TANGGAL ISO: Mengubah "2026-09-27T17:00:00.000Z" menjadi "27/09/2026"
+          var tgl = tglRaw;
+          if (tgl.includes('T')) {
+            var parts = tgl.split('T')[0].split('-');
+            if (parts.length === 3) {
+              tgl = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+          }
+
+          // 🛠️ DEDUPLIKASI DROPDOWN: Simpan nama divisi versi huruf rapi (Title Case)
+          if (divisi) {
+            var kunciLower = divisi.toLowerCase();
+            if (!divisiMap.has(kunciLower) || divisi !== kunciLower) {
+              divisiMap.set(kunciLower, divisi);
+            }
+          }
+
+          dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
+        }
       });
+
+      var selectDivisi = document.getElementById('filterDivisi');
+      var divisiSebelumnya = selectDivisi.value;
+      selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
+      
+      // 🛠️ Urutkan dan masukkan nama divisi rapi tanpa duplikat
+      Array.from(divisiMap.values()).sort().forEach(div => {
+        selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
+      });
+      
+      if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
+        selectDivisi.value = divisiSebelumnya;
+      } else {
+        selectDivisi.value = 'semua';
+      }
+      tampilkanRekeningKoran();
+    });
+  }
+
+  function tampilkanRekeningKoran() {
+    var selectDivisi = document.getElementById('filterDivisi');
+    var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+
+    var dataFilter = (divisiTerpilih === 'semua')
+      ? dataKeuangan
+      : dataKeuangan.filter(item => item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
+
+    var totMasuk = 0;
+    var totKeluar = 0;
+
+    dataFilter.forEach(item => {
+      if (item.tipe === 'MASUK') totMasuk += item.nominal;
+      if (item.tipe === 'KELUAR') totKeluar += item.nominal;
+    });
+
+    var saldoAkhir = totMasuk - totKeluar;
+    document.getElementById('saldo-kas').innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
+
+    var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
+    renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
+
+    var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
+    renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
+  }
+    
+  function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
+    var tbody = document.getElementById(elementId);
+    tbody.innerHTML = '';
+
+    if (dataset.length === 0) {
+      tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
+      return;
     }
 
+    dataset.forEach(item => {
+      var tr = document.createElement('tr');
+      tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+      tr.innerHTML = `
+        <td style="padding:6px 0;">
+          <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHtml(item.tgl)}</span><br>
+          <b>${escapeHtml(item.ket)}</b>
+        </td>
+        <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
+          ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+    
     function bukaModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'flex';
       muatDataKeuangan();
@@ -1481,20 +1531,24 @@ function muatDataJimpitan() {
     arrayTanggal = [];
     arrayBulan = [];
 
-    baris.forEach(kolom => {
+  baris.forEach(kolom => {
       if (kolom.length >= 3 && kolom[0] !== '') {
-        var tglStr = kolom[0];
+        // PERBAIKAN 1: Pastikan tanggal mutlak menjadi string agar .match() tidak memicu error
+        var tglStr = String(kolom[0] || '');
         var malamManual = '';
         var warga = '-';
         var nominal = 0;
 
-        if (kolom[1] && (kolom[1].startsWith('Malam') || kolom[1] === '-')) {
-          malamManual = kolom[1].trim(); 
-          warga = kolom[2] || '-';
+        // PERBAIKAN 2: Pastikan kolom 1 menjadi string sebelum dicek .startsWith() atau .trim()
+        var col1Str = String(kolom[1] || '');
+        
+        if (col1Str && (col1Str.startsWith('Malam') || col1Str === '-')) {
+          malamManual = col1Str.trim(); 
+          warga = String(kolom[2] || '-');
           var nominalRaw = kolom[3] ? String(kolom[3]).replace(/[^0-9]/g, '') : '0';
           nominal = parseInt(nominalRaw, 10) || 0;
         } else {
-          warga = kolom[1] || '-';
+          warga = col1Str || '-';
           var nominalRaw = kolom[2] ? String(kolom[2]).replace(/[^0-9]/g, '') : '0';
           nominal = parseInt(nominalRaw, 10) || 0;
         }
@@ -1513,17 +1567,26 @@ function muatDataJimpitan() {
           
           var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
 
-          // --- DATA HARIAN ---
-          var keyTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
+          // --- DATA HARIAN (Gantian Baru) ---
           var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
+          var isoTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
+          
+          // Kunci Unik Gabungan Nama Malam + ISO Tanggal
+          var keyTanggal = (namaMalam + '_' + isoTanggal).replace(/\s+/g, '_');
 
           if (!cacheDataHarian[keyTanggal]) {
-            cacheDataHarian[keyTanggal] = { label: namaMalam + ' (' + labelTanggal + ')', subtotal: 0, items: [] };
+            cacheDataHarian[keyTanggal] = { 
+              label: namaMalam + ' (' + labelTanggal + ')', 
+              subtotal: 0, 
+              items: [],
+              isoDate: isoTanggal // Disimpan untuk pengurutan tanggal
+            };
             arrayTanggal.push(keyTanggal);
           }
           cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
           cacheDataHarian[keyTanggal].subtotal += nominal;
 
+          
           // --- DATA BULANAN ---
           var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
           var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
@@ -1548,7 +1611,12 @@ function muatDataJimpitan() {
       }
     });
 
-    arrayTanggal.sort((a, b) => b.localeCompare(a));
+    // Urutkan dropdown harian berdasarkan isoDate dari yang paling baru
+    arrayTanggal.sort((a, b) => {
+      var dateA = cacheDataHarian[a].isoDate;
+      var dateB = cacheDataHarian[b].isoDate;
+      return dateB.localeCompare(dateA);
+    });
     arrayBulan.sort((a, b) => b.localeCompare(a));
     
     isJimpitanLoaded = true; 
@@ -1741,11 +1809,32 @@ window.refreshDataJimpitan = function() {
     
     // --- CHANGELOG ---
     const dataChangelog = [
+      {
+        versi: "v1.4.8",
+        tanggal: "28 Sep 2026",
+        status: "Terbaru",
+        warna: "#4CAF50",
+        fitur: [
+          "Penambahan fitur PIN untuk laporan per divisi",
+          "Perbaikan fitur Kelola Data Nama Warga"
+        ]
+      },
+      {
+        versi: "v1.4.7",
+        tanggal: "27 Sep 2026",
+        status: "",
+        warna: "#888",
+        fitur: [
+          "Penambahan fitur Kelola Data Warga",
+          "Penambahan fitur Cari Nama Anggota Keluarga",
+          "Perbaikan fitur Senter/Torch"
+        ]
+      },
        {
         versi: "v1.4.6",
         tanggal: "26 Sep 2026",
-        status: "Terbaru",
-        warna: "#4CAF50",
+        status: "",
+        warna: "#888",
         fitur: [
           "Penambahan fitur lampu senter/torch",
           "Perbaikan fitur notifikasi lonceng update versi/pembaruan"
