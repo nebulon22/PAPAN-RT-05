@@ -854,19 +854,25 @@ const payload = {
 var map, daftarPin = [], pinRumahAktif = null;
   var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta`;
 
-  // Variabel penyimpan hasil cari aktif
+  // 🛠️ LAYER GROUP UNTUK MENGELOLA MARKER PETA DENGAN BERSIH
+  var markerGroup = L.layerGroup();
   var pinHasilPencarian = null;
 
   function initMap() {
     if (map) return;
 
     map = L.map('map').setView([-7.7423, 110.3842], 17);
+    
     L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
     L.DomEvent.disableClickPropagation(document.getElementById('modal-admin-inventaris'));
     L.DomEvent.disableClickPropagation(document.getElementById('modal-kelola-warga'));
+    
     L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
 
     L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+
+    // Tempelkan LayerGroup utama ke peta
+    markerGroup.addTo(map);
 
     map.on('click', function(e) {
       if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex' || document.getElementById('modal-kelola-warga').style.display === 'flex') return;
@@ -920,7 +926,7 @@ var map, daftarPin = [], pinRumahAktif = null;
 
           var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
 
-          var pinObj = { 
+          daftarPin.push({ 
             namaRaw: item.nameAsli,
             nama: item.nameAsli.toLowerCase(), 
             marker: marker, 
@@ -928,28 +934,23 @@ var map, daftarPin = [], pinRumahAktif = null;
             lng: item.lng,
             hidden: item.hidden,
             kategori: katFinal
-          };
-
-          daftarPin.push(pinObj);
+          });
         }
       });
 
-      // 🛠️ TERAPKAN FILTER DEFAULT SETELAH DATA SELESAI DIMUAT
+      // Terapkan filter pertama kali setelah seluruh data siap
       filterKategori('semua');
     });
   }
 
-  function tutupModalForm() { document.getElementById('modal-form').style.display = 'none'; }
-
-  // 🛠️ FUNGSI FILTER DENGAN ATURAN BARU
+  // 🛠️ FUNGSI FILTER BERSIH MENGGUNAKAN LAYERGROUP
   function filterKategori(kat) {
     var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
 
-    daftarPin.forEach(function(pin) {
-      if (map.hasLayer(pin.marker)) {
-        map.removeLayer(pin.marker);
-      }
+    // 1. Bersihkan seluruh marker yang menempel di peta sekaligus
+    markerGroup.clearLayers();
 
+    daftarPin.forEach(function(pin) {
       if (pin.hidden) return;
 
       var teksKategori = String(pin.kategori || '').toLowerCase();
@@ -974,7 +975,7 @@ var map, daftarPin = [], pinRumahAktif = null;
         if (isPengurus || isFasum || isKost || isKuliner || isMinimarket) {
           isMatch = true;
         } else if (pinHasilPencarian && pinHasilPencarian === pin) {
-          isMatch = true; // Munculkan rumah warga jika sedang dicari
+          isMatch = true;
         }
       } else if (kategoriPilihan === 'kost') {
         isMatch = isKost;
@@ -986,22 +987,21 @@ var map, daftarPin = [], pinRumahAktif = null;
         isMatch = isMinimarket;
       }
 
+      // 2. Masukkan marker yang cocok ke dalam LayerGroup
       if (isMatch) {
-        pin.marker.addTo(map);
+        markerGroup.addLayer(pin.marker);
       }
     });
   }
 
-  // 🛠️ FUNGSI PENCARIAN TUNGGAL & LENGKAP (Memilih nama & No Rumah)
+  // 🛠️ FUNGSI PENCARIAN TUNGGAL SINKRON DENGAN LAYERGROUP
   function cariLokasi() {
     var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
     var kataKunci = inputElem ? inputElem.value.toLowerCase().trim() : '';
     if (!kataKunci) return;
 
-    // 1. Pencarian Persis Nama
     var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
 
-    // 2. Pencarian Angka (Nomor Rumah)
     if (!hasil && /^\d+$/.test(kataKunci)) {
       var angkaCari = parseInt(kataKunci, 10);
       hasil = daftarPin.find(pin => {
@@ -1010,16 +1010,15 @@ var map, daftarPin = [], pinRumahAktif = null;
       });
     }
 
-    // 3. Pencarian Teks Parsial (Mengandung kata)
     if (!hasil) {
       hasil = daftarPin.find(pin => pin.nama.includes(kataKunci) || pin.namaRaw.toLowerCase().includes(kataKunci));
     }
 
     if (hasil) {
-      pinHasilPencarian = hasil; // 📌 Kunci pin hasil pencarian agar tidak hilang saat re-filter
+      pinHasilPencarian = hasil;
 
-      if (!map.hasLayer(hasil.marker)) { 
-        hasil.marker.addTo(map); 
+      if (!markerGroup.hasLayer(hasil.marker)) { 
+        markerGroup.addLayer(hasil.marker); 
       }
       
       map.flyTo([hasil.lat, hasil.lng], 19); 
@@ -1029,7 +1028,6 @@ var map, daftarPin = [], pinRumahAktif = null;
     }
   }
 
-  // Alias agar panggilan 'cariNama()' pada tombol cari lama tetap berfungsi
   function cariNama() { cariLokasi(); }
 
     function bukaModalPinjamAdmin() {
