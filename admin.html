@@ -1124,29 +1124,28 @@ function bukaTutupLuarForm(e) {
     let cachePerkakas = [];
     let cachePeminjaman = [];
 
-   async function muatPeminjamanAdmin() {
-      const container = document.getElementById("tabel-peminjaman-admin");
-      if (!container) return;
+  async function muatPeminjamanAdmin() {
+  const container = document.getElementById("tabel-peminjaman-admin");
+  if (!container) return;
 
-      if (!localStorage.getItem('cache_inventaris_admin')) {
-        container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
-      }
+  if (!localStorage.getItem('cache_inventaris_admin')) {
+    container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
+  }
 
-      // TAMBAHKAN TOKEN DI SINI AGAR TIDAK DITOLAK BACKEND
-      const tokenAdmin = localStorage.getItem('adminToken') || '';
-      const targetUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
+  // UBAH BARIS INI: Panggil URL polosan tanpa action=getPeta agar Apps Script merespon payload Perkakas & Peminjaman
+  const tokenAdmin = localStorage.getItem('adminToken') || '';
+  const targetUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(tokenAdmin)}`;
 
-      ambilDataSheets('cache_inventaris_admin', targetUrl, (data, fromCache) => {
-        if (data && (data.perkakas || data.peminjaman)) {
-          cachePeminjaman = Array.isArray(data) ? data : (data.peminjaman || []);
-          cachePerkakas = data.perkakas || [];
-          renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
-        } else if (!fromCache && (!data || data.length === 0)) {
-          container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Mode Offline: Gagal memuat data.</td></tr>`;
-        }
-      });
+  ambilDataSheets('cache_inventaris_admin', targetUrl, (data, fromCache) => {
+    if (data && (data.perkakas || data.peminjaman)) {
+      cachePeminjaman = Array.isArray(data) ? data : (data.peminjaman || []);
+      cachePerkakas = data.perkakas || [];
+      renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
+    } else if (!fromCache && (!data || data.length === 0)) {
+      container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Mode Offline: Gagal memuat data.</td></tr>`;
     }
-
+  });
+}
     function renderTabelDanDropdown(perkakas, peminjaman) {
       const container = document.getElementById("tabel-peminjaman-admin");
       const selectBarang = document.getElementById("pinjamPilihBarang");
