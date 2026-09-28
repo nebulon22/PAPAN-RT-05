@@ -1548,15 +1548,35 @@ document.addEventListener("DOMContentLoaded", () => {
   
 
 <script>
-    // Taruh di script biasa agar bisa dipanggil global oleh tabel inventaris
+    // Pindahkan escapeHTML ke sini agar aman dibaca global
     function escapeHTML(str) {
       return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
     }
+
+    // Panggilan awal saat HTML siap
+    document.addEventListener("DOMContentLoaded", () => {
+      perbaruiIndikatorSyncAdmin();
+      muatPeminjamanAdmin();
+
+      if (periksaSesiAdmin()) {
+        muatSemuaDataAdmin();
+      } else {
+        setTimeout(() => {
+          const inputPin = document.getElementById('adminPin');
+          if (inputPin) inputPin.focus();
+        }, 300);
+      }
+
+      if (navigator.onLine) {
+        kirimDataPendingAdmin();
+      }
+    });
   </script>
 
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
+  <!-- MODULE FIREBASE -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -1569,6 +1589,8 @@ document.addEventListener("DOMContentLoaded", () => {
       const pendingTable = document.getElementById('pending-users-list');
       const allUsersTable = document.getElementById('all-users-list');
       
+      if (!pendingTable || !allUsersTable) return;
+
       pendingTable.innerHTML = '';
       allUsersTable.innerHTML = '';
 
@@ -1635,8 +1657,10 @@ document.addEventListener("DOMContentLoaded", () => {
         pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar pending.</td></tr>';
       }
 
-      document.getElementById('pending-badge').innerText = `${pendingCount} Pending`;
-      document.getElementById('total-warga-count').innerText = totalCount;
+      const pBadge = document.getElementById('pending-badge');
+      const tWarga = document.getElementById('total-warga-count');
+      if (pBadge) pBadge.innerText = `${pendingCount} Pending`;
+      if (tWarga) tWarga.innerText = totalCount;
     });
 
     window.approveUser = (uid) => {
@@ -1654,8 +1678,5 @@ document.addEventListener("DOMContentLoaded", () => {
       update(ref(db, `users/${uid}`), { role: newRole });
     };
   </script>
-
-  
-  
 </body>
 </html>
