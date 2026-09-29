@@ -805,10 +805,15 @@
       });
     }
     
-    // 6. Pengiriman Pesan (Keyboard Tetap Terbuka)
-    window.sendChatMessage = (e) => {
-      e.preventDefault();
+   // 6. Pengiriman Pesan (Keyboard Tetap Terbuka & Auto-Clear Highlight)
+    function executeSendMessage(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
       const input = document.getElementById('chat-input');
+      if (!input) return;
       const text = input.value.trim();
 
       if (!text || currentUser?.status !== 'aktif') return;
@@ -818,6 +823,13 @@
 
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
+        const newKey = newMsgRef.key;
+
+        // 🛠️ PERBAIKAN: Langsung tandai ID pesan ini sebagai 'terbaca' agar highlight putih di chat lama otomatis padam!
+        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+        lastReadPublicMap[currentUser.uid] = newKey;
+        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+
         set(newMsgRef, {
           uid: currentUser.uid,
           sender: currentUser.username || currentUser.nama,
@@ -859,7 +871,10 @@
           }
         });
       }
-    };
+    }
+
+    // Bind fungsi secara global ke window agar terbaca penuh oleh form HTML
+    window.sendChatMessage = executeSendMessage;
 
     // Pemantau Pesan Unread Grup Chat Publik
     let publicGroupListener = null;
