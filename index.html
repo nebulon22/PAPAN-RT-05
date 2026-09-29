@@ -1057,9 +1057,15 @@ function cariLokasi() {
       selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
       
       // 🛠️ Urutkan dan masukkan nama divisi rapi tanpa duplikat
-      Array.from(divisiMap.values()).sort().forEach(div => {
-        selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(div)}</option>`;
-      });
+  Array.from(divisiMap.values()).sort().forEach(div => {
+  // Fungsi pemformat teks agar setiap awal kata menjadi Huruf Besar/Kapital
+  var divFormatRapi = div.replace(/\w\S*/g, function(teks) {
+    return teks.charAt(0).toUpperCase() + teks.substr(1).toLowerCase();
+  });
+
+  // Teks di dalam tag <option> memakai 'divFormatRapi' agar tampilan layar menjadi Kapital Rapi
+  selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(divFormatRapi)}</option>`;
+});
       
       if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
         selectDivisi.value = divisiSebelumnya;
