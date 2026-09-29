@@ -113,16 +113,26 @@
      1px  1px 0 #000,
      0px  1px 2px rgba(0,0,0,0.9); /* Bayangan ekstra agar makin cerah & tajam */
 }
-/* Teks Chat Khusus Admin: Biru Cerah + Outline Hitam 1px */
+
+/* Styling Teks Khusus di Chat Room */
 .msg-text-admin {
-  color: #38bdf8 !important;
+  color: #38bdf8 !important; /* Biru Cerah (Admin) */
   font-weight: 700 !important;
-  text-shadow: 
-    -1px -1px 0 #000,  
-     1px -1px 0 #000,
-    -1px  1px 0 #000,
-     1px  1px 0 #000 !important;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
 }
+
+.msg-text-self {
+  color: #facc15 !important; /* Kuning Terang (Pesan Saya) */
+  font-weight: 700 !important;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
+}
+
+.msg-text-other {
+  color: #fb923c !important; /* Oranye Cerah (Pesan Lawan Chat) */
+  font-weight: 700 !important;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
+}
+    
     .badge-admin {
       background: rgba(56, 189, 248, 0.2);
       color: #38bdf8;
@@ -1446,12 +1456,25 @@
       }
 
       let nameClass = "role-user";
-      let textClass = "msg-text"; // Default teks warga (Putih)
+      let textClass = "msg-text"; // Default teks warga di Grup Publik (Putih)
 
+      // 1. Jika pengirim adalah Admin -> Tetap Biru di room manapun
       if (msg.role === 'admin') {
         nameClass = "role-admin";
-        textClass = "msg-text msg-text-admin"; // Teks khusus Admin (Biru)
-      } else if (msg.uid === currentUser?.uid) {
+        textClass = "msg-text msg-text-admin";
+      } 
+      // 2. Jika di Room Private -> Terapkan skema Kuning & Oranye untuk warga
+      else if (activeChatType === 'private') {
+        if (msg.uid === currentUser?.uid) {
+          nameClass = "role-self";
+          textClass = "msg-text msg-text-self";   // Saya sendiri = Kuning
+        } else {
+          nameClass = "role-user";
+          textClass = "msg-text msg-text-other";  // Lawan chat = Oranye
+        }
+      } 
+      // 3. Jika di Grup Publik biasa
+      else if (msg.uid === currentUser?.uid) {
         nameClass = "role-self";
       }
 
