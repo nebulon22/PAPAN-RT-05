@@ -906,8 +906,23 @@ function bukaModalInfo() {
     daftarPengumuman.forEach(function(info) {
       var lokasiParam = encodeURIComponent(info.lokasi);
       
-      // Foto flyer yang bisa diklik untuk dibuka di modal-foto
-      var htmlFoto = info.foto ? `<img src="${info.foto}" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">` : '';
+     // Deteksi otomatis format gambar vs video (WebM/MP4)
+      var htmlFoto = '';
+      if (info.foto) {
+        var urlFoto = info.foto.toLowerCase();
+        
+        // Jika file berupa video WebM atau MP4 (bisa diputar + ada suara)
+        if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+          htmlFoto = `
+            <video src="${info.foto}" controls playsinline style="width:100%; max-height:220px; border-radius:6px; margin-top:8px; background:#000;">
+              Browser Anda tidak mendukung pemutaran video WebM/MP4.
+            </video>`;
+        } else {
+          // Jika file gambar biasa (JPG, PNG, GIF, WebP)
+          htmlFoto = `
+            <img src="${info.foto}" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
+        }
+      }
 
       var html = `
         <div class="card-info">
