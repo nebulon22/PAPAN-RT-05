@@ -847,48 +847,49 @@ function perbaruiAplikasiSekarang() {
       });
     });
 
-  // 2. Muat Data Pengumuman
-ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
-  if (!data) return;
-  var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-  daftarPengumuman = [];
+// 2. Muat Data Pengumuman
+  ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
+    if (!data) return;
+    var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+    daftarPengumuman = [];
 
-  baris.forEach(function(kolom) {
-    if (kolom.length >= 2 && kolom[1] !== '') {
-      var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
-      if (status === 'AKTIF') {
-        
-        // 🛠️ PERBAIKAN FORMAT TANGGAL ISO:
-        var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
-        var tglRapi = tglRaw;
-        
-        if (tglRapi.includes('T')) {
-          var parts = tglRapi.split('T')[0].split('-');
-          if (parts.length === 3) {
-            tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah "2026-09-14T..." menjadi "14/09/2026"
+    baris.forEach(function(kolom) {
+      if (kolom.length >= 2 && kolom[1] !== '') {
+        var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
+        if (status === 'AKTIF') {
+          
+          // 🛠️ PERBAIKAN FORMAT TANGGAL ISO:
+          var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
+          var tglRapi = tglRaw;
+          
+          if (tglRapi.includes('T')) {
+            var parts = tglRapi.split('T')[0].split('-');
+            if (parts.length === 3) {
+              tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah "2026-09-14T..." menjadi "14/09/2026"
+            }
           }
-        }
 
-        daftarPengumuman.push({
-          tanggal: tglRapi, // Simpan tanggal yang sudah bersih
-          judul: kolom[1] ? String(kolom[1]).trim() : '',
-          detail: kolom[2] ? String(kolom[2]).trim() : '',
-          lokasi: kolom[3] ? String(kolom[3]).trim() : ''
-        });
+          daftarPengumuman.push({
+            tanggal: tglRapi,
+            judul: kolom[1] ? String(kolom[1]).trim() : '',
+            detail: kolom[2] ? String(kolom[2]).trim() : '',
+            lokasi: kolom[3] ? String(kolom[3]).trim() : '',
+            foto: kolom[5] ? String(kolom[5]).trim() : '' // <-- TAMBAHAN: Membaca URL Foto/Flyer di Kolom F
+          });
+        }
+      }
+    });
+
+    var badge = document.getElementById('badge-count');
+    if (badge) {
+      if (daftarPengumuman.length > 0) {
+        badge.innerText = daftarPengumuman.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
       }
     }
   });
-
-  var badge = document.getElementById('badge-count');
-  if (badge) {
-    if (daftarPengumuman.length > 0) {
-      badge.innerText = daftarPengumuman.length;
-      badge.style.display = 'inline-block';
-    } else {
-      badge.style.display = 'none';
-    }
-  }
-});
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -904,12 +905,17 @@ function bukaModalInfo() {
   } else {
     daftarPengumuman.forEach(function(info) {
       var lokasiParam = encodeURIComponent(info.lokasi);
+      
+      // Foto flyer yang bisa diklik untuk dibuka di modal-foto
+      var htmlFoto = info.foto ? `<img src="${info.foto}" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">` : '';
+
       var html = `
         <div class="card-info">
           ${info.tanggal ? `<div class="tgl">📅 ${escapeHtml(info.tanggal)}</div>` : ''}
           <div class="judul">${escapeHtml(info.judul)}</div>
           <div class="detail">${escapeHtml(info.detail)}</div>
-          ${info.lokasi ? `<button class="btn-lihat-lokasi" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHtml(info.lokasi)})</button>` : ''}
+          ${htmlFoto}
+          ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHtml(info.lokasi)})</button>` : ''}
         </div>
       `;
       container.innerHTML += html;
