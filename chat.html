@@ -342,14 +342,20 @@
   </div>
 
   <!-- Footer / Input Form Chat -->
-  <footer>
-    <form id="chat-form" onsubmit="sendChatMessage(event)">
-      <input type="text" id="chat-input" placeholder="Ketik pesan obrolan di sini..." autocomplete="off" maxlength="300">
-      <button type="submit" class="btn-send" title="Kirim Pesan">
-        <i class="fa-solid fa-paper-plane"></i>
-      </button>
-    </form>
-  </footer>
+<footer>
+  <form id="chat-form" onsubmit="sendChatMessage(event)">
+    <!-- Label Nama User Aktif -->
+    <span id="chat-current-user-label" style="font-size: 12px; font-weight: bold; color: #facc15; white-space: nowrap; font-family: monospace; display: flex; align-items: center;">
+      ...:
+    </span>
+
+    <input type="text" id="chat-input" placeholder="Ketik pesan obrolan di sini..." autocomplete="off" maxlength="300">
+    
+    <button type="submit" class="btn-send" title="Kirim Pesan">
+      <i class="fa-solid fa-paper-plane"></i>
+    </button>
+  </form>
+</footer>
 
   <!-- MODAL 1: Form Registration & Login -->
   <div id="reg-modal" class="modal-overlay hidden">
@@ -1194,6 +1200,11 @@
           
           const userInfo = document.getElementById('user-info-text');
           if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
+          // Tambahkan baris ini untuk memperbarui label di sebelah kolom ketik:
+          const labelUserKetik = document.getElementById('chat-current-user-label');
+          if (labelUserKetik) {
+          labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
+        }
           
           setupPresence();
           
@@ -1500,22 +1511,27 @@
     };
 
     window.saveNewUsername = () => {
-      const input = document.getElementById('new-username-input');
-      if (!input) return;
-      const newName = input.value.trim();
-      if (!newName) return;
+  const input = document.getElementById('new-username-input');
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) return;
 
-      if (newName.toUpperCase().includes('ADMIN') && currentUser.role !== 'admin') {
-        alert("Username tidak boleh mengandung kata 'ADMIN'!");
-        return;
-      }
+  if (newName.toUpperCase().includes('ADMIN') && currentUser.role !== 'admin') {
+    alert("Username tidak boleh mengandung kata 'ADMIN'!");
+    return;
+  }
 
-      set(ref(db, `users/${currentUser.uid}/username`), newName).then(() => {
-        currentUser.username = newName;
-        localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
-        closeChangeNameModal();
-      });
-    };
+  set(ref(db, `users/${currentUser.uid}/username`), newName).then(() => {
+    currentUser.username = newName;
+    localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
+    
+    // Perbarui label nama di sebelah input ketik secara instan
+    const labelUserKetik = document.getElementById('chat-current-user-label');
+    if (labelUserKetik) labelUserKetik.innerText = `${newName}:`;
+
+    closeChangeNameModal();
+  });
+};
 
     window.resetAccountData = () => {
       if (confirm("Keluar dari akun saat ini?")) {
