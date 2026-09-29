@@ -529,10 +529,19 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-  <!-- Modal Foto Layar Penuh -->
-  <div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)">
-    <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()">
+<!-- Modal Foto Layar Penuh (Peta & Poster Pengumuman) -->
+<div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)">
+  <div style="position: relative; max-width: 95%; max-height: 85vh; display: inline-block;">
+    
+    <!-- Tombol X Merah Minimalis tanpa Lingkaran -->
+    <button type="button" onclick="tutupFotoBesar(event)" title="Tutup" style="position: absolute; top: -18px; right: -18px; background: none; color: #ef4444; border: none; font-size: 22px; font-weight: bold; cursor: pointer; z-index: 3010; padding: 4px 8px; line-height: 1; outline: none; text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
+      ✕
+    </button>
+    
+    <!-- Gambar Pratinjau (Foto Rumah / Poster Event) -->
+    <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()" style="max-width: 100%; max-height: 85vh; border-radius: 8px; display: block;">
   </div>
+</div>
 
   <!-- Modal Riwayat Jimpitan -->
   <div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
@@ -847,48 +856,63 @@ function perbaruiAplikasiSekarang() {
       });
     });
 
-  // 2. Muat Data Pengumuman
-ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
-  if (!data) return;
-  var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-  daftarPengumuman = [];
+// 2. Muat Data Pengumuman
+  ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
+    if (!data) return;
+    var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+    daftarPengumuman = [];
 
-  baris.forEach(function(kolom) {
-    if (kolom.length >= 2 && kolom[1] !== '') {
-      var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
-      if (status === 'AKTIF') {
-        
-        // 🛠️ PERBAIKAN FORMAT TANGGAL ISO:
-        var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
-        var tglRapi = tglRaw;
-        
-        if (tglRapi.includes('T')) {
-          var parts = tglRapi.split('T')[0].split('-');
-          if (parts.length === 3) {
-            tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah "2026-09-14T..." menjadi "14/09/2026"
+    baris.forEach(function(kolom) {
+      if (kolom.length >= 2 && kolom[1] !== '') {
+        var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
+        if (status === 'AKTIF') {
+          
+          // 🛠️ PERBAIKAN FORMAT TANGGAL ISO:
+          var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
+          var tglRapi = tglRaw;
+          
+          if (tglRapi.includes('T')) {
+            var parts = tglRapi.split('T')[0].split('-');
+            if (parts.length === 3) {
+              tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah "2026-09-14T..." menjadi "14/09/2026"
+            }
           }
-        }
 
-        daftarPengumuman.push({
-          tanggal: tglRapi, // Simpan tanggal yang sudah bersih
-          judul: kolom[1] ? String(kolom[1]).trim() : '',
-          detail: kolom[2] ? String(kolom[2]).trim() : '',
-          lokasi: kolom[3] ? String(kolom[3]).trim() : ''
-        });
+          daftarPengumuman.push({
+            tanggal: tglRapi,
+            judul: kolom[1] ? String(kolom[1]).trim() : '',
+            detail: kolom[2] ? String(kolom[2]).trim() : '',
+            lokasi: kolom[3] ? String(kolom[3]).trim() : '',
+            foto: kolom[5] ? String(kolom[5]).trim() : '' // <-- TAMBAHAN: Membaca URL Foto/Flyer di Kolom F
+          });
+        }
+      }
+    });
+   // 🔄 URUTKAN BERDASARKAN TANGGAL EVENT (Event Mendatang/Terdekat di Atas, Event Lampau di Bawah)
+daftarPengumuman.sort((a, b) => {
+  // Ubah format string "DD/MM/YYYY" menjadi Date Object yang bisa dibandingkan
+  var partsA = a.tanggal.split('/');
+  var partsB = b.tanggal.split('/');
+  
+  var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
+  var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
+  
+  return dateB - dateA; // Urutkan dari tanggal paling masa depan/terbaru ke tanggal lampau
+});
+    // Tampilkan hanya 10 pengumuman terbaru di layar warga
+daftarPengumuman = daftarPengumuman.slice(0, 10);
+    
+    // TAMPILKAN BADGE NOTIFIKASI
+    var badge = document.getElementById('badge-count');
+    if (badge) {
+      if (daftarPengumuman.length > 0) {
+        badge.innerText = daftarPengumuman.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
       }
     }
   });
-
-  var badge = document.getElementById('badge-count');
-  if (badge) {
-    if (daftarPengumuman.length > 0) {
-      badge.innerText = daftarPengumuman.length;
-      badge.style.display = 'inline-block';
-    } else {
-      badge.style.display = 'none';
-    }
-  }
-});
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -904,12 +928,32 @@ function bukaModalInfo() {
   } else {
     daftarPengumuman.forEach(function(info) {
       var lokasiParam = encodeURIComponent(info.lokasi);
+      
+     // Deteksi otomatis format gambar vs video (WebM/MP4)
+      var htmlFoto = '';
+      if (info.foto) {
+        var urlFoto = info.foto.toLowerCase();
+        
+        // Jika file berupa video WebM atau MP4 (bisa diputar + ada suara)
+        if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+          htmlFoto = `
+            <video src="${info.foto}" controls playsinline style="width:100%; max-height:220px; border-radius:6px; margin-top:8px; background:#000;">
+              Browser Anda tidak mendukung pemutaran video WebM/MP4.
+            </video>`;
+        } else {
+          // Jika file gambar biasa (JPG, PNG, GIF, WebP)
+          htmlFoto = `
+            <img src="${info.foto}" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
+        }
+      }
+
       var html = `
         <div class="card-info">
           ${info.tanggal ? `<div class="tgl">📅 ${escapeHtml(info.tanggal)}</div>` : ''}
           <div class="judul">${escapeHtml(info.judul)}</div>
           <div class="detail">${escapeHtml(info.detail)}</div>
-          ${info.lokasi ? `<button class="btn-lihat-lokasi" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHtml(info.lokasi)})</button>` : ''}
+          ${htmlFoto}
+          ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHtml(info.lokasi)})</button>` : ''}
         </div>
       `;
       container.innerHTML += html;
@@ -918,7 +962,15 @@ function bukaModalInfo() {
   document.getElementById('modal-info').style.display = 'flex';
 }
 
-function tutupModalInfo() { document.getElementById('modal-info').style.display = 'none'; }
+function tutupModalInfo() { 
+  // Hentikan pemutaran video saja agar RAM/prosesor tenang, TANPA menghapus src
+  var listVideo = document.querySelectorAll('#list-pengumuman video');
+  listVideo.forEach(function(v) {
+    v.pause(); 
+  });
+
+  document.getElementById('modal-info').style.display = 'none'; 
+}
 function bukaTutupLuar(e) { if (e.target.id === 'modal-info') tutupModalInfo(); }
     
     function sorotLokasi(lokasiEncoded) {
@@ -1004,9 +1056,15 @@ function cariLokasi() {
     }
 
     function tutupFotoBesar(e) {
-      if (e) { e.stopPropagation(); e.preventDefault(); }
-      document.getElementById('modal-foto').style.display = 'none';
-    }
+  if (e) {
+    e.stopPropagation();
+    if (e.preventDefault) e.preventDefault();
+  }
+  var modal = document.getElementById('modal-foto');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
 
  // 3. Muat Data Keuangan
   function muatDataKeuangan() {
