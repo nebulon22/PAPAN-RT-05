@@ -606,45 +606,57 @@
       });
     }
 
-   // 3. Pindah Tab (Public <-> Private)
-    window.switchChatRoom = (type, targetUID = null) => {
-      activeChatType = type;
-      activePrivateUID = targetUID;
-      isChatVisible = true; // <-- TAMBAHKAN INI AGAR KLIK TAB LANGSUNG DIANGGAP AKTIF/TERBUKA
+ // 3. Pindah Tab (Public <-> Private) dengan Perbedaan Warna Latar
+  window.switchChatRoom = (type, targetUID = null) => {
+    activeChatType = type;
+    activePrivateUID = targetUID;
+    isChatVisible = true; // <-- AGAR KLIK TAB LANGSUNG DIANGGAP AKTIF/TERBUKA
 
+    // 🎨 EFEK PERBEDAAN WARNA BACKGROUND:
+    const chatContainer = document.getElementById('chat-container');
+    if (chatContainer) {
       if (type === 'public') {
-        updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
-        markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
-      } else if (type === 'private' && targetUID) {
-        unreadCounts[targetUID] = 0; 
-        markRoomAsRead(targetUID);   
+        // Tab Grup RT 05: Gelap Transparan (Hitam Transparan Bawaan)
+        chatContainer.style.background = 'rgba(2, 6, 23, 0.3)';
+      } else {
+        // Tab Private Chat: Lebih Cerah (Putih/Kebiru-biruan Transparan)
+        chatContainer.style.background = 'rgba(255, 255, 255, 0.12)';
       }
+    }
 
-      if (currentChatUnsubscribe) {
-        currentChatUnsubscribe();
-        currentChatUnsubscribe = null;
-      }
+    if (type === 'public') {
+      updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
+      markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
+    } else if (type === 'private' && targetUID) {
+      unreadCounts[targetUID] = 0; 
+      markRoomAsRead(targetUID);   
+    }
 
-      const btnPublic = document.getElementById('tab-room-public');
-      if (btnPublic) {
-        btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
-        btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
-      }
+    if (currentChatUnsubscribe) {
+      currentChatUnsubscribe();
+      currentChatUnsubscribe = null;
+    }
 
-      renderPrivateTabsUI();
+    const btnPublic = document.getElementById('tab-room-public');
+    if (btnPublic) {
+      btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
+      btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
+    }
 
-      const chatStream = document.getElementById('chat-stream');
-      if (chatStream) {
-        // Berikan indikator memuat daripada langsung mengosongkan layar secara mendadak
-        chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
-      }
+    renderPrivateTabsUI();
 
-      if (type === 'public') {
-        loadChatStream();
-      } else if (type === 'private' && targetUID) {
-        loadPrivateChatStream(targetUID);
-      }
-    };
+    const chatStream = document.getElementById('chat-stream');
+    if (chatStream) {
+      // Indikator memuat percakapan
+      chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
+    }
+
+    if (type === 'public') {
+      loadChatStream();
+    } else if (type === 'private' && targetUID) {
+      loadPrivateChatStream(targetUID);
+    }
+  };
 
     // 4. Tutup Tab Private
     window.closePrivateTab = (e, targetUID) => {
