@@ -207,6 +207,76 @@
     </button>
   </div>
 </div>
+
+<!-- Tombol Buka Modal Pengumuman -->
+<div class="filter-row" style="margin-top: 6px;">
+  <button type="button" class="btn-filter" style="background: #f59e0b; color: white; border-color: #d97706; width: 100%;" onclick="bukaModalPengumumanAdmin()">
+    📢 Kelola & Tambah Pengumuman
+  </button>
+</div>
+
+<!-- Modal Kelola Pengumuman -->
+<div id="modal-admin-pengumuman" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-pengumuman') tutupModalPengumumanAdmin()">
+  <div class="modal-content" style="max-width: 500px; width: 92%;">
+    <div class="modal-header">
+      <h3 style="margin:0; font-size:16px;">📢 Form Input & Arsip Pengumuman</h3>
+      <button class="close-btn" onclick="tutupModalPengumumanAdmin()">&times;</button>
+    </div>
+
+    <!-- Form Tambah Pengumuman Baru -->
+    <form id="formInputPengumuman" style="background: #fef3c7; padding: 12px; border-radius: 8px; border: 1px solid #fde68a; margin-bottom: 15px;">
+      <div style="font-weight: bold; font-size: 12px; color: #b45309; margin-bottom: 8px;">➕ Input Pengumuman / Event Baru</div>
+      
+      <div class="form-group" style="margin-bottom: 8px;">
+        <label style="font-size: 11px; font-weight: bold;">Tanggal Acara / Kegiatan:</label>
+        <input type="date" id="pengumumanTanggal" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 8px;">
+        <label style="font-size: 11px; font-weight: bold;">Judul Kegiatan / Event:</label>
+        <input type="text" id="pengumumanJudul" placeholder="Contoh: Kerja Bakti / Arisan RT" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 8px;">
+        <label style="font-size: 11px; font-weight: bold;">Detail & Catatan Informasi:</label>
+        <textarea id="pengumumanDetail" rows="3" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 8px;">
+        <label style="font-size: 11px; font-weight: bold;">Lokasi (Peta RT / Bebas):</label>
+        <input type="text" id="pengumumanLokasi" placeholder="Contoh: Balai RT 05 / Rumah Pak Bejo" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
+        <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+      </div>
+
+      <button type="button" onclick="simpanPengumumanAdmin()" id="btnSimpanPengumuman" style="width: 100%; padding: 8px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">
+        💾 Terbitkan Pengumuman
+      </button>
+    </form>
+
+    <!-- Daftar Pengumuman & Toggle Arsip -->
+    <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151;">📋 Daftar Pengumuman & Status Arsip:</h4>
+    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+        <thead>
+          <tr style="background: #111827; color: white;">
+            <th style="padding: 6px;">Kegiatan</th>
+            <th style="padding: 6px; text-align: center;">Status</th>
+            <th style="padding: 6px; text-align: center;">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="tabel-pengumuman-admin">
+          <tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <button type="button" onclick="tutupModalPengumumanAdmin()" style="width: 100%; margin-top: 12px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
+  </div>
+</div>
     
     <!-- Section Persetujuan Chat Warga Ringkas -->
 <div style="margin-top: 8px; background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 6px 10px; color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-family: sans-serif;">
@@ -1717,7 +1787,149 @@ document.addEventListener("DOMContentLoaded", () => {
     kirimDataPendingAdmin();
   }
 });
+
+
+    function bukaModalPengumumanAdmin() {
+  document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-admin-pengumuman').style.display = 'flex';
+  muatDaftarPengumumanAdmin();
+}
+
+function tutupModalPengumumanAdmin() {
+  document.getElementById('modal-admin-pengumuman').style.display = 'none';
+  document.getElementById('formInputPengumuman').reset();
+}
+
+// Muat data dari Google Sheets (GID Pengumuman)
+function muatDaftarPengumumanAdmin() {
+  const container = document.getElementById('tabel-pengumuman-admin');
+  const tokenAdmin = localStorage.getItem('adminToken') || '';
   
+  // Memakai fungsi ambilDataSheets / fetch ke backend
+  const urlPengumuman = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getSheetByGid&gid=1885853390&token=${encodeURIComponent(tokenAdmin)}`;
+
+  ambilDataSheets('cache_pengumuman_admin', urlPengumuman, (data) => {
+    if (!data || data.length <= 1) {
+      container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
+      return;
+    }
+
+    const baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+    
+    container.innerHTML = baris.map((row, index) => {
+      const rowIndex = index + 2; // Indeks baris asli di Google Sheets
+      const judul = row[1] || '-';
+      const status = String(row[4] || 'AKTIF').toUpperCase().trim();
+      const isAktif = status === 'AKTIF';
+
+      return `
+        <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
+          <td style="padding: 6px;">
+            <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
+            <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(row[0] || '')}</div>
+          </td>
+          <td style="padding: 6px; text-align: center;">
+            <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
+              ${isAktif ? 'AKTIF' : 'ARSIP'}
+            </span>
+          </td>
+          <td style="padding: 6px; text-align: center;">
+            <button onclick="toggleStatusPengumuman(${rowIndex}, '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
+              ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
+            </button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+  });
+}
+
+// Simpan Pengumuman Baru
+async function simpanPengumumanAdmin() {
+  const tglInput = document.getElementById('pengumumanTanggal').value;
+  const judul = document.getElementById('pengumumanJudul').value.trim();
+  const detail = document.getElementById('pengumumanDetail').value.trim();
+  const lokasi = document.getElementById('pengumumanLokasi').value.trim();
+  const foto = document.getElementById('pengumumanFoto').value.trim();
+  const tokenAdmin = localStorage.getItem('adminToken') || '';
+
+  if (!judul || !tglInput) {
+    alert("Mohon isi tanggal dan judul pengumuman!");
+    return;
+  }
+
+  const parts = tglInput.split('-');
+  const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+  const btn = document.getElementById('btnSimpanPengumuman');
+  btn.disabled = true;
+  btn.innerText = "⏳ Menyimpan...";
+
+  const payload = {
+    token: tokenAdmin,
+    action: 'kelolaPengumuman',
+    subAksi: 'tambah',
+    tanggal: tglRapi,
+    judul: judul,
+    detail: detail,
+    lokasi: lokasi,
+    foto: foto
+  };
+
+  try {
+    const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+      method: "POST",
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+
+    btn.disabled = false;
+    btn.innerText = "💾 Terbitkan Pengumuman";
+
+    if (text.includes("SUCCESS")) {
+      alert("✅ Pengumuman berhasil diterbitkan!");
+      document.getElementById('formInputPengumuman').reset();
+      muatDaftarPengumumanAdmin();
+    } else {
+      alert("❌ Gagal menyimpan: " + text);
+    }
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerText = "💾 Terbitkan Pengumuman";
+    alert("❌ Error koneksi: " + err);
+  }
+}
+
+// Ubah Status Pengumuman (Aktif / Arsip)
+async function toggleStatusPengumuman(rowIndex, statusBaru) {
+  const tokenAdmin = localStorage.getItem('adminToken') || '';
+
+  const payload = {
+    token: tokenAdmin,
+    action: 'kelolaPengumuman',
+    subAksi: 'ubahStatus',
+    rowIndex: rowIndex,
+    statusBaru: statusBaru
+  };
+
+  try {
+    const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+      method: "POST",
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    });
+    const text = await res.text();
+
+    if (text.includes("SUCCESS")) {
+      muatDaftarPengumumanAdmin();
+    } else {
+      alert("❌ Gagal mengubah status: " + text);
+    }
+  } catch (err) {
+    alert("❌ Error koneksi: " + err);
+  }
+}
 
 // <!-- PENUTUP SCRIPT UTAMA PWA -->
   </script>
