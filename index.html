@@ -888,8 +888,17 @@ function perbaruiAplikasiSekarang() {
         }
       }
     });
-    // 🔄 BALIK URUTAN: Agar data pengumuman terbaru/terakhir yang di-input muncul paling atas
-    daftarPengumuman.reverse();
+   // 🔄 URUTKAN BERDASARKAN TANGGAL EVENT (Event Mendatang/Terdekat di Atas, Event Lampau di Bawah)
+daftarPengumuman.sort((a, b) => {
+  // Ubah format string "DD/MM/YYYY" menjadi Date Object yang bisa dibandingkan
+  var partsA = a.tanggal.split('/');
+  var partsB = b.tanggal.split('/');
+  
+  var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
+  var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
+  
+  return dateB - dateA; // Urutkan dari tanggal paling masa depan/terbaru ke tanggal lampau
+});
     
     var badge = document.getElementById('badge-count');
     if (badge) {
