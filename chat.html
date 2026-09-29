@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Obrolan Warga - RT 05 Kayen</title>
+  <!-- Import Google Font VT323 (Retro Pixel Chat) -->
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
   
   <!-- IMPORTANT: Panggil utils.js terlebih dahulu agar RT05_CONFIG terdefinisi -->
   <script src="utils.js"></script>
@@ -75,16 +77,18 @@
       position: relative;
       background: rgba(2, 6, 23, 0.3);
     }
-    #chat-stream {
+   #chat-stream {
       flex: 1;
       display: flex;
       flex-direction: column;
       padding: 8px;
       overflow-y: auto !important;
       gap: 4px;
-      font-family: monospace;
-      font-size: 12px;
-      line-height: 1.4;
+      /* 🛠️ GANTI FONT-FAMILY DENGAN VT323 & SESUAIKAN UKURAN FONT HARUS AGAK BESAR (16px) HARUS JELAS */
+      font-family: 'VT323', 'Courier New', monospace;
+      font-size: 16px; 
+      line-height: 1.2;
+      letter-spacing: 0.5px;
       overscroll-behavior: contain !important;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y !important;
@@ -97,11 +101,56 @@
       transition: background 0.2s;
     }
     .msg-row:hover { background: rgba(30, 41, 59, 0.2); }
-    .role-admin { color: #38bdf8; font-weight: bold; }
-    .role-self { color: #facc15; font-weight: bold; }
-    .role-user { color: #ffffff; font-weight: 600; }
-    .msg-text { color: #e2e8f0; margin-left: 4px; }
+    
+    /* Role Name Styles + Outline Hitam setipis rambut */
+    .role-admin { 
+      color: #38bdf8; 
+      font-weight: bold; 
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    }
+    .role-self { 
+      color: #facc15; 
+      font-weight: bold; 
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    }
+    .role-user { 
+      color: #ffffff; 
+      font-weight: 600; 
+      text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
+    }
 
+/* CSS Teks Putih Cerah Solid + Outline Hitam Sharp */
+.msg-text {
+  color: #ffffff !important;
+  font-weight: 500 !important;
+  margin-left: 4px;
+  text-shadow: 
+    -1px -1px 0 #000,  
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000,
+     0px  1px 2px rgba(0,0,0,0.9); /* Bayangan ekstra agar makin cerah & tajam */
+}
+
+/* Styling Teks Khusus di Chat Room */
+.msg-text-admin {
+  color: #38bdf8 !important; /* Biru Cerah (Admin) */
+  font-weight: 700 !important;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
+}
+
+.msg-text-self {
+  color: #facc15 !important; /* Kuning Terang (Pesan Saya) */
+  font-weight: 700 !important;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
+}
+
+.msg-text-other {
+  color: #fb923c !important; /* Oranye Cerah (Pesan Lawan Chat) */
+  font-weight: 700 !important;
+  text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
+}
+    
     .badge-admin {
       background: rgba(56, 189, 248, 0.2);
       color: #38bdf8;
@@ -342,14 +391,20 @@
   </div>
 
   <!-- Footer / Input Form Chat -->
-  <footer>
-    <form id="chat-form" onsubmit="sendChatMessage(event)">
-      <input type="text" id="chat-input" placeholder="Ketik pesan obrolan di sini..." autocomplete="off" maxlength="300">
-      <button type="submit" class="btn-send" title="Kirim Pesan">
-        <i class="fa-solid fa-paper-plane"></i>
-      </button>
-    </form>
-  </footer>
+<footer>
+  <form id="chat-form" onsubmit="sendChatMessage(event)">
+    <!-- Label Nama User Aktif -->
+    <span id="chat-current-user-label" style="font-size: 12px; font-weight: bold; color: #facc15; white-space: nowrap; font-family: monospace; display: flex; align-items: center;">
+      ...:
+    </span>
+
+    <input type="text" id="chat-input" placeholder="Ketik pesan obrolan di sini..." autocomplete="off" maxlength="300">
+    
+    <button type="submit" class="btn-send" title="Kirim Pesan">
+      <i class="fa-solid fa-paper-plane"></i>
+    </button>
+  </form>
+</footer>
 
   <!-- MODAL 1: Form Registration & Login -->
   <div id="reg-modal" class="modal-overlay hidden">
@@ -600,45 +655,57 @@
       });
     }
 
-   // 3. Pindah Tab (Public <-> Private)
-    window.switchChatRoom = (type, targetUID = null) => {
-      activeChatType = type;
-      activePrivateUID = targetUID;
-      isChatVisible = true; // <-- TAMBAHKAN INI AGAR KLIK TAB LANGSUNG DIANGGAP AKTIF/TERBUKA
+ // 3. Pindah Tab (Public <-> Private) dengan Perbedaan Warna Latar
+  window.switchChatRoom = (type, targetUID = null) => {
+    activeChatType = type;
+    activePrivateUID = targetUID;
+    isChatVisible = true; // <-- AGAR KLIK TAB LANGSUNG DIANGGAP AKTIF/TERBUKA
 
+    // 🎨 EFEK PERBEDAAN WARNA BACKGROUND:
+    const chatContainer = document.getElementById('chat-container');
+    if (chatContainer) {
       if (type === 'public') {
-        updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
-        markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
-      } else if (type === 'private' && targetUID) {
-        unreadCounts[targetUID] = 0; 
-        markRoomAsRead(targetUID);   
+        // Tab Grup RT 05: Gelap Transparan (Hitam Transparan Bawaan)
+        chatContainer.style.background = 'rgba(2, 6, 23, 0.3)';
+      } else {
+        // Tab Private Chat: Lebih Cerah (Transparan)
+        chatContainer.style.background = 'rgba(0, 0, 0, 0.1)';
       }
+    }
 
-      if (currentChatUnsubscribe) {
-        currentChatUnsubscribe();
-        currentChatUnsubscribe = null;
-      }
+    if (type === 'public') {
+      updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
+      markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
+    } else if (type === 'private' && targetUID) {
+      unreadCounts[targetUID] = 0; 
+      markRoomAsRead(targetUID);   
+    }
 
-      const btnPublic = document.getElementById('tab-room-public');
-      if (btnPublic) {
-        btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
-        btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
-      }
+    if (currentChatUnsubscribe) {
+      currentChatUnsubscribe();
+      currentChatUnsubscribe = null;
+    }
 
-      renderPrivateTabsUI();
+    const btnPublic = document.getElementById('tab-room-public');
+    if (btnPublic) {
+      btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
+      btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
+    }
 
-      const chatStream = document.getElementById('chat-stream');
-      if (chatStream) {
-        // Berikan indikator memuat daripada langsung mengosongkan layar secara mendadak
-        chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
-      }
+    renderPrivateTabsUI();
 
-      if (type === 'public') {
-        loadChatStream();
-      } else if (type === 'private' && targetUID) {
-        loadPrivateChatStream(targetUID);
-      }
-    };
+    const chatStream = document.getElementById('chat-stream');
+    if (chatStream) {
+      // Indikator memuat percakapan
+      chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
+    }
+
+    if (type === 'public') {
+      loadChatStream();
+    } else if (type === 'private' && targetUID) {
+      loadPrivateChatStream(targetUID);
+    }
+  };
 
     // 4. Tutup Tab Private
     window.closePrivateTab = (e, targetUID) => {
@@ -799,10 +866,15 @@
       });
     }
     
-    // 6. Pengiriman Pesan (Keyboard Tetap Terbuka)
-    window.sendChatMessage = (e) => {
-      e.preventDefault();
+   // 6. Pengiriman Pesan (Keyboard Tetap Terbuka & Auto-Clear Highlight)
+    function executeSendMessage(e) {
+      if (e) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+
       const input = document.getElementById('chat-input');
+      if (!input) return;
       const text = input.value.trim();
 
       if (!text || currentUser?.status !== 'aktif') return;
@@ -812,6 +884,13 @@
 
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
+        const newKey = newMsgRef.key;
+
+        // 🛠️ PERBAIKAN: Langsung tandai ID pesan ini sebagai 'terbaca' agar highlight putih di chat lama otomatis padam!
+        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+        lastReadPublicMap[currentUser.uid] = newKey;
+        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+
         set(newMsgRef, {
           uid: currentUser.uid,
           sender: currentUser.username || currentUser.nama,
@@ -853,7 +932,10 @@
           }
         });
       }
-    };
+    }
+
+    // Bind fungsi secara global ke window agar terbaca penuh oleh form HTML
+    window.sendChatMessage = executeSendMessage;
 
     // Pemantau Pesan Unread Grup Chat Publik
     let publicGroupListener = null;
@@ -1194,6 +1276,11 @@
           
           const userInfo = document.getElementById('user-info-text');
           if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
+          // Tambahkan baris ini untuk memperbarui label di sebelah kolom ketik:
+          const labelUserKetik = document.getElementById('chat-current-user-label');
+          if (labelUserKetik) {
+          labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
+        }
           
           setupPresence();
           
@@ -1366,7 +1453,7 @@
       });
     }
         
-    function renderSingleMessage(msg, isUnread = false, msgKey = '') {
+ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
       const chatStream = document.getElementById('chat-stream');
       if (!chatStream) return;
       
@@ -1387,8 +1474,27 @@
       }
 
       let nameClass = "role-user";
-      if (msg.role === 'admin') nameClass = "role-admin";
-      else if (msg.uid === currentUser?.uid) nameClass = "role-self";
+      let textClass = "msg-text"; // Default teks warga di Grup Publik (Putih)
+
+      // 1. Jika pengirim adalah Admin -> Tetap Biru di room manapun
+      if (msg.role === 'admin') {
+        nameClass = "role-admin";
+        textClass = "msg-text msg-text-admin";
+      } 
+      // 2. Jika di Room Private -> Terapkan skema Kuning & Oranye untuk warga
+      else if (activeChatType === 'private') {
+        if (msg.uid === currentUser?.uid) {
+          nameClass = "role-self";
+          textClass = "msg-text msg-text-self";   // Saya sendiri = Kuning
+        } else {
+          nameClass = "role-user";
+          textClass = "msg-text msg-text-other";  // Lawan chat = Oranye
+        }
+      } 
+      // 3. Jika di Grup Publik biasa
+      else if (msg.uid === currentUser?.uid) {
+        nameClass = "role-self";
+      }
 
       const clickHandler = (msg.uid !== currentUser?.uid) 
         ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
@@ -1396,7 +1502,7 @@
 
       div.innerHTML = `
         <span class="${nameClass}" ${clickHandler}>${escapeHTML(msg.sender)}:</span>
-        <span class="msg-text">${escapeHTML(msg.text)}</span>
+        <span class="${textClass}">${escapeHTML(msg.text)}</span>
       `;
 
       chatStream.appendChild(div);
@@ -1500,22 +1606,27 @@
     };
 
     window.saveNewUsername = () => {
-      const input = document.getElementById('new-username-input');
-      if (!input) return;
-      const newName = input.value.trim();
-      if (!newName) return;
+  const input = document.getElementById('new-username-input');
+  if (!input) return;
+  const newName = input.value.trim();
+  if (!newName) return;
 
-      if (newName.toUpperCase().includes('ADMIN') && currentUser.role !== 'admin') {
-        alert("Username tidak boleh mengandung kata 'ADMIN'!");
-        return;
-      }
+  if (newName.toUpperCase().includes('ADMIN') && currentUser.role !== 'admin') {
+    alert("Username tidak boleh mengandung kata 'ADMIN'!");
+    return;
+  }
 
-      set(ref(db, `users/${currentUser.uid}/username`), newName).then(() => {
-        currentUser.username = newName;
-        localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
-        closeChangeNameModal();
-      });
-    };
+  set(ref(db, `users/${currentUser.uid}/username`), newName).then(() => {
+    currentUser.username = newName;
+    localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
+    
+    // Perbarui label nama di sebelah input ketik secara instan
+    const labelUserKetik = document.getElementById('chat-current-user-label');
+    if (labelUserKetik) labelUserKetik.innerText = `${newName}:`;
+
+    closeChangeNameModal();
+  });
+};
 
     window.resetAccountData = () => {
       if (confirm("Keluar dari akun saat ini?")) {
