@@ -375,6 +375,17 @@ function perbaruiAplikasiSekarang() {
   }
 }
 
+/* Efek Memutar Video 90 Derajat (Landscape CSS Rotate) */
+.video-rotated {
+  transform: rotate(90deg) !important;
+  /* Tukar dimensi agar pas dengan layar HP */
+  width: 100vh !important;
+  height: 100vw !important;
+  max-width: 100vh !important;
+  max-height: 100vw !important;
+  object-fit: contain !important;
+  transition: transform 0.3s ease !important;
+}
 
   </style>
 </head>
@@ -1118,6 +1129,24 @@ function bukaModalInfo() {
 // Variable status rotasi
 var isVideoRotated = false;
 
+// Fungsi Toggle Memutar Layar 90 Derajat
+window.toggleRotasiVideo = function() {
+  var player = document.getElementById('player-video-modal');
+  var btnRotate = document.getElementById('btn-rotate-video');
+  
+  if (player) {
+    isVideoRotated = !isVideoRotated;
+    
+    if (isVideoRotated) {
+      player.classList.add('video-rotated');
+      if (btnRotate) btnRotate.innerHTML = '🔄 Kembalikan';
+    } else {
+      player.classList.remove('video-rotated');
+      if (btnRotate) btnRotate.innerHTML = '🔄 Putar Layar';
+    }
+  }
+};
+
 window.bukaModalVideo = function(videoUrl, event) {
   if (event) {
     event.stopPropagation();
@@ -1130,11 +1159,14 @@ window.bukaModalVideo = function(videoUrl, event) {
   var modal = document.getElementById('modal-video-popup');
   var player = document.getElementById('player-video-modal');
   var btnRotate = document.getElementById('btn-rotate-video');
-  var wrapper = document.getElementById('wrapper-player-video');
 
-  // Reset rotasi saat modal baru dibuka
+  // Reset rotasi & tombol saat video baru dibuka
   isVideoRotated = false;
-  if (wrapper) wrapper.classList.remove('video-rotated');
+  if (player) player.classList.remove('video-rotated');
+  if (btnRotate) {
+    btnRotate.innerHTML = '🔄 Putar Layar';
+    btnRotate.style.display = 'none';
+  }
 
   if (modal && player) {
     player.src = videoUrl;
@@ -1142,13 +1174,11 @@ window.bukaModalVideo = function(videoUrl, event) {
     
     player.load();
     
-    // Deteksi Otomatis: Apakah video berformat Landscape?
+    // Deteksi Otomatis: Tampilkan tombol jika video Landscape
     player.onloadedmetadata = function() {
       if (player.videoWidth > player.videoHeight) {
-        // Tampilkan tombol "🔄 Putar Layar" jika video landscape
         if (btnRotate) btnRotate.style.display = 'block';
       } else {
-        // Sembunyikan jika video portrait/tegak
         if (btnRotate) btnRotate.style.display = 'none';
       }
     };
@@ -1162,44 +1192,26 @@ window.bukaModalVideo = function(videoUrl, event) {
   }
 };
 
-// Fungsi Toggle Memutar Layar 90 Derajat
-window.toggleRotasiVideo = function() {
-  var wrapper = document.getElementById('wrapper-player-video');
-  var btnRotate = document.getElementById('btn-rotate-video');
-  
-  if (wrapper) {
-    isVideoRotated = !isVideoRotated;
-    if (isVideoRotated) {
-      wrapper.classList.add('video-rotated');
-      if (btnRotate) btnRotate.innerText = '🔄 Kembalikan';
-    } else {
-      wrapper.classList.remove('video-rotated');
-      if (btnRotate) btnRotate.innerText = '🔄 Putar Layar';
-    }
-  }
-};
-
 window.tutupModalVideo = function() {
   var modal = document.getElementById('modal-video-popup');
   var player = document.getElementById('player-video-modal');
-  var wrapper = document.getElementById('wrapper-player-video');
+  var btnRotate = document.getElementById('btn-rotate-video');
 
-  // Reset tampilan rotasi
+  // Reset rotasi
   isVideoRotated = false;
-  if (wrapper) wrapper.classList.remove('video-rotated');
-
   if (player) {
+    player.classList.remove('video-rotated');
     player.pause();
     player.currentTime = 0;
     player.src = '';
   }
   
+  if (btnRotate) btnRotate.style.display = 'none';
   if (modal) modal.style.display = 'none';
 
   var modalInfo = document.getElementById('modal-info');
   if (modalInfo) modalInfo.style.display = 'flex';
 };
-
     
 // ✅ VERSI BERSIH & RINGKAS
 function tutupModalInfo() { 
