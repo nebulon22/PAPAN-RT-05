@@ -1167,16 +1167,21 @@ function setupVideoFullscreenListeners() {
   });
 }
 
-// 🛠️ FUNGSI TOMBOL CLOSE (X) VIDEO
+// 🛠️ FUNGSI TOMBOL CLOSE (X) VIDEO (DIPERBAIKI: Tombol Play Tetap Ada & Instan)
 window.tutupDanResetVideo = function(videoId, wrapperId) {
   var v = document.getElementById(videoId);
   if (v) {
+    // 1. Hentikan pemutaran video secara bersih
     v.pause();
-    var currentSrc = v.src;
-    v.src = ''; 
-    v.load(); // Reset memori video untuk mencegah memory leak PWA[cite: 2]
-    v.src = currentSrc; // Kembalikan sumber agar siap diputar lagi jika dibuka
+    
+    // 2. Kembalikan durasi ke awal (0 detik)
+    v.currentTime = 0;
+    
+    // 3. Muat ulang elemen video agar poster/tombol PLAY bawaan browser langsung muncul kembali
+    v.load();
   }
+  
+  // 4. Keluar dari mode Fullscreen
   keluarFullscreen();
 };
 
