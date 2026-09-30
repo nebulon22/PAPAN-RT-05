@@ -594,6 +594,25 @@ function perbaruiAplikasiSekarang() {
   align-items: center; 
   justify-content: center;
 ">
+  <!-- Tombol Rotate (Muncul Khusus Video Landscape) -->
+  <button id="btn-rotate-video" type="button" onclick="toggleRotasiVideo()" title="Putar Layar" style="
+    display: none; 
+    position: absolute; 
+    top: 16px; 
+    right: 58px; 
+    z-index: 1000000; 
+    background: rgba(255, 255, 255, 0.2); 
+    color: #ffffff; 
+    border: 1px solid rgba(255, 255, 255, 0.4); 
+    border-radius: 20px; 
+    padding: 6px 12px; 
+    font-size: 12px; 
+    font-weight: bold; 
+    cursor: pointer; 
+    backdrop-filter: blur(4px); 
+    -webkit-backdrop-filter: blur(4px); 
+    outline: none;
+  ">🔄 Putar Layar</button>
  <!-- Tombol Close Minimalis & Elegan (Semi-Transparan) -->
 <button type="button" onclick="tutupModalVideo()" title="Tutup Video" style="
   position: absolute; 
@@ -1096,48 +1115,93 @@ function bukaModalInfo() {
 
 
 
-// Fungsi Membuka Modal Video Layar Penuh
-window.bukaModalVideo = function(videoUrl) {
+// Variable status rotasi
+var isVideoRotated = false;
+
+window.bukaModalVideo = function(videoUrl, event) {
+  if (event) {
+    event.stopPropagation();
+    if (event.preventDefault) event.preventDefault();
+  }
+
+  var modalInfo = document.getElementById('modal-info');
+  if (modalInfo) modalInfo.style.display = 'none';
+
   var modal = document.getElementById('modal-video-popup');
   var player = document.getElementById('player-video-modal');
-  
+  var btnRotate = document.getElementById('btn-rotate-video');
+  var wrapper = document.getElementById('wrapper-player-video');
+
+  // Reset rotasi saat modal baru dibuka
+  isVideoRotated = false;
+  if (wrapper) wrapper.classList.remove('video-rotated');
+
   if (modal && player) {
-    // Isikan URL video
     player.src = videoUrl;
-    
-    // Tampilkan modal
     modal.style.display = 'flex';
     
-    // Muat ulang video & putar
     player.load();
-    var playPromise = player.play();
     
+    // Deteksi Otomatis: Apakah video berformat Landscape?
+    player.onloadedmetadata = function() {
+      if (player.videoWidth > player.videoHeight) {
+        // Tampilkan tombol "🔄 Putar Layar" jika video landscape
+        if (btnRotate) btnRotate.style.display = 'block';
+      } else {
+        // Sembunyikan jika video portrait/tegak
+        if (btnRotate) btnRotate.style.display = 'none';
+      }
+    };
+
+    var playPromise = player.play();
     if (playPromise !== undefined) {
       playPromise.catch(function(error) {
-        console.log("Autoplay tercegah, menunggu interaksi pengguna:", error);
+        console.log("Autoplay tercegah:", error);
       });
     }
   }
 };
 
-// Fungsi Menutup Modal Video
-window.tutupModalVideo = function() {
-  var modal = document.getElementById('modal-video-popup');
-  var player = document.getElementById('player-video-modal');
+// Fungsi Toggle Memutar Layar 90 Derajat
+window.toggleRotasiVideo = function() {
+  var wrapper = document.getElementById('wrapper-player-video');
+  var btnRotate = document.getElementById('btn-rotate-video');
   
-  if (player) {
-    player.pause();
-    player.currentTime = 0;
-    player.src = ''; // Reset memori untuk cegah memory leak PWA
-  }
-  
-  if (modal) {
-    modal.style.display = 'none';
+  if (wrapper) {
+    isVideoRotated = !isVideoRotated;
+    if (isVideoRotated) {
+      wrapper.classList.add('video-rotated');
+      if (btnRotate) btnRotate.innerText = '🔄 Kembalikan';
+    } else {
+      wrapper.classList.remove('video-rotated');
+      if (btnRotate) btnRotate.innerText = '🔄 Putar Layar';
+    }
   }
 };
 
+window.tutupModalVideo = function() {
+  var modal = document.getElementById('modal-video-popup');
+  var player = document.getElementById('player-video-modal');
+  var wrapper = document.getElementById('wrapper-player-video');
+
+  // Reset tampilan rotasi
+  isVideoRotated = false;
+  if (wrapper) wrapper.classList.remove('video-rotated');
+
+  if (player) {
+    player.pause();
+    player.currentTime = 0;
+    player.src = '';
+  }
+  
+  if (modal) modal.style.display = 'none';
+
+  var modalInfo = document.getElementById('modal-info');
+  if (modalInfo) modalInfo.style.display = 'flex';
+};
+
     
-// ✅ VERSI HERSIH & RINGKAS
+// ✅ VERSI BERSIH & RINGKAS
 function tutupModalInfo() { 
   document.getElementById('modal-info').style.display = 'none'; 
 }
