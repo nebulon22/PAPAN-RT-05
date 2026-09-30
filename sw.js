@@ -38,7 +38,7 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. Abaikan navigasi HTML, Firebase, dan file Video Streaming dari Cache Storage
+  // 1. Abaikan navigasi HTML, Firebase, dan file Video Streaming dari Cache Storage PWA
   if (
     event.request.mode === 'navigate' || 
     url.origin.includes('firebase') || 
@@ -48,10 +48,11 @@ self.addEventListener('fetch', (event) => {
     url.origin.includes('catbox.moe')
   ) {
     event.respondWith(
-      fetch(event.request).catch(() => {
-        // PERBAIKAN: Tangkap error & pastikan selalu mengembalikan Response yang valid
+      fetch(event.request).catch((err) => {
+        // Jika request media terputus/dibatalkan, kembalikan dari cache jika ada,
+        // atau biarkan Response 404 standar agar browser tidak melempar error kustom 480
         return caches.match(event.request).then((cached) => {
-          return cached || new Response('', { status: 480, statusText: 'Network Bypassed' });
+          return cached || new Response(null, { status: 404, statusText: 'Not Found' });
         });
       })
     );
@@ -65,7 +66,6 @@ self.addEventListener('fetch', (event) => {
         return cachedResponse;
       }
       
-      // Ambil dari jaringan, dan jika gagal (terputus/CDN diblokir), tangkap dengan .catch()
       return fetch(event.request).catch(() => {
         return new Response('', { status: 480, statusText: 'Offline/Network Error' });
       });
