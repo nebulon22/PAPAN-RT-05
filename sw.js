@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.4.9'; // <--- Naikkan versi saat update
+const CACHE_NAME = 'rt-kayen-v1.5.0'; // <--- Naikkan versi saat update
 
 self.addEventListener('install', (e) => {
   // CATATAN: self.skipWaiting() Sengaja DIHAPUS dari sini 
