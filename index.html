@@ -530,44 +530,100 @@ function perbaruiAplikasiSekarang() {
   </div>
 
 <!-- Modal Foto Layar Penuh (Peta & Poster Pengumuman) -->
-<div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)">
-  <div style="position: relative; max-width: 95%; max-height: 85vh; display: inline-block;">
+<div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)" style="
+  display: none; 
+  position: fixed; 
+  inset: 0; 
+  z-index: 3000; 
+  background: rgba(0,0,0,0.9); 
+  align-items: center; 
+  justify-content: center; 
+  padding: 16px;
+">
+  <div style="position: relative; max-width: 100%; max-height: 90vh; display: flex; align-items: center; justify-content: center;">
     
-    <!-- Tombol X Merah Minimalis tanpa Lingkaran -->
-    <button type="button" onclick="tutupFotoBesar(event)" title="Tutup" style="position: absolute; top: -18px; right: -18px; background: none; color: #ef4444; border: none; font-size: 22px; font-weight: bold; cursor: pointer; z-index: 3010; padding: 4px 8px; line-height: 1; outline: none; text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
-      ✕
-    </button>
-    
-    <!-- Gambar Pratinjau (Foto Rumah / Poster Event) -->
-    <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()" style="max-width: 100%; max-height: 85vh; border-radius: 8px; display: block;">
-  </div>
-</div>
-  <!-- Modal Video Layar Penuh -->
-<div id="modal-video" class="modal-foto-bg" style="display: none; position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.9); align-items: center; justify-content: center;">
-  <div id="video-wrapper" style="position: relative; width: 92%; max-width: 700px; display: inline-block;">
-    
-    <!-- Tombol X Merah Melayang (Selalu Ada saat Play/Pause) -->
-    <button type="button" onclick="tutupVideoBesar()" title="Tutup Video" style="
+    <!-- Tombol X Merah Minimalis Melayang di Pojok Gambar -->
+    <button type="button" onclick="tutupFotoBesar(event)" title="Tutup" style="
       position: absolute; 
-      top: -20px; 
-      right: -10px; 
-      background: none; 
-      color: #ef4444; 
-      border: none; 
-      font-size: 26px; 
+      top: -12px; 
+      right: -12px; 
+      background: #ef4444; 
+      color: #ffffff; 
+      border: 2px solid #ffffff; 
+      border-radius: 50%; 
+      width: 32px; 
+      height: 32px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 16px; 
       font-weight: bold; 
       cursor: pointer; 
       z-index: 3010; 
-      padding: 4px 8px; 
-      line-height: 1; 
-      outline: none; 
-      text-shadow: 0 2px 6px rgba(0,0,0,0.9);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+      outline: none;
     ">
       ✕
     </button>
     
-    <!-- Player Video HTML5 -->
-    <video id="video-preview" controls style="width: 100%; max-height: 80vh; border-radius: 8px; display: block; background: #000;">
+    <!-- Gambar Poster/Flyer Tampil Pas di Tengah Layar HP -->
+    <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()" style="
+      max-width: 100%; 
+      max-height: 85vh; 
+      width: auto; 
+      height: auto; 
+      object-fit: contain; 
+      border-radius: 8px; 
+      display: block; 
+      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+    ">
+  </div>
+</div>
+
+<!-- Modal Video Layar Penuh (Tanpa Ruang Hitam) -->
+<div id="modal-video" class="modal-foto-bg" style="
+  display: none; 
+  position: fixed; 
+  inset: 0; 
+  z-index: 3000; 
+  background: #000; 
+  align-items: center; 
+  justify-content: center;
+">
+  <div id="video-wrapper" style="position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: #000;">
+    
+    <!-- Tombol X Merah Melayang (Selalu Ada saat Play/Pause) -->
+    <button type="button" onclick="tutupVideoBesar()" title="Tutup Video" style="
+      position: absolute; 
+      top: 16px; 
+      right: 16px; 
+      background: #ef4444; 
+      color: #ffffff; 
+      border: 2px solid #ffffff; 
+      border-radius: 50%; 
+      width: 36px; 
+      height: 36px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 18px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      z-index: 99999; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.8); 
+      outline: none;
+    ">
+      ✕
+    </button>
+    
+    <!-- Player Video Full Layar HP -->
+    <video id="video-preview" controls playsinline style="
+      width: 100vw; 
+      height: 100vh; 
+      object-fit: cover; 
+      display: block; 
+      background: #000;
+    ">
       <source id="video-src" src="" type="video/mp4">
       Browser kamu tidak mendukung pemutar video.
     </video>
@@ -1030,19 +1086,37 @@ function setupVideoFullscreenListeners() {
   listVideo.forEach(function(v) {
     var wrapper = v.parentElement;
     
-    // Saat tombol PLAY diklik -> Pemicu Layar Penuh (Fullscreen)
-    v.onplay = function() {
+    // Saat warga menekan tombol PLAY
+    v.onplay = async function() {
       var target = wrapper || v;
-      if (target.requestFullscreen) {
-        target.requestFullscreen();
-      } else if (target.webkitRequestFullscreen) { /* Safari / iOS */
-        target.webkitRequestFullscreen();
-      } else if (target.msRequestFullscreen) {
-        target.msRequestFullscreen();
+      
+      try {
+        // 1. Masuk ke mode Fullscreen
+        if (target.requestFullscreen) {
+          await target.requestFullscreen();
+        } else if (target.webkitRequestFullscreen) { /* iOS / Safari */
+          await target.webkitRequestFullscreen();
+        }
+
+        // 2. Deteksi Orientasi Video (Landscape vs Portrait)
+        const isLandscape = v.videoWidth > v.videoHeight;
+
+        // 3. Putar Layar HP Otomatis Berdasarkan Bentuk Video
+        if (screen.orientation && screen.orientation.lock) {
+          if (isLandscape) {
+            // Jika Video Landscape -> Paksa HP Miring
+            await screen.orientation.lock('landscape').catch(() => {});
+          } else {
+            // Jika Video Portrait -> Paksa HP Tegak
+            await screen.orientation.lock('portrait').catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.log("Fullscreen / Lock Orientation Error:", err);
       }
     };
 
-    // Saat video SELESAI diputar -> Otomatis Keluar Fullscreen
+    // Saat video SELESAI diputar -> Otomatis Keluar Fullscreen & Buka Kunci Orientasi
     v.onended = function() {
       keluarFullscreen();
     };
@@ -1063,6 +1137,11 @@ window.tutupDanResetVideo = function(videoId, wrapperId) {
 };
 
 function keluarFullscreen() {
+  // Lepas kunci rotasi layar agar HP warga kembali normal
+  if (screen.orientation && screen.orientation.unlock) {
+    screen.orientation.unlock();
+  }
+
   if (document.fullscreenElement || document.webkitFullscreenElement) {
     if (document.exitFullscreen) {
       document.exitFullscreen();
@@ -1071,7 +1150,6 @@ function keluarFullscreen() {
     }
   }
 }
-
 function tutupModalInfo() { 
   var listVideo = document.querySelectorAll('#list-pengumuman video');
   listVideo.forEach(function(v) {
