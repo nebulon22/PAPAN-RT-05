@@ -34,12 +34,19 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Izinkan navigasi halaman HTML & Firebase berjalan langsung tanpa lewat Cache
+// Izinkan navigasi halaman HTML, Firebase, dan Video Streaming berjalan langsung tanpa lewat Cache
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. Abaikan request navigasi HTML (seperti admin.html) & Firebase API
-  if (event.request.mode === 'navigate' || url.origin.includes('firebase') || url.origin.includes('gstatic')) {
+  // 1. Abaikan navigasi HTML, Firebase, dan file Video Streaming dari Cache Storage
+  if (
+    event.request.mode === 'navigate' || 
+    url.origin.includes('firebase') || 
+    url.origin.includes('gstatic') ||
+    url.pathname.endsWith('.webm') || 
+    url.pathname.endsWith('.mp4') ||
+    url.origin.includes('catbox.moe')
+  ) {
     event.respondWith(
       fetch(event.request).catch(() => caches.match(event.request))
     );
