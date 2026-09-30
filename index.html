@@ -1093,9 +1093,21 @@ window.bukaModalVideo = function(videoUrl) {
   var player = document.getElementById('player-video-modal');
   
   if (modal && player) {
+    // Isikan URL video
     player.src = videoUrl;
+    
+    // Tampilkan modal
     modal.style.display = 'flex';
-    player.play().catch(() => {}); // Autoplay saat modal terbuka
+    
+    // Muat ulang video & putar
+    player.load();
+    var playPromise = player.play();
+    
+    if (playPromise !== undefined) {
+      playPromise.catch(function(error) {
+        console.log("Autoplay tercegah, menunggu interaksi pengguna:", error);
+      });
+    }
   }
 };
 
