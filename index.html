@@ -1104,10 +1104,8 @@ function setupVideoFullscreenListeners() {
         // 3. Putar Layar HP Otomatis Berdasarkan Bentuk Video
         if (screen.orientation && screen.orientation.lock) {
           if (isLandscape) {
-            // Jika Video Landscape -> Paksa HP Miring
             await screen.orientation.lock('landscape').catch(() => {});
           } else {
-            // Jika Video Portrait -> Paksa HP Tegak
             await screen.orientation.lock('portrait').catch(() => {});
           }
         }
@@ -1130,7 +1128,7 @@ window.tutupDanResetVideo = function(videoId, wrapperId) {
     v.pause();
     var currentSrc = v.src;
     v.src = ''; 
-    v.load(); // Reset memori video untuk mencegah memory leak PWA
+    v.load(); // Reset memori video untuk mencegah memory leak PWA[cite: 2]
     v.src = currentSrc; // Kembalikan sumber agar siap diputar lagi jika dibuka
   }
   keluarFullscreen();
@@ -1150,6 +1148,7 @@ function keluarFullscreen() {
     }
   }
 }
+
 function tutupModalInfo() { 
   var listVideo = document.querySelectorAll('#list-pengumuman video');
   listVideo.forEach(function(v) {
@@ -1162,15 +1161,14 @@ function tutupModalInfo() {
 function bukaTutupLuar(e) { 
   if (e.target.id === 'modal-info') tutupModalInfo(); 
 }
-    
-    function sorotLokasi(lokasiEncoded) {
+
+function sorotLokasi(lokasiEncoded) {
   var namaLokasi = decodeURIComponent(lokasiEncoded || '').trim();
   tutupModalInfo();
 
   if (!namaLokasi) return;
 
   var kataKunci = namaLokasi.toLowerCase();
-  // PERBAIKAN: Gunakan String(pin.namaRaw || '') sebelum di-trim agar bebas error
   var hasil = daftarPin.find(pin => String(pin.namaRaw || '').trim().toLowerCase() === kataKunci) || 
               daftarPin.find(pin => String(pin.nama || '').includes(kataKunci));
 
@@ -1191,50 +1189,6 @@ function bukaTutupLuar(e) {
     });
   }
 }
-
-const videoWrapper = document.getElementById('video-wrapper');
-const videoElement = document.getElementById('video-pengumuman');
-
-if (videoElement && videoWrapper) {
-  // 1. Saat tombol PLAY diklik -> Masuk Mode Fullscreen pada Wrapper (agar tombol Close ikut terbawa)
-  videoElement.addEventListener('play', () => {
-    if (videoWrapper.requestFullscreen) {
-      videoWrapper.requestFullscreen();
-    } else if (videoWrapper.webkitRequestFullscreen) { /* Safari / iOS */
-      videoWrapper.webkitRequestFullscreen();
-    } else if (videoWrapper.msRequestFullscreen) {
-      videoWrapper.msRequestFullscreen();
-    }
-  });
-
-  // 2. Saat video SELESAI diputar -> Keluar Fullscreen Otomatis
-  videoElement.addEventListener('ended', () => {
-    tutupVideoPengumuman();
-  });
-}
-
-// 3. Fungsi Utama Tombol Close (X)
-window.tutupVideoPengumuman = function() {
-  if (videoElement) {
-    videoElement.pause();
-    videoElement.src = ''; // Clear RAM untuk mencegah kebocoran memori PWA
-    videoElement.load();
-  }
-
-  // Keluar dari mode Fullscreen jika sedang aktif
-  if (document.fullscreenElement || document.webkitFullscreenElement) {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    }
-  }
-
-  // Sembunyikan elemen video wrapper (opsional)
-  if (videoWrapper) {
-    videoWrapper.style.display = 'none';
-  }
-};
 
 function cariLokasi() {
   var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
