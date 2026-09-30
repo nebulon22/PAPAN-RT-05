@@ -384,7 +384,29 @@ function perbaruiAplikasiSekarang() {
   object-fit: contain !important; /* Gunakan 'contain' agar tidak ada bagian video yang terpotong/gepeng */
   background: #000000 !important;
 }
-    
+/* Saat Container Wrapper Masuk Mode Fullscreen */
+.custom-video-container:fullscreen,
+.custom-video-container:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #000000 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+
+/* Video di dalam Fullscreen Wrapper */
+.custom-video-container:fullscreen video,
+.custom-video-container:-webkit-full-screen video {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  object-fit: contain !important; /* Pas di layar tanpa terpotong */
+}
   </style>
 </head>
 <body>
@@ -1039,29 +1061,43 @@ function bukaModalInfo() {
           var wrapperId = 'video-wrapper-' + idx;
           
           htmlFoto = `
-            <div id="${wrapperId}" style="position: relative; width: 100%; border-radius: 6px; overflow: hidden; margin-top: 8px; background: #000;">
-              <!-- Tombol Close (X) Melayang -->
+            <div id="${wrapperId}" class="custom-video-container" style="
+              position: relative; 
+              width: 100%; 
+              border-radius: 6px; 
+              overflow: hidden; 
+              margin-top: 8px; 
+              background: #000;
+            ">
+              <!-- Tombol Close (✕) Melayang (z-index tinggi agar selalu di atas video) -->
               <button type="button" onclick="tutupDanResetVideo('${videoId}', '${wrapperId}')" title="Tutup Video" style="
                 position: absolute; 
-                top: 8px; 
-                right: 8px; 
-                z-index: 999; 
-                background: rgba(239, 68, 68, 0.85); 
+                top: 10px; 
+                right: 10px; 
+                z-index: 999999; 
+                background: #ef4444; 
                 color: #ffffff; 
-                border: none; 
+                border: 2px solid #ffffff; 
                 border-radius: 50%; 
-                width: 28px; 
-                height: 28px; 
+                width: 32px; 
+                height: 32px; 
                 display: flex; 
                 align-items: center; 
                 justify-content: center; 
                 font-weight: bold; 
-                font-size: 14px; 
+                font-size: 16px; 
                 cursor: pointer; 
-                box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+                outline: none;
               ">✕</button>
 
-              <video id="${videoId}" src="${info.foto}" controls playsinline style="width:100%; max-height:260px; display:block;">
+              <video id="${videoId}" src="${info.foto}" controls playsinline style="
+                width: 100%; 
+                max-height: 260px; 
+                display: block; 
+                object-fit: contain; 
+                background: #000;
+              ">
                 Browser Anda tidak mendukung pemutaran video WebM/MP4.
               </video>
             </div>`;
@@ -1089,22 +1125,23 @@ function bukaModalInfo() {
   }
   document.getElementById('modal-info').style.display = 'flex';
 }
-
+    
 // 🛠️ FUNGSI FULLSCREEN PERSISI SAAT VIDEO DI-PLAY
 function setupVideoFullscreenListeners() {
   var listVideo = document.querySelectorAll('#list-pengumuman video');
   listVideo.forEach(function(v) {
+    var wrapper = v.parentElement; // Ambil container wrapper-nya
     
     // Saat warga menekan tombol PLAY
     v.onplay = async function() {
+      var target = wrapper || v;
+      
       try {
-        // 1. Picu Fullscreen LANGSUNG pada elemen video (bukan wrapper div)
-        if (v.requestFullscreen) {
-          await v.requestFullscreen();
-        } else if (v.webkitRequestFullscreen) { /* Safari / iOS */
-          await v.webkitRequestFullscreen();
-        } else if (v.webkitEnterFullscreen) { /* Khusus iPhone Safari */
-          v.webkitEnterFullscreen();
+        // 1. Masuk Fullscreen pada WRAPPER (bukan video langsung)
+        if (target.requestFullscreen) {
+          await target.requestFullscreen();
+        } else if (target.webkitRequestFullscreen) { /* Safari / iOS */
+          await target.webkitRequestFullscreen();
         }
 
         // 2. Deteksi Orientasi Video (Landscape vs Portrait)
@@ -1113,10 +1150,8 @@ function setupVideoFullscreenListeners() {
         // 3. Lock Orientasi Layar HP
         if (screen.orientation && screen.orientation.lock) {
           if (isLandscape) {
-            // Video Miring -> Paksa Layar Miring (Landscape)
             await screen.orientation.lock('landscape').catch(() => {});
           } else {
-            // Video Tegak (9:16) -> Paksa Layar Tegak (Portrait)
             await screen.orientation.lock('portrait').catch(() => {});
           }
         }
@@ -1125,7 +1160,7 @@ function setupVideoFullscreenListeners() {
       }
     };
 
-    // Saat video SELESAI diputar -> Keluar Fullscreen & Lepas Kunci Orientasi
+    // Saat video SELESAI diputar -> Otomatis Keluar Fullscreen
     v.onended = function() {
       keluarFullscreen();
     };
