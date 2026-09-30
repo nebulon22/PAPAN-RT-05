@@ -8,7 +8,7 @@
    <!-- FontAwesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.4.9">
+  <link rel="manifest" href="manifest.json?v=1.5.0">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
  
@@ -374,7 +374,39 @@ function perbaruiAplikasiSekarang() {
     filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
   }
 }
-    
+
+/* Paksa Video Mengisi Seluruh Layar HP saat Mode Fullscreen Aktif */
+#list-pengumuman video:fullscreen,
+#list-pengumuman video:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  object-fit: contain !important; /* Gunakan 'contain' agar tidak ada bagian video yang terpotong/gepeng */
+  background: #000000 !important;
+}
+/* Saat Container Wrapper Masuk Mode Fullscreen */
+.custom-video-container:fullscreen,
+.custom-video-container:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  background: #000000 !important;
+  border-radius: 0 !important;
+  margin: 0 !important;
+}
+
+/* Video di dalam Fullscreen Wrapper */
+.custom-video-container:fullscreen video,
+.custom-video-container:-webkit-full-screen video {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  object-fit: contain !important; /* Pas di layar tanpa terpotong */
+}
   </style>
 </head>
 <body>
@@ -530,16 +562,104 @@ function perbaruiAplikasiSekarang() {
   </div>
 
 <!-- Modal Foto Layar Penuh (Peta & Poster Pengumuman) -->
-<div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)">
-  <div style="position: relative; max-width: 95%; max-height: 85vh; display: inline-block;">
+<div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)" style="
+  display: none; 
+  position: fixed; 
+  inset: 0; 
+  z-index: 3000; 
+  background: rgba(0,0,0,0.9); 
+  align-items: center; 
+  justify-content: center; 
+  padding: 16px;
+">
+  <div style="position: relative; max-width: 100%; max-height: 90vh; display: flex; align-items: center; justify-content: center;">
     
-    <!-- Tombol X Merah Minimalis tanpa Lingkaran -->
-    <button type="button" onclick="tutupFotoBesar(event)" title="Tutup" style="position: absolute; top: -18px; right: -18px; background: none; color: #ef4444; border: none; font-size: 22px; font-weight: bold; cursor: pointer; z-index: 3010; padding: 4px 8px; line-height: 1; outline: none; text-shadow: 0 1px 4px rgba(0,0,0,0.8);">
+    <!-- Tombol X Merah Minimalis Melayang di Pojok Gambar -->
+    <button type="button" onclick="tutupFotoBesar(event)" title="Tutup" style="
+      position: absolute; 
+      top: -12px; 
+      right: -12px; 
+      background: #ef4444; 
+      color: #ffffff; 
+      border: 2px solid #ffffff; 
+      border-radius: 50%; 
+      width: 32px; 
+      height: 32px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 16px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      z-index: 3010; 
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
+      outline: none;
+    ">
       ✕
     </button>
     
-    <!-- Gambar Pratinjau (Foto Rumah / Poster Event) -->
-    <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()" style="max-width: 100%; max-height: 85vh; border-radius: 8px; display: block;">
+    <!-- Gambar Poster/Flyer Tampil Pas di Tengah Layar HP -->
+    <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()" style="
+      max-width: 100%; 
+      max-height: 85vh; 
+      width: auto; 
+      height: auto; 
+      object-fit: contain; 
+      border-radius: 8px; 
+      display: block; 
+      box-shadow: 0 8px 24px rgba(0,0,0,0.8);
+    ">
+  </div>
+</div>
+
+<!-- Modal Video Layar Penuh (Tanpa Ruang Hitam) -->
+<div id="modal-video" class="modal-foto-bg" style="
+  display: none; 
+  position: fixed; 
+  inset: 0; 
+  z-index: 3000; 
+  background: #000; 
+  align-items: center; 
+  justify-content: center;
+">
+  <div id="video-wrapper" style="position: relative; width: 100vw; height: 100vh; display: flex; align-items: center; justify-content: center; background: #000;">
+    
+    <!-- Tombol X Merah Melayang (Selalu Ada saat Play/Pause) -->
+    <button type="button" onclick="tutupVideoBesar()" title="Tutup Video" style="
+      position: absolute; 
+      top: 16px; 
+      right: 16px; 
+      background: #ef4444; 
+      color: #ffffff; 
+      border: 2px solid #ffffff; 
+      border-radius: 50%; 
+      width: 36px; 
+      height: 36px; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 18px; 
+      font-weight: bold; 
+      cursor: pointer; 
+      z-index: 99999; 
+      box-shadow: 0 4px 12px rgba(0,0,0,0.8); 
+      outline: none;
+    ">
+      ✕
+    </button>
+    
+    <!-- Player Video Full Layar HP -->
+    <video id="video-preview" controls playsinline style="
+      width: 100vw; 
+      height: 100vh; 
+      object-fit: cover; 
+      display: block; 
+      background: #000;
+    ">
+      <source id="video-src" src="" type="video/mp4">
+      Browser kamu tidak mendukung pemutar video.
+    </video>
+    
   </div>
 </div>
 
@@ -858,62 +978,63 @@ function perbaruiAplikasiSekarang() {
     });
 
 // 2. Muat Data Pengumuman
-  ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
-    if (!data) return;
-    var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-    daftarPengumuman = [];
+ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
+  if (!data) return;
+  var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+  daftarPengumuman = [];
 
-    baris.forEach(function(kolom) {
-      if (kolom.length >= 2 && kolom[1] !== '') {
-        var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
-        if (status === 'AKTIF') {
-          
-          // 🛠️ PERBAIKAN FORMAT TANGGAL ISO:
-          var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
-          var tglRapi = tglRaw;
-          
-          if (tglRapi.includes('T')) {
-            var parts = tglRapi.split('T')[0].split('-');
-            if (parts.length === 3) {
-              tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah "2026-09-14T..." menjadi "14/09/2026"
-            }
+  baris.forEach(function(kolom) {
+    if (kolom.length >= 2 && kolom[1] !== '') {
+      var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
+      if (status === 'AKTIF') {
+        
+        // 🛠️ PERBAIKAN FORMAT TANGGAL ISO:
+        var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
+        var tglRapi = tglRaw;
+        
+        if (tglRapi.includes('T')) {
+          var parts = tglRapi.split('T')[0].split('-');
+          if (parts.length === 3) {
+            tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah "2026-09-14T..." menjadi "14/09/2026"
           }
-
-          daftarPengumuman.push({
-            tanggal: tglRapi,
-            judul: kolom[1] ? String(kolom[1]).trim() : '',
-            detail: kolom[2] ? String(kolom[2]).trim() : '',
-            lokasi: kolom[3] ? String(kolom[3]).trim() : '',
-            foto: kolom[5] ? String(kolom[5]).trim() : '' // <-- TAMBAHAN: Membaca URL Foto/Flyer di Kolom F
-          });
         }
-      }
-    });
-   // 🔄 URUTKAN BERDASARKAN TANGGAL EVENT (Event Mendatang/Terdekat di Atas, Event Lampau di Bawah)
-daftarPengumuman.sort((a, b) => {
-  // Ubah format string "DD/MM/YYYY" menjadi Date Object yang bisa dibandingkan
-  var partsA = a.tanggal.split('/');
-  var partsB = b.tanggal.split('/');
-  
-  var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
-  var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
-  
-  return dateB - dateA; // Urutkan dari tanggal paling masa depan/terbaru ke tanggal lampau
-});
-    // Tampilkan hanya 10 pengumuman terbaru di layar warga
-daftarPengumuman = daftarPengumuman.slice(0, 10);
-    
-    // TAMPILKAN BADGE NOTIFIKASI
-    var badge = document.getElementById('badge-count');
-    if (badge) {
-      if (daftarPengumuman.length > 0) {
-        badge.innerText = daftarPengumuman.length;
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
+
+        daftarPengumuman.push({
+          tanggal: tglRapi,
+          judul: kolom[1] ? String(kolom[1]).trim() : '',
+          detail: kolom[2] ? String(kolom[2]).trim() : '',
+          lokasi: kolom[3] ? String(kolom[3]).trim() : '',
+          foto: kolom[5] ? String(kolom[5]).trim() : '' // Membaca URL Foto/Video di Kolom F
+        });
       }
     }
   });
+
+  // 🔄 URUTKAN BERDASARKAN TANGGAL EVENT
+  daftarPengumuman.sort((a, b) => {
+    var partsA = a.tanggal.split('/');
+    var partsB = b.tanggal.split('/');
+    
+    var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
+    var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
+    
+    return dateB - dateA;
+  });
+
+  // Tampilkan hanya 10 pengumuman terbaru di layar warga
+  daftarPengumuman = daftarPengumuman.slice(0, 10);
+  
+  // TAMPILKAN BADGE NOTIFIKASI
+  var badge = document.getElementById('badge-count');
+  if (badge) {
+    if (daftarPengumuman.length > 0) {
+      badge.innerText = daftarPengumuman.length;
+      badge.style.display = 'inline-block';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+});
 
 function escapeHtml(text) {
   if (!text) return '';
@@ -927,22 +1048,61 @@ function bukaModalInfo() {
   if (daftarPengumuman.length === 0) {
     container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
   } else {
-    daftarPengumuman.forEach(function(info) {
+    daftarPengumuman.forEach(function(info, idx) {
       var lokasiParam = encodeURIComponent(info.lokasi);
       
-     // Deteksi otomatis format gambar vs video (WebM/MP4)
       var htmlFoto = '';
       if (info.foto) {
         var urlFoto = info.foto.toLowerCase();
         
-        // Jika file berupa video WebM atau MP4 (bisa diputar + ada suara)
+        // Jika file berupa video WebM atau MP4
         if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+          var videoId = 'video-announcement-' + idx;
+          var wrapperId = 'video-wrapper-' + idx;
+          
           htmlFoto = `
-            <video src="${info.foto}" controls playsinline style="width:100%; max-height:220px; border-radius:6px; margin-top:8px; background:#000;">
-              Browser Anda tidak mendukung pemutaran video WebM/MP4.
-            </video>`;
+            <div id="${wrapperId}" class="custom-video-container" style="
+              position: relative; 
+              width: 100%; 
+              border-radius: 6px; 
+              overflow: hidden; 
+              margin-top: 8px; 
+              background: #000;
+            ">
+              <!-- Tombol Close (✕) Melayang (z-index tinggi agar selalu di atas video) -->
+              <button type="button" onclick="tutupDanResetVideo('${videoId}', '${wrapperId}')" title="Tutup Video" style="
+                position: absolute; 
+                top: 10px; 
+                right: 10px; 
+                z-index: 999999; 
+                background: #ef4444; 
+                color: #ffffff; 
+                border: 2px solid #ffffff; 
+                border-radius: 50%; 
+                width: 32px; 
+                height: 32px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: center; 
+                font-weight: bold; 
+                font-size: 16px; 
+                cursor: pointer; 
+                box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+                outline: none;
+              ">✕</button>
+
+              <video id="${videoId}" src="${info.foto}" controls playsinline style="
+                width: 100%; 
+                max-height: 260px; 
+                display: block; 
+                object-fit: contain; 
+                background: #000;
+              ">
+                Browser Anda tidak mendukung pemutaran video WebM/MP4.
+              </video>
+            </div>`;
         } else {
-          // Jika file gambar biasa (JPG, PNG, GIF, WebP)
+          // Jika file gambar biasa
           htmlFoto = `
             <img src="${info.foto}" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
         }
@@ -959,29 +1119,107 @@ function bukaModalInfo() {
       `;
       container.innerHTML += html;
     });
+
+    // Inisialisasi event listener fullscreen setelah elemen dirender
+    setTimeout(setupVideoFullscreenListeners, 100);
   }
   document.getElementById('modal-info').style.display = 'flex';
 }
+    
+// 🛠️ FUNGSI FULLSCREEN PERSISI SAAT VIDEO DI-PLAY
+function setupVideoFullscreenListeners() {
+  var listVideo = document.querySelectorAll('#list-pengumuman video');
+  listVideo.forEach(function(v) {
+    var wrapper = v.parentElement; // Ambil container wrapper-nya
+    
+    // Saat warga menekan tombol PLAY
+    v.onplay = async function() {
+      var target = wrapper || v;
+      
+      try {
+        // 1. Masuk Fullscreen pada WRAPPER (bukan video langsung)
+        if (target.requestFullscreen) {
+          await target.requestFullscreen();
+        } else if (target.webkitRequestFullscreen) { /* Safari / iOS */
+          await target.webkitRequestFullscreen();
+        }
+
+        // 2. Deteksi Orientasi Video (Landscape vs Portrait)
+        const isLandscape = v.videoWidth > v.videoHeight;
+
+        // 3. Lock Orientasi Layar HP
+        if (screen.orientation && screen.orientation.lock) {
+          if (isLandscape) {
+            await screen.orientation.lock('landscape').catch(() => {});
+          } else {
+            await screen.orientation.lock('portrait').catch(() => {});
+          }
+        }
+      } catch (err) {
+        console.log("Fullscreen / Lock Orientation Error:", err);
+      }
+    };
+
+    // Saat video SELESAI diputar -> Otomatis Keluar Fullscreen
+    v.onended = function() {
+      keluarFullscreen();
+    };
+  });
+}
+
+// 🛠️ FUNGSI TOMBOL CLOSE (X) VIDEO (DIPERBAIKI: Tombol Play Tetap Ada & Instan)
+window.tutupDanResetVideo = function(videoId, wrapperId) {
+  var v = document.getElementById(videoId);
+  if (v) {
+    // 1. Hentikan pemutaran video secara bersih
+    v.pause();
+    
+    // 2. Kembalikan durasi ke awal (0 detik)
+    v.currentTime = 0;
+    
+    // 3. Muat ulang elemen video agar poster/tombol PLAY bawaan browser langsung muncul kembali
+    v.load();
+  }
+  
+  // 4. Keluar dari mode Fullscreen
+  keluarFullscreen();
+};
+
+function keluarFullscreen() {
+  // Lepas kunci rotasi layar agar HP warga kembali normal
+  if (screen.orientation && screen.orientation.unlock) {
+    screen.orientation.unlock();
+  }
+
+  if (document.fullscreenElement || document.webkitFullscreenElement) {
+    if (document.exitFullscreen) {
+      document.exitFullscreen();
+    } else if (document.webkitExitFullscreen) {
+      document.webkitExitFullscreen();
+    }
+  }
+}
 
 function tutupModalInfo() { 
-  // Hentikan pemutaran video saja agar RAM/prosesor tenang, TANPA menghapus src
   var listVideo = document.querySelectorAll('#list-pengumuman video');
   listVideo.forEach(function(v) {
     v.pause(); 
   });
-
+  keluarFullscreen();
   document.getElementById('modal-info').style.display = 'none'; 
 }
-function bukaTutupLuar(e) { if (e.target.id === 'modal-info') tutupModalInfo(); }
-    
-    function sorotLokasi(lokasiEncoded) {
+
+function bukaTutupLuar(e) { 
+  if (e.target.id === 'modal-info') tutupModalInfo(); 
+}
+
+function sorotLokasi(lokasiEncoded) {
   var namaLokasi = decodeURIComponent(lokasiEncoded || '').trim();
   tutupModalInfo();
 
   if (!namaLokasi) return;
 
   var kataKunci = namaLokasi.toLowerCase();
-  // PERBAIKAN: Gunakan String(pin.namaRaw || '') sebelum di-trim agar bebas error
   var hasil = daftarPin.find(pin => String(pin.namaRaw || '').trim().toLowerCase() === kataKunci) || 
               daftarPin.find(pin => String(pin.nama || '').includes(kataKunci));
 
@@ -1874,11 +2112,21 @@ window.refreshDataJimpitan = function() {
     
     // --- CHANGELOG ---
     const dataChangelog = [
+      {
+        versi: "v1.5.0",
+        tanggal: "30 Sep 2026",
+        status: "Terbaru",
+        warna: "#4CAF50",
+        fitur: [
+          "Perbaikan fitur info/pengumuman berupa gambar dan video sekarang otomatis fullscreen",
+          "Perbaikan fitur Form Warga Baru dan Tamu menginap"
+        ]
+      },
        {
         versi: "v1.4.9",
         tanggal: "29 Sep 2026",
-        status: "Terbaru",
-        warna: "#4CAF50",
+        status: "",
+        warna: "#888",
         fitur: [
           "Perbaikan fitur chat",
           "Penambahan fungsi papan Info/Pengumuman bisa menampilkan gambar dan video",

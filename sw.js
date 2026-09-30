@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.4.9'; // <--- Naikkan versi di sini saat update
+const CACHE_NAME = 'rt-kayen-v1.5.0'; // <--- Naikkan versi saat update
 
 self.addEventListener('install', (e) => {
   // CATATAN: self.skipWaiting() Sengaja DIHAPUS dari sini 
@@ -34,27 +34,46 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Izinkan navigasi halaman HTML & Firebase berjalan langsung tanpa lewat Cache
+// Izinkan navigasi halaman HTML, Firebase, dan Video Streaming berjalan langsung tanpa lewat Cache
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. Abaikan request navigasi HTML (seperti admin.html) & Firebase API
-  if (event.request.mode === 'navigate' || url.origin.includes('firebase') || url.origin.includes('gstatic')) {
+  // 1. Abaikan navigasi HTML, Firebase, dan file Video Streaming dari Cache Storage PWA
+  if (
+    event.request.mode === 'navigate' || 
+    url.origin.includes('firebase') || 
+    url.origin.includes('gstatic') ||
+    url.pathname.endsWith('.webm') || 
+    url.pathname.endsWith('.mp4') ||
+    url.origin.includes('catbox.moe')
+  ) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(event.request).catch((err) => {
+        // Jika request media terputus/dibatalkan, kembalikan dari cache jika ada,
+        // atau biarkan Response 404 standar agar browser tidak melempar error kustom 480
+        return caches.match(event.request).then((cached) => {
+          return cached || new Response(null, { status: 404, statusText: 'Not Found' });
+        });
+      })
     );
     return;
   }
 
-  // 2. Caching biasa untuk aset statis (CSS, JS, Gambar, Font)
+  // 2. Caching biasa untuk aset statis (CSS, JS, Gambar, Font) + Aman dari Error Network
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      
+      return fetch(event.request).catch(() => {
+        return new Response('', { status: 480, statusText: 'Offline/Network Error' });
+      });
     })
   );
 });
 
-// 3. Tambahkan ini agar perintah skipWaiting dari lonceng bisa dieksekusi!
+// 3. Perintah skipWaiting dari lonceng
 self.addEventListener('message', (event) => {
   if (event.data && event.data.action === 'skipWaiting') {
     self.skipWaiting();
