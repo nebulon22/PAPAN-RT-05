@@ -1877,6 +1877,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (periksaSesiAdmin()) {
     // Hanya ambil data warga/peta jika sesi admin MASIH VALID (< 30 menit)
     muatSemuaDataAdmin();
+    muatDataProgker();
   } else {
     // Jika belum login / sesi expired, fokuskan kursor ke input PIN
     setTimeout(() => {
@@ -2040,7 +2041,7 @@ function muatDataProgker() {
   var tbody = document.getElementById('list-tabel-progker');
   if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
 
-  fetch(API_URL + '?action=get_progker')
+  fetch(GAS_WEB_APP_URL + '?action=get_progker')
     .then(res => res.json())
     .then(data => {
       dataProgkerGlobal = data || [];
@@ -2083,15 +2084,15 @@ function renderTabelProgker(list) {
     tr.style.borderBottom = '1px solid #f1f5f9';
     tr.innerHTML = `
       <td style="padding: 10px;">
-        <strong style="color:#1e293b; display:block;">${escapeHtml(item.kegiatan)}</strong>
-        <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHtml(item.divisi)}</span>
+        <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
+        <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
       </td>
       <td style="padding: 10px; font-weight:bold; color:#0f172a;">
         Rp ${nominal.toLocaleString('id-ID')}
       </td>
       <td style="padding: 10px;">
         <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
-          ${escapeHtml(item.status)}
+          ${escapeHTML(item.status)}
         </span>
       </td>
       <td style="padding: 10px; text-align: center; white-space: nowrap;">
@@ -2109,7 +2110,7 @@ function renderTabelProgker(list) {
 // 3. Simpan / Edit Data Progker
 function simpanDataProgker(e) {
   e.preventDefault();
-  var token = localStorage.getItem('admin_token') || '';
+  var token = localStorage.getItem('adminToken') || ''; // Sesuaikan kunci 'adminToken'
   var btn = document.getElementById('btnSimpanProgker');
   btn.disabled = true;
   btn.innerText = 'Menyimpan...';
@@ -2126,8 +2127,9 @@ function simpanDataProgker(e) {
     tanggal: new Date().toLocaleDateString('id-ID')
   };
 
-  fetch(API_URL, {
+  fetch(GAS_WEB_APP_URL, {
     method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify(payload)
   })
   .then(res => res.json())
@@ -2147,7 +2149,7 @@ function simpanDataProgker(e) {
     alert('Terjadi kesalahan jaringan.');
   });
 }
-
+    
 // 4. Modal Handler
 function bukaModalFormProgker() {
   document.getElementById('formProgker').reset();
@@ -2175,17 +2177,33 @@ function editProgker(id) {
   document.getElementById('modal-form-progker').style.display = 'flex';
 }
 
+// 5. Hapus Progker
 function hapusProgker(id) {
   if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
-  var token = localStorage.getItem('admin_token') || '';
+  var token = localStorage.getItem('adminToken') || '';
 
-  fetch(API_URL, {
+  fetch(GAS_WEB_APP_URL, {
     method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
     body: JSON.stringify({ action: 'hapus_progker', id: id, token: token })
   })
   .then(res => res.json())
   .then(() => muatDataProgker())
   .catch(() => alert('Gagal menghapus program kerja.'));
+}
+
+function bukaTabAdmin(tabName) {
+  // Sembunyikan semua tab konten admin
+  var allTabs = document.querySelectorAll('.content-tab-admin');
+  allTabs.forEach(function(el) { el.style.display = 'none'; });
+
+  if (tabName === 'progker') {
+    var tabProgker = document.getElementById('tab-progker');
+    if (tabProgker) {
+      tabProgker.style.display = 'block';
+      muatDataProgker(); // Auto load data saat tab dibuka
+    }
+  }
 }
 
 // <!-- PENUTUP SCRIPT UTAMA PWA -->
