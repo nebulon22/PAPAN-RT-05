@@ -206,6 +206,9 @@
       </span>
     </button>
   </div>
+
+     <!-- Tombol Tab Navigasi Admin -->
+<button class="btn-tab-admin" onclick="bukaTabAdmin('progker')">📋 Progker & RAB</button>
 </div>
 
 <!-- Tombol Buka Modal Pengumuman -->
@@ -323,6 +326,7 @@
         </div>
       </details>
     </div>
+    
   </details>
 </div>
     
@@ -634,6 +638,104 @@
 
     </div>
   </div>
+
+  <!-- SECTION: PROGRAM KERJA & RAB -->
+<div id="tab-progker" class="content-tab-admin" style="display: none;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+    <h3 style="margin: 0; font-size: 16px; color: #1e293b;">📋 Program Kerja & RAB RT 05</h3>
+    <button type="button" onclick="bukaModalFormProgker()" style="background: #10b981; color: white; border: none; padding: 8px 14px; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+      ➕ Tambah Progker
+    </button>
+  </div>
+
+  <!-- Ringkasan Anggaran -->
+  <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+    <div style="flex: 1; min-width: 140px; background: #eff6ff; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #3b82f6;">
+      <span style="font-size: 10px; color: #1d4ed8; font-weight: bold; text-transform: uppercase;">Total RAB Perencanaan</span>
+      <div id="total-rab-perencanaan" style="font-size: 16px; font-weight: bold; color: #1e40af;">Rp 0</div>
+    </div>
+    <div style="flex: 1; min-width: 140px; background: #ecfdf5; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #10b981;">
+      <span style="font-size: 10px; color: #047857; font-weight: bold; text-transform: uppercase;">Total RAB Disetujui</span>
+      <div id="total-rab-disetujui" style="font-size: 16px; font-weight: bold; color: #065f46;">Rp 0</div>
+    </div>
+  </div>
+
+  <!-- Tabel Daftar Program Kerja -->
+  <div style="overflow-x: auto; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">
+    <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+      <thead>
+        <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #e2e8f0;">
+          <th style="padding: 10px;">Kegiatan / Divisi</th>
+          <th style="padding: 10px;">Estimasi RAB</th>
+          <th style="padding: 10px;">Status</th>
+          <th style="padding: 10px; text-align: center;">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="list-tabel-progker">
+        <tr>
+          <td colspan="4" style="text-align: center; padding: 15px; color: #94a3b8;">Memuat data program kerja...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+  <!-- MODAL FORM INPUT PROGKER & RAB -->
+<div id="modal-form-progker" class="modal-bg" style="display: none; z-index: 3000;">
+  <div class="modal-content" style="max-width: 450px; width: 90%;">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+      <h3 id="judul-modal-progker" style="margin: 0; font-size: 15px;">➕ Tambah Program Kerja</h3>
+      <span onclick="tutupModalFormProgker()" style="cursor: pointer; font-size: 20px; font-weight: bold; color: #888;">&times;</span>
+    </div>
+
+    <form id="formProgker" onsubmit="simpanDataProgker(event)">
+      <input type="hidden" id="progkerId" value="">
+
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569;">Nama Kegiatan / Program Kerja:</label>
+        <input type="text" id="progkerKegiatan" placeholder="Contoh: Kerja Bakti Drainage RW" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569;">Divisi Penanggung Jawab:</label>
+        <select id="progkerDivisi" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+          <option value="Bendahara Umum">Bendahara Umum</option>
+          <option value="Pekerjaan Umum & Kelistrikan">Pekerjaan Umum & Kelistrikan</option>
+          <option value="Tata Ruang">Tata Ruang</option>
+          <option value="Sosial">Sosial</option>
+          <option value="Ronda Harian & Keamanan">Ronda Harian & Keamanan</option>
+          <option value="Tenda dan Perkakas">Tenda dan Perkakas</option>
+          <option value="Sound System">Sound System</option>
+          <option value="Transportasi">Transportasi</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569;">Estimasi Anggaran (RAB Rp):</label>
+        <input type="number" id="progkerAnggaran" placeholder="Contoh: 1500000" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+      </div>
+
+      <div style="margin-bottom: 10px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569;">Status Program:</label>
+        <select id="progkerStatus" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+          <option value="Perencanaan">🟡 Perencanaan</option>
+          <option value="Disetujui">🔵 Disetujui</option>
+          <option value="Berjalan">🟢 Berjalan</option>
+          <option value="Selesai">⚪ Selesai</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom: 15px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569;">Rincian / Catatan RAB:</label>
+        <textarea id="progkerDetail" rows="3" placeholder="Catatan rincian kebutuhan barang/jasa..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px; resize: vertical;"></textarea>
+      </div>
+
+      <button type="submit" id="btnSimpanProgker" style="width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+        💾 Simpan Program Kerja
+      </button>
+    </form>
+  </div>
+</div>
     
   <!-- JAVASCRIPT LOGIC SCRIP UTAMA-->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1929,6 +2031,161 @@ async function toggleStatusPengumuman(rowIndex, statusBaru) {
   } catch (err) {
     alert("❌ Error koneksi: " + err);
   }
+}
+
+var dataProgkerGlobal = [];
+
+// 1. Memuat Data dari Google Sheets
+function muatDataProgker() {
+  var tbody = document.getElementById('list-tabel-progker');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
+
+  fetch(API_URL + '?action=get_progker')
+    .then(res => res.json())
+    .then(data => {
+      dataProgkerGlobal = data || [];
+      renderTabelProgker(dataProgkerGlobal);
+    })
+    .catch(err => {
+      console.error(err);
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data.</td></tr>';
+    });
+}
+
+// 2. Render Data ke Tabel
+function renderTabelProgker(list) {
+  var tbody = document.getElementById('list-tabel-progker');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#94a3b8;">Belum ada program kerja yang dicatat.</td></tr>';
+    document.getElementById('total-rab-perencanaan').innerText = 'Rp 0';
+    document.getElementById('total-rab-disetujui').innerText = 'Rp 0';
+    return;
+  }
+
+  var totalPerencanaan = 0;
+  var totalDisetujui = 0;
+
+  list.forEach(item => {
+    var nominal = Number(item.anggaran) || 0;
+    if (item.status === 'Perencanaan') totalPerencanaan += nominal;
+    if (item.status === 'Disetujui' || item.status === 'Berjalan') totalDisetujui += nominal;
+
+    // Badge Warna Status
+    var badgeColor = '#94a3b8';
+    if (item.status === 'Perencanaan') badgeColor = '#eab308';
+    if (item.status === 'Disetujui') badgeColor = '#3b82f6';
+    if (item.status === 'Berjalan') badgeColor = '#10b981';
+
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #f1f5f9';
+    tr.innerHTML = `
+      <td style="padding: 10px;">
+        <strong style="color:#1e293b; display:block;">${escapeHtml(item.kegiatan)}</strong>
+        <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHtml(item.divisi)}</span>
+      </td>
+      <td style="padding: 10px; font-weight:bold; color:#0f172a;">
+        Rp ${nominal.toLocaleString('id-ID')}
+      </td>
+      <td style="padding: 10px;">
+        <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
+          ${escapeHtml(item.status)}
+        </span>
+      </td>
+      <td style="padding: 10px; text-align: center; white-space: nowrap;">
+        <button onclick="editProgker('${item.id}')" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer; margin-right:4px;">✏️ Edit</button>
+        <button onclick="hapusProgker('${item.id}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">🗑️</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('total-rab-perencanaan').innerText = 'Rp ' + totalPerencanaan.toLocaleString('id-ID');
+  document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalDisetujui.toLocaleString('id-ID');
+}
+
+// 3. Simpan / Edit Data Progker
+function simpanDataProgker(e) {
+  e.preventDefault();
+  var token = localStorage.getItem('admin_token') || '';
+  var btn = document.getElementById('btnSimpanProgker');
+  btn.disabled = true;
+  btn.innerText = 'Menyimpan...';
+
+  var payload = {
+    action: 'simpan_progker',
+    token: token,
+    id: document.getElementById('progkerId').value,
+    kegiatan: document.getElementById('progkerKegiatan').value,
+    divisi: document.getElementById('progkerDivisi').value,
+    anggaran: document.getElementById('progkerAnggaran').value,
+    status: document.getElementById('progkerStatus').value,
+    detail: document.getElementById('progkerDetail').value,
+    tanggal: new Date().toLocaleDateString('id-ID')
+  };
+
+  fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(res => {
+    btn.disabled = false;
+    btn.innerText = '💾 Simpan Program Kerja';
+    if (res.status === 'success') {
+      tutupModalFormProgker();
+      muatDataProgker();
+    } else {
+      alert('Gagal menyimpan program kerja.');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerText = '💾 Simpan Program Kerja';
+    alert('Terjadi kesalahan jaringan.');
+  });
+}
+
+// 4. Modal Handler
+function bukaModalFormProgker() {
+  document.getElementById('formProgker').reset();
+  document.getElementById('progkerId').value = '';
+  document.getElementById('judul-modal-progker').innerText = '➕ Tambah Program Kerja';
+  document.getElementById('modal-form-progker').style.display = 'flex';
+}
+
+function tutupModalFormProgker() {
+  document.getElementById('modal-form-progker').style.display = 'none';
+}
+
+function editProgker(id) {
+  var item = dataProgkerGlobal.find(x => String(x.id) === String(id));
+  if (!item) return;
+
+  document.getElementById('progkerId').value = item.id;
+  document.getElementById('progkerKegiatan').value = item.kegiatan;
+  document.getElementById('progkerDivisi').value = item.divisi;
+  document.getElementById('progkerAnggaran').value = item.anggaran;
+  document.getElementById('progkerStatus').value = item.status;
+  document.getElementById('progkerDetail').value = item.detail;
+
+  document.getElementById('judul-modal-progker').innerText = '✏️ Edit Program Kerja';
+  document.getElementById('modal-form-progker').style.display = 'flex';
+}
+
+function hapusProgker(id) {
+  if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
+  var token = localStorage.getItem('admin_token') || '';
+
+  fetch(API_URL, {
+    method: 'POST',
+    body: JSON.stringify({ action: 'hapus_progker', id: id, token: token })
+  })
+  .then(res => res.json())
+  .then(() => muatDataProgker())
+  .catch(() => alert('Gagal menghapus program kerja.'));
 }
 
 // <!-- PENUTUP SCRIPT UTAMA PWA -->
