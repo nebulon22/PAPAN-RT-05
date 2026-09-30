@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.4.9'; // <--- Naikkan versi di sini saat update
+const CACHE_NAME = 'rt-kayen-v1.4.9'; // <--- Naikkan versi saat update
 
 self.addEventListener('install', (e) => {
   // CATATAN: self.skipWaiting() Sengaja DIHAPUS dari sini 
@@ -46,10 +46,18 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Caching biasa untuk aset statis (CSS, JS, Gambar, Font)
+  // 2. Caching biasa untuk aset statis (CSS, JS, Gambar, Font) + Aman dari Error Network
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      return cachedResponse || fetch(event.request);
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      
+      // Ambil dari jaringan, dan jika gagal (terputus/CDN diblokir), tangkap dengan .catch()
+      return fetch(event.request).catch(() => {
+        // Mengembalikan response kosong aman agar console browser tidak melempar error merah
+        return new Response('', { status: 480, statusText: 'Offline/Network Error' });
+      });
     })
   );
 });
