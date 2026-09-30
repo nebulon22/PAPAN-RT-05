@@ -576,15 +576,24 @@
       observer.observe(document.body);
     });
 
-    // Deteksi jika layar HP mati / minimize
-    document.addEventListener('visibilitychange', () => {
-      isChatVisible = !document.hidden;
-      if (isChatVisible && activeChatType === 'private' && activePrivateUID) {
-        unreadCounts[activePrivateUID] = 0;
-        markRoomAsRead(activePrivateUID);
-        renderPrivateTabsUI();
-      }
-    });
+  // Deteksi jika layar HP mati / minimize / kembali dari idle
+document.addEventListener('visibilitychange', () => {
+  isChatVisible = !document.hidden;
+  
+  if (isChatVisible) {
+    // 🛠️ TAMBAHAN: Paksa Firebase mengaktifkan kembali WebSocket jika sempat terputus/idle
+    if (typeof firebase !== 'undefined' && firebase.database) {
+      firebase.database().goOnline();
+    }
+
+    // Logika penandaan pesan terbaca milik Anda
+    if (activeChatType === 'private' && activePrivateUID) {
+      unreadCounts[activePrivateUID] = 0;
+      markRoomAsRead(activePrivateUID);
+      renderPrivateTabsUI();
+    }
+  }
+});
     // ======================================
 
     
