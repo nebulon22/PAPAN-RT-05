@@ -374,6 +374,16 @@ function perbaruiAplikasiSekarang() {
     filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
   }
 }
+
+/* Paksa Video Mengisi Seluruh Layar HP saat Mode Fullscreen Aktif */
+#list-pengumuman video:fullscreen,
+#list-pengumuman video:-webkit-full-screen {
+  width: 100vw !important;
+  height: 100vh !important;
+  max-height: 100vh !important;
+  object-fit: contain !important; /* Gunakan 'contain' agar tidak ada bagian video yang terpotong/gepeng */
+  background: #000000 !important;
+}
     
   </style>
 </head>
@@ -1080,32 +1090,33 @@ function bukaModalInfo() {
   document.getElementById('modal-info').style.display = 'flex';
 }
 
-// 🛠️ FUNGSI FULLSCREEN SAAT VIDEO DI-PLAY
+// 🛠️ FUNGSI FULLSCREEN PERSISI SAAT VIDEO DI-PLAY
 function setupVideoFullscreenListeners() {
   var listVideo = document.querySelectorAll('#list-pengumuman video');
   listVideo.forEach(function(v) {
-    var wrapper = v.parentElement;
     
     // Saat warga menekan tombol PLAY
     v.onplay = async function() {
-      var target = wrapper || v;
-      
       try {
-        // 1. Masuk ke mode Fullscreen
-        if (target.requestFullscreen) {
-          await target.requestFullscreen();
-        } else if (target.webkitRequestFullscreen) { /* iOS / Safari */
-          await target.webkitRequestFullscreen();
+        // 1. Picu Fullscreen LANGSUNG pada elemen video (bukan wrapper div)
+        if (v.requestFullscreen) {
+          await v.requestFullscreen();
+        } else if (v.webkitRequestFullscreen) { /* Safari / iOS */
+          await v.webkitRequestFullscreen();
+        } else if (v.webkitEnterFullscreen) { /* Khusus iPhone Safari */
+          v.webkitEnterFullscreen();
         }
 
         // 2. Deteksi Orientasi Video (Landscape vs Portrait)
         const isLandscape = v.videoWidth > v.videoHeight;
 
-        // 3. Putar Layar HP Otomatis Berdasarkan Bentuk Video
+        // 3. Lock Orientasi Layar HP
         if (screen.orientation && screen.orientation.lock) {
           if (isLandscape) {
+            // Video Miring -> Paksa Layar Miring (Landscape)
             await screen.orientation.lock('landscape').catch(() => {});
           } else {
+            // Video Tegak (9:16) -> Paksa Layar Tegak (Portrait)
             await screen.orientation.lock('portrait').catch(() => {});
           }
         }
@@ -1114,7 +1125,7 @@ function setupVideoFullscreenListeners() {
       }
     };
 
-    // Saat video SELESAI diputar -> Otomatis Keluar Fullscreen & Buka Kunci Orientasi
+    // Saat video SELESAI diputar -> Keluar Fullscreen & Lepas Kunci Orientasi
     v.onended = function() {
       keluarFullscreen();
     };
