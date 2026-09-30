@@ -573,6 +573,45 @@ function perbaruiAplikasiSekarang() {
   padding: 16px;
 ">
   <div style="position: relative; max-width: 100%; max-height: 90vh; display: flex; align-items: center; justify-content: center;">
+
+    <!-- Modal Popup khusus Video (Layaknya Buka Foto Besar) -->
+<div id="modal-video-popup" style="
+  display: none; 
+  position: fixed; 
+  top: 0; left: 0; 
+  width: 100vw; height: 100vh; 
+  background: rgba(0,0,0,0.92); 
+  z-index: 999999; 
+  align-items: center; 
+  justify-content: center;
+">
+  <!-- Tombol Close (X) Merah Melayang -->
+  <button type="button" onclick="tutupModalVideo()" style="
+    position: absolute; 
+    top: 16px; right: 16px; 
+    z-index: 1000000; 
+    background: #ef4444; 
+    color: #ffffff; 
+    border: 2px solid #ffffff; 
+    border-radius: 50%; 
+    width: 36px; height: 36px; 
+    font-weight: bold; font-size: 18px; 
+    cursor: pointer; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+  ">✕</button>
+
+  <!-- Container Pemutaran Video -->
+  <div style="width: 100%; max-width: 800px; padding: 10px; box-sizing: border-box;">
+    <video id="player-video-modal" controls playsinline style="
+      width: 100%; 
+      max-height: 85vh; 
+      object-fit: contain; 
+      border-radius: 8px; 
+      background: #000;
+    ">
+    </video>
+  </div>
+</div>
     
     <!-- Tombol X Merah Minimalis Melayang di Pojok Gambar -->
     <button type="button" onclick="tutupFotoBesar(event)" title="Tutup" style="
@@ -1052,62 +1091,51 @@ function bukaModalInfo() {
       var lokasiParam = encodeURIComponent(info.lokasi);
       
       var htmlFoto = '';
-      if (info.foto) {
-        var urlFoto = info.foto.toLowerCase();
+  if (info.foto) {
+  var urlFoto = info.foto.toLowerCase();
+  
+  if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+    // Tampilan Thumbnail Video di dalam Kartu Pengumuman
+    htmlFoto = `
+      <div onclick="bukaModalVideo('${info.foto}')" style="
+        position: relative; 
+        width: 100%; 
+        max-height: 200px; 
+        border-radius: 6px; 
+        overflow: hidden; 
+        margin-top: 8px; 
+        background: #000; 
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      ">
+        <video src="${info.foto}#t=0.5" preload="metadata" style="
+          width: 100%; 
+          max-height: 200px; 
+          object-fit: cover; 
+          opacity: 0.8;
+          pointer-events: none;
+        "></video>
         
-        // Jika file berupa video WebM atau MP4
-        if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
-          var videoId = 'video-announcement-' + idx;
-          var wrapperId = 'video-wrapper-' + idx;
-          
-          htmlFoto = `
-            <div id="${wrapperId}" class="custom-video-container" style="
-              position: relative; 
-              width: 100%; 
-              border-radius: 6px; 
-              overflow: hidden; 
-              margin-top: 8px; 
-              background: #000;
-            ">
-              <!-- Tombol Close (✕) Melayang (z-index tinggi agar selalu di atas video) -->
-              <button type="button" onclick="tutupDanResetVideo('${videoId}', '${wrapperId}')" title="Tutup Video" style="
-                position: absolute; 
-                top: 10px; 
-                right: 10px; 
-                z-index: 999999; 
-                background: #ef4444; 
-                color: #ffffff; 
-                border: 2px solid #ffffff; 
-                border-radius: 50%; 
-                width: 32px; 
-                height: 32px; 
-                display: flex; 
-                align-items: center; 
-                justify-content: center; 
-                font-weight: bold; 
-                font-size: 16px; 
-                cursor: pointer; 
-                box-shadow: 0 2px 8px rgba(0,0,0,0.6);
-                outline: none;
-              ">✕</button>
-
-              <video id="${videoId}" src="${info.foto}" controls playsinline style="
-                width: 100%; 
-                max-height: 260px; 
-                display: block; 
-                object-fit: contain; 
-                background: #000;
-              ">
-                Browser Anda tidak mendukung pemutaran video WebM/MP4.
-              </video>
-            </div>`;
-        } else {
-          // Jika file gambar biasa
-          htmlFoto = `
-            <img src="${info.foto}" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
-        }
-      }
-
+        <!-- Icon Play Melayang di Atas Thumbnail -->
+        <div style="
+          position: absolute; 
+          background: rgba(239, 68, 68, 0.9); 
+          color: #fff; 
+          border-radius: 50%; 
+          width: 48px; height: 48px; 
+          display: flex; align-items: center; justify-content: center; 
+          font-size: 22px; 
+          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        ">▶</div>
+      </div>`;
+  } else {
+    // Jika gambar biasa
+    htmlFoto = `
+      <img src="${info.foto}" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
+  }
+}
       var html = `
         <div class="card-info">
           ${info.tanggal ? `<div class="tgl">📅 ${escapeHtml(info.tanggal)}</div>` : ''}
@@ -1120,78 +1148,45 @@ function bukaModalInfo() {
       container.innerHTML += html;
     });
 
-    // Inisialisasi event listener fullscreen setelah elemen dirender
-    setTimeout(setupVideoFullscreenListeners, 100);
+   
   }
   document.getElementById('modal-info').style.display = 'flex';
 }
     
-// 🛠️ FUNGSI FULLSCREEN PERSISI SAAT VIDEO DI-PLAY
-function setupVideoFullscreenListeners() {
-  var listVideo = document.querySelectorAll('#list-pengumuman video');
-  listVideo.forEach(function(v) {
-    
-    v.onplay = async function() {
-      try {
-        // 1. Kunci orientasi layar (opsional, jika didukung browser)
-        const isLandscape = v.videoWidth > v.videoHeight;
-        if (screen.orientation && screen.orientation.lock) {
-          if (isLandscape) {
-            await screen.orientation.lock('landscape').catch(() => {});
-          } else {
-            await screen.orientation.lock('portrait').catch(() => {});
-          }
-        }
-      } catch (err) {
-        console.log("Orientation Lock Error:", err);
-      }
-    };
 
-    v.onended = function() {
-      keluarFullscreen();
-    };
-  });
-}
 
-// 🛠️ FUNGSI TOMBOL CLOSE (X) VIDEO (DIPERBAIKI: Tombol Play Tetap Ada & Instan)
-window.tutupDanResetVideo = function(videoId, wrapperId) {
-  var v = document.getElementById(videoId);
-  if (v) {
-    // 1. Hentikan pemutaran video secara bersih
-    v.pause();
-    
-    // 2. Kembalikan durasi ke awal (0 detik)
-    v.currentTime = 0;
-    
-    // 3. Muat ulang elemen video agar poster/tombol PLAY bawaan browser langsung muncul kembali
-    v.load();
-  }
+
+// Fungsi Membuka Modal Video Layar Penuh
+window.bukaModalVideo = function(videoUrl) {
+  var modal = document.getElementById('modal-video-popup');
+  var player = document.getElementById('player-video-modal');
   
-  // 4. Keluar dari mode Fullscreen
-  keluarFullscreen();
+  if (modal && player) {
+    player.src = videoUrl;
+    modal.style.display = 'flex';
+    player.play().catch(() => {}); // Autoplay saat modal terbuka
+  }
 };
 
-function keluarFullscreen() {
-  // Lepas kunci rotasi layar agar HP warga kembali normal
-  if (screen.orientation && screen.orientation.unlock) {
-    screen.orientation.unlock();
+// Fungsi Menutup Modal Video
+window.tutupModalVideo = function() {
+  var modal = document.getElementById('modal-video-popup');
+  var player = document.getElementById('player-video-modal');
+  
+  if (player) {
+    player.pause();
+    player.currentTime = 0;
+    player.src = ''; // Reset memori untuk cegah memory leak PWA
   }
-
-  if (document.fullscreenElement || document.webkitFullscreenElement) {
-    if (document.exitFullscreen) {
-      document.exitFullscreen();
-    } else if (document.webkitExitFullscreen) {
-      document.webkitExitFullscreen();
-    }
+  
+  if (modal) {
+    modal.style.display = 'none';
   }
-}
+};
 
+    
+// ✅ VERSI HERSIH & RINGKAS
 function tutupModalInfo() { 
-  var listVideo = document.querySelectorAll('#list-pengumuman video');
-  listVideo.forEach(function(v) {
-    v.pause(); 
-  });
-  keluarFullscreen();
   document.getElementById('modal-info').style.display = 'none'; 
 }
 
