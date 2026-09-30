@@ -48,7 +48,12 @@ self.addEventListener('fetch', (event) => {
     url.origin.includes('catbox.moe')
   ) {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(event.request))
+      fetch(event.request).catch(() => {
+        // PERBAIKAN: Tangkap error & pastikan selalu mengembalikan Response yang valid
+        return caches.match(event.request).then((cached) => {
+          return cached || new Response('', { status: 480, statusText: 'Network Bypassed' });
+        });
+      })
     );
     return;
   }
@@ -62,14 +67,13 @@ self.addEventListener('fetch', (event) => {
       
       // Ambil dari jaringan, dan jika gagal (terputus/CDN diblokir), tangkap dengan .catch()
       return fetch(event.request).catch(() => {
-        // Mengembalikan response kosong aman agar console browser tidak melempar error merah
         return new Response('', { status: 480, statusText: 'Offline/Network Error' });
       });
     })
   );
 });
 
-// 3. Tambahkan ini agar perintah skipWaiting dari lonceng bisa dieksekusi!
+// 3. Perintah skipWaiting dari lonceng
 self.addEventListener('message', (event) => {
   if (event.data && event.data.action === 'skipWaiting') {
     self.skipWaiting();
