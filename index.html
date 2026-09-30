@@ -1130,24 +1130,11 @@ function bukaModalInfo() {
 function setupVideoFullscreenListeners() {
   var listVideo = document.querySelectorAll('#list-pengumuman video');
   listVideo.forEach(function(v) {
-    var wrapper = v.parentElement; // Ambil container wrapper-nya
     
-    // Saat warga menekan tombol PLAY
     v.onplay = async function() {
-      var target = wrapper || v;
-      
       try {
-        // 1. Masuk Fullscreen pada WRAPPER (bukan video langsung)
-        if (target.requestFullscreen) {
-          await target.requestFullscreen();
-        } else if (target.webkitRequestFullscreen) { /* Safari / iOS */
-          await target.webkitRequestFullscreen();
-        }
-
-        // 2. Deteksi Orientasi Video (Landscape vs Portrait)
+        // 1. Kunci orientasi layar (opsional, jika didukung browser)
         const isLandscape = v.videoWidth > v.videoHeight;
-
-        // 3. Lock Orientasi Layar HP
         if (screen.orientation && screen.orientation.lock) {
           if (isLandscape) {
             await screen.orientation.lock('landscape').catch(() => {});
@@ -1156,11 +1143,10 @@ function setupVideoFullscreenListeners() {
           }
         }
       } catch (err) {
-        console.log("Fullscreen / Lock Orientation Error:", err);
+        console.log("Orientation Lock Error:", err);
       }
     };
 
-    // Saat video SELESAI diputar -> Otomatis Keluar Fullscreen
     v.onended = function() {
       keluarFullscreen();
     };
