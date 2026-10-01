@@ -528,16 +528,61 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-  <!-- Modal Pengumuman -->
+
+  <!-- Modal Pengumuman & RAB (Sudah Ada Tab Navigasi) -->
   <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>📢 Pengumuman RT 05</h3>
+    <div class="modal-content" style="max-width: 500px; width: 92%; max-height: 85vh; overflow-y: auto;">
+      
+      <!-- Header Modal -->
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+        <h3 style="margin: 0; font-size: 16px; color: #111;">📢 Informasi & RAB RT 05</h3>
         <button class="close-btn" onclick="tutupModalInfo()">&times;</button>
       </div>
-      <div class="modal-body" id="list-pengumuman">
-        <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
+
+      <!-- TAB NAVIGASI ATAS -->
+      <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
+        <button type="button" id="btn-tab-info" onclick="switchTabWarga('info')" 
+                style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">
+          📢 Informasi Umum
+        </button>
+        <button type="button" id="btn-tab-rab" onclick="switchTabWarga('rab')" 
+                style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: bold; font-size: 12px; cursor: pointer;">
+          📋 RAB & Progker
+        </button>
       </div>
+
+      <!-- WADAH TAB 1: INFORMASI UMUM / PENGUMUMAN -->
+      <div id="panel-tab-info">
+        <div class="modal-body" id="list-pengumuman">
+          <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
+        </div>
+      </div>
+
+      <!-- WADAH TAB 2: RAB / PROGKER (READ ONLY FOR WARGA) -->
+      <div id="panel-tab-rab" style="display: none;">
+        <!-- Ringkasan Anggaran Disetujui -->
+        <div style="background: #ecfdf5; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #10b981; margin-bottom: 10px;">
+          <span style="font-size: 10px; color: #047857; font-weight: bold; text-transform: uppercase;">Total RAB Disetujui</span>
+          <div id="warga-total-rab" style="font-size: 16px; font-weight: bold; color: #065f46;">Rp 0</div>
+        </div>
+
+        <!-- Tabel Transparansi Progker/RAB -->
+        <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left;">
+            <thead>
+              <tr style="background: #f1f5f9; color: #475569;">
+                <th style="padding: 8px;">Kegiatan / Divisi</th>
+                <th style="padding: 8px;">Estimasi RAB</th>
+                <th style="padding: 8px; text-align: center;">Status</th>
+              </tr>
+            </thead>
+            <tbody id="tabel-progker-warga">
+              <tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat data RAB...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -1221,6 +1266,83 @@ function tutupModalInfo() {
 function bukaTutupLuar(e) { 
   if (e.target.id === 'modal-info') tutupModalInfo(); 
 }
+
+function switchTabWarga(tab) {
+  const panelInfo = document.getElementById('panel-tab-info');
+  const panelRab = document.getElementById('panel-tab-rab');
+  const btnInfo = document.getElementById('btn-tab-info');
+  const btnRab = document.getElementById('btn-tab-rab');
+
+  if (tab === 'info') {
+    panelInfo.style.display = 'block';
+    panelRab.style.display = 'none';
+    btnInfo.style.background = '#0288d1'; btnInfo.style.color = '#ffffff';
+    btnRab.style.background = '#f1f5f9';  btnRab.style.color = '#64748b';
+  } else {
+    panelInfo.style.display = 'none';
+    panelRab.style.display = 'block';
+    btnRab.style.background = '#0288d1';  btnRab.style.color = '#ffffff';
+    btnInfo.style.background = '#f1f5f9'; btnInfo.style.color = '#64748b';
+    muatProgkerWarga();
+  }
+}
+
+function muatProgkerWarga() {
+  const tbody = document.getElementById('tabel-progker-warga');
+  const totalRabEl = document.getElementById('warga-total-rab');
+  if (!tbody) return;
+
+  fetch(GAS_WEB_APP_URL + '?action=get_progker')
+    .then(res => res.json())
+    .then(data => {
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
+        if (totalRabEl) totalRabEl.innerText = 'Rp 0';
+        return;
+      }
+
+      var totalRab = 0;
+      var html = '';
+      const progkerFilter = data.filter(item => item.status === 'Disetujui' || item.status === 'Berjalan');
+
+      if (progkerFilter.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada RAB yang disetujui.</td></tr>';
+        if (totalRabEl) totalRabEl.innerText = 'Rp 0';
+        return;
+      }
+
+      progkerFilter.forEach(item => {
+        var nominal = Number(item.anggaran) || 0;
+        totalRab += nominal;
+        var badgeColor = item.status === 'Disetujui' ? '#3b82f6' : '#10b981';
+
+        html += `
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px;">
+              <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
+              <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
+            </td>
+            <td style="padding: 8px; font-weight:bold; color:#0f172a;">
+              Rp ${nominal.toLocaleString('id-ID')}
+            </td>
+            <td style="padding: 8px; text-align: center;">
+              <span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">
+                ${escapeHTML(item.status)}
+              </span>
+            </td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+      if (totalRabEl) totalRabEl.innerText = 'Rp ' + totalRab.toLocaleString('id-ID');
+    })
+    .catch(err => {
+      console.error(err);
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
+    });
+}
+    
 
 function sorotLokasi(lokasiEncoded) {
   var namaLokasi = decodeURIComponent(lokasiEncoded || '').trim();
