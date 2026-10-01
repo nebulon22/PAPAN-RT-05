@@ -1305,7 +1305,6 @@ function switchTabWarga(tab) {
 
 function muatProgkerWarga() {
   const tbody = document.getElementById('tabel-progker-warga');
-  const totalRabEl = document.getElementById('warga-total-rab');
   if (!tbody) return;
 
   fetch(RT05_CONFIG.GAS_WEB_APP_URL + '?action=get_progker')
@@ -1313,12 +1312,11 @@ function muatProgkerWarga() {
     .then(data => {
       if (!data || !Array.isArray(data) || data.length === 0) {
         tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
-        if (totalRabEl) totalRabEl.innerText = 'Rp 0';
         return;
       }
 
-      var totalRabPerencanaan = 0;
-      var totalRealisasiSelesai = 0;
+      var totalRabPerencanaan = 0; // Total Estimasi RAB (Semua Plan)
+      var totalRealisasiSelesai = 0; // Total Realisasi (Selesai)
       var html = '';
 
       data.forEach(item => {
@@ -1326,25 +1324,21 @@ function muatProgkerWarga() {
         var angRealisasi = Number(item.realisasi || 0);
         var statusRaw = String(item.status || 'Perencanaan').trim();
 
-        // -------------------------------------------------------------
-        // PERBAIKAN LOGIKA PENJUMLAHAN:
-        // -------------------------------------------------------------
-        // 1. Total Estimasi RAB menjumlahkan SEMUA Rencana Anggaran (Plan)
+        // 1. Jumlahkan SEMUA Rencana Anggaran (2jt + 2jt = 4jt)
         totalRabPerencanaan += angPlan;
 
-        // 2. Realisasi Selesai HANYA menjumlahkan yang statusnya 'Selesai'
+        // 2. Jumlahkan Realisasi Selesai (2jt)
         if (statusRaw === 'Selesai') {
           totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
         }
 
-        // 1. STATUS DANA (Kolom ke-3)
+        // --- BADGE STATUS DANA & PROGKER ---
         var badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
         if (statusRaw === 'Berjalan' || statusRaw === 'Selesai') {
           badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
         }
 
-        // 2. STATUS PROGKER (Kolom ke-4)
-        var badgeColor = '#eab308'; // 🟡 Perencanaan
+        var badgeColor = '#eab308';
         var labelStatus = 'Jangka Panjang';
 
         if (statusRaw === 'Disetujui') {
@@ -1360,51 +1354,41 @@ function muatProgkerWarga() {
 
         var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${labelStatus}</span>`;
 
-        // TAMPILKAN 4 KOLOM UTUH
+        // TABEL
         html += `
           <tr style="border-bottom: 1px solid #f1f5f9;">
-            <!-- KOLOM 1: KEGIATAN & DIVISI -->
             <td style="padding: 8px;">
               <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
               <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
             </td>
-
-            <!-- KOLOM 2: RENCANA VS REALISASI -->
             <td style="padding: 8px;">
               <div style="font-size:11px; font-weight:bold; color:#0f172a;">Plan: Rp ${angPlan.toLocaleString('id-ID')}</div>
               ${angRealisasi > 0 ? `<div style="font-size:10px; color:#059669; font-weight:bold;">Real: Rp ${angRealisasi.toLocaleString('id-ID')}</div>` : ''}
             </td>
-
-            <!-- KOLOM 3: STATUS DANA -->
-            <td style="padding: 8px; text-align: center;">
-              ${badgeDana}
-            </td>
-
-            <!-- KOLOM 4: STATUS PROGKER -->
-            <td style="padding: 8px; text-align: center;">
-              ${badgeProgker}
-            </td>
+            <td style="padding: 8px; text-align: center;">${badgeDana}</td>
+            <td style="padding: 8px; text-align: center;">${badgeProgker}</td>
           </tr>
         `;
       });
 
       tbody.innerHTML = html;
       
-      // RINGKASAN ATAS (2 Card Side-by-Side)
-      if (totalRabEl) {
-        totalRabEl.innerHTML = `
-          <div style="display: flex; justify-content: space-between; gap: 8px;">
-            <div>
-              <span style="font-size: 9px; color: #1e40af; display: block; font-weight: bold;">TOTAL ESTIMASI RAB</span>
-              <span style="font-size: 14px; color: #1d4ed8; font-weight: bold;">Rp ${totalRabPerencanaan.toLocaleString('id-ID')}</span>
-            </div>
-            <div style="text-align: right; border-left: 1px solid #a7f3d0; padding-left: 8px;">
-              <span style="font-size: 9px; color: #065f46; display: block; font-weight: bold;">REALISASI SELESAI</span>
-              <span style="font-size: 14px; color: #047857; font-weight: bold;">Rp ${totalRealisasiSelesai.toLocaleString('id-ID')}</span>
-            </div>
-          </div>
-        `;
+      // -------------------------------------------------------------
+      // ISI KEDUA KOTAK ATAS SECARA TERPISAH
+      // -------------------------------------------------------------
+      
+      // 1. Isikan Rp 4.000.000 ke Kotak Kiri (Total Estimasi RAB)
+      const totalEstimasiEl = document.getElementById('warga-total-rab') || document.getElementById('warga-total-estimasi');
+      if (totalEstimasiEl) {
+        totalEstimasiEl.innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
       }
+
+      // 2. Isikan Rp 2.000.000 ke Kotak Kanan (Realisasi Selesai)
+      const totalRealisasiEl = document.getElementById('warga-total-realisasi');
+      if (totalRealisasiEl) {
+        totalRealisasiEl.innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
+      }
+
     })
     .catch(err => {
       console.error(err);
