@@ -570,15 +570,16 @@ function perbaruiAplikasiSekarang() {
         </div>
 
         <!-- Tabel Transparansi Progker/RAB -->
-        <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left;">
-            <thead>
-              <tr style="background: #f1f5f9; color: #475569;">
-                <th style="padding: 8px;">Kegiatan / Divisi</th>
-                <th style="padding: 8px;">Estimasi RAB</th>
-                <th style="padding: 8px; text-align: center;">Status</th>
-              </tr>
-            </thead>
+       <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+          <thead>
+        <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1;">
+        <th style="padding: 8px;">Kegiatan / Divisi</th>
+        <th style="padding: 8px;">Rencana vs Realisasi</th>
+        <th style="padding: 8px; text-align: center;">Status Dana</th>
+        <th style="padding: 8px; text-align: center;">Status Progker</th>
+        </tr>
+          </thead>
             <tbody id="tabel-progker-warga">
               <tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat data RAB...</td></tr>
             </tbody>
@@ -1301,38 +1302,48 @@ function muatProgkerWarga() {
     .then(res => res.json())
     .then(data => {
       if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
         if (totalRabEl) totalRabEl.innerText = 'Rp 0';
         return;
       }
 
-      var totalRab = 0;
+      var totalRealisasi = 0;
       var html = '';
-      const progkerFilter = data.filter(item => item.status === 'Disetujui' || item.status === 'Berjalan');
 
-      if (progkerFilter.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada RAB yang disetujui.</td></tr>';
-        if (totalRabEl) totalRabEl.innerText = 'Rp 0';
-        return;
-      }
+      data.forEach(item => {
+        var angPlan = Number(item.anggaran) || 0;
+        var angRealisasi = Number(item.realisasi) || 0;
+        totalRealisasi += angRealisasi;
 
-      progkerFilter.forEach(item => {
-        var nominal = Number(item.anggaran) || 0;
-        totalRab += nominal;
-        var badgeColor = item.status === 'Disetujui' ? '#3b82f6' : '#10b981';
+        // Badge Status Dana
+        var badgeDana = item.statusDana === 'Dana Siap' 
+          ? '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold;">🟢 Dana Siap</span>'
+          : '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold;">🟡 Cari Dana</span>';
+
+        // Badge Status Progker
+        var badgeProgker = '#6b7280';
+        if (item.statusProgker === 'Selesai') badgeProgker = '#10b981';
+        if (item.statusProgker === 'Proses Jangka Pendek') badgeProgker = '#3b82f6';
+        if (item.statusProgker === 'Proses Jangka Panjang') badgeProgker = '#8b5cf6';
+        if (item.statusProgker === 'Gagal') badgeProgker = '#ef4444';
 
         html += `
           <tr style="border-bottom: 1px solid #f1f5f9;">
             <td style="padding: 8px;">
               <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
               <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
+              ${item.detail ? `<div style="font-size:9.5px; color:#475569; margin-top:2px; font-style:italic;">📝 ${escapeHTML(item.detail)}</div>` : ''}
             </td>
-            <td style="padding: 8px; font-weight:bold; color:#0f172a;">
-              Rp ${nominal.toLocaleString('id-ID')}
+            <td style="padding: 8px;">
+              <div style="font-size:10px; color:#64748b;">Plan: Rp ${angPlan.toLocaleString('id-ID')}</div>
+              <div style="font-weight:bold; color:#0f172a;">Real: Rp ${angRealisasi.toLocaleString('id-ID')}</div>
+            </td>
+            <td style="padding: 8px; text-align: center; font-size:10px;">
+              ${badgeDana}
             </td>
             <td style="padding: 8px; text-align: center;">
-              <span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">
-                ${escapeHTML(item.status)}
+              <span style="background:${badgeProgker}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">
+                ${escapeHTML(item.statusProgker || 'Proses')}
               </span>
             </td>
           </tr>
@@ -1340,11 +1351,11 @@ function muatProgkerWarga() {
       });
 
       tbody.innerHTML = html;
-      if (totalRabEl) totalRabEl.innerText = 'Rp ' + totalRab.toLocaleString('id-ID');
+      if (totalRabEl) totalRabEl.innerText = 'Rp ' + totalRealisasi.toLocaleString('id-ID');
     })
     .catch(err => {
       console.error(err);
-      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
     });
 }
     
