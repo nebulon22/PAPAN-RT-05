@@ -1301,49 +1301,55 @@ function muatProgkerWarga() {
   fetch(RT05_CONFIG.GAS_WEB_APP_URL + '?action=get_progker')
     .then(res => res.json())
     .then(data => {
-      if (!data || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
         if (totalRabEl) totalRabEl.innerText = 'Rp 0';
         return;
       }
 
-      var totalRealisasi = 0;
+      var totalRabPerencanaan = 0;
+      var totalRealisasiSelesai = 0;
       var html = '';
 
       data.forEach(item => {
-        var angPlan = Number(item.anggaran) || 0;
-        var angRealisasi = Number(item.realisasi) || 0;
-        totalRealisasi += angRealisasi;
+        var nominal = Number(item.anggaran || item.anggaran_disetujui || item.nominal || 0);
+        var statusRaw = String(item.status || 'Perencanaan').trim();
 
-        // Badge Status Dana
-        var badgeDana = item.statusDana === 'Dana Siap' 
-          ? '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold;">🟢 Dana Siap</span>'
-          : '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold;">🟡 Cari Dana</span>';
+        // LOGIKA PENJUMLAHAN
+        if (statusRaw === 'Selesai') {
+          totalRealisasiSelesai += nominal;
+        } else {
+          // Status Perencanaan, Disetujui, Berjalan
+          totalRabPerencanaan += nominal;
+        }
 
-        // Badge Status Progker
-        var badgeProgker = '#6b7280';
-        if (item.statusProgker === 'Selesai') badgeProgker = '#10b981';
-        if (item.statusProgker === 'Proses Jangka Pendek') badgeProgker = '#3b82f6';
-        if (item.statusProgker === 'Proses Jangka Panjang') badgeProgker = '#8b5cf6';
-        if (item.statusProgker === 'Gagal') badgeProgker = '#ef4444';
+        // TAMPILAN BADGE WARNA STATUS
+        var badgeColor = '#eab308'; // 🟡 Perencanaan
+        var labelStatus = '🟡 Perencanaan';
+
+        if (statusRaw === 'Disetujui') {
+          badgeColor = '#3b82f6'; // 🔵 Disetujui
+          labelStatus = '🔵 Disetujui';
+        } else if (statusRaw === 'Berjalan') {
+          badgeColor = '#10b981'; // 🟢 Berjalan
+          labelStatus = '🟢 Berjalan';
+        } else if (statusRaw === 'Selesai') {
+          badgeColor = '#94a3b8'; // ⚪ Selesai
+          labelStatus = '⚪ Selesai (Realisasi)';
+        }
 
         html += `
           <tr style="border-bottom: 1px solid #f1f5f9;">
             <td style="padding: 8px;">
               <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
               <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
-              ${item.detail ? `<div style="font-size:9.5px; color:#475569; margin-top:2px; font-style:italic;">📝 ${escapeHTML(item.detail)}</div>` : ''}
             </td>
-            <td style="padding: 8px;">
-              <div style="font-size:10px; color:#64748b;">Plan: Rp ${angPlan.toLocaleString('id-ID')}</div>
-              <div style="font-weight:bold; color:#0f172a;">Real: Rp ${angRealisasi.toLocaleString('id-ID')}</div>
-            </td>
-            <td style="padding: 8px; text-align: center; font-size:10px;">
-              ${badgeDana}
+            <td style="padding: 8px; font-weight:bold; color:#0f172a;">
+              Rp ${nominal.toLocaleString('id-ID')}
             </td>
             <td style="padding: 8px; text-align: center;">
-              <span style="background:${badgeProgker}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">
-                ${escapeHTML(item.statusProgker || 'Proses')}
+              <span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">
+                ${labelStatus}
               </span>
             </td>
           </tr>
@@ -1351,14 +1357,28 @@ function muatProgkerWarga() {
       });
 
       tbody.innerHTML = html;
-      if (totalRabEl) totalRabEl.innerText = 'Rp ' + totalRealisasi.toLocaleString('id-ID');
+      
+      // Tampilkan ringkasan Total RAB Perencanaan & Realisasi Selesai
+      if (totalRabEl) {
+        totalRabEl.innerHTML = `
+          <div style="display: flex; justify-content: space-between; gap: 8px;">
+            <div>
+              <span style="font-size: 9px; color: #1e40af; display: block; font-weight: bold;">TOTAL ESTIMASI RAB</span>
+              <span style="font-size: 14px; color: #1d4ed8;">Rp ${totalRabPerencanaan.toLocaleString('id-ID')}</span>
+            </div>
+            <div style="text-align: right; border-left: 1px solid #a7f3d0; padding-left: 8px;">
+              <span style="font-size: 9px; color: #065f46; display: block; font-weight: bold;">REALISASI SELESAI</span>
+              <span style="font-size: 14px; color: #047857;">Rp ${totalRealisasiSelesai.toLocaleString('id-ID')}</span>
+            </div>
+          </div>
+        `;
+      }
     })
     .catch(err => {
       console.error(err);
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
     });
 }
-    
 
 function sorotLokasi(lokasiEncoded) {
   var namaLokasi = decodeURIComponent(lokasiEncoded || '').trim();
