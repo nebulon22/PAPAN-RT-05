@@ -551,47 +551,57 @@ function perbaruiAplikasiSekarang() {
       </button>
     </div>
 
-    <!-- WADAH KONTEN (Area Scroll) -->
-    <div style="flex: 1; overflow-y: auto; padding-right: 2px;">
+   <!-- WADAH KONTEN (Area Scroll) -->
+<div style="flex: 1; overflow-y: auto; padding-right: 2px;">
+  
+  <!-- WADAH TAB 1: INFORMASI UMUM / PENGUMUMAN -->
+  <div id="panel-tab-info">
+    <div class="modal-body" id="list-pengumuman">
+      <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
+    </div>
+  </div>
+
+  <!-- WADAH TAB 2: RAB / PROGKER (READ ONLY FOR WARGA) -->
+  <div id="panel-tab-rab" style="display: none;">
+    
+    <!-- Ringkasan Anggaran (2 Card Side-by-Side) -->
+    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
       
-      <!-- WADAH TAB 1: INFORMASI UMUM / PENGUMUMAN -->
-      <div id="panel-tab-info">
-        <div class="modal-body" id="list-pengumuman">
-          <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
-        </div>
+      <!-- KIRI: TOTAL ESTIMASI RAB (Proses, Rencana & Selesai) -->
+      <div style="flex: 1; background: #eff6ff; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+        <span style="font-size: 9.5px; color: #1d4ed8; font-weight: bold; text-transform: uppercase; display: block;">Total Estimasi RAB</span>
+        <div id="warga-total-estimasi" style="font-size: 15px; font-weight: bold; color: #1e40af;">Rp 0</div>
       </div>
 
-      <!-- WADAH TAB 2: RAB / PROGKER (READ ONLY FOR WARGA) -->
-      <div id="panel-tab-rab" style="display: none;">
-        <!-- Ringkasan Anggaran Disetujui -->
-        <div style="background: #ecfdf5; padding: 10px 12px; border-radius: 8px; border-left: 4px solid #10b981; margin-bottom: 10px;">
-          <span style="font-size: 10px; color: #047857; font-weight: bold; text-transform: uppercase;">Total RAB Disetujui</span>
-          <div id="warga-total-rab" style="font-size: 16px; font-weight: bold; color: #065f46;">Rp 0</div>
-        </div>
-
-        <!-- Tabel Transparansi Progker/RAB -->
-       <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
-          <thead>
-        <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1;">
-        <th style="padding: 8px;">Kegiatan / Divisi</th>
-        <th style="padding: 8px;">Rencana vs Realisasi</th>
-        <th style="padding: 8px; text-align: center;">Status Dana</th>
-        <th style="padding: 8px; text-align: center;">Status Progker</th>
-        </tr>
-          </thead>
-            <tbody id="tabel-progker-warga">
-              <tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat data RAB...</td></tr>
-            </tbody>
-          </table>
-        </div>
+      <!-- KANAN: TOTAL REALISASI (Program Kerja Selesai) -->
+      <div style="flex: 1; background: #ecfdf5; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #10b981;">
+        <span style="font-size: 9.5px; color: #047857; font-weight: bold; text-transform: uppercase; display: block;">Realisasi Selesai</span>
+        <div id="warga-total-realisasi" style="font-size: 15px; font-weight: bold; color: #065f46;">Rp 0</div>
       </div>
 
     </div>
 
+    <!-- Tabel Transparansi Progker/RAB -->
+    <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+        <thead>
+          <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1;">
+            <th style="padding: 8px;">Kegiatan / Divisi</th>
+            <th style="padding: 8px;">Rencana vs Realisasi</th>
+            <th style="padding: 8px; text-align: center;">Status Dana</th>
+            <th style="padding: 8px; text-align: center;">Status Progker</th>
+          </tr>
+        </thead>
+        <tbody id="tabel-progker-warga">
+          <tr><td colspan="4" style="text-align: center; padding: 10px; color: #888;">Memuat data RAB...</td></tr>
+        </tbody>
+      </table>
+    </div>
   </div>
+
 </div>
 
+    
 <!-- Modal Foto Layar Penuh (Peta & Poster Pengumuman) -->
 <div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)" style="
   display: none; 
@@ -1316,11 +1326,15 @@ function muatProgkerWarga() {
         var angRealisasi = Number(item.realisasi || 0);
         var statusRaw = String(item.status || 'Perencanaan').trim();
 
-        // LOGIKA PENJUMLAHAN
+        // -------------------------------------------------------------
+        // PERBAIKAN LOGIKA PENJUMLAHAN:
+        // -------------------------------------------------------------
+        // 1. Total Estimasi RAB menjumlahkan SEMUA Rencana Anggaran (Plan)
+        totalRabPerencanaan += angPlan;
+
+        // 2. Realisasi Selesai HANYA menjumlahkan yang statusnya 'Selesai'
         if (statusRaw === 'Selesai') {
           totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
-        } else {
-          totalRabPerencanaan += angPlan;
         }
 
         // 1. STATUS DANA (Kolom ke-3)
@@ -1346,7 +1360,7 @@ function muatProgkerWarga() {
 
         var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${labelStatus}</span>`;
 
-        // TAMPILKAN 4 KOLOM UUTUH
+        // TAMPILKAN 4 KOLOM UTUH
         html += `
           <tr style="border-bottom: 1px solid #f1f5f9;">
             <!-- KOLOM 1: KEGIATAN & DIVISI -->
@@ -1376,7 +1390,7 @@ function muatProgkerWarga() {
 
       tbody.innerHTML = html;
       
-      // RINGKASAN ATAS
+      // RINGKASAN ATAS (2 Card Side-by-Side)
       if (totalRabEl) {
         totalRabEl.innerHTML = `
           <div style="display: flex; justify-content: space-between; gap: 8px;">
@@ -1397,7 +1411,7 @@ function muatProgkerWarga() {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
     });
 }
-
+    
 function sorotLokasi(lokasiEncoded) {
   var namaLokasi = decodeURIComponent(lokasiEncoded || '').trim();
   tutupModalInfo();
