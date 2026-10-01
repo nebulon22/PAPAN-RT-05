@@ -723,16 +723,17 @@
     </select>
   </div>
 
-  <div style="margin-bottom: 10px;">
-    <label style="font-size: 11px; font-weight: bold; color: #475569;">Estimasi Anggaran (RAB Rp):</label>
-    <input type="number" id="progkerAnggaran" placeholder="Contoh: 1500000" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
-  </div>
+ <!-- Estimasi Anggaran -->
+<div style="margin-bottom: 10px;">
+  <label style="font-size: 11px; font-weight: bold; color: #475569;">Estimasi Anggaran (RAB Rp):</label>
+  <input type="text" id="progkerAnggaran" oninput="formatRupiahInput(this)" placeholder="Contoh: 1.500.000" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+</div>
 
-  <!-- INPUT BARU: REALISASI PENGELUARAN -->
-  <div style="margin-bottom: 10px;">
-    <label style="font-size: 11px; font-weight: bold; color: #475569;">Realisasi Pengeluaran (Rp):</label>
-    <input type="number" id="progkerRealisasi" placeholder="Isi jika status Selesai (Contoh: 1400000)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
-  </div>
+<!-- Realisasi Pengeluaran -->
+<div style="margin-bottom: 10px;">
+  <label style="font-size: 11px; font-weight: bold; color: #475569;">Realisasi Pengeluaran (Rp):</label>
+  <input type="text" id="progkerRealisasi" oninput="formatRupiahInput(this)" placeholder="Isi jika status Selesai (Contoh: 1.400.000)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+</div>
 
   <div style="margin-bottom: 10px;">
     <label style="font-size: 11px; font-weight: bold; color: #475569;">Status Program:</label>
@@ -766,6 +767,16 @@
 function escapeHTML(str) {
   if (str === null || str === undefined) return '';
   return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
+    // Fungsi Format Ribuan Otomatis saat Diketik
+function formatRupiahInput(el) {
+  var value = el.value.replace(/\D/g, ''); // Hapus semua karakter non-angka
+  if (value === '') {
+    el.value = '';
+    return;
+  }
+  // Format menjadi ribuan dengan titik (contoh: 1500000 -> 1.500.000)
+  el.value = Number(value).toLocaleString('id-ID');
 }
 
     // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
@@ -2128,7 +2139,7 @@ function renderTabelProgker(list) {
   document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalDisetujui.toLocaleString('id-ID');
 }
 
-// 3. Simpan / Edit Data Progker + Otomatis Terbit ke Pengumuman Warga
+// 3. Simpan / Edit Data Progker + Format Angka Ribuan & Otomatis Terbit Pengumuman
 function simpanDataProgker(e) {
   e.preventDefault();
   var token = localStorage.getItem('adminToken') || '';
@@ -2139,7 +2150,11 @@ function simpanDataProgker(e) {
   var status = document.getElementById('progkerStatus').value;
   var kegiatan = document.getElementById('progkerKegiatan').value;
   var divisi = document.getElementById('progkerDivisi').value;
-  var rawAnggaran = document.getElementById('progkerAnggaran').value;
+  
+  // Clean titik ribuan sebelum dikirim ke Google Sheets
+  var rawAnggaran = document.getElementById('progkerAnggaran').value.replace(/\./g, '');
+  var rawRealisasi = document.getElementById('progkerRealisasi').value.replace(/\./g, '');
+  
   var anggaranFormatted = Number(rawAnggaran || 0).toLocaleString('id-ID');
   var detail = document.getElementById('progkerDetail').value;
 
@@ -2149,8 +2164,8 @@ function simpanDataProgker(e) {
     id: document.getElementById('progkerId').value,
     kegiatan: kegiatan,
     divisi: divisi,
-    anggaran: rawAnggaran,
-    realisasi: document.getElementById('progkerRealisasi').value || 0,
+    anggaran: rawAnggaran || 0,
+    realisasi: rawRealisasi || 0,
     status: status,
     detail: detail,
     tanggal: new Date().toLocaleDateString('id-ID')
@@ -2221,7 +2236,8 @@ function editProgker(id) {
   document.getElementById('progkerId').value = item.id;
   document.getElementById('progkerKegiatan').value = item.kegiatan;
   document.getElementById('progkerDivisi').value = item.divisi;
-  document.getElementById('progkerAnggaran').value = item.anggaran;
+  document.getElementById('progkerAnggaran').value = item.anggaran ? Number(item.anggaran).toLocaleString('id-ID') : '';
+  document.getElementById('progkerRealisasi').value = item.realisasi ? Number(item.realisasi).toLocaleString('id-ID') : '';
   document.getElementById('progkerStatus').value = item.status;
   document.getElementById('progkerDetail').value = item.detail;
 
