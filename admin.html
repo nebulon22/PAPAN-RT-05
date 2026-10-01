@@ -2120,23 +2120,30 @@ function renderTabelProgker(list) {
   document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalDisetujui.toLocaleString('id-ID');
 }
 
-// 3. Simpan / Edit Data Progker
+// 3. Simpan / Edit Data Progker + Otomatis Terbit ke Pengumuman Warga
 function simpanDataProgker(e) {
   e.preventDefault();
-  var token = localStorage.getItem('adminToken') || ''; // Sesuaikan kunci 'adminToken'
+  var token = localStorage.getItem('adminToken') || '';
   var btn = document.getElementById('btnSimpanProgker');
   btn.disabled = true;
   btn.innerText = 'Menyimpan...';
+
+  var status = document.getElementById('progkerStatus').value;
+  var kegiatan = document.getElementById('progkerKegiatan').value;
+  var divisi = document.getElementById('progkerDivisi').value;
+  var rawAnggaran = document.getElementById('progkerAnggaran').value;
+  var anggaranFormatted = Number(rawAnggaran || 0).toLocaleString('id-ID');
+  var detail = document.getElementById('progkerDetail').value;
 
   var payload = {
     action: 'simpan_progker',
     token: token,
     id: document.getElementById('progkerId').value,
-    kegiatan: document.getElementById('progkerKegiatan').value,
-    divisi: document.getElementById('progkerDivisi').value,
-    anggaran: document.getElementById('progkerAnggaran').value,
-    status: document.getElementById('progkerStatus').value,
-    detail: document.getElementById('progkerDetail').value,
+    kegiatan: kegiatan,
+    divisi: divisi,
+    anggaran: rawAnggaran,
+    status: status,
+    detail: detail,
     tanggal: new Date().toLocaleDateString('id-ID')
   };
 
@@ -2149,9 +2156,32 @@ function simpanDataProgker(e) {
   .then(res => {
     btn.disabled = false;
     btn.innerText = '💾 Simpan Program Kerja';
+    
     if (res.status === 'success') {
+      
+      // JIKA STATUS DISETUJUI / BERJALAN -> OTOMATIS TERBITKAN KE PENGUMUMAN WARGA
+      if (status === 'Disetujui' || status === 'Berjalan') {
+        const payloadPengumuman = {
+          token: token,
+          action: 'kelolaPengumuman',
+          subAksi: 'tambah',
+          tanggal: new Date().toLocaleDateString('id-ID'),
+          judul: `[RAB APPROVED] ${kegiatan}`,
+          detail: `Divisi: ${divisi}\nEstimasi RAB: Rp ${anggaranFormatted}\n\nCatatan: ${detail}`,
+          lokasi: 'RT 05',
+          foto: ''
+        };
+
+        fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payloadPengumuman)
+        });
+      }
+
       tutupModalFormProgker();
       muatDataProgker();
+      alert('✅ Program Kerja berhasil disimpan' + (status === 'Disetujui' || status === 'Berjalan' ? ' & otomatis diterbitkan ke Papan Pengumuman Warga!' : '!'));
     } else {
       alert('Gagal menyimpan program kerja.');
     }
