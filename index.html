@@ -8,7 +8,7 @@
    <!-- FontAwesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.5.0">
+  <link rel="manifest" href="manifest.json?v=1.5.1">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
  
@@ -445,9 +445,9 @@ function perbaruiAplikasiSekarang() {
       </div>
 
       <div class="filter-row">
-        <a href="inventaris.html" class="btn-filter" style="background: #8b5cf6; color: white; border-color: #7c3aed; text-decoration: none; font-size: 11px; padding: 6px 4px;">
-          📦 Inventaris Perkakas
-        </a>
+        <button type="button" onclick="bukaModalInventaris()" class="btn-filter" style="background: #8b5cf6; color: white; border-color: #7c3aed; font-size: 11px; padding: 6px 4px; cursor: pointer;">
+           📦 Inventaris Perkakas
+        </button>
         <button type="button" onclick="bukaModalWargaBaru()" class="btn-filter" style="background: #0000FF; color: white; border-color: #512da8; font-size: 11px; padding: 6px 4px; cursor: pointer;">
           📝 Form Warga Baru
         </button>
@@ -528,19 +528,85 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-  <!-- Modal Pengumuman -->
-  <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>📢 Pengumuman RT 05</h3>
-        <button class="close-btn" onclick="tutupModalInfo()">&times;</button>
-      </div>
-      <div class="modal-body" id="list-pengumuman">
-        <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
-      </div>
+
+<!-- Modal Pengumuman & RAB (Ukuran Konsisten & Smooth) -->
+<div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
+  <div class="modal-content" style="max-width: 500px; width: 92%; height: 80vh; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box;">
+    
+    <!-- Header Modal (Tetap Di Atas) -->
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px; flex-shrink: 0;">
+      <h3 style="margin: 0; font-size: 16px; color: #111;">📢 Informasi & RAB RT 05</h3>
+      <button class="close-btn" onclick="tutupModalInfo()">&times;</button>
+    </div>
+
+    <!-- TAB NAVIGASI ATAS (Tetap Di Atas) -->
+    <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; flex-shrink: 0;">
+      <button type="button" id="btn-tab-info" onclick="switchTabWarga('info')" 
+              style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">
+        📢 Informasi Umum
+      </button>
+      <button type="button" id="btn-tab-rab" onclick="switchTabWarga('rab')" 
+              style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: bold; font-size: 12px; cursor: pointer;">
+        📋 RAB & Progker
+      </button>
+    </div>
+
+   <!-- WADAH KONTEN (Area Scroll) -->
+<div style="flex: 1; overflow-y: auto; padding-right: 2px;">
+  
+  <!-- WADAH TAB 1: INFORMASI UMUM / PENGUMUMAN -->
+  <div id="panel-tab-info">
+    <div class="modal-body" id="list-pengumuman">
+      <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
     </div>
   </div>
 
+  <!-- WADAH TAB 2: RAB / PROGKER (READ ONLY FOR WARGA) -->
+  <div id="panel-tab-rab" style="display: none;">
+    
+    <!-- Ringkasan Anggaran (2 Card Side-by-Side) -->
+    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+      
+      <!-- KIRI: TOTAL ESTIMASI RAB (Proses, Rencana & Selesai) -->
+      <div style="flex: 1; background: #eff6ff; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+        <span style="font-size: 9.5px; color: #1d4ed8; font-weight: bold; text-transform: uppercase; display: block;">Total Estimasi RAB</span>
+        <div id="warga-total-rab" style="font-size: 15px; font-weight: bold; color: #1e40af;">Rp 0</div>
+      </div>
+
+      <!-- KANAN: TOTAL REALISASI (Program Kerja Selesai) -->
+      <div style="flex: 1; background: #ecfdf5; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #10b981;">
+        <span style="font-size: 9.5px; color: #047857; font-weight: bold; text-transform: uppercase; display: block;">Realisasi Selesai</span>
+        <div id="warga-total-realisasi" style="font-size: 15px; font-weight: bold; color: #065f46;">Rp 0</div>
+      </div>
+
+    </div>
+
+    <!-- Tabel Transparansi Progker/RAB -->
+    <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+      <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+        <thead>
+          <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1;">
+            <th style="padding: 8px;">Kegiatan / Divisi</th>
+            <th style="padding: 8px;">Rencana vs Realisasi</th>
+            <th style="padding: 8px; text-align: center;">Status Dana</th>
+            <th style="padding: 8px; text-align: center;">Status Progker</th>
+          </tr>
+        </thead>
+        <tbody id="tabel-progker-warga">
+          <tr><td colspan="4" style="text-align: center; padding: 10px; color: #888;">Memuat data RAB...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div> <!-- Ini penutup WADAH KONTEN -->
+
+  <!-- TAMBAHKAN DUA BARIS INI -->
+  </div> <!-- Penutup modal-content -->
+</div> <!-- Penutup modal-info -->
+
+
+    
 <!-- Modal Foto Layar Penuh (Peta & Poster Pengumuman) -->
 <div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)" style="
   display: none; 
@@ -670,6 +736,20 @@ function perbaruiAplikasiSekarang() {
   </div>
 </div>
 
+  <!-- Modal Inventaris Perkakas (Menggunakan iframe) -->
+<div id="modal-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-inventaris') tutupModalInventaris()">
+  <div class="modal-content" style="max-width: 600px; width: 95%; height: 85vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
+    
+    <div class="modal-header" style="padding: 12px 16px; margin: 0; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
+      <h3 style="margin: 0; font-size: 16px;">📦 Inventaris Perkakas</h3>
+      <button class="close-btn" onclick="tutupModalInventaris()">&times;</button>
+    </div>
+    
+    <!-- Memanggil file inventaris.html ke dalam kotak popup secara mulus -->
+    <iframe src="inventaris.html" style="width: 100%; flex: 1; border: none; background: #f9fafb;"></iframe>
+    
+  </div>
+</div>
 
 
   <!-- Modal Riwayat Jimpitan -->
@@ -1045,7 +1125,7 @@ ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
   }
 });
 
-function escapeHtml(text) {
+function escapeHTML(text) {
   if (!text) return '';
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
@@ -1108,11 +1188,11 @@ function bukaModalInfo() {
 }
       var html = `
         <div class="card-info">
-          ${info.tanggal ? `<div class="tgl">📅 ${escapeHtml(info.tanggal)}</div>` : ''}
-          <div class="judul">${escapeHtml(info.judul)}</div>
-          <div class="detail">${escapeHtml(info.detail)}</div>
+          ${info.tanggal ? `<div class="tgl">📅 ${escapeHTML(info.tanggal)}</div>` : ''}
+          <div class="judul">${escapeHTML(info.judul)}</div>
+          <div class="detail">${escapeHTML(info.detail)}</div>
           ${htmlFoto}
-          ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHtml(info.lokasi)})</button>` : ''}
+          ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHTML(info.lokasi)})</button>` : ''}
         </div>
       `;
       container.innerHTML += html;
@@ -1222,6 +1302,119 @@ function bukaTutupLuar(e) {
   if (e.target.id === 'modal-info') tutupModalInfo(); 
 }
 
+function switchTabWarga(tab) {
+  const panelInfo = document.getElementById('panel-tab-info');
+  const panelRab = document.getElementById('panel-tab-rab');
+  const btnInfo = document.getElementById('btn-tab-info');
+  const btnRab = document.getElementById('btn-tab-rab');
+
+  if (tab === 'info') {
+    panelInfo.style.display = 'block';
+    panelRab.style.display = 'none';
+    btnInfo.style.background = '#0288d1'; btnInfo.style.color = '#ffffff';
+    btnRab.style.background = '#f1f5f9';  btnRab.style.color = '#64748b';
+  } else {
+    panelInfo.style.display = 'none';
+    panelRab.style.display = 'block';
+    btnRab.style.background = '#0288d1';  btnRab.style.color = '#ffffff';
+    btnInfo.style.background = '#f1f5f9'; btnInfo.style.color = '#64748b';
+    muatProgkerWarga();
+  }
+}
+
+function muatProgkerWarga() {
+  const tbody = document.getElementById('tabel-progker-warga');
+  if (!tbody) return;
+
+  fetch(RT05_CONFIG.GAS_WEB_APP_URL + '?action=get_progker')
+    .then(res => res.json())
+    .then(data => {
+      if (!data || !Array.isArray(data) || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
+        return;
+      }
+
+      var totalRabPerencanaan = 0; // Total Estimasi RAB (Semua Plan)
+      var totalRealisasiSelesai = 0; // Total Realisasi (Selesai)
+      var html = '';
+
+      data.forEach(item => {
+        var angPlan = Number(item.anggaran || item.anggaran_disetujui || item.nominal || 0);
+        var angRealisasi = Number(item.realisasi || 0);
+        var statusRaw = String(item.status || 'Perencanaan').trim();
+
+        // 1. Jumlahkan SEMUA Rencana Anggaran (2jt + 2jt = 4jt)
+        totalRabPerencanaan += angPlan;
+
+        // 2. Jumlahkan Realisasi Selesai (2jt)
+        if (statusRaw === 'Selesai') {
+          totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
+        }
+
+        // --- BADGE STATUS DANA & PROGKER ---
+        var badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
+        if (statusRaw === 'Berjalan' || statusRaw === 'Selesai') {
+          badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
+        }
+
+        var badgeColor = '#eab308';
+        var labelStatus = 'Jangka Panjang';
+
+        if (statusRaw === 'Disetujui') {
+          badgeColor = '#3b82f6'; 
+          labelStatus = 'Jangka Pendek';
+        } else if (statusRaw === 'Berjalan') {
+          badgeColor = '#10b981'; 
+          labelStatus = 'Berjalan';
+        } else if (statusRaw === 'Selesai') {
+          badgeColor = '#6b7280'; 
+          labelStatus = 'Selesai';
+        }
+
+        var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${labelStatus}</span>`;
+
+        // TABEL
+        html += `
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 8px;">
+              <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
+              <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
+            </td>
+            <td style="padding: 8px;">
+              <div style="font-size:11px; font-weight:bold; color:#0f172a;">Plan: Rp ${angPlan.toLocaleString('id-ID')}</div>
+              ${angRealisasi > 0 ? `<div style="font-size:10px; color:#059669; font-weight:bold;">Real: Rp ${angRealisasi.toLocaleString('id-ID')}</div>` : ''}
+            </td>
+            <td style="padding: 8px; text-align: center;">${badgeDana}</td>
+            <td style="padding: 8px; text-align: center;">${badgeProgker}</td>
+          </tr>
+        `;
+      });
+
+      tbody.innerHTML = html;
+      
+      // -------------------------------------------------------------
+      // ISI KEDUA KOTAK ATAS SECARA TERPISAH
+      // -------------------------------------------------------------
+      
+      // 1. Isikan Rp 4.000.000 ke Kotak Kiri (Total Estimasi RAB)
+      const totalEstimasiEl = document.getElementById('warga-total-rab') || document.getElementById('warga-total-estimasi');
+      if (totalEstimasiEl) {
+        totalEstimasiEl.innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
+      }
+
+      // 2. Isikan Rp 2.000.000 ke Kotak Kanan (Realisasi Selesai)
+      const totalRealisasiEl = document.getElementById('warga-total-realisasi');
+      if (totalRealisasiEl) {
+        totalRealisasiEl.innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
+      }
+
+    })
+    .catch(err => {
+      console.error(err);
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
+    });
+}
+    
 function sorotLokasi(lokasiEncoded) {
   var namaLokasi = decodeURIComponent(lokasiEncoded || '').trim();
   tutupModalInfo();
@@ -1370,7 +1563,7 @@ function cariLokasi() {
   });
 
   // Teks di dalam tag <option> memakai 'divFormatRapi' agar tampilan layar menjadi Kapital Rapi
-  selectDivisi.innerHTML += `<option value="${escapeHtml(div)}">${escapeHtml(divFormatRapi)}</option>`;
+  selectDivisi.innerHTML += `<option value="${escapeHTML(div)}">${escapeHTML(divFormatRapi)}</option>`;
 });
       
       if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
@@ -1381,6 +1574,13 @@ function cariLokasi() {
       tampilkanRekeningKoran();
     });
   }
+
+    function bukaModalInventaris() {
+  document.getElementById('modal-inventaris').style.display = 'flex';
+}
+function tutupModalInventaris() {
+  document.getElementById('modal-inventaris').style.display = 'none';
+}
 
   function tampilkanRekeningKoran() {
     var selectDivisi = document.getElementById('filterDivisi');
@@ -1422,8 +1622,8 @@ function cariLokasi() {
       tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
       tr.innerHTML = `
         <td style="padding:6px 0;">
-          <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHtml(item.tgl)}</span><br>
-          <b>${escapeHtml(item.ket)}</b>
+          <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHTML(item.tgl)}</span><br>
+          <b>${escapeHTML(item.ket)}</b>
         </td>
         <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
           ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
@@ -1808,7 +2008,7 @@ var arrayBulan = [];
 let isJimpitanLoaded = false;
 let modeJimpitan = 'harian'; 
 
-// Helper anti-error untuk merapikan teks (menggantikan escapeHtml yang rawan macet)
+// Helper anti-error untuk merapikan teks (menggantikan escapeHTML yang rawan macet)
 function teksAman(str) {
   return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
 }
@@ -2121,11 +2321,22 @@ window.refreshDataJimpitan = function() {
     
     // --- CHANGELOG ---
     const dataChangelog = [
-      {
-        versi: "v1.5.0",
+       {
+        versi: "v1.5.1",
         tanggal: "30 Sep 2026",
         status: "Terbaru",
         warna: "#4CAF50",
+        fitur: [
+          "Penambahan fitur RAB/Program Kerja",
+          "Penambahan tab RAB/Program Kerja pada halaman info/pengumuman warga",
+          "Perbaikan fitur Filter Bangunan/Lokasi di halaman admin"
+        ]
+      },
+      {
+        versi: "v1.5.0",
+        tanggal: "30 Sep 2026",
+        status: "",
+        warna: "#888",
         fitur: [
           "Perbaikan fitur info/pengumuman berupa gambar dan video sekarang otomatis fullscreen",
           "Perbaikan fitur Form Warga Baru dan Tamu menginap"

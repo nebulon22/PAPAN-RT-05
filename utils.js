@@ -227,3 +227,4 @@ window.toggleSenterRonda = async function() {
     if (status) status.innerText = 'OFF';
   }
 };
+

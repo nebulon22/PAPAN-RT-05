@@ -170,21 +170,35 @@
 
    <!-- KODE BARU: -->
 <div id="search-box">
-  <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
+  <input type="text" id="searchInput" aria-label="Cari lokasi rumah atau warga" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
   <button onclick="cariLokasi()">Cari</button>
 </div>
 
    <div class="filter-container">
-  <!-- 1. Dropdown Filter Lokasi Bangunan (Gabungan Semua Tombol Filter) -->
- <div class="filter-row" style="margin-bottom: 8px;">
-  <select id="selectFilterKategori" onchange="filterKategori(this.value)" 
-          style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background-color: #50c878; font-weight: bold; font-size: 13px; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer;">
-    <option value="semua">🌍 Filter: Tampilkan Semua Lokasi</option>
-    <option value="kost">🛏️ Filter: Kost / Kontrakan</option>
-    <option value="fasum">🏛️ Filter: Fasilitas Umum (Fasum)</option>
-    <option value="kuliner">🍽️ Filter: Kuliner / Warung</option>
-    <option value="minimarket">🏪 Filter: Minimarket / Toko</option>
-  </select>
+<!-- 1. Custom Filter UI (Modern & Minimalis) -->
+<div class="custom-filter-container" style="position: relative; width: 100%; margin-bottom: 8px;">
+  
+  <!-- Tombol Utama (Toggle) -->
+  <button type="button" id="btn-filter-toggle" onclick="toggleCustomFilter()" style="width: 100%; padding: 10px 14px; background: #10b981; border: 1px solid #059669; border-radius: 8px; font-size: 13px; font-weight: bold; color: #ffffff; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+    <span id="label-filter-aktif">🌍 Filter: Semua Lokasi</span>
+    <i class="fas fa-chevron-down" id="icon-filter-toggle" style="color: #ffffff; font-size: 12px;"></i>
+  </button>
+  
+  <!-- Panel Opsi Filter (Tetap Terbuka Saat Diklik) -->
+  <div id="menu-filter-options" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; margin-top: 6px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 2000; padding: 10px; box-sizing: border-box; grid-template-columns: 1fr 1fr; gap: 8px;">
+    
+    <!-- Perhatikan: toggleCustomFilter() dihapus dari onclick di bawah ini -->
+    <button type="button" class="btn-filter-opt active" onclick="pilihCustomFilter('semua', '🌍 Filter: Semua Lokasi', this)" style="grid-column: span 2; padding: 8px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer;">🌍 Tampilkan Semua</button>
+    
+    <button type="button" class="btn-filter-opt" onclick="pilihCustomFilter('kost', '🛏️ Filter: Kost', this)" style="padding: 8px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🛏️ Kost</button>
+    
+    <button type="button" class="btn-filter-opt" onclick="pilihCustomFilter('fasum', '🏛️ Filter: Fasum', this)" style="padding: 8px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🏛️ Fasum</button>
+    
+    <button type="button" class="btn-filter-opt" onclick="pilihCustomFilter('kuliner', '🍽️ Filter: Kuliner', this)" style="padding: 8px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🍽️ Kuliner</button>
+    
+    <button type="button" class="btn-filter-opt" onclick="pilihCustomFilter('minimarket', '🏪 Filter: Toko', this)" style="padding: 8px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🏪 Toko</button>
+    
+  </div>
 </div>
 
   <!-- 2. Tombol Aksi Pinjam Perkakas & Laporan Divisi -->
@@ -206,6 +220,13 @@
       </span>
     </button>
   </div>
+
+     <!-- Tombol Tab Navigasi Admin -->
+<div class="filter-row">
+  <button type="button" class="btn-filter" style="background: #111827; color: white; border-color: #374151; width: 100%;" onclick="bukaTabAdmin('progker')">
+    📋 Progker & RAB
+  </button>
+</div>
 </div>
 
 <!-- Tombol Buka Modal Pengumuman -->
@@ -223,32 +244,32 @@
       <button class="close-btn" onclick="tutupModalPengumumanAdmin()">&times;</button>
     </div>
 
-    <!-- Form Tambah Pengumuman Baru -->
+   <!-- Form Tambah Pengumuman Baru -->
     <form id="formInputPengumuman" style="background: #fef3c7; padding: 12px; border-radius: 8px; border: 1px solid #fde68a; margin-bottom: 15px;">
       <div style="font-weight: bold; font-size: 12px; color: #b45309; margin-bottom: 8px;">➕ Input Pengumuman / Event Baru</div>
       
       <div class="form-group" style="margin-bottom: 8px;">
-        <label style="font-size: 11px; font-weight: bold;">Tanggal Acara / Kegiatan:</label>
+        <label for="pengumumanTanggal" style="font-size: 11px; font-weight: bold;">Tanggal Acara / Kegiatan:</label>
         <input type="date" id="pengumumanTanggal" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
       </div>
 
       <div class="form-group" style="margin-bottom: 8px;">
-        <label style="font-size: 11px; font-weight: bold;">Judul Kegiatan / Event:</label>
+        <label for="pengumumanJudul" style="font-size: 11px; font-weight: bold;">Judul Kegiatan / Event:</label>
         <input type="text" id="pengumumanJudul" placeholder="Contoh: Kerja Bakti / Arisan RT" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
       </div>
 
       <div class="form-group" style="margin-bottom: 8px;">
-        <label style="font-size: 11px; font-weight: bold;">Detail & Catatan Informasi:</label>
+        <label for="pengumumanDetail" style="font-size: 11px; font-weight: bold;">Detail & Catatan Informasi:</label>
         <textarea id="pengumumanDetail" rows="3" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
       </div>
 
       <div class="form-group" style="margin-bottom: 8px;">
-        <label style="font-size: 11px; font-weight: bold;">Lokasi (Peta RT / Bebas):</label>
+        <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Peta RT / Bebas):</label>
         <input type="text" id="pengumumanLokasi" placeholder="Contoh: Balai RT 05 / Rumah Pak Bejo" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
       </div>
 
       <div class="form-group" style="margin-bottom: 10px;">
-        <label style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
+        <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
         <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
       </div>
 
@@ -323,6 +344,7 @@
         </div>
       </details>
     </div>
+    
   </details>
 </div>
     
@@ -434,10 +456,10 @@
 
         <!-- Input Tambahan: PIN Khusus Divisi -->
 <div style="margin-top: 10px;">
-  <label style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+  <label for="laporanPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
     🔒 PIN Khusus Divisi:
   </label>
-  <input type="password" id="laporanPinDivisi" maxlength="6" 
+  <input type="password" id="laporanPinDivisi" maxlength="6"
          inputmode="numeric" 
          autocomplete="off" 
          data-lpignore="true" 
@@ -590,9 +612,9 @@
         </div>
 
         <!-- PANEL 1: CARI & CONNECT KOORDINAT -->
-        <div id="panel-cari-warga">
-          <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-            <input type="text" id="inputCariWargaAdmin" placeholder="Ketik Nama Kepala / Anggota / No Rumah..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none;">
+       <div id="panel-cari-warga">
+  <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+    <input type="text" id="inputCariWargaAdmin" aria-label="Cari Nama Warga" placeholder="Ketik Nama Kepala / Anggota / No Rumah..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none;">
             <button type="button" onclick="cariDetailKeluargaAdmin()" style="padding: 8px 14px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
               Cari
             </button>
@@ -604,34 +626,151 @@
           </div>
         </div>
 
-        <!-- PANEL 2: FORM TAMBAH DATA KELUARGA -->
+  <!-- PANEL 2: FORM TAMBAH DATA KELUARGA -->
         <div id="panel-tambah-warga" style="display: none;">
           <form id="formTambahKeluargaAdmin">
+            
             <div style="margin-bottom: 10px;">
-              <label style="font-size: 11px; font-weight: bold; color: #475569;">Nama Lengkap Kepala Keluarga:</label>
+              <label for="addKepalaKeluarga" style="font-size: 11px; font-weight: bold; color: #475569;">Nama Lengkap Kepala Keluarga:</label>
               <input type="text" id="addKepalaKeluarga" placeholder="Contoh: Bejo Nurcahyono" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
             </div>
 
             <div style="margin-bottom: 10px; position: relative;">
-  <label style="font-size: 11px; font-weight: bold; color: #475569;">Pilih Lokasi Rumah (Integrasi Peta):</label>
-  <input type="text" id="inputCariRumahPeta" placeholder="🔍 Ketik untuk mencari rumah..." autocomplete="off" oninput="filterDropdownRumah(this.value)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
-  
-  <!-- Kotak Daftar Hasil Pencarian Melayang -->
-  <div id="listDropdownRumah" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 150px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999;"></div>
-</div>
+              <label for="inputCariRumahPeta" style="font-size: 11px; font-weight: bold; color: #475569;">Pilih Lokasi Rumah (Integrasi Peta):</label>
+              <input type="text" id="inputCariRumahPeta" placeholder="🔍 Ketik untuk mencari rumah..." autocomplete="off" oninput="filterDropdownRumah(this.value)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
+              
+              <!-- Kotak Daftar Hasil Pencarian Melayang -->
+              <div id="listDropdownRumah" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 150px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999;"></div>
+            </div>
 
             <div style="margin-bottom: 12px;">
-              <label style="font-size: 11px; font-weight: bold; color: #475569;">Daftar Nama Anggota Keluarga (Pisahkan koma):</label>
+              <label for="addAnggotaKeluarga" style="font-size: 11px; font-weight: bold; color: #475569;">Daftar Nama Anggota Keluarga (Pisahkan koma):</label>
               <textarea id="addAnggotaKeluarga" rows="3" placeholder="Contoh: Supartinah (Istri), Budi (Anak), Ani (Anak)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box; resize: vertical;" required></textarea>
             </div>
 
             <button type="button" onclick="simpanKeluargaAdmin()" id="btnSimpanKeluarga" style="width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
               💾 Simpan ke Google Sheets
             </button>
+            
           </form>
+        </div>
+        
+      </div>
+
+    </div>
+  </div>
+
+ <!-- SECTION: PROGRAM KERJA & RAB (MODAL OVERLAY) -->
+  <div id="tab-progker" class="modal-bg content-tab-admin" style="display: none; z-index: 3000;" onclick="if(event.target.id==='tab-progker') tutupTabProgker()">
+    <div class="modal-content" style="max-width: 600px; width: 92%; max-height: 85vh; overflow-y: auto;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+        <h3 style="margin: 0; font-size: 16px; color: #1e293b;">📋 Program Kerja & RAB RT 05</h3>
+        <div style="display: flex; gap: 8px; align-items: center;">
+          <button type="button" onclick="bukaModalFormProgker()" style="background: #10b981; color: white; border: none; padding: 6px 12px; border-radius: 6px; font-weight: bold; font-size: 11.5px; cursor: pointer;">
+            ➕ Tambah Progker
+          </button>
+          <button type="button" onclick="tutupTabProgker()" class="close-btn">&times;</button>
         </div>
       </div>
 
+      <!-- Ringkasan Anggaran -->
+      <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 15px; display: flex; gap: 10px; flex-wrap: wrap;">
+        <div style="flex: 1; min-width: 140px; background: #eff6ff; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #3b82f6;">
+          <span style="font-size: 10px; color: #1d4ed8; font-weight: bold; text-transform: uppercase;">Total RAB Perencanaan</span>
+          <div id="total-rab-perencanaan" style="font-size: 16px; font-weight: bold; color: #1e40af;">Rp 0</div>
+        </div>
+        <div style="flex: 1; min-width: 140px; background: #ecfdf5; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #10b981;">
+          <span style="font-size: 10px; color: #047857; font-weight: bold; text-transform: uppercase;">Total RAB Disetujui</span>
+          <div id="total-rab-disetujui" style="font-size: 16px; font-weight: bold; color: #065f46;">Rp 0</div>
+        </div>
+      </div>
+
+      <!-- Tabel Daftar Program Kerja -->
+      <div style="overflow-x: auto; background: white; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px; text-align: left;">
+          <thead>
+            <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #e2e8f0;">
+              <th style="padding: 10px;">Kegiatan / Divisi</th>
+              <th style="padding: 10px;">Estimasi RAB</th>
+              <th style="padding: 10px;">Status</th>
+              <th style="padding: 10px; text-align: center;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="list-tabel-progker">
+            <tr>
+              <td colspan="4" style="text-align: center; padding: 15px; color: #94a3b8;">Memuat data program kerja...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <button type="button" onclick="tutupTabProgker()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
+    </div>
+  </div>
+
+  <!-- MODAL FORM INPUT PROGKER & RAB -->
+  <div id="modal-form-progker" class="modal-bg" style="display: none; z-index: 3100;">
+    <div class="modal-content" style="max-width: 450px; width: 90%;">
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+        <h3 id="judul-modal-progker" style="margin: 0; font-size: 15px;">➕ Tambah Program Kerja</h3>
+        <button type="button" class="close-btn" onclick="tutupModalFormProgker()">&times;</button>
+      </div>
+
+      <form id="formProgker" onsubmit="simpanDataProgker(event)">
+  <input type="hidden" id="progkerId" value="">
+
+  <div style="margin-bottom: 10px;">
+    <label for="progkerKegiatan" style="font-size: 11px; font-weight: bold; color: #475569;">Nama Kegiatan / Program Kerja:</label>
+    <input type="text" id="progkerKegiatan" placeholder="Contoh: Kerja Bakti Drainage RW" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+  </div>
+
+  <div style="margin-bottom: 10px;">
+    <label for="progkerDivisi" style="font-size: 11px; font-weight: bold; color: #475569;">Divisi Penanggung Jawab:</label>
+    <select id="progkerDivisi" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+      <option value="Bendahara Umum">Bendahara Umum</option>
+      <option value="Pekerjaan Umum & Kelistrikan">Divisi Pekerjaan Umum & Kelistrikan</option>
+      <option value="Tata Ruang">Divisi Tata Ruang</option>
+      <option value="Sosial">Divisi Sosial</option>
+      <option value="Ronda Harian & Keamanan">Divisi Ronda Harian & Keamanan</option>
+      <option value="Tenda dan Perkakas">Divisi Tenda dan Perkakas</option>
+      <option value="Sound System">Divisi Sound System</option>
+      <option value="Transportasi">Divisi Transportasi</option>
+      <option value="Jimpitan Bulanan & Pengganti Ronda">Divisi Jimpitan Bulanan & Pengganti Ronda</option>
+      <option value="Pondokan RT 05">Divisi Pondokan RT 05</option>
+    </select>
+  </div>
+
+ <!-- Estimasi Anggaran -->
+<div style="margin-bottom: 10px;">
+  <label for="progkerAnggaran" style="font-size: 11px; font-weight: bold; color: #475569;">Estimasi Anggaran (RAB Rp):</label>
+  <input type="text" id="progkerAnggaran" oninput="formatRupiahInput(this)" placeholder="Contoh: 1.500.000" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+</div>
+
+<!-- Realisasi Pengeluaran -->
+<div style="margin-bottom: 10px;">
+  <label for="progkerRealisasi" style="font-size: 11px; font-weight: bold; color: #475569;">Realisasi Pengeluaran (Rp):</label>
+  <input type="text" id="progkerRealisasi" oninput="formatRupiahInput(this)" placeholder="Isi jika status Selesai (Contoh: 1.400.000)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+</div>
+
+  <div style="margin-bottom: 10px;">
+    <label for="progkerStatus" style="font-size: 11px; font-weight: bold; color: #475569;">Status Program:</label>
+    <select id="progkerStatus" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+      <option value="Perencanaan">🟡 Perencanaan (Jangka Panjang)</option>
+      <option value="Disetujui">🔵 Disetujui (Jangka Pendek)</option>
+      <option value="Berjalan">🟢 Berjalan (Dana Siap)</option>
+      <option value="Selesai">⚪ Selesai</option>
+    </select>
+  </div>
+
+  <div style="margin-bottom: 15px;">
+    <label for="progkerDetail" style="font-size: 11px; font-weight: bold; color: #475569;">Rincian / Catatan RAB:</label>
+    <textarea id="progkerDetail" rows="3" placeholder="Catatan rincian kebutuhan barang/jasa..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px; resize: vertical;"></textarea>
+  </div>
+
+  <button type="submit" id="btnSimpanProgker" style="width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+    💾 Simpan Program Kerja
+  </button>
+</form>
     </div>
   </div>
     
@@ -645,6 +784,16 @@
 function escapeHTML(str) {
   if (str === null || str === undefined) return '';
   return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
+    // Fungsi Format Ribuan Otomatis saat Diketik
+function formatRupiahInput(el) {
+  var value = el.value.replace(/\D/g, ''); // Hapus semua karakter non-angka
+  if (value === '') {
+    el.value = '';
+    return;
+  }
+  // Format menjadi ribuan dengan titik (contoh: 1500000 -> 1.500.000)
+  el.value = Number(value).toLocaleString('id-ID');
 }
 
     // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
@@ -955,11 +1104,13 @@ function initMap() {
 
  
     map = L.map('map').setView([-7.7423, 110.3842], 17);
+
+ ['modal-form', 'modal-admin-inventaris', 'modal-kelola-warga', 'tab-progker', 'modal-admin-pengumuman', 'modal-laporan'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) L.DomEvent.disableClickPropagation(el);
+});
     
-    L.DomEvent.disableClickPropagation(document.getElementById('modal-form'));
-    L.DomEvent.disableClickPropagation(document.getElementById('modal-admin-inventaris'));
-    L.DomEvent.disableClickPropagation(document.getElementById('modal-kelola-warga'));
-    
+     
     L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
 
     L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
@@ -1036,7 +1187,7 @@ function initMap() {
     });
   }
 
-  // 🛠️ FUNGSI FILTER BERSIH MENGGUNAKAN LAYERGROUP
+// 🛠️ FUNGSI FILTER BERSIH MENGGUNAKAN LAYERGROUP
   function filterKategori(kat) {
     var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
 
@@ -1044,7 +1195,9 @@ function initMap() {
     markerGroup.clearLayers();
 
     daftarPin.forEach(function(pin) {
-      if (pin.hidden) return;
+      // Jika kategori BUKAN 'semua' dan pin berstatus hidden, abaikan.
+      // Tapi jika kategori 'semua', izinkan pin hidden untuk tetap tampil khusus admin.
+      if (kategoriPilihan !== 'semua' && pin.hidden) return;
 
       var teksKategori = String(pin.kategori || '').toLowerCase();
       var teksNama = String(pin.nama || '').toLowerCase();
@@ -1064,12 +1217,9 @@ function initMap() {
 
       var isPengurus = teksNama.includes('rt') || teksNama.includes('rw') || teksKategori.includes('rt') || teksKategori.includes('rw');
 
+      // 🛠️ PERUBAHAN UTAMA DI SINI:
       if (kategoriPilihan === 'semua') {
-        if (isPengurus || isFasum || isKost || isKuliner || isMinimarket) {
-          isMatch = true;
-        } else if (pinHasilPencarian && pinHasilPencarian === pin) {
-          isMatch = true;
-        }
+        isMatch = true; // Loloskan SEMUA bangunan tanpa terkecuali (Rumah warga, kost, fasum, dll)
       } else if (kategoriPilihan === 'kost') {
         isMatch = isKost;
       } else if (kategoriPilihan === 'fasum') {
@@ -1134,6 +1284,58 @@ function initMap() {
   }
 
   function cariNama() { cariLokasi(); }
+
+  // --- LOGIKA CUSTOM FILTER UI ---
+function toggleCustomFilter() {
+  const menu = document.getElementById('menu-filter-options');
+  const icon = document.getElementById('icon-filter-toggle');
+  
+  if (menu.style.display === 'grid') {
+    menu.style.display = 'none';
+    icon.classList.remove('fa-chevron-up');
+    icon.classList.add('fa-chevron-down');
+  } else {
+    menu.style.display = 'grid';
+    icon.classList.remove('fa-chevron-down');
+    icon.classList.add('fa-chevron-up');
+  }
+}
+
+function pilihCustomFilter(kategori, labelTeks, btnElement) {
+  // 1. Ubah teks di tombol utama
+  document.getElementById('label-filter-aktif').innerText = labelTeks;
+  
+  // 2. Reset semua warna tombol opsi
+  const semuaTombol = document.querySelectorAll('.btn-filter-opt');
+  semuaTombol.forEach(btn => {
+    btn.style.background = '#f1f5f9';
+    btn.style.color = '#475569';
+    btn.style.border = '1px solid #e2e8f0';
+  });
+  
+  // 3. Beri warna hijau pada tombol yang sedang aktif/dipilih
+  btnElement.style.background = '#10b981';
+  btnElement.style.color = 'white';
+  btnElement.style.border = 'none';
+  
+  // (Baris perintah tutup panel sudah DIHAPUS dari sini, jadi panel akan tetap terbuka)
+
+  // 4. Panggil fungsi filter peta bawaan
+  filterKategori(kategori);
+}
+
+// Panel tetap hanya akan tertutup jika user mengeklik area di luar kotak filter
+document.addEventListener("click", function(e) {
+  const container = document.querySelector('.custom-filter-container');
+  const menu = document.getElementById('menu-filter-options');
+  const icon = document.getElementById('icon-filter-toggle');
+  
+  if (container && menu && !container.contains(e.target) && menu.style.display === 'grid') {
+    menu.style.display = 'none';
+    icon.classList.remove('fa-chevron-up');
+    icon.classList.add('fa-chevron-down');
+  }
+});
 
     // 🛠️ FUNGSI UNTUK MENUTUP MODAL TAMBAH DATA BARU
 function tutupModalForm() {
@@ -1775,6 +1977,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (periksaSesiAdmin()) {
     // Hanya ambil data warga/peta jika sesi admin MASIH VALID (< 30 menit)
     muatSemuaDataAdmin();
+    muatDataProgker();
   } else {
     // Jika belum login / sesi expired, fokuskan kursor ke input PIN
     setTimeout(() => {
@@ -1928,6 +2131,218 @@ async function toggleStatusPengumuman(rowIndex, statusBaru) {
     }
   } catch (err) {
     alert("❌ Error koneksi: " + err);
+  }
+}
+
+var dataProgkerGlobal = [];
+
+// 1. Memuat Data dari Google Sheets
+function muatDataProgker() {
+  var tbody = document.getElementById('list-tabel-progker');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
+
+  fetch(GAS_WEB_APP_URL + '?action=get_progker')
+    .then(res => res.json())
+    .then(data => {
+      dataProgkerGlobal = data || [];
+      renderTabelProgker(dataProgkerGlobal);
+    })
+    .catch(err => {
+      console.error(err);
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data.</td></tr>';
+    });
+}
+
+// 2. Render Data ke Tabel
+function renderTabelProgker(list) {
+  var tbody = document.getElementById('list-tabel-progker');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#94a3b8;">Belum ada program kerja yang dicatat.</td></tr>';
+    document.getElementById('total-rab-perencanaan').innerText = 'Rp 0';
+    document.getElementById('total-rab-disetujui').innerText = 'Rp 0';
+    return;
+  }
+
+  var totalPerencanaan = 0;
+  var totalDisetujui = 0;
+
+  list.forEach(item => {
+    var nominal = Number(item.anggaran) || 0;
+    if (item.status === 'Perencanaan') totalPerencanaan += nominal;
+    if (item.status === 'Disetujui' || item.status === 'Berjalan') totalDisetujui += nominal;
+
+    // Badge Warna Status
+    var badgeColor = '#94a3b8';
+    if (item.status === 'Perencanaan') badgeColor = '#eab308';
+    if (item.status === 'Disetujui') badgeColor = '#3b82f6';
+    if (item.status === 'Berjalan') badgeColor = '#10b981';
+
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #f1f5f9';
+    tr.innerHTML = `
+      <td style="padding: 10px;">
+        <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
+        <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
+      </td>
+      <td style="padding: 10px; font-weight:bold; color:#0f172a;">
+        Rp ${nominal.toLocaleString('id-ID')}
+      </td>
+      <td style="padding: 10px;">
+        <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
+          ${escapeHTML(item.status)}
+        </span>
+      </td>
+      <td style="padding: 10px; text-align: center; white-space: nowrap;">
+        <button onclick="editProgker('${item.id}')" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer; margin-right:4px;">✏️ Edit</button>
+        <button onclick="hapusProgker('${item.id}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">🗑️</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('total-rab-perencanaan').innerText = 'Rp ' + totalPerencanaan.toLocaleString('id-ID');
+  document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalDisetujui.toLocaleString('id-ID');
+}
+
+// 3. Simpan / Edit Data Progker + Format Angka Ribuan & Otomatis Terbit Pengumuman
+function simpanDataProgker(e) {
+  e.preventDefault();
+  var token = localStorage.getItem('adminToken') || '';
+  var btn = document.getElementById('btnSimpanProgker');
+  btn.disabled = true;
+  btn.innerText = 'Menyimpan...';
+
+  var status = document.getElementById('progkerStatus').value;
+  var kegiatan = document.getElementById('progkerKegiatan').value;
+  var divisi = document.getElementById('progkerDivisi').value;
+  
+  // Clean titik ribuan sebelum dikirim ke Google Sheets
+  var rawAnggaran = document.getElementById('progkerAnggaran').value.replace(/\./g, '');
+  var rawRealisasi = document.getElementById('progkerRealisasi').value.replace(/\./g, '');
+  
+  var anggaranFormatted = Number(rawAnggaran || 0).toLocaleString('id-ID');
+  var detail = document.getElementById('progkerDetail').value;
+
+  var payload = {
+    action: 'simpan_progker',
+    token: token,
+    id: document.getElementById('progkerId').value,
+    kegiatan: kegiatan,
+    divisi: divisi,
+    anggaran: rawAnggaran || 0,
+    realisasi: rawRealisasi || 0,
+    status: status,
+    detail: detail,
+    tanggal: new Date().toLocaleDateString('id-ID')
+  };
+
+  fetch(GAS_WEB_APP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(payload)
+  })
+  .then(res => res.json())
+  .then(res => {
+    btn.disabled = false;
+    btn.innerText = '💾 Simpan Program Kerja';
+    
+    if (res.status === 'success') {
+      
+      // JIKA STATUS DISETUJUI / BERJALAN -> OTOMATIS TERBITKAN KE PENGUMUMAN WARGA
+      if (status === 'Disetujui' || status === 'Berjalan') {
+        const payloadPengumuman = {
+          token: token,
+          action: 'kelolaPengumuman',
+          subAksi: 'tambah',
+          tanggal: new Date().toLocaleDateString('id-ID'),
+          judul: `[RAB APPROVED] ${kegiatan}`,
+          detail: `Divisi: ${divisi}\nEstimasi RAB: Rp ${anggaranFormatted}\n\nCatatan: ${detail}`,
+          lokasi: 'RT 05',
+          foto: ''
+        };
+
+        fetch(GAS_WEB_APP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payloadPengumuman)
+        });
+      }
+
+      tutupModalFormProgker();
+      muatDataProgker();
+      alert('✅ Program Kerja berhasil disimpan' + (status === 'Disetujui' || status === 'Berjalan' ? ' & otomatis diterbitkan ke Papan Pengumuman Warga!' : '!'));
+    } else {
+      alert('Gagal menyimpan program kerja.');
+    }
+  })
+  .catch(err => {
+    btn.disabled = false;
+    btn.innerText = '💾 Simpan Program Kerja';
+    alert('Terjadi kesalahan jaringan.');
+  });
+}
+    
+// 4. Modal Handler
+function bukaModalFormProgker() {
+  document.getElementById('formProgker').reset();
+  document.getElementById('progkerId').value = '';
+  document.getElementById('judul-modal-progker').innerText = '➕ Tambah Program Kerja';
+  document.getElementById('modal-form-progker').style.display = 'flex';
+}
+
+function tutupModalFormProgker() {
+  document.getElementById('modal-form-progker').style.display = 'none';
+}
+
+function editProgker(id) {
+  var item = dataProgkerGlobal.find(x => String(x.id) === String(id));
+  if (!item) return;
+
+  document.getElementById('progkerId').value = item.id;
+  document.getElementById('progkerKegiatan').value = item.kegiatan;
+  document.getElementById('progkerDivisi').value = item.divisi;
+  document.getElementById('progkerAnggaran').value = item.anggaran ? Number(item.anggaran).toLocaleString('id-ID') : '';
+  document.getElementById('progkerRealisasi').value = item.realisasi ? Number(item.realisasi).toLocaleString('id-ID') : '';
+  document.getElementById('progkerStatus').value = item.status;
+  document.getElementById('progkerDetail').value = item.detail;
+
+  document.getElementById('judul-modal-progker').innerText = '✏️ Edit Program Kerja';
+  document.getElementById('modal-form-progker').style.display = 'flex';
+}
+
+// 5. Hapus Progker
+function hapusProgker(id) {
+  if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
+  var token = localStorage.getItem('adminToken') || '';
+
+  fetch(GAS_WEB_APP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: 'hapus_progker', id: id, token: token })
+  })
+  .then(res => res.json())
+  .then(() => muatDataProgker())
+  .catch(() => alert('Gagal menghapus program kerja.'));
+}
+
+function tutupTabProgker() {
+  var tabProgker = document.getElementById('tab-progker');
+  if (tabProgker) tabProgker.style.display = 'none';
+}
+
+function bukaTabAdmin(tabName) {
+  var allTabs = document.querySelectorAll('.content-tab-admin');
+  allTabs.forEach(function(el) { el.style.display = 'none'; });
+
+  if (tabName === 'progker') {
+    var tabProgker = document.getElementById('tab-progker');
+    if (tabProgker) {
+      tabProgker.style.display = 'flex'; // Diubah ke 'flex' agar modal tampil rapi di tengah
+      muatDataProgker();
+    }
   }
 }
 
