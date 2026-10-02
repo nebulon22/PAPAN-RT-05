@@ -1326,92 +1326,105 @@ function muatProgkerWarga() {
   const tbody = document.getElementById('tabel-progker-warga');
   if (!tbody) return;
 
+  // Fungsi internal untuk merender data ke tabel & menghitung total RAB
+  function renderData(data) {
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
+      return;
+    }
+
+    var totalRabPerencanaan = 0; 
+    var totalRealisasiSelesai = 0; 
+    var html = '';
+
+    data.forEach(item => {
+      var angPlan = Number(item.anggaran || item.anggaran_disetujui || item.nominal || 0);
+      var angRealisasi = Number(item.realisasi || 0);
+      var statusRaw = String(item.status || 'Perencanaan').trim();
+
+      totalRabPerencanaan += angPlan;
+
+      if (statusRaw === 'Selesai') {
+        totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
+      }
+
+      var badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
+      if (statusRaw === 'Berjalan' || statusRaw === 'Selesai') {
+        badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
+      }
+
+      var badgeColor = '#eab308';
+      var labelStatus = 'Jangka Panjang';
+
+      if (statusRaw === 'Disetujui') {
+        badgeColor = '#3b82f6'; 
+        labelStatus = 'Jangka Pendek';
+      } else if (statusRaw === 'Berjalan') {
+        badgeColor = '#10b981'; 
+        labelStatus = 'Berjalan';
+      } else if (statusRaw === 'Selesai') {
+        badgeColor = '#6b7280'; 
+        labelStatus = 'Selesai';
+      }
+
+      var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${labelStatus}</span>`;
+
+    // TABEL (Diperbarui dengan tambahan informasi Detail)
+      html += `
+        <tr style="border-bottom: 1px solid #f1f5f9;">
+          <td style="padding: 8px;">
+            <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
+            <span style="font-size:10px; color:#64748b; display:block;">🏷️ ${escapeHTML(item.divisi)}</span>
+            ${item.detail ? `<span style="font-size:9.5px; color:#475569; font-style:italic; display:block; margin-top:2px;">📝 ${escapeHTML(item.detail)}</span>` : ''}
+          </td>
+          <td style="padding: 8px;">
+            <div style="font-size:11px; font-weight:bold; color:#0f172a;">Plan: Rp ${angPlan.toLocaleString('id-ID')}</div>
+            ${angRealisasi > 0 ? `<div style="font-size:10px; color:#059669; font-weight:bold;">Real: Rp ${angRealisasi.toLocaleString('id-ID')}</div>` : ''}
+          </td>
+          <td style="padding: 8px; text-align: center;">${badgeDana}</td>
+          <td style="padding: 8px; text-align: center;">${badgeProgker}</td>
+        </tr>
+      `;
+    });
+
+    tbody.innerHTML = html;
+    
+    const totalEstimasiEl = document.getElementById('warga-total-rab') || document.getElementById('warga-total-estimasi');
+    if (totalEstimasiEl) {
+      totalEstimasiEl.innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
+    }
+
+    const totalRealisasiEl = document.getElementById('warga-total-realisasi');
+    if (totalRealisasiEl) {
+      totalRealisasiEl.innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
+    }
+  }
+
+  // 1. TAMPILKAN DARI CACHE LOKAL SECARA INSTAN JIKA ADA
+  const cachedData = localStorage.getItem('cache_progker_rt05');
+  if (cachedData) {
+    try {
+      renderData(JSON.parse(cachedData));
+    } catch (e) {
+      console.error("Gagal memuat cache progker:", e);
+    }
+  }
+
+  // 2. AMBIL DATA TERBARU DARI SERVER DI LATAR BELAKANG
   fetch(RT05_CONFIG.GAS_WEB_APP_URL + '?action=get_progker')
     .then(res => res.json())
     .then(data => {
-      if (!data || !Array.isArray(data) || data.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
-        return;
+      if (data && Array.isArray(data)) {
+        // Simpan ke localStorage untuk kunjungan berikutnya
+        localStorage.setItem('cache_progker_rt05', JSON.stringify(data));
+        renderData(data);
       }
-
-      var totalRabPerencanaan = 0; // Total Estimasi RAB (Semua Plan)
-      var totalRealisasiSelesai = 0; // Total Realisasi (Selesai)
-      var html = '';
-
-      data.forEach(item => {
-        var angPlan = Number(item.anggaran || item.anggaran_disetujui || item.nominal || 0);
-        var angRealisasi = Number(item.realisasi || 0);
-        var statusRaw = String(item.status || 'Perencanaan').trim();
-
-        // 1. Jumlahkan SEMUA Rencana Anggaran (2jt + 2jt = 4jt)
-        totalRabPerencanaan += angPlan;
-
-        // 2. Jumlahkan Realisasi Selesai (2jt)
-        if (statusRaw === 'Selesai') {
-          totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
-        }
-
-        // --- BADGE STATUS DANA & PROGKER ---
-        var badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
-        if (statusRaw === 'Berjalan' || statusRaw === 'Selesai') {
-          badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
-        }
-
-        var badgeColor = '#eab308';
-        var labelStatus = 'Jangka Panjang';
-
-        if (statusRaw === 'Disetujui') {
-          badgeColor = '#3b82f6'; 
-          labelStatus = 'Jangka Pendek';
-        } else if (statusRaw === 'Berjalan') {
-          badgeColor = '#10b981'; 
-          labelStatus = 'Berjalan';
-        } else if (statusRaw === 'Selesai') {
-          badgeColor = '#6b7280'; 
-          labelStatus = 'Selesai';
-        }
-
-        var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${labelStatus}</span>`;
-
-        // TABEL
-        html += `
-          <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="padding: 8px;">
-              <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
-              <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
-            </td>
-            <td style="padding: 8px;">
-              <div style="font-size:11px; font-weight:bold; color:#0f172a;">Plan: Rp ${angPlan.toLocaleString('id-ID')}</div>
-              ${angRealisasi > 0 ? `<div style="font-size:10px; color:#059669; font-weight:bold;">Real: Rp ${angRealisasi.toLocaleString('id-ID')}</div>` : ''}
-            </td>
-            <td style="padding: 8px; text-align: center;">${badgeDana}</td>
-            <td style="padding: 8px; text-align: center;">${badgeProgker}</td>
-          </tr>
-        `;
-      });
-
-      tbody.innerHTML = html;
-      
-      // -------------------------------------------------------------
-      // ISI KEDUA KOTAK ATAS SECARA TERPISAH
-      // -------------------------------------------------------------
-      
-      // 1. Isikan Rp 4.000.000 ke Kotak Kiri (Total Estimasi RAB)
-      const totalEstimasiEl = document.getElementById('warga-total-rab') || document.getElementById('warga-total-estimasi');
-      if (totalEstimasiEl) {
-        totalEstimasiEl.innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
-      }
-
-      // 2. Isikan Rp 2.000.000 ke Kotak Kanan (Realisasi Selesai)
-      const totalRealisasiEl = document.getElementById('warga-total-realisasi');
-      if (totalRealisasiEl) {
-        totalRealisasiEl.innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
-      }
-
     })
     .catch(err => {
-      console.error(err);
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
+      console.warn("Gagal memperbarui data progker dari server, menggunakan cache lokal.", err);
+      if (!cachedData) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
+      }
     });
 }
     
