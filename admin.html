@@ -1187,17 +1187,17 @@ function initMap() {
     });
   }
 
-  // 🛠️ FUNGSI FILTER BERSIH MENGGUNAKAN LAYERGROUP
+// 🛠️ FUNGSI FILTER BERSIH MENGGUNAKAN LAYERGROUP
   function filterKategori(kat) {
     var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
 
     // 1. Bersihkan seluruh marker yang menempel di peta sekaligus
     markerGroup.clearLayers();
 
-   daftarPin.forEach(function(pin) {
-    // 🛠️ PERUBAHAN: Jika kategori yang dipilih adalah 'semua', abaikan status hidden (izinkan tampil). 
-    // Tapi jika sedang memilih kategori lain (kost, kuliner, dll), tetap abaikan jika pin di-hidden.
-    if (kategoriPilihan !== 'semua' && pin.hidden) return;
+    daftarPin.forEach(function(pin) {
+      // Jika kategori BUKAN 'semua' dan pin berstatus hidden, abaikan.
+      // Tapi jika kategori 'semua', izinkan pin hidden untuk tetap tampil khusus admin.
+      if (kategoriPilihan !== 'semua' && pin.hidden) return;
 
       var teksKategori = String(pin.kategori || '').toLowerCase();
       var teksNama = String(pin.nama || '').toLowerCase();
@@ -1217,12 +1217,9 @@ function initMap() {
 
       var isPengurus = teksNama.includes('rt') || teksNama.includes('rw') || teksKategori.includes('rt') || teksKategori.includes('rw');
 
+      // 🛠️ PERUBAHAN UTAMA DI SINI:
       if (kategoriPilihan === 'semua') {
-        if (isPengurus || isFasum || isKost || isKuliner || isMinimarket) {
-          isMatch = true;
-        } else if (pinHasilPencarian && pinHasilPencarian === pin) {
-          isMatch = true;
-        }
+        isMatch = true; // Loloskan SEMUA bangunan tanpa terkecuali (Rumah warga, kost, fasum, dll)
       } else if (kategoriPilihan === 'kost') {
         isMatch = isKost;
       } else if (kategoriPilihan === 'fasum') {
