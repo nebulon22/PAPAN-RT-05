@@ -680,7 +680,7 @@
           <div id="total-rab-perencanaan" style="font-size: 16px; font-weight: bold; color: #1e40af;">Rp 0</div>
         </div>
         <div style="flex: 1; min-width: 140px; background: #ecfdf5; padding: 8px 12px; border-radius: 6px; border-left: 4px solid #10b981;">
-          <span style="font-size: 10px; color: #047857; font-weight: bold; text-transform: uppercase;">Total RAB Disetujui</span>
+          <span style="font-size: 10px; color: #047857; font-weight: bold; text-transform: uppercase;">Total RAB Terlaksana</span>
           <div id="total-rab-disetujui" style="font-size: 16px; font-weight: bold; color: #065f46;">Rp 0</div>
         </div>
       </div>
@@ -2166,14 +2166,21 @@ function renderTabelProgker(list) {
     return;
   }
 
-  var totalPerencanaan = 0;
-  var totalDisetujui = 0;
+  var totalRabPerencanaan = 0; // Total Keseluruhan Estimasi
+  var totalRealisasiSelesai = 0; // Total Realisasi Selesai
 
   list.forEach(item => {
     var nominal = Number(item.anggaran) || 0;
-    if (item.status === 'Perencanaan') totalPerencanaan += nominal;
-    if (item.status === 'Disetujui' || item.status === 'Berjalan') totalDisetujui += nominal;
+    var realisasi = Number(item.realisasi) || 0;
+    var statusRaw = String(item.status || 'Perencanaan').trim();
 
+    // 1. Akumulasi SEMUA Rencana Anggaran (Sama seperti di index.html)
+    totalRabPerencanaan += nominal;
+
+    // 2. Akumulasi Realisasi untuk program yang Selesai
+    if (statusRaw === 'Selesai') {
+      totalRealisasiSelesai += (realisasi > 0 ? realisasi : nominal);
+    }
     // Badge Warna Status
     var badgeColor = '#94a3b8';
     if (item.status === 'Perencanaan') badgeColor = '#eab308';
@@ -2203,8 +2210,8 @@ function renderTabelProgker(list) {
     tbody.appendChild(tr);
   });
 
-  document.getElementById('total-rab-perencanaan').innerText = 'Rp ' + totalPerencanaan.toLocaleString('id-ID');
-  document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalDisetujui.toLocaleString('id-ID');
+  document.getElementById('total-rab-perencanaan').innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
+  document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
 }
 
 // 3. Simpan / Edit Data Progker + Format Angka Ribuan & Otomatis Terbit Pengumuman
