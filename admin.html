@@ -175,16 +175,29 @@
 </div>
 
    <div class="filter-container">
-  <!-- 1. Dropdown Filter Lokasi Bangunan (Gabungan Semua Tombol Filter) -->
- <div class="filter-row" style="margin-bottom: 8px;">
- <select id="selectFilterKategori" aria-label="Filter kategori lokasi bangunan" onchange="filterKategori(this.value)"
-          style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #cbd5e1; background-color: #50c878; font-weight: bold; font-size: 13px; color: #1e293b; box-shadow: 0 1px 3px rgba(0,0,0,0.05); cursor: pointer;">
-    <option value="semua">🌍 Filter: Tampilkan Semua Lokasi</option>
-    <option value="kost">🛏️ Filter: Kost / Kontrakan</option>
-    <option value="fasum">🏛️ Filter: Fasilitas Umum (Fasum)</option>
-    <option value="kuliner">🍽️ Filter: Kuliner / Warung</option>
-    <option value="minimarket">🏪 Filter: Minimarket / Toko</option>
-  </select>
+<!-- 1. Custom Filter UI (Modern & Minimalis) -->
+<div class="custom-filter-container" style="position: relative; width: 100%; margin-bottom: 8px;">
+  
+  <!-- Tombol Utama (Toggle) -->
+  <button type="button" id="btn-filter-toggle" onclick="toggleCustomFilter()" style="width: 100%; padding: 10px 14px; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; font-weight: bold; color: #1e293b; display: flex; justify-content: space-between; align-items: center; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: all 0.2s ease;">
+    <span id="label-filter-aktif">🌍 Filter: Semua Lokasi</span>
+    <i class="fas fa-chevron-down" id="icon-filter-toggle" style="color: #64748b; font-size: 12px;"></i>
+  </button>
+  
+  <!-- Panel Opsi Filter (Tersembunyi) -->
+  <div id="menu-filter-options" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; margin-top: 6px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); z-index: 2000; padding: 10px; box-sizing: border-box; grid-template-columns: 1fr 1fr; gap: 8px;">
+    
+    <button type="button" class="btn-filter-opt active" onclick="pilihCustomFilter('semua', '🌍 Filter: Semua Lokasi', this)" style="grid-column: span 2; padding: 8px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 11.5px; font-weight: bold; cursor: pointer;">🌍 Tampilkan Semua</button>
+    
+    <button type="button" class="btn-filter-opt" onclick="pilihCustomFilter('kost', '🛏️ Filter: Kost', this)" style="padding: 8px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🛏️ Kost</button>
+    
+    <button type="button" class="btn-filter-opt" onclick="pilihCustomFilter('fasum', '🏛️ Filter: Fasum', this)" style="padding: 8px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🏛️ Fasum</button>
+    
+    <button type="button" class="btn-filter-opt" onclick="pilihCustomFilter('kuliner', '🍽️ Filter: Kuliner', this)" style="padding: 8px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🍽️ Kuliner</button>
+    
+    <button type="button" class="btn-filter-opt" onclick="pilihCustomFilter('minimarket', '🏪 Filter: Toko', this)" style="padding: 8px; background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">🏪 Toko</button>
+    
+  </div>
 </div>
 
   <!-- 2. Tombol Aksi Pinjam Perkakas & Laporan Divisi -->
@@ -1271,6 +1284,59 @@ function initMap() {
   }
 
   function cariNama() { cariLokasi(); }
+
+  // --- LOGIKA CUSTOM FILTER UI ---
+function toggleCustomFilter() {
+  const menu = document.getElementById('menu-filter-options');
+  const icon = document.getElementById('icon-filter-toggle');
+  
+  if (menu.style.display === 'grid') {
+    menu.style.display = 'none';
+    icon.classList.remove('fa-chevron-up');
+    icon.classList.add('fa-chevron-down');
+  } else {
+    menu.style.display = 'grid';
+    icon.classList.remove('fa-chevron-down');
+    icon.classList.add('fa-chevron-up');
+  }
+}
+
+function pilihCustomFilter(kategori, labelTeks, btnElement) {
+  // 1. Ubah teks di tombol utama
+  document.getElementById('label-filter-aktif').innerText = labelTeks;
+  
+  // 2. Reset semua warna tombol opsi
+  const semuaTombol = document.querySelectorAll('.btn-filter-opt');
+  semuaTombol.forEach(btn => {
+    btn.style.background = '#f1f5f9';
+    btn.style.color = '#475569';
+    btn.style.border = '1px solid #e2e8f0';
+  });
+  
+  // 3. Beri warna hijau pada tombol yang dipilih
+  btnElement.style.background = '#10b981';
+  btnElement.style.color = 'white';
+  btnElement.style.border = 'none';
+  
+  // 4. Tutup menu panel
+  toggleCustomFilter();
+  
+  // 5. Panggil fungsi filter peta bawaan Anda
+  filterKategori(kategori);
+}
+
+// Menutup filter otomatis jika user mengklik area lain di layar
+document.addEventListener("click", function(e) {
+  const container = document.querySelector('.custom-filter-container');
+  const menu = document.getElementById('menu-filter-options');
+  const icon = document.getElementById('icon-filter-toggle');
+  
+  if (container && menu && !container.contains(e.target) && menu.style.display === 'grid') {
+    menu.style.display = 'none';
+    icon.classList.remove('fa-chevron-up');
+    icon.classList.add('fa-chevron-down');
+  }
+});
 
     // 🛠️ FUNGSI UNTUK MENUTUP MODAL TAMBAH DATA BARU
 function tutupModalForm() {
