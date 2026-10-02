@@ -2136,20 +2136,37 @@ async function toggleStatusPengumuman(rowIndex, statusBaru) {
 
 var dataProgkerGlobal = [];
 
-// 1. Memuat Data dari Google Sheets
+// 1. Memuat Data dari Google Sheets (Dilengkapi Cache Lokal agar Instan)
 function muatDataProgker() {
   var tbody = document.getElementById('list-tabel-progker');
-  if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
+  
+  // A. TAMPILKAN DARI CACHE LOKAL SECARA INSTAN JIKA ADA
+  var cachedProgker = localStorage.getItem('cache_progker_admin_rt05');
+  if (cachedProgker) {
+    try {
+      dataProgkerGlobal = JSON.parse(cachedProgker);
+      renderTabelProgker(dataProgkerGlobal);
+    } catch (e) {
+      console.error("Gagal membaca cache progker admin:", e);
+    }
+  } else if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
+  }
 
+  // B. AMBIL DATA TERBARU DARI SERVER DI LATAR BELAKANG
   fetch(GAS_WEB_APP_URL + '?action=get_progker')
     .then(res => res.json())
     .then(data => {
       dataProgkerGlobal = data || [];
+      // Simpan ke localStorage untuk kunjungan/pemuatan berikutnya
+      localStorage.setItem('cache_progker_admin_rt05', JSON.stringify(dataProgkerGlobal));
       renderTabelProgker(dataProgkerGlobal);
     })
     .catch(err => {
-      console.error(err);
-      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data.</td></tr>';
+      console.error("Gagal menyinkronkan data progker dari server, menggunakan cache lokal.", err);
+      if (!cachedProgker && tbody) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data.</td></tr>';
+      }
     });
 }
 
