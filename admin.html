@@ -279,9 +279,12 @@
         <textarea id="pengumumanDetail" rows="3" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
       </div>
 
-      <div class="form-group" style="margin-bottom: 8px;">
-        <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Peta RT / Bebas):</label>
-        <input type="text" id="pengumumanLokasi" placeholder="Contoh: Balai RT 05 / Rumah Pak Bejo" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+     <div class="form-group" style="margin-bottom: 8px; position: relative;">
+        <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Peta RT / Pilih Warga):</label>
+        <input type="text" id="pengumumanLokasi" placeholder="Ketik nama warga atau lokasi..." autocomplete="off" oninput="cariLokasiPengumuman(this.value)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+    
+        <!-- Kotak Dropdown Rekomendasi Hasil Pencarian -->
+        <div id="hasilPencarianLokasi" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 140px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
       </div>
 
       <div class="form-group" style="margin-bottom: 10px;">
@@ -2149,6 +2152,61 @@ async function toggleStatusPengumuman(rowIndex, statusBaru) {
     alert("❌ Error koneksi: " + err);
   }
 }
+
+// 1. Fungsi untuk memfilter data warga saat admin mengetik di kolom lokasi pengumuman
+function cariLokasiPengumuman(keyword) {
+  var container = document.getElementById('hasilPencarianLokasi');
+  if (!keyword || keyword.trim() === '') {
+    container.style.display = 'none';
+    return;
+  }
+
+  var query = keyword.toLowerCase();
+  
+  // Mengambil sumber data warga (sesuaikan variabel global data warga Anda, misal: dataWargaGlobal atau dataPetaGlobal)
+  var sumberData = window.dataWargaGlobal || window.petaWargaGlobal || []; 
+
+  var hasil = sumberData.filter(function(item) {
+    var nama = String(item.nama || item.kepala_keluarga || '').toLowerCase();
+    var noRumah = String(item.no_rumah || item.nomor_rumah || '').toLowerCase();
+    return nama.includes(query) || noRumah.includes(query);
+  });
+
+  if (hasil.length === 0) {
+    container.style.display = 'none';
+    return;
+  }
+
+  var html = '';
+  hasil.forEach(function(item) {
+    var namaWarga = item.nama || item.kepala_keluarga || 'Warga';
+    var nomorRumah = item.no_rumah || item.nomor_rumah || 'RT 05';
+    
+    html += `
+      <div onclick="pilihLokasiPengumuman('${escapeHTML(namaWarga)}', '${escapeHTML(nomorRumah)}')" style="padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+        <strong>🏠 Bp/Ibu ${escapeHTML(namaWarga)}</strong> <span style="color: #64748b;">(No. ${escapeHTML(nomorRumah)})</span>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  container.style.display = 'block';
+}
+
+// 2. Fungsi saat salah satu nama warga diklik dari daftar rekomendasi
+function pilihLokasiPengumuman(nama, noRumah) {
+  document.getElementById('pengumumanLokasi').value = `Rumah Bp/Ibu ${nama} (No. ${noRumah})`;
+  document.getElementById('hasilPencarianLokasi').style.display = 'none';
+}
+
+// 3. Menutup dropdown jika admin mengklik area lain di luar kotak pencarian
+document.addEventListener('click', function(e) {
+  var container = document.getElementById('hasilPencarianLokasi');
+  var input = document.getElementById('pengumumanLokasi');
+  if (container && input && !container.contains(e.target) && e.target !== input) {
+    container.style.display = 'none';
+  }
+});
 
 var dataProgkerGlobal = [];
 
