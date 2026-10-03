@@ -279,12 +279,18 @@
         <textarea id="pengumumanDetail" rows="3" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
       </div>
 
-     <div class="form-group" style="margin-bottom: 8px; position: relative;">
-        <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Peta RT / Pilih Warga):</label>
-        <input type="text" id="pengumumanLokasi" placeholder="Ketik nama warga atau lokasi..." autocomplete="off" oninput="cariLokasiPengumuman(this.value)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-    
-        <!-- Kotak Dropdown Rekomendasi Hasil Pencarian -->
-        <div id="hasilPencarianLokasi" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 140px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+    <div class="form-group" style="margin-bottom: 8px;">
+        <label for="pengumumanLokasiSelect" style="font-size: 11px; font-weight: bold;">Pilih Lokasi Rumah Warga / Titik Peta:</label>
+        <select id="pengumumanLokasiSelect" onchange="pilihTitikLokasi(this)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; background: white;">
+          <option value="">-- Pilih Lokasi Acara / Rumah Warga --</option>
+          <option value="Balai RT 05" data-lat="-7.77" data-lng="110.37">Balai RT 05</option>
+          <option value="Pos Satpam" data-lat="-7.78" data-lng="110.38">Pos Satpam RT 05</option>
+        </select>
+        
+        <!-- Input tersembunyi untuk menyimpan data yang dikirim ke database -->
+        <input type="hidden" id="pengumumanLat" value="">
+        <input type="hidden" id="pengumumanLng" value="">
+        <input type="hidden" id="pengumumanLokasiTeks" value="">
       </div>
 
       <div class="form-group" style="margin-bottom: 10px;">
@@ -2153,87 +2159,63 @@ async function toggleStatusPengumuman(rowIndex, statusBaru) {
   }
 }
 
-// 1. Fungsi Pencarian Lokasi Pengumuman (Otomatis Deteksi Data Warga)
-function cariLokasiPengumuman(keyword) {
-  var container = document.getElementById('hasilPencarianLokasi');
-  if (!keyword || keyword.trim() === '') {
-    container.style.display = 'none';
-    return;
-  }
-
-  var query = keyword.toLowerCase();
-  var sumberData = [];
-
-  // A. Coba ambil dari variabel global yang biasa dipakai di halaman admin
-  if (typeof dataWargaGlobal !== 'undefined' && Array.isArray(dataWargaGlobal)) {
-    sumberData = dataWargaGlobal;
-  } else if (typeof wargaList !== 'undefined' && Array.isArray(wargaList)) {
-    sumberData = wargaList;
-  }
-
-  // B. Jika masih kosong, ambil dari localStorage (cache warga yang tersimpan)
-  if (sumberData.length === 0) {
-    try {
-      var cachedKeys = ['cache_warga_rt05', 'dataWarga', 'warga_rt05', 'peta_warga'];
-      for (var i = 0; i < cachedKeys.length; i++) {
-        var raw = localStorage.getItem(cachedKeys[i]);
-        if (raw) {
-          var parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            sumberData = parsed;
-            break;
-          }
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  var hasil = sumberData.filter(function(item) {
-    var nama = String(item.nama || item.kepala_keluarga || item.nama_warga || '').toLowerCase();
-    var noRumah = String(item.no_rumah || item.nomor_rumah || '').toLowerCase();
-    return nama.includes(query) || noRumah.includes(query);
-  });
-
-  if (hasil.length === 0) {
-    container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Ketik bebas atau belum ada data warga tersimpan</div>`;
-    container.style.display = 'block';
-    return;
-  }
-
-  var html = '';
-  // Batasi maksimal 5 hasil teratas agar dropdown tetap rapi
-  hasil.slice(0, 5).forEach(function(item) {
-    var namaWarga = item.nama || item.kepala_keluarga || item.nama_warga || 'Warga';
-    var nomorRumah = item.no_rumah || item.nomor_rumah || '-';
-    
-    html += `
-      <div onclick="pilihLokasiPengumuman('${escapeHTML(namaWarga)}', '${escapeHTML(nomorRumah)}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-        <strong>🏠 Bp/Ibu ${escapeHTML(namaWarga)}</strong> <span style="color: #64748b;">(No. ${escapeHTML(nomorRumah)})</span>
-      </div>
-    `;
-  });
-
-  container.innerHTML = html;
-  container.style.display = 'block';
-}
-
-// 2. Fungsi saat salah satu nama warga diklik dari daftar rekomendasi
-function pilihLokasiPengumuman(nama, noRumah) {
-  document.getElementById('pengumumanLokasi').value = `Rumah Bp/Ibu ${nama} (No. ${noRumah})`;
-  document.getElementById('hasilPencarianLokasi').style.display = 'none';
-}
-
-// 3. Menutup dropdown jika admin mengklik area lain di luar kotak pencarian
-document.addEventListener('click', function(e) {
-  var container = document.getElementById('hasilPencarianLokasi');
-  var input = document.getElementById('pengumumanLokasi');
-  if (container && input && !container.contains(e.target) && e.target !== input) {
-    container.style.display = 'none';
-  }
+// Jalankan saat halaman admin siap untuk mengisi pilihan dropdown warga
+document.addEventListener("DOMContentLoaded", function() {
+  setTimeout(muatPilihanLokasiPresisi, 500);
 });
 
+function muatPilihanLokasiPresisi() {
+  var selectElemen = document.getElementById('pengumumanLokasiSelect');
+  if (!selectElemen) return;
+
+  var sumberData = [];
+  try {
+    // Mencari data warga dari berbagai kemungkinan cache localStorage
+    var cachedKeys = ['cache_warga_rt05', 'dataWarga', 'warga_rt05', 'peta_warga'];
+    for (var i = 0; i < cachedKeys.length; i++) {
+      var raw = localStorage.getItem(cachedKeys[i]);
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          sumberData = parsed;
+          break;
+        }
+      }
+    }
+  } catch (e) {
+    console.error(e);
+  }
+
+  var opsiHtml = '<option value="">-- Pilih Lokasi Acara / Rumah Warga --</option>';
+  opsiHtml += '<option value="Balai RT 05" data-lat="-7.77" data-lng="110.37">Balai RT 05</option>';
+  opsiHtml += '<option value="Pos Satpam RT 05" data-lat="-7.78" data-lng="110.38">Pos Satpam RT 05</option>';
+  
+  sumberData.forEach(function(item) {
+    var nama = item.nama || item.kepala_keluarga || item.nama_warga || '';
+    var noRumah = item.no_rumah || item.nomor_rumah || '';
+    var lat = item.lat || item.latitude || '';
+    var lng = item.lng || item.longitude || '';
+    
+    if (nama) {
+      opsiHtml += `<option value="Rumah Bp/Ibu ${nama} (No. ${noRumah})" data-lat="${lat}" data-lng="${lng}">Rumah Bp/Ibu ${nama} (No. ${noRumah})</option>`;
+    }
+  });
+
+  selectElemen.innerHTML = opsiHtml;
+}
+
+// Fungsi saat admin memilih salah satu opsi dari dropdown
+function pilihTitikLokasi(select) {
+  var selectedOption = select.options[select.selectedIndex];
+  var teksLokasi = select.value;
+  var lat = selectedOption.getAttribute('data-lat') || '';
+  var lng = selectedOption.getAttribute('data-lng') || '';
+
+  // Masukkan ke input tersembunyi
+  document.getElementById('pengumumanLokasiTeks').value = teksLokasi;
+  document.getElementById('pengumumanLat').value = lat;
+  document.getElementById('pengumumanLng').value = lng;
+}
 
 var dataProgkerGlobal = [];
 
