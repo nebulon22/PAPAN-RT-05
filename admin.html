@@ -279,10 +279,19 @@
         <textarea id="pengumumanDetail" rows="3" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
       </div>
 
-      <div class="form-group" style="margin-bottom: 8px;">
-        <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Peta RT / Bebas):</label>
-        <input type="text" id="pengumumanLokasi" placeholder="Contoh: Balai RT 05 / Rumah Pak Bejo" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-      </div>
+   <div class="form-group" style="margin-bottom: 8px; position: relative;">
+    <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Ketik Nama Warga / Pilih):</label>
+  
+  <!-- Input teks dengan event oninput untuk memicu pencarian -->
+  <input type="text" id="pengumumanLokasi" placeholder="Ketik nama warga (misal: Bejo)..." autocomplete="off" oninput="cariLokasiPengumuman(this.value)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+  
+  <!-- Kotak Dropdown Rekomendasi Hasil Pencarian -->
+  <div id="hasilPencarianLokasi" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 140px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+
+  <!-- Input tersembunyi untuk menyimpan koordinat presisi yang akan dikirim ke database -->
+  <input type="hidden" id="pengumumanLat" value="">
+  <input type="hidden" id="pengumumanLng" value="">
+  </div>
 
       <div class="form-group" style="margin-bottom: 10px;">
         <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
@@ -2063,12 +2072,17 @@ function muatDaftarPengumumanAdmin() {
   });
 }
 
-// Simpan Pengumuman Baru
+// Simpan Pengumuman Baru (Dengan Integrasi Koordinat Presisi)
 async function simpanPengumumanAdmin() {
   const tglInput = document.getElementById('pengumumanTanggal').value;
   const judul = document.getElementById('pengumumanJudul').value.trim();
   const detail = document.getElementById('pengumumanDetail').value.trim();
   const lokasi = document.getElementById('pengumumanLokasi').value.trim();
+  
+  // 1. AMBIL NILAI KOORDINAT DARI INPUT TERSEMBUNYI
+  const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
+  const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
+  
   const foto = document.getElementById('pengumumanFoto').value.trim();
   const tokenAdmin = localStorage.getItem('adminToken') || '';
 
@@ -2084,6 +2098,7 @@ async function simpanPengumumanAdmin() {
   btn.disabled = true;
   btn.innerText = "⏳ Menyimpan...";
 
+  // 2. SERTAKAN LAT & LNG KE DALAM PAYLOAD
   const payload = {
     token: tokenAdmin,
     action: 'kelolaPengumuman',
@@ -2092,11 +2107,13 @@ async function simpanPengumumanAdmin() {
     judul: judul,
     detail: detail,
     lokasi: lokasi,
+    lat: lat, // Kirim koordinat lintang
+    lng: lng, // Kirim koordinat bujur
     foto: foto
   };
 
   try {
-    const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+    const res = await fetch(GAS_WEB_APP_URL, {
       method: "POST",
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
@@ -2107,8 +2124,13 @@ async function simpanPengumumanAdmin() {
     btn.innerText = "💾 Terbitkan Pengumuman";
 
     if (text.includes("SUCCESS")) {
-      alert("✅ Pengumuman berhasil diterbitkan!");
+      alert("✅ Pengumuman berhasil diterbitkan dengan titik lokasi presisi!");
       document.getElementById('formInputPengumuman').reset();
+      
+      // Reset juga input tersembunyi koordinat
+      if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
+      if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
+      
       muatDaftarPengumumanAdmin();
     } else {
       alert("❌ Gagal menyimpan: " + text);
@@ -2149,6 +2171,99 @@ async function toggleStatusPengumuman(rowIndex, statusBaru) {
     alert("❌ Error koneksi: " + err);
   }
 }
+
+// 1. Fungsi Pencarian Otomatis (Autocomplete) untuk Lokasi Pengumuman
+function cariLokasiPengumuman(keyword) {
+  var container = document.getElementById('hasilPencarianLokasi');
+  if (!keyword || keyword.trim() === '') {
+    container.style.display = 'none';
+    return;
+  }
+
+  var query = keyword.toLowerCase();
+  var sumberData = [];
+
+  // A. Ambil langsung dari variabel global rumah/peta yang aktif di halaman admin
+  if (typeof globalDataRumah !== 'undefined' && Array.isArray(globalDataRumah) && globalDataRumah.length > 0) {
+    // Format globalDataRumah dari Google Sheets: [nama, lat, lng, hidden, kategori, foto]
+    sumberData = globalDataRumah.map(function(row) {
+      return {
+        nama: row[0] || '',
+        lat: row[1] || '',
+        lng: row[2] || ''
+      };
+    });
+  } 
+  // B. Jika kosong, fallback ke cache localStorage
+  else {
+    try {
+      var raw = localStorage.getItem('cache_peta_admin') || localStorage.getItem('cache_data_warga');
+      if (raw) {
+        var parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          sumberData = parsed.slice(1).map(function(row) {
+            return {
+              nama: row[0] || '',
+              lat: row[1] || '',
+              lng: row[2] || ''
+            };
+          });
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  // Filter data berdasarkan ketikan (nama rumah / warga)
+  var hasil = sumberData.filter(function(item) {
+    return String(item.nama).toLowerCase().includes(query);
+  });
+
+  if (hasil.length === 0) {
+    container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Ketik bebas (Tidak ada data di peta)</div>`;
+    container.style.display = 'block';
+    return;
+  }
+
+  var html = '';
+  // Batasi maksimal 6 hasil teratas agar rapi
+  hasil.slice(0, 6).forEach(function(item) {
+    var namaTempat = item.nama;
+    var lat = item.lat;
+    var lng = item.lng;
+    
+    var safeNama = typeof escapeHTML === 'function' ? escapeHTML(namaTempat) : namaTempat;
+
+    // Saat diklik, nama masuk ke input teks dan koordinat lat/lng tersimpan di input tersembunyi
+    html += `
+      <div onclick="pilihLokasiPengumuman('${safeNama}', '${lat}', '${lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+        <strong>🏠 ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html;
+  container.style.display = 'block';
+}
+
+// 2. Fungsi saat salah satu rekomendasi diklik
+function pilihLokasiPengumuman(teksLokasi, lat, lng) {
+  document.getElementById('pengumumanLokasi').value = teksLokasi;
+  document.getElementById('pengumumanLat').value = lat;
+  document.getElementById('pengumumanLng').value = lng;
+  document.getElementById('hasilPencarianLokasi').style.display = 'none';
+}
+
+// 3. Menutup dropdown jika mengklik area luar
+document.addEventListener('click', function(e) {
+  var container = document.getElementById('hasilPencarianLokasi');
+  var input = document.getElementById('pengumumanLokasi');
+  if (container && input && !container.contains(e.target) && e.target !== input) {
+    container.style.display = 'none';
+  }
+});
+    
 
 var dataProgkerGlobal = [];
 
