@@ -2159,18 +2159,19 @@ async function toggleStatusPengumuman(rowIndex, statusBaru) {
   }
 }
 
-// Jalankan saat halaman admin siap untuk mengisi pilihan dropdown warga
-document.addEventListener("DOMContentLoaded", function() {
-  setTimeout(muatPilihanLokasiPresisi, 500);
-});
+// 1. Fungsi Pencarian Otomatis (Autocomplete) untuk Lokasi Pengumuman
+function cariLokasiPengumuman(keyword) {
+  var container = document.getElementById('hasilPencarianLokasi');
+  if (!keyword || keyword.trim() === '') {
+    container.style.display = 'none';
+    return;
+  }
 
-function muatPilihanLokasiPresisi() {
-  var selectElemen = document.getElementById('pengumumanLokasiSelect');
-  if (!selectElemen) return;
-
+  var query = keyword.toLowerCase();
   var sumberData = [];
+
+  // Mengambil data warga dari memori atau cache browser
   try {
-    // Mencari data warga dari berbagai kemungkinan cache localStorage
     var cachedKeys = ['cache_warga_rt05', 'dataWarga', 'warga_rt05', 'peta_warga'];
     for (var i = 0; i < cachedKeys.length; i++) {
       var raw = localStorage.getItem(cachedKeys[i]);
@@ -2186,36 +2187,58 @@ function muatPilihanLokasiPresisi() {
     console.error(e);
   }
 
-  var opsiHtml = '<option value="">-- Pilih Lokasi Acara / Rumah Warga --</option>';
-  opsiHtml += '<option value="Balai RT 05" data-lat="-7.77" data-lng="110.37">Balai RT 05</option>';
-  opsiHtml += '<option value="Pos Satpam RT 05" data-lat="-7.78" data-lng="110.38">Pos Satpam RT 05</option>';
-  
-  sumberData.forEach(function(item) {
-    var nama = item.nama || item.kepala_keluarga || item.nama_warga || '';
-    var noRumah = item.no_rumah || item.nomor_rumah || '';
+  // Filter data berdasarkan nama warga atau nomor rumah
+  var hasil = sumberData.filter(function(item) {
+    var nama = String(item.nama || item.kepala_keluarga || item.nama_warga || '').toLowerCase();
+    var noRumah = String(item.no_rumah || item.nomor_rumah || '').toLowerCase();
+    return nama.includes(query) || noRumah.includes(query);
+  });
+
+  if (hasil.length === 0) {
+    container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Gunakan teks bebas (Tidak ada data warga yang cocok)</div>`;
+    container.style.display = 'block';
+    return;
+  }
+
+  var html = '';
+  // Batasi maksimal 5 hasil teratas
+  hasil.slice(0, 5).forEach(function(item) {
+    var namaWarga = item.nama || item.kepala_keluarga || item.nama_warga || 'Warga';
+    var nomorRumah = item.no_rumah || item.nomor_rumah || '-';
     var lat = item.lat || item.latitude || '';
     var lng = item.lng || item.longitude || '';
     
-    if (nama) {
-      opsiHtml += `<option value="Rumah Bp/Ibu ${nama} (No. ${noRumah})" data-lat="${lat}" data-lng="${lng}">Rumah Bp/Ibu ${nama} (No. ${noRumah})</option>`;
-    }
+    var safeNama = typeof escapeHTML === 'function' ? escapeHTML(namaWarga) : namaWarga;
+    var safeRumah = typeof escapeHTML === 'function' ? escapeHTML(nomorRumah) : nomorRumah;
+
+    // Ketika diklik, teks lokasi terisi otomatis DAN koordinat lat/lng-nya langsung disimpan ke input tersembunyi
+    html += `
+      <div onclick="pilihLokasiPengumuman('Rumah Bp/Ibu ${safeNama} (No. ${safeRumah})', '${lat}', '${lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+        <strong>🏠 Bp/Ibu ${safeNama}</strong> <span style="color: #64748b;">(No. ${safeRumah})</span>
+      </div>
+    `;
   });
 
-  selectElemen.innerHTML = opsiHtml;
+  container.innerHTML = html;
+  container.style.display = 'block';
 }
 
-// Fungsi saat admin memilih salah satu opsi dari dropdown
-function pilihTitikLokasi(select) {
-  var selectedOption = select.options[select.selectedIndex];
-  var teksLokasi = select.value;
-  var lat = selectedOption.getAttribute('data-lat') || '';
-  var lng = selectedOption.getAttribute('data-lng') || '';
-
-  // Masukkan ke input tersembunyi
-  document.getElementById('pengumumanLokasiTeks').value = teksLokasi;
+// 2. Fungsi saat salah satu rekomendasi diklik
+function pilihLokasiPengumuman(teksLokasi, lat, lng) {
+  document.getElementById('pengumumanLokasi').value = teksLokasi;
   document.getElementById('pengumumanLat').value = lat;
   document.getElementById('pengumumanLng').value = lng;
+  document.getElementById('hasilPencarianLokasi').style.display = 'none';
 }
+
+// 3. Menutup dropdown jika mengklik area luar
+document.addEventListener('click', function(e) {
+  var container = document.getElementById('hasilPencarianLokasi');
+  var input = document.getElementById('pengumumanLokasi');
+  if (container && input && !container.contains(e.target) && e.target !== input) {
+    container.style.display = 'none';
+  }
+});
 
 var dataProgkerGlobal = [];
 
