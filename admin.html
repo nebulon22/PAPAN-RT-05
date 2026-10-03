@@ -2153,7 +2153,7 @@ async function toggleStatusPengumuman(rowIndex, statusBaru) {
   }
 }
 
-// 1. Fungsi untuk memfilter data warga saat admin mengetik di kolom lokasi pengumuman
+// 1. Fungsi Pencarian Lokasi Pengumuman (Diperbarui & Lebih Handal)
 function cariLokasiPengumuman(keyword) {
   var container = document.getElementById('hasilPencarianLokasi');
   if (!keyword || keyword.trim() === '') {
@@ -2163,8 +2163,20 @@ function cariLokasiPengumuman(keyword) {
 
   var query = keyword.toLowerCase();
   
-  // Mengambil sumber data warga (sesuaikan variabel global data warga Anda, misal: dataWargaGlobal atau dataPetaGlobal)
-  var sumberData = window.dataWargaGlobal || window.petaWargaGlobal || []; 
+  // Mengambil sumber data warga dari berbagai kemungkinan variabel global di aplikasi Anda
+  var sumberData = window.dataWargaGlobal || window.wargaList || window.semuaWarga || [];
+  
+  // Jika data di memori kosong, coba ambil dari localStorage cadangan
+  if (sumberData.length === 0) {
+    try {
+      var cachedWarga = localStorage.getItem('cache_warga_rt05') || localStorage.getItem('dataWarga');
+      if (cachedWarga) {
+        sumberData = JSON.parse(cachedWarga);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
 
   var hasil = sumberData.filter(function(item) {
     var nama = String(item.nama || item.kepala_keluarga || '').toLowerCase();
@@ -2173,7 +2185,9 @@ function cariLokasiPengumuman(keyword) {
   });
 
   if (hasil.length === 0) {
-    container.style.display = 'none';
+    // Jika tidak ditemukan di data warga, tetap tampilkan opsi teks bebas agar admin tetap bisa mengetik manual
+    container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Gunakan teks bebas (Tekan untuk pakai: "${escapeHTML(keyword)}")</div>`;
+    container.style.display = 'block';
     return;
   }
 
@@ -2183,7 +2197,7 @@ function cariLokasiPengumuman(keyword) {
     var nomorRumah = item.no_rumah || item.nomor_rumah || 'RT 05';
     
     html += `
-      <div onclick="pilihLokasiPengumuman('${escapeHTML(namaWarga)}', '${escapeHTML(nomorRumah)}')" style="padding: 6px 10px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+      <div onclick="pilihLokasiPengumuman('${escapeHTML(namaWarga)}', '${escapeHTML(nomorRumah)}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
         <strong>🏠 Bp/Ibu ${escapeHTML(namaWarga)}</strong> <span style="color: #64748b;">(No. ${escapeHTML(nomorRumah)})</span>
       </div>
     `;
