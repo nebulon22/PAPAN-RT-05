@@ -2072,12 +2072,17 @@ function muatDaftarPengumumanAdmin() {
   });
 }
 
-// Simpan Pengumuman Baru
+// Simpan Pengumuman Baru (Dengan Integrasi Koordinat Presisi)
 async function simpanPengumumanAdmin() {
   const tglInput = document.getElementById('pengumumanTanggal').value;
   const judul = document.getElementById('pengumumanJudul').value.trim();
   const detail = document.getElementById('pengumumanDetail').value.trim();
   const lokasi = document.getElementById('pengumumanLokasi').value.trim();
+  
+  // 1. AMBIL NILAI KOORDINAT DARI INPUT TERSEMBUNYI
+  const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
+  const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
+  
   const foto = document.getElementById('pengumumanFoto').value.trim();
   const tokenAdmin = localStorage.getItem('adminToken') || '';
 
@@ -2093,6 +2098,7 @@ async function simpanPengumumanAdmin() {
   btn.disabled = true;
   btn.innerText = "⏳ Menyimpan...";
 
+  // 2. SERTAKAN LAT & LNG KE DALAM PAYLOAD
   const payload = {
     token: tokenAdmin,
     action: 'kelolaPengumuman',
@@ -2101,11 +2107,13 @@ async function simpanPengumumanAdmin() {
     judul: judul,
     detail: detail,
     lokasi: lokasi,
+    lat: lat, // Kirim koordinat lintang
+    lng: lng, // Kirim koordinat bujur
     foto: foto
   };
 
   try {
-    const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
+    const res = await fetch(GAS_WEB_APP_URL, {
       method: "POST",
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload)
@@ -2116,8 +2124,13 @@ async function simpanPengumumanAdmin() {
     btn.innerText = "💾 Terbitkan Pengumuman";
 
     if (text.includes("SUCCESS")) {
-      alert("✅ Pengumuman berhasil diterbitkan!");
+      alert("✅ Pengumuman berhasil diterbitkan dengan titik lokasi presisi!");
       document.getElementById('formInputPengumuman').reset();
+      
+      // Reset juga input tersembunyi koordinat
+      if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
+      if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
+      
       muatDaftarPengumumanAdmin();
     } else {
       alert("❌ Gagal menyimpan: " + text);
@@ -2170,51 +2183,62 @@ function cariLokasiPengumuman(keyword) {
   var query = keyword.toLowerCase();
   var sumberData = [];
 
-  // Mengambil data warga dari memori atau cache browser
-  try {
-    var cachedKeys = ['cache_warga_rt05', 'dataWarga', 'warga_rt05', 'peta_warga'];
-    for (var i = 0; i < cachedKeys.length; i++) {
-      var raw = localStorage.getItem(cachedKeys[i]);
+  // A. Ambil langsung dari variabel global rumah/peta yang aktif di halaman admin
+  if (typeof globalDataRumah !== 'undefined' && Array.isArray(globalDataRumah) && globalDataRumah.length > 0) {
+    // Format globalDataRumah dari Google Sheets: [nama, lat, lng, hidden, kategori, foto]
+    sumberData = globalDataRumah.map(function(row) {
+      return {
+        nama: row[0] || '',
+        lat: row[1] || '',
+        lng: row[2] || ''
+      };
+    });
+  } 
+  // B. Jika kosong, fallback ke cache localStorage
+  else {
+    try {
+      var raw = localStorage.getItem('cache_peta_admin') || localStorage.getItem('cache_data_warga');
       if (raw) {
         var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          sumberData = parsed;
-          break;
+        if (Array.isArray(parsed)) {
+          sumberData = parsed.slice(1).map(function(row) {
+            return {
+              nama: row[0] || '',
+              lat: row[1] || '',
+              lng: row[2] || ''
+            };
+          });
         }
       }
+    } catch (e) {
+      console.error(e);
     }
-  } catch (e) {
-    console.error(e);
   }
 
-  // Filter data berdasarkan nama warga atau nomor rumah
+  // Filter data berdasarkan ketikan (nama rumah / warga)
   var hasil = sumberData.filter(function(item) {
-    var nama = String(item.nama || item.kepala_keluarga || item.nama_warga || '').toLowerCase();
-    var noRumah = String(item.no_rumah || item.nomor_rumah || '').toLowerCase();
-    return nama.includes(query) || noRumah.includes(query);
+    return String(item.nama).toLowerCase().includes(query);
   });
 
   if (hasil.length === 0) {
-    container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Gunakan teks bebas (Tidak ada data warga yang cocok)</div>`;
+    container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Ketik bebas (Tidak ada data di peta)</div>`;
     container.style.display = 'block';
     return;
   }
 
   var html = '';
-  // Batasi maksimal 5 hasil teratas
-  hasil.slice(0, 5).forEach(function(item) {
-    var namaWarga = item.nama || item.kepala_keluarga || item.nama_warga || 'Warga';
-    var nomorRumah = item.no_rumah || item.nomor_rumah || '-';
-    var lat = item.lat || item.latitude || '';
-    var lng = item.lng || item.longitude || '';
+  // Batasi maksimal 6 hasil teratas agar rapi
+  hasil.slice(0, 6).forEach(function(item) {
+    var namaTempat = item.nama;
+    var lat = item.lat;
+    var lng = item.lng;
     
-    var safeNama = typeof escapeHTML === 'function' ? escapeHTML(namaWarga) : namaWarga;
-    var safeRumah = typeof escapeHTML === 'function' ? escapeHTML(nomorRumah) : nomorRumah;
+    var safeNama = typeof escapeHTML === 'function' ? escapeHTML(namaTempat) : namaTempat;
 
-    // Ketika diklik, teks lokasi terisi otomatis DAN koordinat lat/lng-nya langsung disimpan ke input tersembunyi
+    // Saat diklik, nama masuk ke input teks dan koordinat lat/lng tersimpan di input tersembunyi
     html += `
-      <div onclick="pilihLokasiPengumuman('Rumah Bp/Ibu ${safeNama} (No. ${safeRumah})', '${lat}', '${lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-        <strong>🏠 Bp/Ibu ${safeNama}</strong> <span style="color: #64748b;">(No. ${safeRumah})</span>
+      <div onclick="pilihLokasiPengumuman('${safeNama}', '${lat}', '${lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+        <strong>🏠 ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
       </div>
     `;
   });
@@ -2239,6 +2263,7 @@ document.addEventListener('click', function(e) {
     container.style.display = 'none';
   }
 });
+    
 
 var dataProgkerGlobal = [];
 
