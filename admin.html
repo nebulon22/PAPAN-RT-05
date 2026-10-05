@@ -1680,19 +1680,18 @@ function bukaTutupLuarForm(e) {
     }
 
    
-    function simpanLaporanDivisi() {
+function simpanLaporanDivisi() {
   const tglInput = document.getElementById('laporanTanggal').value;
   const divisi = document.getElementById('laporanNamaDivisi').value;
   const jenis = document.getElementById('laporanJenis').value;
   const ket = document.getElementById('laporanKeterangan').value;
-  const pinDivisi = document.getElementById('laporanPinDivisi').value.trim(); // Ambil PIN Divisi
+  const pinDivisi = document.getElementById('laporanPinDivisi').value.trim();
   
   const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
   const nominal = parseInt(rawNominal, 10);
 
   const tokenAdmin = localStorage.getItem('adminToken') || '';
 
-  // Validasi wajib isi PIN Divisi
   if (!divisi || !ket || isNaN(nominal) || !tglInput || !pinDivisi) {
     alert('Harap isi semua kolom, termasuk PIN Khusus Divisi!');
     return;
@@ -1701,14 +1700,9 @@ function bukaTutupLuarForm(e) {
   const parts = tglInput.split('-');
   const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
-  const btnSimpan = document.getElementById('btnSimpanLaporan');
-  btnSimpan.disabled = true;
-  btnSimpan.innerText = 'Mengirim...';
-
-  // Kirim pinDivisi bersama payload
   const payload = {
     token: tokenAdmin,
-    pinDivisi: pinDivisi, // PIN khusus untuk verifikasi divisi di backend
+    pinDivisi: pinDivisi,
     action: 'tambahKeuangan',
     tanggalInput: tglFormatted,
     divisi: divisi,
@@ -1717,14 +1711,18 @@ function bukaTutupLuarForm(e) {
     nominal: parseInt(nominal)
   };
 
+  // 1. Jika perangkat offline, masukkan ke antrean lokal
   if (!navigator.onLine) {
-    btnSimpan.disabled = false;
-    btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
     simpanPayloadKeAntrean('Laporan Keuangan', payload);
     tutupModalLaporan();
+    alert('📴 Anda sedang offline. Laporan disimpan ke antrean dan akan dikirim otomatis saat tersambung ke internet.');
     return;
   }
 
+  // 2. Optimistic UI: Langsung tutup modal secara instan agar tidak macet
+  tutupModalLaporan();
+  
+  // 3. Kirim ke Google Apps Script di latar belakang (Background)
   fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1733,19 +1731,15 @@ function bukaTutupLuarForm(e) {
   .then(res => res.text())
   .then(result => {
     if(result.includes('SUCCESS')) {
-      alert('✅ Laporan Keuangan ' + divisi + ' berhasil dicatat!');
-      tutupModalLaporan();
+      console.log('✅ Laporan Keuangan ' + divisi + ' berhasil dicatat di server.');
     } else {
-      alert('❌ Gagal mengirim: ' + result);
+      console.warn('❌ Gagal di server, memasukkan ke antrean offline:', result);
+      simpanPayloadKeAntrean('Laporan Keuangan', payload);
     }
   })
   .catch(err => {
+    // Jika koneksi terputus di tengah jalan, amankan ke antrean offline
     simpanPayloadKeAntrean('Laporan Keuangan', payload);
-    tutupModalLaporan();
-  })
-  .finally(() => {
-    btnSimpan.disabled = false;
-    btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
   });
 }
 
