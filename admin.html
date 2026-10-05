@@ -1711,18 +1711,21 @@ function simpanLaporanDivisi() {
     nominal: parseInt(nominal)
   };
 
-  // 1. Jika perangkat offline, masukkan ke antrean lokal
+  // 1. Jika perangkat offline, masukkan ke antrean lokal dan beri tahu warga
   if (!navigator.onLine) {
     simpanPayloadKeAntrean('Laporan Keuangan', payload);
     tutupModalLaporan();
-    alert('📴 Anda sedang offline. Laporan disimpan ke antrean dan akan dikirim otomatis saat tersambung ke internet.');
+    alert('📴 Anda sedang offline. Laporan disimpan ke antrean lokal.');
     return;
   }
 
-  // 2. Optimistic UI: Langsung tutup modal secara instan agar tidak macet
+  // 2. Langsung tutup modal agar terasa instan & responsif
   tutupModalLaporan();
   
-  // 3. Kirim ke Google Apps Script di latar belakang (Background)
+  // Berikan notifikasi kilat bahwa laporan sedang diproses/terkirim
+  alert('✅ Laporan Keuangan ' + divisi + ' sedang dikirim...');
+
+  // 3. Kirim ke Google Apps Script di latar belakang
   fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1738,7 +1741,6 @@ function simpanLaporanDivisi() {
     }
   })
   .catch(err => {
-    // Jika koneksi terputus di tengah jalan, amankan ke antrean offline
     simpanPayloadKeAntrean('Laporan Keuangan', payload);
   });
 }
