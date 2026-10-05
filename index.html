@@ -83,311 +83,334 @@ function perbaruiAplikasiSekarang() {
    
 </script>
 
-  <style>
-    html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; }
-    #map { width: 100%; height: 100vh; }
-    
-    .btn-back-floating {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      z-index: 1001;
-      background: #111827;
-      color: #fff !important;
-      padding: 8px 14px;
-      border-radius: 20px;
-      text-decoration: none;
-      font-size: 12px;
-      font-weight: bold;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .btn-rute {
-      display: inline-block;
-      margin-top: 8px;
-      padding: 6px 12px;
-      background-color: #00c853;
-      color: white !important;
-      text-decoration: none;
-      border-radius: 4px;
-      font-size: 12px;
-      font-weight: bold;
-      text-align: center;
-    }
-    .custom-pin { background: none; border: none; }
-
-    .img-popup {
-      width: 100%;
-      max-height: 140px;
-      object-fit: cover;
-      border-radius: 6px;
-      margin-top: 6px;
-      border: 1px solid #ddd;
-      cursor: pointer;
-      transition: transform 0.2s ease;
-    }
-    .img-popup:hover { opacity: 0.9; }
-
-    #top-panel {
-      position: absolute;
-      top: 70px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      width: 86%;
-      max-width: 340px;
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    #search-box {
-      background: white;
-      padding: 8px 10px;
-      border-radius: 8px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      display: flex;
-      gap: 6px;
-    }
-    #searchInput {
-      flex: 1;
-      padding: 8px;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-      font-size: 13px;
-      outline: none;
-    }
-    #search-box button {
-      padding: 8px 12px;
-      background: #111;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      cursor: pointer;
-      font-weight: bold;
-      font-size: 13px;
-    }
-
-    .filter-container {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      width: 100%;
-    }
-    .filter-row {
-      display: flex;
-      gap: 6px;
-      width: 100%;
-    }
-
-    .btn-filter {
-      flex: 1;
-      justify-content: center;
-      padding: 6px 12px;
-      background: white;
-      color: #333;
-      border: 1px solid #ccc;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: bold;
-      cursor: pointer;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      white-space: nowrap;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .btn-filter.active {
-      background: #00c853;
-      color: white;
-      border-color: #00c853;
-    }
-
-    .btn-info-rt {
-      background: #ff9800;
-      color: white;
-      border-color: #f57c00;
-    }
-
-    .badge-count {
-      background: #d32f2f;
-      color: white;
-      font-size: 10px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      font-weight: bold;
-    }
-
-    .modal-bg {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5);
-      z-index: 2000;
-      align-items: center;
-      justify-content: center;
-    }
-    .modal-content {
-      background: white;
-      width: 90%;
-      max-width: 400px;
-      max-height: 75vh;
-      border-radius: 12px;
-      padding: 16px;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-      display: flex;
-      flex-direction: column;
-    }
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 8px;
-      margin-bottom: 12px;
-    }
-    .modal-header h3 { margin: 0; font-size: 16px; color: #111; }
-    .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #777; font-weight: bold; }
-    .modal-body { overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 12px; }
-    
-    .card-info {
-      background: #fdfdfd;
-      border: 1px solid #e0e0e0;
-      border-left: 4px solid #ff9800;
-      padding: 10px 12px;
-      border-radius: 6px;
-    }
-    .card-info .tgl { font-size: 11px; color: #777; font-weight: bold; }
-    .card-info .judul { font-size: 14px; font-weight: bold; margin: 4px 0; color: #222; }
-    .card-info .detail { font-size: 12.5px; color: #444; margin-bottom: 8px; line-height: 1.4; white-space: pre-line; }
-    
-    .btn-lihat-lokasi {
-      display: inline-block;
-      font-size: 11px;
-      padding: 6px 10px;
-      background: #0288d1;
-      color: white;
-      border-radius: 4px;
-      border: none;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    .modal-foto-bg {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; 
-      width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      z-index: 3000;
-      align-items: center;
-      justify-content: center;
-      padding: 10px;
-      box-sizing: border-box;
-      touch-action: manipulation;
-    }
-    .modal-foto-img {
-      max-width: 95%;
-      max-height: 85vh;
-      border-radius: 8px;
-      object-fit: contain;
-      box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
-    }
-
-    .btn-qr-floating {
-      position: fixed;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1500;
-      width: 65px;
-      height: 65px;
-      background-color: #0288d1;
-      color: white;
-      border: none;
-      border-radius: 16px;
-      box-shadow: 0 6px 16px rgba(0,0,0,0.35);
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      padding: 4px;
-    }
-
-    .btn-qr-floating::before {
-      content: '';
-      position: absolute;
-      top: 8px; left: 8px; right: 8px; bottom: 8px;
-      pointer-events: none;
-      background-image: 
-        linear-gradient(to right, #ffffff 3px, transparent 3px),
-        linear-gradient(to bottom, #ffffff 3px, transparent 3px),
-        linear-gradient(to left, #ffffff 3px, transparent 3px),
-        linear-gradient(to bottom, #ffffff 3px, transparent 3px),
-        linear-gradient(to right, #ffffff 3px, transparent 3px),
-        linear-gradient(to top, #ffffff 3px, transparent 3px),
-        linear-gradient(to left, #ffffff 3px, transparent 3px),
-        linear-gradient(to top, #ffffff 3px, transparent 3px);
-      background-position: 
-        0 0, 0 0, 
-        100% 0, 100% 0, 
-        0 100%, 0 100%, 
-        100% 100%, 100% 100%;
-      background-size: 10px 10px;
-      background-repeat: no-repeat;
-    }
-
-    .btn-qr-floating span {
-      font-size: 9px;
-      font-weight: bold;
-      line-height: 1;
-      margin-top: 2px;
-    }
-
-@keyframes pulse {
-  0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-  70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
-  100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-}
-
-@keyframes pulseText {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); }
-  100% { transform: scale(1); }
-}
-    @keyframes floatPulse {
-  0% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0.7));
+ <style>
+  html, body { 
+    margin: 0; 
+    padding: 0; 
+    height: 100%; 
+    font-family: sans-serif; 
+    overflow: hidden; /* Mencegah halaman utama/peta ikut scroll saat modal terbuka */
   }
-  50% {
-    transform: scale(1.08);
-    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+  #map { width: 100%; height: 100vh; }
+  
+  .btn-back-floating {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    z-index: 1001;
+    background: #111827;
+    color: #fff !important;
+    padding: 8px 14px;
+    border-radius: 20px;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    gap: 4px;
   }
-  100% {
-    transform: scale(1);
-    filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
+
+  .btn-rute {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 6px 12px;
+    background-color: #00c853;
+    color: white !important;
+    text-decoration: none;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: bold;
+    text-align: center;
   }
-}
+  .custom-pin { background: none; border: none; }
 
-/* Efek Memutar Video 90 Derajat (Landscape CSS Rotate) */
-.video-rotated {
-  transform: rotate(90deg) !important;
-  /* Tukar dimensi agar pas dengan layar HP */
-  width: 100vh !important;
-  height: 100vw !important;
-  max-width: 100vh !important;
-  max-height: 100vw !important;
-  object-fit: contain !important;
-  transition: transform 0.3s ease !important;
-}
+  .img-popup {
+    width: 100%;
+    max-height: 140px;
+    object-fit: cover;
+    border-radius: 6px;
+    margin-top: 6px;
+    border: 1px solid #ddd;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+  .img-popup:hover { opacity: 0.9; }
 
-  </style>
+  #top-panel {
+    position: absolute;
+    top: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 86%;
+    max-width: 340px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #search-box {
+    background: white;
+    padding: 8px 10px;
+    border-radius: 8px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    display: flex;
+    gap: 6px;
+  }
+  #searchInput {
+    flex: 1;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    font-size: 13px;
+    outline: none;
+  }
+  #search-box button {
+    padding: 8px 12px;
+    background: #111;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 13px;
+  }
+
+  .filter-container {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    width: 100%;
+  }
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .btn-filter {
+    flex: 1;
+    justify-content: center;
+    padding: 6px 12px;
+    background: white;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    white-space: nowrap;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-filter.active {
+    background: #00c853;
+    color: white;
+    border-color: #00c853;
+  }
+
+  .btn-info-rt {
+    background: #ff9800;
+    color: white;
+    border-color: #f57c00;
+  }
+
+  .badge-count {
+    background: #d32f2f;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: bold;
+  }
+
+  /* --- PERBAIKAN UTAMA MODAL --- */
+  .modal-bg {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 2000;
+    align-items: center;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+  }
+  
+  .modal-content {
+    background: white;
+    width: 92%;
+    max-width: 420px;
+    max-height: 82vh; /* Batasi tinggi maksimum modal agar pas di layar HP */
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+    display: flex;
+    flex-direction: column;
+    box-sizing: border-box;
+    overflow: hidden; /* Mencegah kotak modal meluber keluar */
+  }
+
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+    flex-shrink: 0; /* Header dikunci agar tidak ikut menyusut/bergeser */
+  }
+  
+  .modal-header h3 { margin: 0; font-size: 16px; color: #111; }
+  .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #777; font-weight: bold; }
+  
+  .modal-body { 
+    overflow-y: auto; /* Memunculkan scrollbar vertikal mandiri */
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 12px;
+    padding-right: 4px;
+    -webkit-overflow-scrolling: touch; /* Efek scroll halus di perangkat iOS */
+  }
+  /* ------------------------------ */
+  
+  .card-info {
+    background: #fdfdfd;
+    border: 1px solid #e0e0e0;
+    border-left: 4px solid #ff9800;
+    padding: 10px 12px;
+    border-radius: 6px;
+  }
+  .card-info .tgl { font-size: 11px; color: #777; font-weight: bold; }
+  .card-info .judul { font-size: 14px; font-weight: bold; margin: 4px 0; color: #222; }
+  .card-info .detail { font-size: 12.5px; color: #444; margin-bottom: 8px; line-height: 1.4; white-space: pre-line; }
+  
+  .btn-lihat-lokasi {
+    display: inline-block;
+    font-size: 11px;
+    padding: 6px 10px;
+    background: #0288d1;
+    color: white;
+    border-radius: 4px;
+    border: none;
+    cursor: pointer;
+    font-weight: bold;
+  }
+
+  .modal-foto-bg {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; 
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 3000;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    box-sizing: border-box;
+    touch-action: manipulation;
+  }
+  .modal-foto-img {
+    max-width: 95%;
+    max-height: 85vh;
+    border-radius: 8px;
+    object-fit: contain;
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+  }
+
+  .btn-qr-floating {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1500;
+    width: 65px;
+    height: 65px;
+    background-color: #0288d1;
+    color: white;
+    border: none;
+    border-radius: 16px;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+  }
+
+  .btn-qr-floating::before {
+    content: '';
+    position: absolute;
+    top: 8px; left: 8px; right: 8px; bottom: 8px;
+    pointer-events: none;
+    background-image: 
+      linear-gradient(to right, #ffffff 3px, transparent 3px),
+      linear-gradient(to bottom, #ffffff 3px, transparent 3px),
+      linear-gradient(to left, #ffffff 3px, transparent 3px),
+      linear-gradient(to bottom, #ffffff 3px, transparent 3px),
+      linear-gradient(to right, #ffffff 3px, transparent 3px),
+      linear-gradient(to top, #ffffff 3px, transparent 3px),
+      linear-gradient(to left, #ffffff 3px, transparent 3px),
+      linear-gradient(to top, #ffffff 3px, transparent 3px);
+    background-position: 
+      0 0, 0 0, 
+      100% 0, 100% 0, 
+      0 100%, 0 100%, 
+      100% 100%, 100% 100%;
+    background-size: 10px 10px;
+    background-repeat: no-repeat;
+  }
+
+  .btn-qr-floating span {
+    font-size: 9px;
+    font-weight: bold;
+    line-height: 1;
+    margin-top: 2px;
+  }
+
+  @keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  }
+
+  @keyframes pulseText {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+  }
+  
+  @keyframes floatPulse {
+    0% {
+      transform: scale(1);
+      filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0.7));
+    }
+    50% {
+      transform: scale(1.08);
+      filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
+    }
+    100% {
+      transform: scale(1);
+      filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
+    }
+  }
+
+  .video-rotated {
+    transform: rotate(90deg) !important;
+    width: 100vh !important;
+    height: 100vw !important;
+    max-width: 100vh !important;
+    max-height: 100vw !important;
+    object-fit: contain !important;
+    transition: transform 0.3s ease !important;
+  }
+</style>
 </head>
 <body>
  <!-- Container Navigasi Pojok Kanan Atas -->
@@ -484,7 +507,7 @@ function perbaruiAplikasiSekarang() {
   <label for="filterDivisi" style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
   <select id="filterDivisi" onchange="tampilkanRekeningKoran()" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
     <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
-    <option value="tenda dan perkakas">Tenda dan Perkakas</option>
+    <option value="tenda">Tenda</option>
     <option value="sound system">Sound System</option>
     <option value="sosial">Sosial</option>
     <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>

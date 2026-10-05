@@ -237,18 +237,14 @@
     </button>
   </div>
 
-     <!-- Tombol Tab Navigasi Admin -->
-<div class="filter-row">
-  <button type="button" class="btn-filter" style="background: #111827; color: white; border-color: #374151; width: 100%;" onclick="bukaTabAdmin('progker')">
-    📋 Progker & RAB
-  </button>
-</div>
 </div>
 
-<!-- Tombol Buka Modal Pengumuman -->
-<div class="filter-row" style="margin-top: 6px;">
-  <button type="button" class="btn-filter" style="background: #f59e0b; color: white; border-color: #d97706; width: 100%;" onclick="bukaModalPengumumanAdmin()">
-    📢 Kelola & Tambah Pengumuman
+<div class="filter-row" style="display: flex; gap: 6px; width: 100%;">
+  <button type="button" class="btn-filter" style="flex: 1; background: #f59e0b; color: white; border-color: #d97706;" onclick="bukaTabAdmin('progker')">
+    📋 Progker & RAB
+  </button>
+  <button type="button" class="btn-filter" style="flex: 1; background: #f59e0b; color: white; border-color: #d97706;" onclick="bukaModalPengumumanAdmin()">
+    📢 Kelola Pengumuman
   </button>
 </div>
 
@@ -449,7 +445,7 @@
           <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
             <option value="">-- Pilih Divisi / Pos --</option>
             <option value="sosial">Sosial</option>
-            <option value="tenda dan perkakas">Tenda dan Perkakas</option>
+            <option value="tenda">Tenda</option>
             <option value="sound system">Sound System</option>
             <option value="pondokan rt 05">Pondokan RT 05</option>
             <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
@@ -757,7 +753,7 @@
       <option value="Tata Ruang">Divisi Tata Ruang</option>
       <option value="Sosial">Divisi Sosial</option>
       <option value="Ronda Harian & Keamanan">Divisi Ronda Harian & Keamanan</option>
-      <option value="Tenda dan Perkakas">Divisi Tenda dan Perkakas</option>
+      <option value="Tenda">Divisi Tenda</option>
       <option value="Sound System">Divisi Sound System</option>
       <option value="Transportasi">Divisi Transportasi</option>
       <option value="Jimpitan Bulanan & Pengganti Ronda">Divisi Jimpitan Bulanan & Pengganti Ronda</option>
@@ -1680,19 +1676,18 @@ function bukaTutupLuarForm(e) {
     }
 
    
-    function simpanLaporanDivisi() {
+function simpanLaporanDivisi() {
   const tglInput = document.getElementById('laporanTanggal').value;
   const divisi = document.getElementById('laporanNamaDivisi').value;
   const jenis = document.getElementById('laporanJenis').value;
   const ket = document.getElementById('laporanKeterangan').value;
-  const pinDivisi = document.getElementById('laporanPinDivisi').value.trim(); // Ambil PIN Divisi
+  const pinDivisi = document.getElementById('laporanPinDivisi').value.trim();
   
   const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
   const nominal = parseInt(rawNominal, 10);
 
   const tokenAdmin = localStorage.getItem('adminToken') || '';
 
-  // Validasi wajib isi PIN Divisi
   if (!divisi || !ket || isNaN(nominal) || !tglInput || !pinDivisi) {
     alert('Harap isi semua kolom, termasuk PIN Khusus Divisi!');
     return;
@@ -1701,14 +1696,9 @@ function bukaTutupLuarForm(e) {
   const parts = tglInput.split('-');
   const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
-  const btnSimpan = document.getElementById('btnSimpanLaporan');
-  btnSimpan.disabled = true;
-  btnSimpan.innerText = 'Mengirim...';
-
-  // Kirim pinDivisi bersama payload
   const payload = {
     token: tokenAdmin,
-    pinDivisi: pinDivisi, // PIN khusus untuk verifikasi divisi di backend
+    pinDivisi: pinDivisi,
     action: 'tambahKeuangan',
     tanggalInput: tglFormatted,
     divisi: divisi,
@@ -1717,14 +1707,21 @@ function bukaTutupLuarForm(e) {
     nominal: parseInt(nominal)
   };
 
+  // 1. Jika perangkat offline, masukkan ke antrean lokal dan beri tahu warga
   if (!navigator.onLine) {
-    btnSimpan.disabled = false;
-    btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
     simpanPayloadKeAntrean('Laporan Keuangan', payload);
     tutupModalLaporan();
+    alert('📴 Anda sedang offline. Laporan disimpan ke antrean lokal.');
     return;
   }
 
+  // 2. Langsung tutup modal agar terasa instan & responsif
+  tutupModalLaporan();
+  
+  // Berikan notifikasi kilat bahwa laporan sedang diproses/terkirim
+  alert('✅ Laporan Keuangan ' + divisi + ' sedang dikirim...');
+
+  // 3. Kirim ke Google Apps Script di latar belakang
   fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -1733,19 +1730,14 @@ function bukaTutupLuarForm(e) {
   .then(res => res.text())
   .then(result => {
     if(result.includes('SUCCESS')) {
-      alert('✅ Laporan Keuangan ' + divisi + ' berhasil dicatat!');
-      tutupModalLaporan();
+      console.log('✅ Laporan Keuangan ' + divisi + ' berhasil dicatat di server.');
     } else {
-      alert('❌ Gagal mengirim: ' + result);
+      console.warn('❌ Gagal di server, memasukkan ke antrean offline:', result);
+      simpanPayloadKeAntrean('Laporan Keuangan', payload);
     }
   })
   .catch(err => {
     simpanPayloadKeAntrean('Laporan Keuangan', payload);
-    tutupModalLaporan();
-  })
-  .finally(() => {
-    btnSimpan.disabled = false;
-    btnSimpan.innerText = '📤 Kirim Laporan Keuangan';
   });
 }
 
