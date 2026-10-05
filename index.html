@@ -996,6 +996,22 @@ function perbaruiAplikasiSekarang() {
       modal.style.display = 'none';
     }
   }
+
+// Fungsi untuk memperbarui Badge pada Ikon Aplikasi PWA (Home Screen)
+function updatePWABadge(totalUnread) {
+  if ('setAppBadge' in navigator) {
+    try {
+      if (totalUnread > 0) {
+        navigator.setAppBadge(totalUnread).catch(err => console.log("Badge PWA error:", err));
+      } else {
+        navigator.clearAppBadge().catch(err => console.log("Clear badge error:", err));
+      }
+    } catch (e) {
+      // Abaikan jika browser tidak mendukung
+    }
+  }
+}
+    
   </script>
     
   <script src="html5-qrcode.min.js"></script>
@@ -2012,7 +2028,7 @@ function tutupModalInventaris() {
       }
     });
 
-   // Mendengarkan Pembaruan Badge Unread dari iframe chat.html
+// Mendengarkan Pembaruan Badge Unread dari iframe chat.html
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
       const badge = document.getElementById('badge-chat-main');
@@ -2027,6 +2043,19 @@ function tutupModalInventaris() {
           badge.style.display = 'inline-block';
         } else {
           badge.style.display = 'none';
+        }
+      }
+
+      // 🛠️ TAMBAHAN: Update badge ikon aplikasi PWA di Home Screen HP
+      if ('setAppBadge' in navigator) {
+        try {
+          if (count > 0 && !isModalOpen) {
+            navigator.setAppBadge(count).catch(err => console.log(err));
+          } else {
+            navigator.clearAppBadge().catch(err => console.log(err));
+          }
+        } catch (e) {
+          // Abaikan jika browser tidak mendukung
         }
       }
     }
