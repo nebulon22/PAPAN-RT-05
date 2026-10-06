@@ -1262,19 +1262,30 @@ document.addEventListener('visibilitychange', () => {
       });
     }
 
-    // 1. Minta izin & ambil token FCM perangkat warga
+  // 1. Minta izin & daftarkan Service Worker untuk FCM Token perangkat warga
     async function initFCMToken(userId) {
       try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-          const currentToken = await getToken(messaging, {
-            vapidKey: 'BIrL-XRxrSpZ65J-fzMfO3_nMm9RWUx9U55mhy3jGQURAEr1gPD7yKzHWGxAoFa5UsYoyj5_BKTSnUbKTYeVG4w'
-          });
-          
-          if (currentToken) {
-            // Simpan token perangkat ke database Firebase berdasarkan UID user
-            set(ref(db, `users/${userId}/fcmToken`), currentToken);
+          // Pastikan Service Worker terdaftar terlebih dahulu agar tidak eror
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            console.log('Service Worker untuk FCM berhasil didaftarkan:', registration.scope);
+
+            // Ambil token dengan menyertakan objek pendaftaran service worker
+            const currentToken = await getToken(messaging, {
+              vapidKey: 'BIrL-XRxrSpZ65J-fzMfO3_nMm9RWUx9U55mhy3jGQURAEr1gPD7yKzHWGxAoFa5UsYoyj5_BKTSnUbKTYeVG4w',
+              serviceWorkerRegistration: registration
+            });
+            
+            if (currentToken) {
+              // Simpan token perangkat ke database Firebase berdasarkan UID user
+              await set(ref(db, `users/${userId}/fcmToken`), currentToken);
+              console.log('FCM Token berhasil disimpan ke database.');
+            }
           }
+        } else {
+          console.log('Izin notifikasi ditolak oleh pengguna.');
         }
       } catch (err) {
         console.log("Gagal mendapatkan FCM Token:", err);
