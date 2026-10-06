@@ -509,6 +509,9 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+   // 👇 TAMBAHKAN MODUL FIREBASE MESSAGING DI SINI 👇
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
       authDomain: "papan05-21a56.firebaseapp.com",
@@ -521,6 +524,9 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    
+    // 👇 INISIALISASI MESSAGING DI SINI 👇
+    const messaging = getMessaging(app);
 
     let currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
     let allUsersCache = {};
@@ -560,6 +566,9 @@
       }
     });
 
+
+
+    
     // === PENDETEKSI MODAL TERBUKA/TIDAK ===
     let isChatVisible = true;
 
@@ -1252,6 +1261,31 @@ document.addEventListener('visibilitychange', () => {
         renderWargaSidebar();
       });
     }
+
+    // 1. Minta izin & ambil token FCM perangkat warga
+    async function initFCMToken(userId) {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          const currentToken = await getToken(messaging, {
+            vapidKey: 'MASUKKAN_VAPID_KEY_ANDA_DARI_FIREBASE_CONSOLE_DI_SINI'
+          });
+          
+          if (currentToken) {
+            // Simpan token perangkat ke database Firebase berdasarkan UID user
+            set(ref(db, `users/${userId}/fcmToken`), currentToken);
+          }
+        }
+      } catch (err) {
+        console.log("Gagal mendapatkan FCM Token:", err);
+      }
+    }
+
+    // 2. Tangkap pesan saat aplikasi SEDANG DIBUKA (Foreground)
+    onMessage(messaging, (payload) => {
+      console.log('Pesan diterima saat aplikasi aktif:', payload);
+      playKlingSound(); // Bunyikan suara notifikasi Anda
+    });
         
     function checkUserStatus() {
       const chatContainer = document.getElementById('chat-container');
@@ -1309,6 +1343,7 @@ document.addEventListener('visibilitychange', () => {
           listenAllPrivateChats();
           listenPublicGroupUnread(); // <--- Hitung unread dari localStorage sebelum ditimpa!
           requestNotificationPermission();
+          initFCMToken(currentUser.uid);
 
           // 2. Set ruang aktif ke public TANPA langsung menandainya sebagai 'read' secara paksa
           activeChatType = 'public';
