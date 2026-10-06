@@ -1036,16 +1036,26 @@ document.addEventListener('visibilitychange', () => {
     };
     
    // Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
-    let lastPublicUnreadCount = 0;
+   let lastPublicUnreadCount = 0;
 
     function sendTotalUnreadToParent() {
+      // 1. Hitung total unread dari semua room private chat yang aktif
+      let totalPrivateUnread = 0;
+      Object.keys(unreadCounts).forEach(uid => {
+        totalPrivateUnread += (unreadCounts[uid] || 0);
+      });
+
+      // 2. Gabungkan unread grup publik + total unread private chat
+      let grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
+
+      // 3. Kirim total gabungan ini ke index.html agar badge PWA & tombol ikut akurat
       window.parent.postMessage({
         type: 'RT05_CHAT_UNREAD_UPDATE',
-        unreadPublicCount: lastPublicUnreadCount // Hanya kirim grup publik
+        unreadPublicCount: grandTotalUnread // Mengirim total keseluruhan (Grup + Private)
       }, '*');
     }
 
-    // Perbarui juga sendUnreadCountToParent agar mengingat angka public
+    // Perbarui juga fungsi penampung unread publik agar otomatis mentrigger pengiriman total
     function sendUnreadCountToParent(count) {
       lastPublicUnreadCount = count || 0;
       sendTotalUnreadToParent();
