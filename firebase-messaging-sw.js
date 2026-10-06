@@ -21,7 +21,10 @@ messaging.onBackgroundMessage((payload) => {
   const notificationTitle = payload.notification.title || 'Pesan Baru RT 05';
   const notificationOptions = {
     body: payload.notification.body || 'Ada pesan baru masuk.',
-    icon: './kentongan-slit-drum.png'
+    icon: './kentongan-slit-drum.png',
+    badge: './kentongan-slit-drum.png', // Menyalakan lencana/badge pada ikon sistem
+    tag: 'rt05-chat-notif',              // Mencegah notifikasi menumpuk berlebihan
+    renotify: true
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);
