@@ -749,7 +749,7 @@ document.addEventListener('visibilitychange', () => {
 
     function loadPrivateChatStream(targetUID) {
       const roomID = [currentUser.uid, targetUID].sort().join('_');
-      const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
+      const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(500));
       const chatStream = document.getElementById('chat-stream');
 
       currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
@@ -966,7 +966,7 @@ document.addEventListener('visibilitychange', () => {
         publicGroupListener = null;
       }
 
-      const chatsRef = query(ref(db, 'chats'), limitToLast(80));
+      const chatsRef = query(ref(db, 'chats'), limitToLast(500));
 
       publicGroupListener = onValue(chatsRef, (snapshot) => {
         if (!snapshot.exists()) {
@@ -1464,7 +1464,7 @@ document.addEventListener('visibilitychange', () => {
     let isInitialPublicChatLoaded = false;
 
     function loadChatStream() {
-      const chatRef = query(ref(db, 'chats'), limitToLast(80));
+      const chatRef = query(ref(db, 'chats'), limitToLast(500));
       const chatStream = document.getElementById('chat-stream');
 
       currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
