@@ -1,3 +1,36 @@
+// --- 0. IMPOR FIREBASE UNTUK PUSH NOTIFICATION ---
+importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
+
+firebase.initializeApp({
+  apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
+  authDomain: "papan05-21a56.firebaseapp.com",
+  databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "papan05-21a56",
+  storageBucket: "papan05-21a56.firebasestorage.app",
+  messagingSenderId: "1068108426437",
+  appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
+});
+
+const messaging = firebase.messaging();
+
+// Menangani background push notification
+messaging.onBackgroundMessage((payload) => {
+  console.log('[sw.js] Menerima pesan background:', payload);
+  
+  const notificationTitle = payload.notification.title || 'Pesan Baru RT 05';
+  const notificationOptions = {
+    body: payload.notification.body || 'Ada pesan baru masuk.',
+    icon: './kentongan-slit-drum.png',
+    badge: './kentongan-slit-drum.png',
+    tag: 'rt05-chat-notif',
+    renotify: true
+  };
+
+  self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// --- KODE ASLI SW.JS ANDA DI BAWAH INI ---
 const CACHE_NAME = 'rt-kayen-v1.5.2'; // <--- Naikkan versi saat update
 
 self.addEventListener('install', (e) => {
@@ -49,8 +82,6 @@ self.addEventListener('fetch', (event) => {
   ) {
     event.respondWith(
       fetch(event.request).catch((err) => {
-        // Jika request media terputus/dibatalkan, kembalikan dari cache jika ada,
-        // atau biarkan Response 404 standar agar browser tidak melempar error kustom 480
         return caches.match(event.request).then((cached) => {
           return cached || new Response(null, { status: 404, statusText: 'Not Found' });
         });
