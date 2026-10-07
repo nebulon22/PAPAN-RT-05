@@ -1262,17 +1262,18 @@ document.addEventListener('visibilitychange', () => {
       });
     }
 
-  // 1. Minta izin & daftarkan Service Worker untuk FCM Token perangkat warga
+
+   // 1. Minta izin & gunakan Service Worker utama untuk FCM Token perangkat warga
     async function initFCMToken(userId) {
       try {
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
-          // Pastikan Service Worker terdaftar terlebih dahulu agar tidak eror
+          // Pastikan Service Worker utama (sw.js) sudah aktif di browser
           if ('serviceWorker' in navigator) {
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            console.log('Service Worker untuk FCM berhasil didaftarkan:', registration.scope);
+            const registration = await navigator.serviceWorker.ready;
+            console.log('Menggunakan Service Worker utama yang aktif untuk FCM:', registration.scope);
 
-            // Ambil token dengan menyertakan objek pendaftaran service worker
+            // Ambil token dengan menyertakan pendaftaran Service Worker utama
             const currentToken = await getToken(messaging, {
               vapidKey: 'BIrL-XRxrSpZ65J-fzMfO3_nMm9RWUx9U55mhy3jGQURAEr1gPD7yKzHWGxAoFa5UsYoyj5_BKTSnUbKTYeVG4w',
               serviceWorkerRegistration: registration
