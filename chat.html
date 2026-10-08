@@ -1047,7 +1047,7 @@ document.addEventListener('visibilitychange', () => {
    // Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
    let lastPublicUnreadCount = 0;
 
-    function sendTotalUnreadToParent() {
+   function sendTotalUnreadToParent() {
       // 1. Hitung total unread dari semua room private chat yang aktif
       let totalPrivateUnread = 0;
       Object.keys(unreadCounts).forEach(uid => {
@@ -1057,13 +1057,30 @@ document.addEventListener('visibilitychange', () => {
       // 2. Gabungkan unread grup publik + total unread private chat
       let grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
 
-      // 3. Kirim total gabungan ini ke index.html agar badge PWA & tombol ikut akurat
+      // 3. 🛠️ TAMBAHAN: Update langsung App Badge dari chat.html jika didukung browser
+      if ('setAppBadge' in navigator) {
+        try {
+          const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
+          const isModalOpen = (modal && modal.style.display === 'flex');
+
+          if (grandTotalUnread > 0 && !isModalOpen) {
+            navigator.setAppBadge(grandTotalUnread).catch(err => console.log(err));
+          } else {
+            navigator.clearAppBadge().catch(err => console.log(err));
+          }
+        } catch (e) {
+          // Abaikan jika browser tidak mendukung
+        }
+      }
+
+      // 4. Kirim total gabungan ini ke index.html agar badge tombol ikut akurat
       window.parent.postMessage({
         type: 'RT05_CHAT_UNREAD_UPDATE',
-        unreadPublicCount: grandTotalUnread // Mengirim total keseluruhan (Grup + Private)
+        unreadPublicCount: grandTotalUnread 
       }, '*');
     }
 
+    
     // Perbarui juga fungsi penampung unread publik agar otomatis mentrigger pengiriman total
     function sendUnreadCountToParent(count) {
       lastPublicUnreadCount = count || 0;
