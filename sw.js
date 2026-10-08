@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.5.3'; 
+const CACHE_NAME = 'rt-kayen-v1.5.4'; 
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -75,32 +75,42 @@ self.addEventListener('message', (event) => {
 });
 
 // --- TAMBAHAN: Penanganan Push Notification & App Badge di Background ---
+// --- TAMBAHAN: Penanganan Push Notification & App Badge di Background ---
 self.addEventListener('push', (event) => {
-  let data = {};
-  try {
-    data = event.data ? event.data.json() : {};
-  } catch (e) {
-    data = { title: 'Pesan Baru', body: event.data ? event.data.text() : 'Ada pesan masuk' };
+  let data = { title: 'Pesan Baru', body: 'Anda menerima pesan baru.' };
+  
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
   }
 
   const title = data.title || 'RT 05 Kayen';
   const options = {
     body: data.body || 'Anda menerima pesan baru.',
     icon: './kentongan-slit-drum.png',
-    badge: './kentongan-slit-drum.png',
-    data: data.url || './index.html'
+    badge: './kentongan-slit-drum.png', // Ikon monokrom kecil untuk status bar Android
+    vibrate: [100, 50, 100],
+    data: {
+      url: data.url || './index.html',
+      dateOfArrival: Date.now(),
+      primaryKey: '1'
+    }
   };
+
+  const count = data.unreadCount ? parseInt(data.unreadCount, 10) : 1;
 
   event.waitUntil(
     Promise.all([
-      // 1. Memunculkan notifikasi sistem di HP
+      // 1. Wajib ada agar Android merekam notifikasi di system tray & memicu badge sistem
       self.registration.showNotification(title, options),
       
       // 2. Memperbarui App Badge di ikon home screen
       (async () => {
         if ('setAppBadge' in navigator) {
           try {
-            const count = data.unreadCount ? parseInt(data.unreadCount, 10) : 1;
             await navigator.setAppBadge(count);
           } catch (err) {
             console.log('Gagal memperbarui app badge:', err);
