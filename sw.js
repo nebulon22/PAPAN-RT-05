@@ -73,3 +73,58 @@ self.addEventListener('message', (event) => {
     self.skipWaiting();
   }
 });
+
+// --- TAMBAHAN: Penanganan Push Notification & App Badge di Background ---
+self.addEventListener('push', (event) => {
+  let data = {};
+  try {
+    data = event.data ? event.data.json() : {};
+  } catch (e) {
+    data = { title: 'Pesan Baru', body: event.data ? event.data.text() : 'Ada pesan masuk' };
+  }
+
+  const title = data.title || 'RT 05 Kayen';
+  const options = {
+    body: data.body || 'Anda menerima pesan baru.',
+    icon: './kentongan-slit-drum.png',
+    badge: './kentongan-slit-drum.png',
+    data: data.url || './index.html'
+  };
+
+  event.waitUntil(
+    Promise.all([
+      // 1. Memunculkan notifikasi sistem di HP
+      self.registration.showNotification(title, options),
+      
+      // 2. Memperbarui App Badge di ikon home screen
+      (async () => {
+        if ('setAppBadge' in navigator) {
+          try {
+            const count = data.unreadCount ? parseInt(data.unreadCount, 10) : 1;
+            await navigator.setAppBadge(count);
+          } catch (err) {
+            console.log('Gagal memperbarui app badge:', err);
+          }
+        }
+      })()
+    ])
+  );
+});
+
+// Klik pada notifikasi akan membuka/fokus kembali ke aplikasi
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (let i = 0; i < clientList.length; i++) {
+        let client = clientList[i];
+        if (client.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('./index.html');
+      }
+    })
+  );
+});
