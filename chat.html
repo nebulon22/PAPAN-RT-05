@@ -118,6 +118,11 @@
       font-weight: 600; 
       text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;
     }
+    .role-text-other { 
+    color: #fb923c !important; /* Oranye cerah khusus username lawan chat di private */
+    font-weight: 700 !important; 
+    text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
+    }
 
 /* CSS Teks Putih Cerah Solid + Outline Hitam Sharp */
 .msg-text {
@@ -509,6 +514,9 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
+   // 👇 TAMBAHKAN MODUL FIREBASE MESSAGING DI SINI 👇
+    import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
+
     const firebaseConfig = {
       apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
       authDomain: "papan05-21a56.firebaseapp.com",
@@ -521,6 +529,9 @@
 
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
+    
+    // 👇 INISIALISASI MESSAGING DI SINI 👇
+    const messaging = getMessaging(app);
 
     let currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
     let allUsersCache = {};
@@ -560,6 +571,9 @@
       }
     });
 
+
+
+    
     // === PENDETEKSI MODAL TERBUKA/TIDAK ===
     let isChatVisible = true;
 
@@ -740,7 +754,7 @@ document.addEventListener('visibilitychange', () => {
 
     function loadPrivateChatStream(targetUID) {
       const roomID = [currentUser.uid, targetUID].sort().join('_');
-      const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(80));
+      const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(500));
       const chatStream = document.getElementById('chat-stream');
 
       currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
@@ -957,7 +971,7 @@ document.addEventListener('visibilitychange', () => {
         publicGroupListener = null;
       }
 
-      const chatsRef = query(ref(db, 'chats'), limitToLast(80));
+      const chatsRef = query(ref(db, 'chats'), limitToLast(500));
 
       publicGroupListener = onValue(chatsRef, (snapshot) => {
         if (!snapshot.exists()) {
@@ -1036,16 +1050,43 @@ document.addEventListener('visibilitychange', () => {
     };
     
    // Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
-    let lastPublicUnreadCount = 0;
+   let lastPublicUnreadCount = 0;
 
-    function sendTotalUnreadToParent() {
+   function sendTotalUnreadToParent() {
+      // 1. Hitung total unread dari semua room private chat yang aktif
+      let totalPrivateUnread = 0;
+      Object.keys(unreadCounts).forEach(uid => {
+        totalPrivateUnread += (unreadCounts[uid] || 0);
+      });
+
+      // 2. Gabungkan unread grup publik + total unread private chat
+      let grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
+
+      // 3. 🛠️ TAMBAHAN: Update langsung App Badge dari chat.html jika didukung browser
+      if ('setAppBadge' in navigator) {
+        try {
+          const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
+          const isModalOpen = (modal && modal.style.display === 'flex');
+
+          if (grandTotalUnread > 0 && !isModalOpen) {
+            navigator.setAppBadge(grandTotalUnread).catch(err => console.log(err));
+          } else {
+            navigator.clearAppBadge().catch(err => console.log(err));
+          }
+        } catch (e) {
+          // Abaikan jika browser tidak mendukung
+        }
+      }
+
+      // 4. Kirim total gabungan ini ke index.html agar badge tombol ikut akurat
       window.parent.postMessage({
         type: 'RT05_CHAT_UNREAD_UPDATE',
-        unreadPublicCount: lastPublicUnreadCount // Hanya kirim grup publik
+        unreadPublicCount: grandTotalUnread 
       }, '*');
     }
 
-    // Perbarui juga sendUnreadCountToParent agar mengingat angka public
+    
+    // Perbarui juga fungsi penampung unread publik agar otomatis mentrigger pengiriman total
     function sendUnreadCountToParent(count) {
       lastPublicUnreadCount = count || 0;
       sendTotalUnreadToParent();
@@ -1242,6 +1283,42 @@ document.addEventListener('visibilitychange', () => {
         renderWargaSidebar();
       });
     }
+
+
+   // 1. Minta izin & gunakan Service Worker utama untuk FCM Token perangkat warga
+    async function initFCMToken(userId) {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          // Pastikan Service Worker utama (sw.js) sudah aktif di browser
+          if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.ready;
+            console.log('Menggunakan Service Worker utama yang aktif untuk FCM:', registration.scope);
+
+            // Ambil token dengan menyertakan pendaftaran Service Worker utama
+            const currentToken = await getToken(messaging, {
+              vapidKey: 'BIrL-XRxrSpZ65J-fzMfO3_nMm9RWUx9U55mhy3jGQURAEr1gPD7yKzHWGxAoFa5UsYoyj5_BKTSnUbKTYeVG4w',
+              serviceWorkerRegistration: registration
+            });
+            
+            if (currentToken) {
+              // Simpan token perangkat ke database Firebase berdasarkan UID user
+              await set(ref(db, `users/${userId}/fcmToken`), currentToken);
+              console.log('FCM Token berhasil disimpan ke database.');
+            }
+          }
+        } else {
+          console.log('Izin notifikasi ditolak oleh pengguna.');
+        }
+      } catch (err) {
+        console.log("Gagal mendapatkan FCM Token:", err);
+      }
+    }
+
+    // 2. Tangkap pesan saat aplikasi SEDANG DIBUKA (Foreground)
+    onMessage(messaging, (payload) => {
+      console.log('Pesan diterima saat aplikasi aktif:', payload);
+    });
         
     function checkUserStatus() {
       const chatContainer = document.getElementById('chat-container');
@@ -1299,6 +1376,7 @@ document.addEventListener('visibilitychange', () => {
           listenAllPrivateChats();
           listenPublicGroupUnread(); // <--- Hitung unread dari localStorage sebelum ditimpa!
           requestNotificationPermission();
+          initFCMToken(currentUser.uid);
 
           // 2. Set ruang aktif ke public TANPA langsung menandainya sebagai 'read' secara paksa
           activeChatType = 'public';
@@ -1420,7 +1498,7 @@ document.addEventListener('visibilitychange', () => {
     let isInitialPublicChatLoaded = false;
 
     function loadChatStream() {
-      const chatRef = query(ref(db, 'chats'), limitToLast(80));
+      const chatRef = query(ref(db, 'chats'), limitToLast(500));
       const chatStream = document.getElementById('chat-stream');
 
       currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
@@ -1482,7 +1560,7 @@ document.addEventListener('visibilitychange', () => {
         }, 2000);
       }
 
-      let nameClass = "role-user";
+     let nameClass = "role-user";
       let textClass = "msg-text"; // Default teks warga di Grup Publik (Putih)
 
       // 1. Jika pengirim adalah Admin -> Tetap Biru di room manapun
@@ -1496,7 +1574,7 @@ document.addEventListener('visibilitychange', () => {
           nameClass = "role-self";
           textClass = "msg-text msg-text-self";   // Saya sendiri = Kuning
         } else {
-          nameClass = "role-user";
+          nameClass = "role-text-other";          // <--- UBAH INI: Username lawan chat jadi Oranye khusus di private
           textClass = "msg-text msg-text-other";  // Lawan chat = Oranye
         }
       } 
@@ -1504,7 +1582,7 @@ document.addEventListener('visibilitychange', () => {
       else if (msg.uid === currentUser?.uid) {
         nameClass = "role-self";
       }
-
+   
       const clickHandler = (msg.uid !== currentUser?.uid) 
         ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
         : '';

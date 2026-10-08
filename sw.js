@@ -1,8 +1,6 @@
-const CACHE_NAME = 'rt-kayen-v1.5.1'; // <--- Naikkan versi saat update
+const CACHE_NAME = 'rt-kayen-v1.5.4'; 
 
 self.addEventListener('install', (e) => {
-  // CATATAN: self.skipWaiting() Sengaja DIHAPUS dari sini 
-  // agar lonceng tidak hilang otomatis sebelum diklik warga.
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
@@ -38,7 +36,6 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 1. Abaikan navigasi HTML, Firebase, dan file Video Streaming dari Cache Storage PWA
   if (
     event.request.mode === 'navigate' || 
     url.origin.includes('firebase') || 
@@ -49,8 +46,6 @@ self.addEventListener('fetch', (event) => {
   ) {
     event.respondWith(
       fetch(event.request).catch((err) => {
-        // Jika request media terputus/dibatalkan, kembalikan dari cache jika ada,
-        // atau biarkan Response 404 standar agar browser tidak melempar error kustom 480
         return caches.match(event.request).then((cached) => {
           return cached || new Response(null, { status: 404, statusText: 'Not Found' });
         });
@@ -59,7 +54,6 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 2. Caching biasa untuk aset statis (CSS, JS, Gambar, Font) + Aman dari Error Network
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -73,9 +67,74 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// 3. Perintah skipWaiting dari lonceng
+// Perintah skipWaiting dari lonceng
 self.addEventListener('message', (event) => {
   if (event.data && event.data.action === 'skipWaiting') {
     self.skipWaiting();
   }
+});
+
+// --- TAMBAHAN: Penanganan Push Notification & App Badge di Background ---
+// --- TAMBAHAN: Penanganan Push Notification & App Badge di Background ---
+self.addEventListener('push', (event) => {
+  let data = { title: 'Pesan Baru', body: 'Anda menerima pesan baru.' };
+  
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data.body = event.data.text();
+    }
+  }
+
+  const title = data.title || 'RT 05 Kayen';
+  const options = {
+    body: data.body || 'Anda menerima pesan baru.',
+    icon: './kentongan-slit-drum.png',
+    badge: './kentongan-slit-drum.png', // Ikon monokrom kecil untuk status bar Android
+    vibrate: [100, 50, 100],
+    data: {
+      url: data.url || './index.html',
+      dateOfArrival: Date.now(),
+      primaryKey: '1'
+    }
+  };
+
+  const count = data.unreadCount ? parseInt(data.unreadCount, 10) : 1;
+
+  event.waitUntil(
+    Promise.all([
+      // 1. Wajib ada agar Android merekam notifikasi di system tray & memicu badge sistem
+      self.registration.showNotification(title, options),
+      
+      // 2. Memperbarui App Badge di ikon home screen
+      (async () => {
+        if ('setAppBadge' in navigator) {
+          try {
+            await navigator.setAppBadge(count);
+          } catch (err) {
+            console.log('Gagal memperbarui app badge:', err);
+          }
+        }
+      })()
+    ])
+  );
+});
+
+// Klik pada notifikasi akan membuka/fokus kembali ke aplikasi
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
+      for (let i = 0; i < clientList.length; i++) {
+        let client = clientList[i];
+        if (client.url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow('./index.html');
+      }
+    })
+  );
 });

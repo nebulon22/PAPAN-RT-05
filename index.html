@@ -8,7 +8,7 @@
    <!-- FontAwesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.5.1">
+  <link rel="manifest" href="manifest.json?v=1.5.4">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
  
@@ -944,7 +944,7 @@ function perbaruiAplikasiSekarang() {
 
   
  <!-- 1. TOMBOL CHAT MELAYANG (Pojok Kiri Bawah) -->
-<button onclick="toggleChatModal()" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #f97316; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 12px rgba(0,0,0,0.4); cursor: pointer;" title="Buka Live Chat RT">
+<button onclick="toggleChatModal()" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #22c55e; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 16px rgba(34, 197, 94, 0.6); cursor: pointer;" title="Buka Live Chat RT">
   <i class="fa-solid fa-comments" style="font-size: 20px;"></i>
   
   <!-- BADGE UNREAD OBROLAN GRUP UTAMA -->
@@ -996,6 +996,22 @@ function perbaruiAplikasiSekarang() {
       modal.style.display = 'none';
     }
   }
+
+// Fungsi untuk memperbarui Badge pada Ikon Aplikasi PWA (Home Screen)
+function updatePWABadge(totalUnread) {
+  if ('setAppBadge' in navigator) {
+    try {
+      if (totalUnread > 0) {
+        navigator.setAppBadge(totalUnread).catch(err => console.log("Badge PWA error:", err));
+      } else {
+        navigator.clearAppBadge().catch(err => console.log("Clear badge error:", err));
+      }
+    } catch (e) {
+      // Abaikan jika browser tidak mendukung
+    }
+  }
+}
+    
   </script>
     
   <script src="html5-qrcode.min.js"></script>
@@ -2012,7 +2028,7 @@ function tutupModalInventaris() {
       }
     });
 
-   // Mendengarkan Pembaruan Badge Unread dari iframe chat.html
+// Mendengarkan Pembaruan Badge Unread dari iframe chat.html
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
       const badge = document.getElementById('badge-chat-main');
@@ -2027,6 +2043,19 @@ function tutupModalInventaris() {
           badge.style.display = 'inline-block';
         } else {
           badge.style.display = 'none';
+        }
+      }
+
+      // 🛠️ TAMBAHAN: Update badge ikon aplikasi PWA di Home Screen HP
+      if ('setAppBadge' in navigator) {
+        try {
+          if (count > 0 && !isModalOpen) {
+            navigator.setAppBadge(count).catch(err => console.log(err));
+          } else {
+            navigator.clearAppBadge().catch(err => console.log(err));
+          }
+        } catch (e) {
+          // Abaikan jika browser tidak mendukung
         }
       }
     }
@@ -2357,11 +2386,22 @@ window.refreshDataJimpitan = function() {
     
     // --- CHANGELOG ---
     const dataChangelog = [
+      {
+        versi: "v1.5.4",
+        tanggal: "8 Okt 2026",
+        status: "Terbaru",
+        warna: "#4CAF50",
+        fitur: [
+          "Penambahan fitur Push Notification",
+          "Perbaikan tampilan tombol di halaman Admin",
+          "Perbaikan fitur Program Kerja"
+        ]
+      },
        {
         versi: "v1.5.1",
         tanggal: "2 Okt 2026",
-        status: "Terbaru",
-        warna: "#4CAF50",
+        status: "",
+        warna: "#888",
         fitur: [
           "Penambahan fitur RAB/Program Kerja",
           "Penambahan tab RAB/Program Kerja pada halaman info/pengumuman warga",
