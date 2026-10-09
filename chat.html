@@ -821,7 +821,7 @@ document.addEventListener('visibilitychange', () => {
       });
     }
 
- // 1. Pemantau Pesan Private Universal
+// 1. Pemantau Pesan Private Universal
     let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
@@ -844,7 +844,7 @@ document.addEventListener('visibilitychange', () => {
 
         const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
 
-      snapshot.forEach((roomSnap) => {
+        snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
           
           if (roomID.includes(currentUser.uid)) {
@@ -853,19 +853,7 @@ document.addEventListener('visibilitychange', () => {
 
             let unreadTotalCount = 0;
             let lastMsg = null;
-            let lastReadKey = lastReadKeyMap[targetUID];
-
-            // 🛠️ PERIKSA APAKAH LASTREADKEY BENAR-BENAR ADA DI DATABASE
-            let keyExists = false;
-            if (lastReadKey) {
-              roomSnap.forEach((msgSnap) => {
-                if (msgSnap.key === lastReadKey) keyExists = true;
-              });
-            }
-            // Jika kuncinya sudah tidak valid/hilang di database, abaikan agar tidak macet
-            if (lastReadKey && !keyExists) {
-              lastReadKey = null;
-            }
+            const lastReadKey = lastReadKeyMap[targetUID];
 
             let countAfterKey = false;
             if (!lastReadKey) countAfterKey = true;
@@ -875,6 +863,7 @@ document.addEventListener('visibilitychange', () => {
               const msgData = msgSnap.val();
               lastMsg = msgData;
 
+              // Jika pesan ini adalah batas terakhir yang dibaca
               if (msgKey === lastReadKey) {
                 countAfterKey = true;
                 unreadTotalCount = 0;
@@ -883,15 +872,23 @@ document.addEventListener('visibilitychange', () => {
               }
             });
 
+            // Jika tidak ada key yang cocok sama sekali tapi ada pesan dari orang lain, hitung semua pesan dari lawan bicara
+            if (!countAfterKey && lastReadKey) {
+              unreadTotalCount = 0;
+              roomSnap.forEach((msgSnap) => {
+                const msgData = msgSnap.val();
+                if (msgData.uid !== currentUser.uid) {
+                  unreadTotalCount++;
+                }
+              });
+            }
+
             if (lastMsg && lastMsg.uid === currentUser.uid) {
               unreadTotalCount = 0;
             }
 
-            // PENGAMAN TAMBAHAN: Jika ada pesan dari lawan bicara tapi unread masih 0
+            // Cek apakah room private ini sedang aktif dibuka di layar
             const isCurrentActivePrivate = (activeChatType === 'private' && activePrivateUID === targetUID && isChatVisible);
-            if (lastMsg && lastMsg.uid !== currentUser.uid && unreadTotalCount === 0 && !lastReadKey) {
-              unreadTotalCount = 1;
-            }
 
             if (unreadTotalCount > 0) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
