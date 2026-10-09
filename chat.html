@@ -844,7 +844,7 @@ document.addEventListener('visibilitychange', () => {
 
         const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
 
-        snapshot.forEach((roomSnap) => {
+       snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
           
           if (roomID.includes(currentUser.uid)) {
@@ -875,6 +875,12 @@ document.addEventListener('visibilitychange', () => {
               unreadTotalCount = 0;
             }
 
+            // 🛠️ TAMBAHAN PENGAMAN: Jika ada pesan dari lawan bicara tapi key belum tersimpan
+            const isCurrentActivePrivate = (activeChatType === 'private' && activePrivateUID === targetUID && isChatVisible);
+            if (lastMsg && lastMsg.uid !== currentUser.uid && unreadTotalCount === 0 && !lastReadKey) {
+              unreadTotalCount = 1;
+            }
+
             if (unreadTotalCount > 0) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
 
@@ -885,9 +891,6 @@ document.addEventListener('visibilitychange', () => {
                 openPrivateRooms[targetUID] = senderName;
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
-
-              // 🛠️ PERBAIKAN: Cek apakah room private ini sedang aktif dibuka di layar
-              const isCurrentActivePrivate = (activeChatType === 'private' && activePrivateUID === targetUID && isChatVisible);
 
               if (!isCurrentActivePrivate) {
                 unreadCounts[targetUID] = unreadTotalCount;
