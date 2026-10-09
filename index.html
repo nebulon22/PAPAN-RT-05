@@ -410,6 +410,9 @@ function perbaruiAplikasiSekarang() {
     object-fit: contain !important;
     transition: transform 0.3s ease !important;
   }
+
+ 
+   
 </style>
 </head>
 <body>
@@ -942,9 +945,28 @@ function perbaruiAplikasiSekarang() {
   </button>
 
 
-  
+<style>
+  @keyframes softPulse {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+    70% {
+      transform: scale(1.1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 0 12px rgba(34, 197, 94, 0);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(34, 197, 94, 0);
+    }
+  }
+
+  .chat-btn-animated {
+    animation: softPulse 2s infinite ease-in-out !important;
+  }
+</style>
 <!-- 1. TOMBOL CHAT MELAYANG (Pojok Kiri Bawah) -->
-<button onclick="toggleChatModal()" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #22c55e; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer;" title="Buka Live Chat RT">
+<button id="floating-chat-btn" onclick="toggleChatModal()" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #22c55e; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer;" title="Buka Live Chat RT">
   <i class="fa-solid fa-comments" style="font-size: 20px;"></i>
   
   <!-- BADGE UNREAD OBROLAN GRUP UTAMA -->
@@ -973,8 +995,8 @@ function perbaruiAplikasiSekarang() {
 
 </div>
 
-  <script>
- function toggleChatModal() {
+<script>
+  function toggleChatModal() {
     const modal = document.getElementById('chat-overlay-modal');
     const iframe = modal ? modal.querySelector('iframe') : null;
 
@@ -987,6 +1009,10 @@ function perbaruiAplikasiSekarang() {
       const badge = document.getElementById('badge-chat-main');
       if (badge) badge.style.display = 'none';
 
+      // 🛑 MATIKAN ANIMASI TOMBOL KETIKA MODAL DIBUKA
+      const chatBtn = document.getElementById('floating-chat-btn');
+      if (chatBtn) chatBtn.classList.remove('chat-btn-animated');
+
       // Pindahkan ke Public Group & tandai terbaca HANYA saat modal DIBUKA
       if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
         iframe.contentWindow.switchChatRoom('public');
@@ -997,21 +1023,39 @@ function perbaruiAplikasiSekarang() {
     }
   }
 
-// Fungsi untuk memperbarui Badge pada Ikon Aplikasi PWA (Home Screen)
-function updatePWABadge(totalUnread) {
-  if ('setAppBadge' in navigator) {
-    try {
-      if (totalUnread > 0) {
-        navigator.setAppBadge(totalUnread).catch(err => console.log("Badge PWA error:", err));
-      } else {
-        navigator.clearAppBadge().catch(err => console.log("Clear badge error:", err));
+  // Fungsi untuk memperbarui Badge pada Ikon Aplikasi PWA (Home Screen)
+  function updatePWABadge(totalUnread) {
+    if ('setAppBadge' in navigator) {
+      try {
+        if (totalUnread > 0) {
+          navigator.setAppBadge(totalUnread).catch(err => console.log("Badge PWA error:", err));
+        } else {
+          navigator.clearAppBadge().catch(err => console.log("Clear badge error:", err));
+        }
+      } catch (e) {
+        // Abaikan jika browser tidak mendukung
       }
-    } catch (e) {
-      // Abaikan jika browser tidak mendukung
     }
   }
-}
+
+  function updatePublicTabBadge(count) {
+  const badge = document.getElementById('badge-chat-main');
+  const chatBtn = document.getElementById('floating-chat-btn');
+
+  if (count > 0) {
+    badge.style.display = 'inline-block';
+    badge.innerText = count > 99 ? '99+' : count;
     
+    // 🔥 NYALAKAN ANIMASI LEMBUT KETIKA ADA PESAN BARU
+    chatBtn.classList.add('chat-btn-animated');
+  } else {
+    badge.style.display = 'none';
+    badge.innerText = '0';
+    
+    // 🛑 MATIKAN ANIMASI JIKA SUDAH DIBACA
+    chatBtn.classList.remove('chat-btn-animated');
+  }
+}
   </script>
     
   <script src="html5-qrcode.min.js"></script>
@@ -2029,37 +2073,32 @@ function tutupModalInventaris() {
     });
 
 // Mendengarkan Pembaruan Badge Unread dari iframe chat.html
-  window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
-      const badge = document.getElementById('badge-chat-main');
-      const count = event.data.unreadPublicCount || 0;
-      const modal = document.getElementById('chat-overlay-modal');
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
+    const count = event.data.unreadPublicCount || 0;
+    const modal = document.getElementById('chat-overlay-modal');
+    const isModalOpen = (modal && modal.style.display === 'flex');
 
-      const isModalOpen = (modal && modal.style.display === 'flex');
+    // Jika modal terbuka, anggap pesan sudah dibaca (count = 0)
+    const effectiveCount = isModalOpen ? 0 : count;
 
-      if (badge) {
-        if (count > 0 && !isModalOpen) {
-          badge.innerText = count > 99 ? '99+' : count;
-          badge.style.display = 'inline-block';
+    // 🚀 PANGGIL FUNGSI INI AGAR BADGE DAN ANIMASI BERSAMAAN AKTIF/MATI
+    updatePublicTabBadge(effectiveCount);
+
+    // 🛠️ TAMBAHAN: Update badge ikon aplikasi PWA di Home Screen HP
+    if ('setAppBadge' in navigator) {
+      try {
+        if (effectiveCount > 0) {
+          navigator.setAppBadge(effectiveCount).catch(err => console.log(err));
         } else {
-          badge.style.display = 'none';
+          navigator.clearAppBadge().catch(err => console.log(err));
         }
-      }
-
-      // 🛠️ TAMBAHAN: Update badge ikon aplikasi PWA di Home Screen HP
-      if ('setAppBadge' in navigator) {
-        try {
-          if (count > 0 && !isModalOpen) {
-            navigator.setAppBadge(count).catch(err => console.log(err));
-          } else {
-            navigator.clearAppBadge().catch(err => console.log(err));
-          }
-        } catch (e) {
-          // Abaikan jika browser tidak mendukung
-        }
+      } catch (e) {
+        // Abaikan jika browser tidak mendukung
       }
     }
-  });
+  }
+});
 
     
 // --- FITUR REKAP & RIWAYAT JIMPITAN ---
