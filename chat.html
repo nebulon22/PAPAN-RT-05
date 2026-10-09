@@ -539,9 +539,11 @@
     let activeChatType = 'public';
     let activePrivateUID = null;
     let currentChatUnsubscribe = null;
-   window.openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
-// Buat alias pendek di dalam modul agar fungsi-fungsi di bawah tidak perlu diubah satu per satu
-const openPrivateRooms = window.openPrivateRooms;
+    
+    // Perbaikan deklarasi global mutlak
+    if (!window.openPrivateRooms) {
+      window.openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
+    }
     let unreadCounts = {};
 
     function getGasUrl() {
@@ -617,8 +619,8 @@ document.addEventListener('visibilitychange', () => {
     window.openPrivateTab = (targetUID, targetName) => {
       if (targetUID === currentUser?.uid) return;
 
-      openPrivateRooms[targetUID] = targetName;
-      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+      window.openPrivateRooms[targetUID] = targetName || "Warga";
+      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(window.openPrivateRooms));
 
       renderPrivateTabsUI();
       listenAllPrivateChats();
