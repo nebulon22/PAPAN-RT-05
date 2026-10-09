@@ -539,11 +539,7 @@
     let activeChatType = 'public';
     let activePrivateUID = null;
     let currentChatUnsubscribe = null;
-    
-    // Perbaikan deklarasi global mutlak
-    if (!window.openPrivateRooms) {
-      window.openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
-    }
+    let openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
     let unreadCounts = {};
 
     function getGasUrl() {
@@ -619,15 +615,15 @@ document.addEventListener('visibilitychange', () => {
     window.openPrivateTab = (targetUID, targetName) => {
       if (targetUID === currentUser?.uid) return;
 
-      window.openPrivateRooms[targetUID] = targetName || "Warga";
-      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(window.openPrivateRooms));
+      openPrivateRooms[targetUID] = targetName;
+      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
       renderPrivateTabsUI();
       listenAllPrivateChats();
       switchChatRoom('private', targetUID);
     };
 
-   // 2. Render UI Tab-tab Private (Diperbarui dengan DOM Aman)
+    // 2. Render UI Tab-tab Private (Perbaiki bagian event klik tab)
     function renderPrivateTabsUI() {
       const container = document.getElementById('dynamic-private-tabs');
       if (!container) return;
@@ -650,21 +646,14 @@ document.addEventListener('visibilitychange', () => {
           border: 1px solid ${isActive ? '#0388d1' : '#334155'}; flex-shrink: 0;
         `;
 
-        // Buat elemen teks nama & badge secara aman
-        const nameSpan = document.createElement('span');
-        nameSpan.style.cssText = "display: flex; align-items: center; gap: 5px; flex: 1;";
-        nameSpan.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}`;
-        nameSpan.onclick = () => switchChatRoom('private', uid);
+        // Pastikan pemanggilan switchChatRoom berdiri sendiri dengan aman
+        btn.innerHTML = `
+          <span onclick="event.stopPropagation(); switchChatRoom('private', '${uid}')" style="display: flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}
+          </span>
+          <i class="fa-solid fa-xmark" onclick="closePrivateTab(event, '${uid}')" style="font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px;" title="Tutup Tab"></i>
+        `;
 
-        // Buat elemen tombol tutup (X) secara aman
-        const closeBtn = document.createElement('i');
-        closeBtn.className = "fa-solid fa-xmark";
-        closeBtn.style.cssText = "font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px; cursor: pointer;";
-        closeBtn.title = "Tutup Tab";
-        closeBtn.onclick = (e) => closePrivateTab(e, uid);
-
-        btn.appendChild(nameSpan);
-        btn.appendChild(closeBtn);
         container.appendChild(btn);
       });
     }
