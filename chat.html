@@ -810,7 +810,7 @@
       });
     }
 
-// 1. Pemantau Pesan Private Universal (Fix Otomatis Munculkan Tab & Update Warga)
+// 1. Pemantau Pesan Private Universal (Otomatis Munculkan Tab Saat Ada Pesan Masuk)
     let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
@@ -864,15 +864,13 @@
               unreadTotalCount = 0;
             }
 
-            // Ambil nama pengirim dari cache atau data pesan terakhir
-            const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
-
-            // Jika ada pesan baru masuk dari orang lain (meskipun unread count atau tidak, asal ada interaksi pesan)
+            // --- BAGIAN INI YANG MEMBUAT TAB OTOMATIS MUNCUL SAAT ADA PESAN MASUK ---
             if (lastMsg && lastMsg.uid !== currentUser.uid) {
-              // Jika tab belum ada di openPrivateRooms, otomatis masukkan agar tab-nya tercipta
+              const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
+
               if (!openPrivateRooms[targetUID]) {
                 const keys = Object.keys(openPrivateRooms);
-                if (keys.length >= 5) delete openPrivateRooms[keys[0]]; // Batasi maksimal 5 tab aktif
+                if (keys.length >= 5) delete openPrivateRooms[keys[0]];
 
                 openPrivateRooms[targetUID] = senderName;
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
@@ -880,6 +878,16 @@
             }
 
             if (unreadTotalCount > 0) {
+              const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
+
+              if (!openPrivateRooms[targetUID]) {
+                const keys = Object.keys(openPrivateRooms);
+                if (keys.length >= 5) delete openPrivateRooms[keys[0]];
+
+                openPrivateRooms[targetUID] = senderName;
+                localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+              }
+
               if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
                 unreadCounts[targetUID] = unreadTotalCount;
                 if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) playKlingSound();
