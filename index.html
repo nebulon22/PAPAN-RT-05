@@ -2073,37 +2073,32 @@ function tutupModalInventaris() {
     });
 
 // Mendengarkan Pembaruan Badge Unread dari iframe chat.html
-  window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
-      const badge = document.getElementById('badge-chat-main');
-      const count = event.data.unreadPublicCount || 0;
-      const modal = document.getElementById('chat-overlay-modal');
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
+    const count = event.data.unreadPublicCount || 0;
+    const modal = document.getElementById('chat-overlay-modal');
+    const isModalOpen = (modal && modal.style.display === 'flex');
 
-      const isModalOpen = (modal && modal.style.display === 'flex');
+    // Jika modal terbuka, anggap pesan sudah dibaca (count = 0)
+    const effectiveCount = isModalOpen ? 0 : count;
 
-      if (badge) {
-        if (count > 0 && !isModalOpen) {
-          badge.innerText = count > 99 ? '99+' : count;
-          badge.style.display = 'inline-block';
+    // 🚀 PANGGIL FUNGSI INI AGAR BADGE DAN ANIMASI BERSAMAAN AKTIF/MATI
+    updatePublicTabBadge(effectiveCount);
+
+    // 🛠️ TAMBAHAN: Update badge ikon aplikasi PWA di Home Screen HP
+    if ('setAppBadge' in navigator) {
+      try {
+        if (effectiveCount > 0) {
+          navigator.setAppBadge(effectiveCount).catch(err => console.log(err));
         } else {
-          badge.style.display = 'none';
+          navigator.clearAppBadge().catch(err => console.log(err));
         }
-      }
-
-      // 🛠️ TAMBAHAN: Update badge ikon aplikasi PWA di Home Screen HP
-      if ('setAppBadge' in navigator) {
-        try {
-          if (count > 0 && !isModalOpen) {
-            navigator.setAppBadge(count).catch(err => console.log(err));
-          } else {
-            navigator.clearAppBadge().catch(err => console.log(err));
-          }
-        } catch (e) {
-          // Abaikan jika browser tidak mendukung
-        }
+      } catch (e) {
+        // Abaikan jika browser tidak mendukung
       }
     }
-  });
+  }
+});
 
     
 // --- FITUR REKAP & RIWAYAT JIMPITAN ---
