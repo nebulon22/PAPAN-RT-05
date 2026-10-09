@@ -582,7 +582,7 @@
 
 
     
-    // === PENDETEKSI MODAL TERBUKA/TIDAK ===
+  // === PENDETEKSI MODAL TERBUKA/TIDAK (Model Lama chat 13) ===
     let isChatVisible = true;
 
     window.addEventListener('DOMContentLoaded', () => {
@@ -598,25 +598,19 @@
       observer.observe(document.body);
     });
 
-  // Deteksi jika layar HP mati / minimize / kembali dari idle
-document.addEventListener('visibilitychange', () => {
-  isChatVisible = !document.hidden;
-  
-  if (isChatVisible) {
-    // 🛠️ TAMBAHAN: Paksa Firebase mengaktifkan kembali WebSocket jika sempat terputus/idle
-    if (typeof firebase !== 'undefined' && firebase.database) {
-      firebase.database().goOnline();
-    }
-
-    // Logika penandaan pesan terbaca milik Anda
-    if (activeChatType === 'private' && activePrivateUID) {
-      unreadCounts[activePrivateUID] = 0;
-      markRoomAsRead(activePrivateUID);
-      renderPrivateTabsUI();
-    }
-  }
-});
-    // ======================================
+    // Deteksi jika layar HP mati / minimize / kembali dari idle
+    document.addEventListener('visibilitychange', () => {
+      isChatVisible = !document.hidden;
+      
+      if (isChatVisible) {
+        if (activeChatType === 'private' && activePrivateUID) {
+          unreadCounts[activePrivateUID] = 0;
+          markRoomAsRead(activePrivateUID);
+          renderPrivateTabsUI();
+        }
+      }
+    });
+    // ==========================================================
 
     
     // 1. Buka Tab Private Chat
@@ -631,8 +625,8 @@ document.addEventListener('visibilitychange', () => {
       switchChatRoom('private', targetUID);
     };
 
-   // 2. Render UI Tab-tab Private (Diperbarui dengan DOM Aman)
-   function renderPrivateTabsUI() {
+   // 2. Render UI Tab-tab Private (Model Lama chat 13)
+    function renderPrivateTabsUI() {
       const container = document.getElementById('dynamic-private-tabs');
       if (!container) return;
       container.innerHTML = '';
@@ -642,42 +636,25 @@ document.addEventListener('visibilitychange', () => {
         const isActive = (activeChatType === 'private' && activePrivateUID === uid);
         const count = unreadCounts[uid] || 0;
 
-        // Container utama tab
+        const badgeHTML = (count > 0 && !isActive) 
+          ? `<span style="background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(239, 68, 68, 0.8);">${count}</span>` 
+          : '';
+
         const btn = document.createElement('div');
         btn.style.cssText = `
           display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 6px;
           font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
-          background: ${isActive ? '#10b981' : '#1e293b'}; color: ${isActive ? '#fff' : '#94a3b8'};
+          background: ${isActive ? '#0288d1' : '#1e293b'}; color: ${isActive ? '#fff' : '#94a3b8'};
           border: 1px solid ${isActive ? '#0388d1' : '#334155'}; flex-shrink: 0;
         `;
 
-        // Area Nama Tab & Badge (Bisa diklik untuk pindah room)
-        const nameSpan = document.createElement('span');
-        nameSpan.style.cssText = "display: flex; align-items: center; gap: 5px; flex: 1;";
-        nameSpan.onclick = () => switchChatRoom('private', uid);
+        btn.innerHTML = `
+          <span onclick="event.stopPropagation(); switchChatRoom('private', '${uid}')" style="display: flex; align-items: center; gap: 5px;">
+            <i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}
+          </span>
+          <i class="fa-solid fa-xmark" onclick="closePrivateTab(event, '${uid}')" style="font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px;" title="Tutup Tab"></i>
+        `;
 
-        // Buat elemen teks nama
-        const textNode = document.createElement('span');
-        textNode.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHTML(name)}`;
-        nameSpan.appendChild(textNode);
-
-        // Buat elemen badge merah jika ada unread dan bukan tab aktif
-        if (count > 0 && !isActive) {
-          const badgeSpan = document.createElement('span');
-          badgeSpan.style.cssText = "background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(239, 68, 68, 0.8); margin-left: 4px;";
-          badgeSpan.innerText = count;
-          nameSpan.appendChild(badgeSpan);
-        }
-
-        // Tombol Tutup (X) yang terpisah dari area klik nama agar tidak bentrok
-        const closeBtn = document.createElement('i');
-        closeBtn.className = "fa-solid fa-xmark";
-        closeBtn.style.cssText = "font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px; cursor: pointer;";
-        closeBtn.title = "Tutup Tab";
-        closeBtn.onclick = (e) => closePrivateTab(e, uid);
-
-        btn.appendChild(nameSpan);
-        btn.appendChild(closeBtn);
         container.appendChild(btn);
       });
     }
@@ -829,7 +806,7 @@ document.addEventListener('visibilitychange', () => {
       });
     }
 
-// 1. Pemantau Pesan Private Universal
+// 1. Pemantau Pesan Private Universal (Model Lama chat 13)
     let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
@@ -894,7 +871,6 @@ document.addEventListener('visibilitychange', () => {
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-              // --- KEMBALIKAN KE KONDISI VERSI LAMA YANG STABIL ---
               if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
                 unreadCounts[targetUID] = unreadTotalCount;
                 if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) playKlingSound();
