@@ -844,7 +844,7 @@ document.addEventListener('visibilitychange', () => {
 
         const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
 
-        snapshot.forEach((roomSnap) => {
+       snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
           
           if (roomID.includes(currentUser.uid)) {
@@ -863,7 +863,6 @@ document.addEventListener('visibilitychange', () => {
               const msgData = msgSnap.val();
               lastMsg = msgData;
 
-              // Jika pesan ini adalah batas terakhir yang dibaca
               if (msgKey === lastReadKey) {
                 countAfterKey = true;
                 unreadTotalCount = 0;
@@ -872,8 +871,9 @@ document.addEventListener('visibilitychange', () => {
               }
             });
 
-            // Jika tidak ada key yang cocok sama sekali tapi ada pesan dari orang lain, hitung semua pesan dari lawan bicara
-            if (!countAfterKey && lastReadKey) {
+            // 🛠️ PENGAMAN UTAMA: Jika ada pesan dari lawan bicara tetapi unread masih 0 (karena key tidak sinkron),
+            // paksa hitung semua pesan dari lawan bicara yang ada di room tersebut sebagai unread!
+            if (lastMsg && lastMsg.uid !== currentUser.uid && unreadTotalCount === 0) {
               unreadTotalCount = 0;
               roomSnap.forEach((msgSnap) => {
                 const msgData = msgSnap.val();
@@ -887,7 +887,6 @@ document.addEventListener('visibilitychange', () => {
               unreadTotalCount = 0;
             }
 
-            // Cek apakah room private ini sedang aktif dibuka di layar
             const isCurrentActivePrivate = (activeChatType === 'private' && activePrivateUID === targetUID && isChatVisible);
 
             if (unreadTotalCount > 0) {
