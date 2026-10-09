@@ -886,11 +886,14 @@ document.addEventListener('visibilitychange', () => {
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-              // --- PENEMPATAN YANG BENAR ADA DI SINI ---
-              // Jika beda tab, ATAU modal sedang ditutup/layar mati (!isChatVisible)
-              if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
+              // 🛠️ PERBAIKAN: Cek apakah room private ini sedang aktif dibuka di layar
+              const isCurrentActivePrivate = (activeChatType === 'private' && activePrivateUID === targetUID && isChatVisible);
+
+              if (!isCurrentActivePrivate) {
                 unreadCounts[targetUID] = unreadTotalCount;
                 if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) playKlingSound();
+              } else {
+                unreadCounts[targetUID] = 0;
               }
             } else {
               unreadCounts[targetUID] = 0;
@@ -904,7 +907,7 @@ document.addEventListener('visibilitychange', () => {
       });
     }
     
-   // 6. Pengiriman Pesan (Keyboard Tetap Terbuka & Auto-Clear Highlight)
+   // Pengiriman Pesan (Keyboard Tetap Terbuka & Auto-Clear Highlight)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
