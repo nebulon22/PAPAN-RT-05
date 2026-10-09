@@ -613,11 +613,16 @@
     // ==========================================================
 
     
-  // 1. Buka Tab Private Chat
+ // 1. Buka Tab Private Chat (Diperbaiki agar selalu aman)
     window.openPrivateTab = (targetUID, targetName) => {
       if (targetUID === currentUser?.uid) return;
 
-      openPrivateRooms[targetUID] = targetName;
+      // Pastikan openPrivateRooms berupa objek yang valid
+      if (!openPrivateRooms || typeof openPrivateRooms !== 'object') {
+        openPrivateRooms = {};
+      }
+
+      openPrivateRooms[targetUID] = targetName || "Warga";
       localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
       renderPrivateTabsUI();
