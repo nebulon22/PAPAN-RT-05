@@ -844,7 +844,7 @@ document.addEventListener('visibilitychange', () => {
 
         const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
 
-       snapshot.forEach((roomSnap) => {
+      snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
           
           if (roomID.includes(currentUser.uid)) {
@@ -853,7 +853,19 @@ document.addEventListener('visibilitychange', () => {
 
             let unreadTotalCount = 0;
             let lastMsg = null;
-            const lastReadKey = lastReadKeyMap[targetUID];
+            let lastReadKey = lastReadKeyMap[targetUID];
+
+            // 🛠️ PERIKSA APAKAH LASTREADKEY BENAR-BENAR ADA DI DATABASE
+            let keyExists = false;
+            if (lastReadKey) {
+              roomSnap.forEach((msgSnap) => {
+                if (msgSnap.key === lastReadKey) keyExists = true;
+              });
+            }
+            // Jika kuncinya sudah tidak valid/hilang di database, abaikan agar tidak macet
+            if (lastReadKey && !keyExists) {
+              lastReadKey = null;
+            }
 
             let countAfterKey = false;
             if (!lastReadKey) countAfterKey = true;
@@ -875,7 +887,7 @@ document.addEventListener('visibilitychange', () => {
               unreadTotalCount = 0;
             }
 
-            // 🛠️ TAMBAHAN PENGAMAN: Jika ada pesan dari lawan bicara tapi key belum tersimpan
+            // PENGAMAN TAMBAHAN: Jika ada pesan dari lawan bicara tapi unread masih 0
             const isCurrentActivePrivate = (activeChatType === 'private' && activePrivateUID === targetUID && isChatVisible);
             if (lastMsg && lastMsg.uid !== currentUser.uid && unreadTotalCount === 0 && !lastReadKey) {
               unreadTotalCount = 1;
