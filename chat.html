@@ -852,7 +852,7 @@ document.addEventListener('visibilitychange', () => {
 
         const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
 
-       snapshot.forEach((roomSnap) => {
+        snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
           
           if (roomID.includes(currentUser.uid)) {
@@ -879,23 +879,9 @@ document.addEventListener('visibilitychange', () => {
               }
             });
 
-            // 🛠️ PENGAMAN UTAMA: Jika ada pesan dari lawan bicara tetapi unread masih 0 (karena key tidak sinkron),
-            // paksa hitung semua pesan dari lawan bicara yang ada di room tersebut sebagai unread!
-            if (lastMsg && lastMsg.uid !== currentUser.uid && unreadTotalCount === 0) {
-              unreadTotalCount = 0;
-              roomSnap.forEach((msgSnap) => {
-                const msgData = msgSnap.val();
-                if (msgData.uid !== currentUser.uid) {
-                  unreadTotalCount++;
-                }
-              });
-            }
-
             if (lastMsg && lastMsg.uid === currentUser.uid) {
               unreadTotalCount = 0;
             }
-
-            const isCurrentActivePrivate = (activeChatType === 'private' && activePrivateUID === targetUID && isChatVisible);
 
             if (unreadTotalCount > 0) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
@@ -908,11 +894,10 @@ document.addEventListener('visibilitychange', () => {
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-              if (!isCurrentActivePrivate) {
+              // --- KEMBALIKAN KE KONDISI VERSI LAMA YANG STABIL ---
+              if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
                 unreadCounts[targetUID] = unreadTotalCount;
                 if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) playKlingSound();
-              } else {
-                unreadCounts[targetUID] = 0;
               }
             } else {
               unreadCounts[targetUID] = 0;
