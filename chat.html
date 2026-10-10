@@ -570,25 +570,25 @@
 
 // Fungsi untuk mendengarkan dan merender Polling dari Firebase secara Real-time
   function listenPinnedPoll() {
-    // Sesuaikan objek database Anda (misalnya firebase.database() atau db)
-    const pollRef = firebase.database().ref('chats/pinned_poll');
+    const pollRef = ref(db, 'chats/pinned_poll');
     
-    pollRef.on('value', (snapshot) => {
+    onValue(pollRef, (snapshot) => {
       const pollData = snapshot.val();
       const container = document.getElementById('pinned-poll-container');
       
       if (!pollData || pollData.status !== 'active') {
-        container.style.display = 'none'; // Sembunyikan jika tidak aktif/tidak ada
+        if (container) container.style.display = 'none';
         return;
       }
 
-      container.style.display = 'block';
-      document.getElementById('poll-question').innerText = pollData.question;
+      if (container) container.style.display = 'block';
+      const qEl = document.getElementById('poll-question');
+      if (qEl) qEl.innerText = pollData.question;
 
       const optionsContainer = document.getElementById('poll-options-container');
+      if (!optionsContainer) return;
       optionsContainer.innerHTML = '';
 
-      // Hitung total suara keseluruhan untuk persentase
       let totalVotes = 0;
       if (pollData.options) {
         Object.values(pollData.options).forEach(opt => {
@@ -596,13 +596,11 @@
         });
       }
 
-      // Render setiap opsi jawaban
       if (pollData.options) {
         Object.entries(pollData.options).forEach(([optKey, optVal]) => {
           const votesCount = optVal.votes ? Object.keys(optVal.votes).length : 0;
           const percentage = totalVotes > 0 ? Math.round((votesCount / totalVotes) * 100) : 0;
           
-          // Cek apakah user saat ini sudah memilih opsi ini
           const hasVotedThis = currentUser && optVal.votes && optVal.votes[currentUser.uid];
 
           const btn = document.createElement('button');
@@ -616,13 +614,12 @@
           
           btn.innerHTML = `
             <div style="display: flex; justify-content: space-between; position: relative; z-index: 2;">
-              <span>${escapeHTML ? escapeHTML(optVal.text) : optVal.text}</span>
+              <span>${escapeHTML(optVal.text)}</span>
               <span style="font-weight: bold;">${votesCount} suara (${percentage}%)</span>
             </div>
             <div style="position: absolute; top: 0; left: 0; bottom: 0; width: ${percentage}%; background: rgba(16, 185, 129, 0.35); z-index: 1; transition: width 0.3s ease;"></div>
           `;
 
-          // Aksi ketika warga mengklik pilihan
           btn.onclick = () => votePoll(optKey);
           optionsContainer.appendChild(btn);
         });
@@ -630,33 +627,34 @@
     });
   }
 
-  // Fungsi untuk mengirim/memperbarui suara voting (1 akun = 1 suara)
+  // Fungsi untuk mengirim/memperbarui suara voting
   function votePoll(optKey) {
     if (!currentUser) {
       alert("Silakan login terlebih dahulu untuk melakukan voting.");
       return;
     }
     
-    const pollRef = firebase.database().ref('chats/pinned_poll/options');
+    const optionsRef = ref(db, 'chats/pinned_poll/options');
     
-    pollRef.once('value', (snapshot) => {
+    get(optionsRef).then((snapshot) => {
       const options = snapshot.val();
       let updates = {};
 
-      // Hapus vote lama dari user ini di opsi manapun agar tidak bisa double vote
       if (options) {
         Object.keys(options).forEach(key => {
           if (options[key].votes && options[key].votes[currentUser.uid]) {
-            updates[`${key}/votes/${currentUser.uid}`] = null;
+            updates[`chats/pinned_poll/options/${key}/votes/${currentUser.uid}`] = null;
           }
         });
       }
 
-      // Masukkan vote baru ke opsi yang diklik
-      updates[`${optKey}/votes/${currentUser.uid}`] = true;
+      updates[`chats/pinned_poll/options/${optKey}/votes/${currentUser.uid}`] = true;
       
-      pollRef.update(updates).then(() => {
-        console.log("Suara berhasil direkam!");
+      // Gunakan fungsi update dari modular firebase (import dulu jika belum ada, atau set langsung)
+      import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js").then(({ update }) => {
+        update(ref(db), updates).then(() => {
+          console.log("Suara berhasil direkam!");
+        });
       });
     });
   }
@@ -1505,6 +1503,7 @@ document.addEventListener('visibilitychange', () => {
           listenPublicGroupUnread(); // <--- Hitung unread dari localStorage sebelum ditimpa!
           requestNotificationPermission();
           initFCMToken(currentUser.uid);
+          listenPinnedPoll();
 
           // 2. Set ruang aktif ke public TANPA langsung menandainya sebagai 'read' secara paksa
           activeChatType = 'public';
