@@ -361,6 +361,18 @@
         <div id="dynamic-private-tabs" style="display: flex; gap: 4px;"></div>
       </div>
 
+      <!-- KOTAK PINNED POLL DI ATAS CHAT -->
+<div id="pinned-poll-container" style="display: none; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 10px 12px; font-size: 12px; color: #fff; z-index: 10;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+    <span style="font-weight: bold; color: #38bdf8;">📌 Polling Aktif RT 05</span>
+    <span style="font-size: 10px; background: #10b981; padding: 2px 6px; border-radius: 4px; color: #fff;">Berlangsung</span>
+  </div>
+  <div id="poll-question" style="font-weight: 500; margin-bottom: 8px;">Memuat pertanyaan...</div>
+  <div id="poll-options-container" style="display: flex; flex-direction: column; gap: 6px;">
+    <!-- Tombol pilihan opsi akan dirender dinamis di sini -->
+  </div>
+</div>
+      
       <!-- Area Stream Pesan -->
       <div id="chat-stream" style="flex: 1; display: flex; flex-direction: column; padding: 8px; overflow-y: auto !important; gap: 4px; font-family: monospace; font-size: 12px; line-height: 1.4;">
         <div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;" id="loading-chat">
@@ -556,6 +568,99 @@
         : '';
     }
 
+// Fungsi untuk mendengarkan dan merender Polling dari Firebase secara Real-time
+  function listenPinnedPoll() {
+    // Sesuaikan objek database Anda (misalnya firebase.database() atau db)
+    const pollRef = firebase.database().ref('chats/pinned_poll');
+    
+    pollRef.on('value', (snapshot) => {
+      const pollData = snapshot.val();
+      const container = document.getElementById('pinned-poll-container');
+      
+      if (!pollData || pollData.status !== 'active') {
+        container.style.display = 'none'; // Sembunyikan jika tidak aktif/tidak ada
+        return;
+      }
+
+      container.style.display = 'block';
+      document.getElementById('poll-question').innerText = pollData.question;
+
+      const optionsContainer = document.getElementById('poll-options-container');
+      optionsContainer.innerHTML = '';
+
+      // Hitung total suara keseluruhan untuk persentase
+      let totalVotes = 0;
+      if (pollData.options) {
+        Object.values(pollData.options).forEach(opt => {
+          if (opt.votes) totalVotes += Object.keys(opt.votes).length;
+        });
+      }
+
+      // Render setiap opsi jawaban
+      if (pollData.options) {
+        Object.entries(pollData.options).forEach(([optKey, optVal]) => {
+          const votesCount = optVal.votes ? Object.keys(optVal.votes).length : 0;
+          const percentage = totalVotes > 0 ? Math.round((votesCount / totalVotes) * 100) : 0;
+          
+          // Cek apakah user saat ini sudah memilih opsi ini
+          const hasVotedThis = currentUser && optVal.votes && optVal.votes[currentUser.uid];
+
+          const btn = document.createElement('button');
+          btn.style.cssText = `
+            width: 100%; text-align: left; padding: 8px 10px; border-radius: 6px; 
+            border: 1px solid ${hasVotedThis ? '#10b981' : 'rgba(255,255,255,0.2)'}; 
+            background: ${hasVotedThis ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255,255,255,0.05)'}; 
+            color: #fff; cursor: pointer; position: relative; overflow: hidden; font-size: 11px;
+            transition: all 0.2s ease;
+          `;
+          
+          btn.innerHTML = `
+            <div style="display: flex; justify-content: space-between; position: relative; z-index: 2;">
+              <span>${escapeHTML ? escapeHTML(optVal.text) : optVal.text}</span>
+              <span style="font-weight: bold;">${votesCount} suara (${percentage}%)</span>
+            </div>
+            <div style="position: absolute; top: 0; left: 0; bottom: 0; width: ${percentage}%; background: rgba(16, 185, 129, 0.35); z-index: 1; transition: width 0.3s ease;"></div>
+          `;
+
+          // Aksi ketika warga mengklik pilihan
+          btn.onclick = () => votePoll(optKey);
+          optionsContainer.appendChild(btn);
+        });
+      }
+    });
+  }
+
+  // Fungsi untuk mengirim/memperbarui suara voting (1 akun = 1 suara)
+  function votePoll(optKey) {
+    if (!currentUser) {
+      alert("Silakan login terlebih dahulu untuk melakukan voting.");
+      return;
+    }
+    
+    const pollRef = firebase.database().ref('chats/pinned_poll/options');
+    
+    pollRef.once('value', (snapshot) => {
+      const options = snapshot.val();
+      let updates = {};
+
+      // Hapus vote lama dari user ini di opsi manapun agar tidak bisa double vote
+      if (options) {
+        Object.keys(options).forEach(key => {
+          if (options[key].votes && options[key].votes[currentUser.uid]) {
+            updates[`${key}/votes/${currentUser.uid}`] = null;
+          }
+        });
+      }
+
+      // Masukkan vote baru ke opsi yang diklik
+      updates[`${optKey}/votes/${currentUser.uid}`] = true;
+      
+      pollRef.update(updates).then(() => {
+        console.log("Suara berhasil direkam!");
+      });
+    });
+  }
+    
     window.logoutUser = () => {
       if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
         if (currentUser && currentUser.uid) {
@@ -1269,6 +1374,8 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
+
+    
     // Logika Pemantau Warga Online
     let previousOnlineUsers = new Set();
     let isInitialUsersLoaded = false;
