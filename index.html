@@ -1765,8 +1765,10 @@ let isDenahOpen = false;
     }
   });
 
-function pilihFilterDenah(kategori, element) {
-    // 1. Jalankan fungsi filter asli Anda
+let denahTimer = null; // Variabel untuk menyimpan timer
+
+  function pilihFilterDenah(kategori, element) {
+    // 1. Panggil fungsi filter asli Anda
     filterKategori(kategori, element);
 
     // 2. Hapus kelas 'active' dari semua tombol di dalam popup denah
@@ -1776,10 +1778,24 @@ function pilihFilterDenah(kategori, element) {
       buttons.forEach(btn => btn.classList.remove('active'));
     }
 
-    // 3. Berikan kelas 'active' HANYA pada tombol yang sedang diklik
+    // 3. Tambahkan kelas 'active' HANYA ke tombol yang sedang diklik
     if (element) {
       element.classList.add('active');
     }
+
+    // 4. BATALKAN timer sebelumnya jika user mengeklik tombol lain sebelum 3 detik habis
+    if (denahTimer) {
+      clearTimeout(denahTimer);
+    }
+
+    // 5. ATUR TIMER BARU: Tutup otomatis popup setelah 3 detik (3000 ms)
+    denahTimer = setTimeout(() => {
+      // Periksa apakah popup sedang terbuka, lalu tutup menggunakan fungsi toggle
+      const popupEl = document.getElementById('denah-filter-popup');
+      if (popupEl && popupEl.style.display === 'grid') {
+        toggleDenahMenu();
+      }
+    }, 3000);
   }
     
     
