@@ -362,14 +362,27 @@
       </div>
 
       <!-- KOTAK PINNED POLL DI ATAS CHAT -->
-<div id="pinned-poll-container" style="display: none; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 10px 12px; font-size: 12px; color: #fff; z-index: 10;">
+<div id="pinned-poll-container" style="display: none; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 10px 12px; font-size: 12px; color: #fff; z-index: 10;">
   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-    <span style="font-weight: bold; color: #38bdf8;">📌 Polling Aktif RT 05</span>
-    <span style="font-size: 10px; background: #10b981; padding: 2px 6px; border-radius: 4px; color: #fff;">Berlangsung</span>
+    <span style="font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-thumbtack"></i> Polling Aktif RT 05</span>
+    <span id="poll-status-badge" style="font-size: 10px; background: #10b981; padding: 2px 6px; border-radius: 4px; color: #fff;">Berlangsung</span>
   </div>
   <div id="poll-question" style="font-weight: 500; margin-bottom: 8px;">Memuat pertanyaan...</div>
-  <div id="poll-options-container" style="display: flex; flex-direction: column; gap: 6px;">
-    <!-- Tombol pilihan opsi akan dirender dinamis di sini -->
+  <div id="poll-options-container" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+    <!-- Tombol pilihan opsi -->
+  </div>
+  
+  <!-- PANEL KONTROL KHUSUS ADMIN (Hanya muncul jika user adalah admin) -->
+  <div id="admin-poll-controls" style="display: none; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 6px; display: flex; gap: 6px; justify-content: flex-end;">
+    <button onclick="promptGantiPolling()" class="btn" style="font-size: 10px; padding: 3px 8px; background: #0288d1; color: #fff; border: none;">
+      <i class="fa-solid fa-plus"></i> Buat/Ganti Polling
+    </button>
+    <button onclick="tutupDanSimpulkanPolling()" class="btn" style="font-size: 10px; padding: 3px 8px; background: #f59e0b; color: #020617; border: none; font-weight: bold;">
+      <i class="fa-solid fa-flag-checkered"></i> Selesaikan
+    </button>
+    <button onclick="hapusPolling()" class="btn btn-danger" style="font-size: 10px; padding: 3px 8px;">
+      <i class="fa-solid fa-trash"></i> Hapus
+    </button>
   </div>
 </div>
       
@@ -658,6 +671,91 @@
       });
     });
   }
+
+// Di dalam fungsi listenPinnedPoll(), tambahkan pengecekan hak akses Admin:
+  const adminControls = document.getElementById('admin-poll-controls');
+  if (adminControls) {
+    if (currentUser && currentUser.role === 'admin') {
+      adminControls.style.display = 'flex';
+    } else {
+      adminControls.style.display = 'none';
+    }
+  }
+
+  // Aksi 1: Membuat / Mengganti Polling Baru via Prompt Praktis
+  window.promptGantiPolling = () => {
+    const pertanyaan = prompt("Masukkan Pertanyaan Polling Baru:");
+    if (!pertanyaan) return;
+    
+    const opsi1 = prompt("Masukkan Opsi Pilihan 1:");
+    const opsi2 = prompt("Masukkan Opsi Pilihan 2:");
+    if (!opsi1 || !opsi2) {
+      alert("Minimal harus ada 2 opsi pilihan!");
+      return;
+    }
+
+    const newPollData = {
+      question: pertanyaan,
+      status: "active",
+      options: {
+        opt1: { text: opsi1, votes: {} },
+        opt2: { text: opsi2, votes: {} }
+      }
+    };
+
+    set(ref(db, 'chats/pinned_poll'), newPollData).then(() => {
+      alert("✅ Polling baru berhasil disematkan di chat warga!");
+    });
+  };
+
+  // Aksi 2: Menyelesaikan / Menyimpulkan Polling (Mengirim hasil ke chat publik)
+  window.tutupDanSimpulkanPolling = () => {
+    const pollRef = ref(db, 'chats/pinned_poll');
+    get(pollRef).then((snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.val();
+      
+      let hasilTeks = `📊 [HASIL AKHIR POLLING]: "${data.question}"\n`;
+      let totalSemuaSuara = 0;
+      
+      let rincianOpsi = [];
+      Object.values(data.options).forEach(opt => {
+        const jml = opt.votes ? Object.keys(opt.votes).length : 0;
+        totalSemuaSuara += jml;
+        rincianOpsi.push({ text: opt.text, count: jml });
+      });
+
+      rincianOpsi.forEach(o => {
+        let pct = totalSemuaSuara > 0 ? Math.round((o.count / totalSemuaSuara) * 100) : 0;
+        hasilTeks += `• ${o.text}: ${o.count} suara (${pct}%)\n`;
+      });
+
+      // Kirim otomatis ringkasan hasil polling ke dalam stream chat publik agar warga bisa melihat
+      const newMsgRef = push(ref(db, 'chats'));
+      set(newMsgRef, {
+        uid: currentUser.uid,
+        sender: "SYSTEM / PENGURUS RT",
+        role: "admin",
+        text: hasilTeks,
+        timestamp: serverTimestamp()
+      });
+
+      // Ubah status polling menjadi closed/selesai
+      update(ref(db, 'chats/pinned_poll'), { status: 'closed' }).then(() => {
+        alert("🏁 Polling telah diselesaikan dan ringkasan hasil telah dikirim ke chat grup!");
+      });
+    });
+  };
+
+  // Aksi 3: Menghapus Polling Sepenuhnya
+  window.hapusPolling = () => {
+    if (confirm("Yakin ingin menghapus polling aktif ini dari layar warga?")) {
+      set(ref(db, 'chats/pinned_poll'), null).then(() => {
+        alert("🗑️ Polling berhasil dihapus.");
+      });
+    }
+  };
+    
     
     window.logoutUser = () => {
       if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
