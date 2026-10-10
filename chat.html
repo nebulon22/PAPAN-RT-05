@@ -1640,6 +1640,7 @@ document.addEventListener('visibilitychange', () => {
     }
 
     // Fungsi pembuat warna unik otomatis dari 360° roda warna (menghasilkan jutaan variasi)
+ // Fungsi pembuat warna unik (Eksklusif: Menghindari rentang warna kuning agar tidak sama dengan self)
   function getUniqueColorFromName(name) {
     if (!name) return '#ffffff';
     let hash = 0;
@@ -1647,11 +1648,16 @@ document.addEventListener('visibilitychange', () => {
       hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
     
-    // Ambil nilai sudut warna (Hue) dari 0 sampai 360 derajat berdasarkan hash nama
+    // Ambil nilai sudut warna (Hue) dari 0 sampai 360 derajat
     let hue = Math.abs(hash) % 360;
     
-    // Saturation 80% dan Lightness 65% diatur tetap agar warna selalu cerah, 
-    // kontras, dan tidak terlalu gelap di latar belakang chat yang gelap.
+    // PENGAMAN: Jika hasil warnanya jatuh di rentang warna kuning (35° - 75°),
+    // geser otomatis ke arah warna lain (misalnya ditambah 50 derajat) supaya tidak kembar dengan Anda.
+    if (hue >= 35 && hue <= 75) {
+      hue = (hue + 50) % 360;
+    }
+    
+    // Saturation 80% dan Lightness 65% agar selalu cerah dan kontras di latar belakang gelap.
     return `hsl(${hue}, 80%, 65%)`;
   }
     
