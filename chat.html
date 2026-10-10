@@ -1599,8 +1599,9 @@ document.addEventListener('visibilitychange', () => {
         }, 2000);
       }
 
-     let nameClass = "role-user";
+   let nameClass = "role-user";
       let textClass = "msg-text"; // Default teks warga di Grup Publik (Putih)
+      let customStyleName = "";   // Variabel untuk menampung warna unik warga publik
 
       // 1. Jika pengirim adalah Admin -> Tetap Biru di room manapun
       if (msg.role === 'admin') {
@@ -1613,13 +1614,17 @@ document.addEventListener('visibilitychange', () => {
           nameClass = "role-self";
           textClass = "msg-text msg-text-self";   // Saya sendiri = Kuning
         } else {
-          nameClass = "role-text-other";          // <--- UBAH INI: Username lawan chat jadi Oranye khusus di private
-          textClass = "msg-text msg-text-other";  // Lawan chat = Oranye
+          nameClass = "role-text-other";         // Lawan chat = Oranye
+          textClass = "msg-text msg-text-other"; 
         }
       } 
-      // 3. Jika di Grup Publik biasa
+      // 3. Jika di Grup Publik biasa (Terapkan Jutaan Warna Unik Anti-Kembar untuk Warga)
       else if (msg.uid === currentUser?.uid) {
         nameClass = "role-self";
+      } else {
+        // WARNA UNIK OTOMATIS BERBASIS HSL UNTUK WARGA DI GRUP PUBLIK
+        const uniqueColor = getUniqueColorFromName(msg.sender);
+        customStyleName = `style="color: ${uniqueColor}; font-weight: bold;"`;
       }
    
       const clickHandler = (msg.uid !== currentUser?.uid) 
@@ -1627,12 +1632,28 @@ document.addEventListener('visibilitychange', () => {
         : '';
 
       div.innerHTML = `
-        <span class="${nameClass}" ${clickHandler}>${escapeHTML(msg.sender)}:</span>
+        <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
         <span class="${textClass}">${escapeHTML(msg.text)}</span>
       `;
 
       chatStream.appendChild(div);
     }
+
+    // Fungsi pembuat warna unik otomatis dari 360° roda warna (menghasilkan jutaan variasi)
+  function getUniqueColorFromName(name) {
+    if (!name) return '#ffffff';
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    
+    // Ambil nilai sudut warna (Hue) dari 0 sampai 360 derajat berdasarkan hash nama
+    let hue = Math.abs(hash) % 360;
+    
+    // Saturation 80% dan Lightness 65% diatur tetap agar warna selalu cerah, 
+    // kontras, dan tidak terlalu gelap di latar belakang chat yang gelap.
+    return `hsl(${hue}, 80%, 65%)`;
+  }
     
     window.renderWargaSidebar = () => {
       const listContainer = document.getElementById('warga-list');
