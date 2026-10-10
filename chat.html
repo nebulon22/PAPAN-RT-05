@@ -1812,6 +1812,9 @@ document.addEventListener('visibilitychange', () => {
     }
         
 function renderSingleMessage(msg, isUnread = false, msgKey = '') {
+    // 🛠️ PENGAMAN: Jika teks pesan kosong atau hanya spasi, abaikan/jangan render agar tidak muncul titik dua kosong
+    if (!msg.text || !msg.text.trim()) return;
+
     const chatStream = document.getElementById('chat-stream');
     if (!chatStream) return;
     
@@ -1847,7 +1850,7 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
       ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
       : '';
 
-    // Jika pesan dikirim oleh SYSTEM / Admin hasil polling, biarkan HTML-nya aktif (jangan di-escape seluruhnya)
+    // Jika pesan dikirim oleh SYSTEM / Admin hasil polling, biarkan HTML-nya aktif
     let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" ? msg.text : escapeHTML(msg.text);
 
     div.innerHTML = `
