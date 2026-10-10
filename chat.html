@@ -712,8 +712,7 @@
   };
 
   // Aksi 2: Menyelesaikan / Menyimpulkan Polling (Mengirim hasil ke chat publik)
- // Aksi: Menyelesaikan / Menyimpulkan Polling (Otomatis Deteksi Pemenang & Buat Kesimpulan Merah)
-  window.tutupDanSimpulkanPolling = () => {
+window.tutupDanSimpulkanPolling = () => {
     const pollRef = ref(db, 'chats/pinned_poll');
     get(pollRef).then((snapshot) => {
       if (!snapshot.exists()) return;
@@ -729,28 +728,26 @@
         totalSemuaSuara += jml;
         rincianOpsi.push({ text: opt.text, count: jml });
 
-        // Cari opsi dengan suara terbanyak
         if (jml > maxSuara) {
           maxSuara = jml;
           opsiPemenang = opt.text;
         }
       });
 
-      // Susun teks hasil polling
-      let hasilTeks = `📊 [HASIL AKHIR POLLING]: "${data.question}"\n`;
+      // Susun teks hasil polling dengan pemisah <br> yang aman
+      let hasilTeks = `📊 [HASIL AKHIR POLLING]: "${data.question}"<br>`;
       rincianOpsi.forEach(o => {
         let pct = totalSemuaSuara > 0 ? Math.round((o.count / totalSemuaSuara) * 100) : 0;
-        hasilTeks += `• ${o.text}: ${o.count} suara (${pct}%)\n`;
+        hasilTeks += `• ${o.text}: ${o.count} suara (${pct}%)<br>`;
       });
 
-      // Tambahkan baris kesimpulan gabungan (Pertanyaan + Jawaban Terbanyak)
       let kesimpulanTeks = totalSemuaSuara > 0 
         ? `Kesimpulan-- ${data.question} ${opsiPemenang}.` 
-        : `Kesimpulan-- Belum ada suara yang masuk pada polling ini.`;
+        : `Kesimpulan-- Belum ada suara yang masuk.`;
 
-      hasilTeks += `\n🔴 ${kesimpulanTeks}`;
+      // Tambahkan span merah dengan pemisah baris
+      hasilTeks += `<br><span style="color: #ef4444; font-weight: bold; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">🔴 ${kesimpulanTeks}</span>`;
 
-      // Kirim otomatis ringkasan hasil ke stream chat publik
       const newMsgRef = push(ref(db, 'chats'));
       set(newMsgRef, {
         uid: currentUser.uid,
@@ -760,9 +757,8 @@
         timestamp: serverTimestamp()
       });
 
-      // Ubah status polling menjadi closed
       update(ref(db, 'chats/pinned_poll'), { status: 'closed' }).then(() => {
-        alert("🏁 Polling selesai! Kesimpulan hasil telah dikirim ke chat grup.");
+        alert("🏁 Polling selesai!");
       });
     });
   };
@@ -1823,23 +1819,10 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
     div.className = "msg-row";
     if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
-    if (isUnread) {
-      div.style.transition = "background-color 2s ease, border-color 2s ease";
-      div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
-      div.style.borderLeft = "3px solid #38bdf8";
-      div.style.paddingLeft = "8px";
-
-      setTimeout(() => {
-        div.style.backgroundColor = "transparent";
-        div.style.borderLeftColor = "transparent"; 
-      }, 2000);
-    }
-
     let nameClass = "role-user";
-    let textClass = "msg-text"; // Default teks warga di Grup Publik (Putih)
-    let customStyleName = "";   // Variabel untuk menampung warna unik warga publik
+    let textClass = "msg-text";
+    let customStyleName = "";
 
-    // 1. Tentukan Role & Style Pengirim Terlebih Dahulu
     if (msg.role === 'admin') {
       nameClass = "role-admin";
       textClass = "msg-text msg-text-admin";
@@ -1847,10 +1830,10 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
     else if (activeChatType === 'private') {
       if (msg.uid === currentUser?.uid) {
         nameClass = "role-self";
-        textClass = "msg-text msg-text-self";   // Saya sendiri = Kuning
+        textClass = "msg-text msg-text-self";
       } else {
-        nameClass = "role-text-other";         // Lawan chat = Oranye
-        textClass = "msg-text msg-text-other"; 
+        nameClass = "role-text-other";
+        textClass = "msg-text msg-text-other";
       }
     } 
     else if (msg.uid === currentUser?.uid) {
@@ -1864,19 +1847,12 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
       ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
       : '';
 
-    // 2. Proses Format Teks (Termasuk Deteksi Kesimpulan Merah)
-    let formattedText = escapeHTML(msg.text);
-    if (formattedText.includes("Kesimpulan--") || formattedText.includes("🔴")) {
-      formattedText = formattedText.replace(
-        /(Kesimpulan--[\s\S]*)/g, 
-        '<span style="color: #ef4444; font-weight: bold; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">$1</span>'
-      );
-    }
+    // Jika pesan dikirim oleh SYSTEM / Admin hasil polling, biarkan HTML-nya aktif (jangan di-escape seluruhnya)
+    let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" ? msg.text : escapeHTML(msg.text);
 
-    // 3. Masukkan ke dalam elemen HTML (Cukup 1 kali di akhir)
     div.innerHTML = `
       <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
-      <span class="${textClass}">${formattedText}</span>
+      <span class="${textClass}">${displayMsgText}</span>
     `;
 
     chatStream.appendChild(div);
