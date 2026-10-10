@@ -350,16 +350,22 @@
     <!-- Area Obrolan Stream Utama -->
     <main style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
       
-      <!-- BAR TAB CHAT (Grup & Room Private) -->
-      <div id="chat-tabs-bar" style="display: flex; gap: 4px; padding: 6px 8px; background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid rgba(255, 255, 255, 0.1); overflow-x: auto; flex-shrink: 0; scrollbar-width: none;">
-        <!-- Tab Grup Utama dengan Badge Unread -->
-       <button id="tab-room-public" onclick="switchChatRoom('public')" class="btn" style="background: #0288d1; color: #fff; border: 1px solid #38bdf8; box-shadow: 0 0 6px rgba(56, 189, 248, 0.4); font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;">
-          <i class="fa-solid fa-users"></i> Grup RT 05
-          <span id="badge-public-tab" style="display: none; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; min-width: 16px; height: 16px; line-height: 1; text-align: center; box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);">0</span>
-       </button>
-        <!-- Tab Private Chat -->
-        <div id="dynamic-private-tabs" style="display: flex; gap: 4px;"></div>
-      </div>
+     <!-- BAR TAB CHAT (Grup & Room Private) -->
+<div id="chat-tabs-bar" style="display: flex; gap: 4px; padding: 6px 8px; background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid rgba(255, 255, 255, 0.1); overflow-x: auto; flex-shrink: 0; scrollbar-width: none;">
+  <!-- Tab Grup Utama dengan Badge Unread -->
+  <button id="tab-room-public" onclick="switchChatRoom('public')" class="btn" style="background: #0288d1; color: #fff; border: 1px solid #38bdf8; box-shadow: 0 0 6px rgba(56, 189, 248, 0.4); font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;">
+    <i class="fa-solid fa-users"></i> Grup RT 05
+    <span id="badge-public-tab" style="display: none; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; min-width: 16px; height: 16px; line-height: 1; text-align: center; box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);">0</span>
+  </button>
+  
+  <!-- Tab Private Chat -->
+  <div id="dynamic-private-tabs" style="display: flex; gap: 4px;"></div>
+
+  <!-- TOMBOL TAMBAHAN BUAT POLLING KHUSUS ADMIN -->
+  <button id="btn-create-poll-admin" onclick="promptGantiPolling()" class="btn" style="display: none; background: #0288d1; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 6px; margin-left: auto; white-space: nowrap; align-items: center; gap: 4px;">
+    <i class="fa-solid fa-square-poll-vertical"></i> Buat Polling
+  </button>
+</div>
 
       <!-- KOTAK PINNED POLL DI ATAS CHAT -->
 <div id="pinned-poll-container" style="display: none; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 10px 12px; font-size: 12px; color: #fff; z-index: 10;">
@@ -1544,7 +1550,7 @@ document.addEventListener('visibilitychange', () => {
       console.log('Pesan diterima saat aplikasi aktif:', payload);
     });
         
-    function checkUserStatus() {
+   function checkUserStatus() {
       const chatContainer = document.getElementById('chat-container');
       const chatFooter = document.querySelector('footer');
       const regModal = document.getElementById('reg-modal');
@@ -1586,11 +1592,22 @@ document.addEventListener('visibilitychange', () => {
           
           const userInfo = document.getElementById('user-info-text');
           if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
-          // Tambahkan baris ini untuk memperbarui label di sebelah kolom ketik:
+          
           const labelUserKetik = document.getElementById('chat-current-user-label');
           if (labelUserKetik) {
-          labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
-        }
+            labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
+          }
+
+          // 👇 TAMBAHKAN KODE INI UNTUK MENGATUR TOMBOL "BUAT POLLING" ADMIN 👇
+          const btnCreatePoll = document.getElementById('btn-create-poll-admin');
+          if (btnCreatePoll) {
+            if (currentUser.role === 'admin') {
+              btnCreatePoll.style.display = 'inline-flex';
+            } else {
+              btnCreatePoll.style.display = 'none';
+            }
+          }
+          // ----------------------------------------------------------------
           
           setupPresence();
           
@@ -1598,18 +1615,19 @@ document.addEventListener('visibilitychange', () => {
           loadUsersList();
           renderPrivateTabsUI();
           listenAllPrivateChats();
-          listenPublicGroupUnread(); // <--- Hitung unread dari localStorage sebelum ditimpa!
+          listenPublicGroupUnread();
           requestNotificationPermission();
           initFCMToken(currentUser.uid);
           listenPinnedPoll();
 
-          // 2. Set ruang aktif ke public TANPA langsung menandainya sebagai 'read' secara paksa
+          // 2. Set ruang aktif ke public
           activeChatType = 'public';
           loadChatStream();
         }
       });
     }
 
+    
     window.toggleAuthMode = (mode) => {
       const secReg = document.getElementById('section-register');
       const secLog = document.getElementById('section-login');
