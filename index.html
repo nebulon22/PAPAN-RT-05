@@ -480,25 +480,37 @@ function perbaruiAplikasiSekarang() {
       </div>
 
      <div class="filter-row">
-        <!-- TOMBOL REKAP JIMPITAN (Konsisten menggunakan class btn-filter) -->
-        <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" onclick="bukaModalRiwayatJimpitan()">
+        <!-- TOMBOL REKAP JIMPITAN -->
+        <button class="btn-filter" style="flex: 1; background: #111827; color: white; border-color: #111827; border-radius: 20px; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="bukaModalRiwayatJimpitan()">
           🪙 Rekap Jimpitan
         </button>
 
-        <!-- TOMBOL UTAMA & MENU POP-UP DENAH RT 05 (Warna Hijau Emerald Default) -->
+        <!-- TOMBOL UTAMA DENAH RT 05 -->
         <div style="flex: 1; position: relative;">
-          <button type="button" id="btn-toggle-denah" onclick="toggleDenahMenu()" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
+          <button type="button" id="btn-toggle-denah" onclick="toggleDenahMenu()" class="filter-btn" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold; border-radius: 20px;">
             🗺️ Denah RT 05
           </button>
+        </div>
+      </div>
 
-          <!-- DAFTAR PILIHAN FILTER: Ditata 2 Kolom (Grid Kanan-Kiri) -->
-          <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px; display: none; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(6px); padding: 8px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); border: 1px solid #e5e7eb; z-index: 100;">
-            <button class="btn-filter active" onclick="filterKategori('semua', this); toggleDenahMenu();" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
-            <button class="btn-filter" onclick="filterKategori('minimarket', this); toggleDenahMenu();" style="width: 100%;">🏪 Minimarket</button>
-            <button class="btn-filter" onclick="filterKategori('kost', this); toggleDenahMenu();" style="width: 100%;">🛏️ Kost</button>
-            <button class="btn-filter" onclick="filterKategori('fasum', this); toggleDenahMenu();" style="width: 100%;">🏛️ Fasum</button>
-            <button class="btn-filter" onclick="filterKategori('kuliner', this); toggleDenahMenu();" style="width: 100%;">🍽️ Kuliner</button>
+      <!-- POP-UP MENU KATEGORI DENAH (Tampil Melayang di Tengah Layar / Center Modal) -->
+      <div id="denah-filter-popup" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(4px); z-index: 9999; align-items: center; justify-content: center; padding: 20px;" onclick="if(event.target.id==='denah-filter-popup') toggleDenahMenu()">
+        <div style="background: white; width: 100%; max-width: 320px; border-radius: 16px; padding: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: flex; flex-direction: column; gap: 10px; text-align: center; animation: scaleUp 0.2s ease;">
+          
+          <div style="font-size: 16px; font-weight: bold; color: #111; margin-bottom: 4px; border-bottom: 1px solid #eee; padding-bottom: 8px;">
+            🗺️ Pilih Kategori Denah
           </div>
+
+          <!-- Tombol-tombol Pilihan Kategori -->
+          <button class="btn-filter active" onclick="filterKategori('semua', this); toggleDenahMenu();" style="width: 100%; justify-content: center; padding: 10px; font-size: 13px;">🌍 Semua</button>
+          <button class="btn-filter" onclick="filterKategori('minimarket', this); toggleDenahMenu();" style="width: 100%; justify-content: center; padding: 10px; font-size: 13px;">🏪 Minimarket</button>
+          <button class="btn-filter" onclick="filterKategori('kost', this); toggleDenahMenu();" style="width: 100%; justify-content: center; padding: 10px; font-size: 13px;">🛏️ Kost</button>
+          <button class="btn-filter" onclick="filterKategori('fasum', this); toggleDenahMenu();" style="width: 100%; justify-content: center; padding: 10px; font-size: 13px;">🏛️ Fasum</button>
+          <button class="btn-filter" onclick="filterKategori('kuliner', this); toggleDenahMenu();" style="width: 100%; justify-content: center; padding: 10px; font-size: 13px;">🍽️ Kuliner</button>
+
+          <button type="button" onclick="toggleDenahMenu()" style="margin-top: 6px; background: #ef4444; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 12px;">
+            ❌ Batal
+          </button>
         </div>
       </div>
       
@@ -1744,26 +1756,15 @@ let isDenahOpen = false;
     const mainBtn = document.getElementById('btn-toggle-denah');
 
     if (isDenahOpen) {
-      popup.style.display = 'grid'; // Menggunakan grid agar rapi 2 kolom
-      mainBtn.style.background = '#111827'; // Berubah gelap saat terbuka
+      popup.style.display = 'flex'; // Munculkan modal di tengah layar
+      mainBtn.style.background = '#111827'; // Tombol utama berubah gelap saat aktif
       mainBtn.style.borderColor = '#111827';
     } else {
-      popup.style.display = 'none';
-      mainBtn.style.background = '#10b981'; // Kembali hijau emerald saat tertutup
+      popup.style.display = 'none'; // Sembunyikan modal
+      mainBtn.style.background = '#10b981'; // Tombol kembali hijau emerald
       mainBtn.style.borderColor = '#059669';
     }
   }
-
-  // Menutup menu otomatis jika diklik di luar area
-  document.addEventListener('click', function(event) {
-    const container = document.getElementById('btn-toggle-denah');
-    const popup = document.getElementById('denah-filter-popup');
-    if (container && popup && !container.contains(event.target) && !popup.contains(event.target)) {
-      if (isDenahOpen) {
-        toggleDenahMenu();
-      }
-    }
-  });
     
     function bukaModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'flex';
