@@ -453,7 +453,7 @@ function perbaruiAplikasiSekarang() {
     🟢 Semua Data Ter-sinkron
   </div>
 
-  <!-- Panel pencarian dan filter melayang -->
+<!-- Panel pencarian dan filter melayang -->
   <div id="top-panel">
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
@@ -472,7 +472,7 @@ function perbaruiAplikasiSekarang() {
 
       <div class="filter-row">
         <button type="button" onclick="bukaModalInventaris()" class="btn-filter" style="background: #8b5cf6; color: white; border-color: #7c3aed; font-size: 11px; padding: 6px 4px; cursor: pointer;">
-           📦 Inventaris Perkakas
+            📦 Inventaris Perkakas
         </button>
         <button type="button" onclick="bukaModalWargaBaru()" class="btn-filter" style="background: #0000FF; color: white; border-color: #512da8; font-size: 11px; padding: 6px 4px; cursor: pointer;">
           📝 Form Warga Baru
@@ -483,17 +483,24 @@ function perbaruiAplikasiSekarang() {
         <button class="btn-filter" style="background: #10b981; color: white; border-color: #059669;" onclick="bukaModalRiwayatJimpitan()">
           🪙 Rekap Jimpitan
         </button>
-        <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
-      </div>
 
-      <div class="filter-row">
-        <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
-        <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
-      </div>
+        <!-- 👇 TOMBOL UTAMA & MENU POP-UP DENAH RT 05 (GABUNGAN 5 KATEGORI) 👇 -->
+        <div style="flex: 1; position: relative;">
+          <button type="button" id="btn-toggle-denah" onclick="toggleDenahMenu()" class="btn-filter" style="background: #111827; color: white; border-color: #111827; width: 100%; justify-content: center; font-weight: bold;">
+            🗺️ Denah RT 05
+          </button>
 
-      <div class="filter-row">
-        <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
-        <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
+          <!-- Daftar Pilihan Filter (Awalnya Tersembunyi / Display: None) -->
+          <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px; flex-direction: column; gap: 6px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(6px); padding: 8px; border-radius: 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); border: 1px solid #e5e7eb; z-index: 100;">
+            <button class="btn-filter active" onclick="filterKategori('semua', this); toggleDenahMenu();" style="width: 100%;">🌍 Semua</button>
+            <button class="btn-filter" onclick="filterKategori('minimarket', this); toggleDenahMenu();" style="width: 100%;">🏪 Minimarket</button>
+            <button class="btn-filter" onclick="filterKategori('kost', this); toggleDenahMenu();" style="width: 100%;">🛏️ Kost</button>
+            <button class="btn-filter" onclick="filterKategori('fasum', this); toggleDenahMenu();" style="width: 100%;">🏛️ Fasum</button>
+            <button class="btn-filter" onclick="filterKategori('kuliner', this); toggleDenahMenu();" style="width: 100%;">🍽️ Kuliner</button>
+          </div>
+        </div>
+        <!-- 👆 SELESAI BAGIAN DENAH RT 05 👆 -->
+
       </div>
     </div>
   </div>
@@ -1729,6 +1736,35 @@ function tutupModalInventaris() {
     });
   }
 
+
+    let isDenahOpen = false;
+
+  function toggleDenahMenu() {
+    isDenahOpen = !isDenahOpen;
+    const popup = document.getElementById('denah-filter-popup');
+    const mainBtn = document.getElementById('btn-toggle-denah');
+
+    if (isDenahOpen) {
+      popup.style.display = 'flex';
+      mainBtn.style.background = '#00c853'; // Berubah hijau saat aktif terbuka
+      mainBtn.style.borderColor = '#00c853';
+    } else {
+      popup.style.display = 'none';
+      mainBtn.style.background = '#111827'; // Kembali gelap
+      mainBtn.style.borderColor = '#111827';
+    }
+  }
+
+  // Opsional: Tutup menu jika pengguna mengklik di luar area panel
+  document.addEventListener('click', function(event) {
+    const container = document.getElementById('btn-toggle-denah');
+    const popup = document.getElementById('denah-filter-popup');
+    if (container && popup && !container.contains(event.target) && !popup.contains(event.target)) {
+      if (isDenahOpen) {
+        toggleDenahMenu();
+      }
+    }
+  });
     
     function bukaModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'flex';
