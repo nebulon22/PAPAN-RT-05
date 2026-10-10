@@ -479,7 +479,7 @@ function perbaruiAplikasiSekarang() {
         </button>
       </div>
 
-     <div class="filter-row">
+    <div class="filter-row">
         <!-- TOMBOL REKAP JIMPITAN -->
         <button class="btn-filter" style="flex: 1; background: #111827; color: white; border-color: #111827; border-radius: 20px; display: flex; align-items: center; justify-content: center; gap: 4px;" onclick="bukaModalRiwayatJimpitan()">
           🪙 Rekap Jimpitan
@@ -493,27 +493,27 @@ function perbaruiAplikasiSekarang() {
         </div>
       </div>
 
-      <!-- POP-UP MENU KATEGORI: Melayang Rapi di Tengah Layar dengan Format Grid Kanan-Kiri -->
-      <div id="denah-filter-popup" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(3px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;" onclick="if(event.target.id==='denah-filter-popup') toggleDenahMenu()">
+      <!-- POP-UP MENU KATEGORI: Gaya Asli, tapi Posisinya di Tengah Layar (Center) -->
+      <div id="denah-filter-popup" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.3); backdrop-filter: blur(2px); z-index: 9999; align-items: center; justify-content: center; padding: 16px;" onclick="if(event.target.id==='denah-filter-popup') toggleDenahMenu()">
         
-        <!-- Kotak Container Ditata Grid 2 Kolom (Kanan-Kiri) -->
-        <div style="background: rgba(255, 255, 255, 0.98); width: 100%; max-width: 340px; border-radius: 16px; padding: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); display: grid; grid-template-columns: 1fr 1fr; gap: 10px; animation: scaleUp 0.2s ease;">
+        <!-- Kotak Putih Pembungkus Tombol Filter (Ditata Persis Seperti Gaya Asal Anda, namun dipusatkan) -->
+        <div style="background: white; border-radius: 14px; padding: 12px; box-shadow: 0 8px 25px rgba(0,0,0,0.25); display: flex; flex-direction: column; gap: 8px; width: 280px; border: 1px solid #e5e7eb; animation: scaleUp 0.2s ease;">
           
-          <!-- Tombol "Semua" Lebar Penuh di Atas -->
-          <button class="btn-filter active" onclick="filterKategori('semua', this); toggleDenahMenu();" style="grid-column: span 2; width: 100%; justify-content: center; padding: 10px; font-weight: bold;">🌍 Semua</button>
+          <!-- Tombol Semua (Hijau Lebar Penuh di Atas) -->
+          <button class="btn-filter active" onclick="filterKategori('semua', this); toggleDenahMenu();" style="width: 100%; justify-content: center; background: #00c853; color: white; border-color: #00c853;">🌍 Semua</button>
           
-          <!-- 4 Tombol Filter Tersebar Rapi Kanan-Kiri -->
-          <button class="btn-filter" onclick="filterKategori('minimarket', this); toggleDenahMenu();" style="width: 100%; justify-content: center; padding: 10px;">🏪 Minimarket</button>
-          <button class="btn-filter" onclick="filterKategori('kost', this); toggleDenahMenu();" style="width: 100%; justify-content: center; padding: 10px;">🛏️ Kost</button>
-          <button class="btn-filter" onclick="filterKategori('fasum', this); toggleDenahMenu();" style="width: 100%; justify-content: center; padding: 10px;">🏛️ Fasum</button>
-          <button class="btn-filter" onclick="filterKategori('kuliner', this); toggleDenahMenu();" style="width: 100%; justify-content: center; padding: 10px;">🍽️ Kuliner</button>
+          <!-- Baris 1: Minimarket & Kost -->
+          <div style="display: flex; gap: 6px; width: 100%;">
+            <button class="btn-filter" onclick="filterKategori('minimarket', this); toggleDenahMenu();" style="flex: 1; justify-content: center;">🏪 Minimarket</button>
+            <button class="btn-filter" onclick="filterKategori('kost', this); toggleDenahMenu();" style="flex: 1; justify-content: center;">🛏️ Kost</button>
+          </div>
 
-          <!-- Tombol Batal Full Lebar di Bawah -->
-          <button type="button" onclick="toggleDenahMenu()" style="grid-column: span 2; background: #ef4444; color: white; border: none; padding: 8px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 12px; margin-top: 4px;">
-            ❌ Batal
-          </button>
+          <!-- Baris 2: Fasum & Kuliner -->
+          <div style="display: flex; gap: 6px; width: 100%;">
+            <button class="btn-filter" onclick="filterKategori('fasum', this); toggleDenahMenu();" style="flex: 1; justify-content: center;">🏛️ Fasum</button>
+            <button class="btn-filter" onclick="filterKategori('kuliner', this); toggleDenahMenu();" style="flex: 1; justify-content: center;">🍽️ Kuliner</button>
+          </div>
         </div>
-
       </div>
       
     </div>
@@ -1758,15 +1758,24 @@ let isDenahOpen = false;
     const mainBtn = document.getElementById('btn-toggle-denah');
 
     if (isDenahOpen) {
-      popup.style.display = 'flex'; // Munculkan popup di tengah layar
-      mainBtn.style.background = '#111827'; // Tombol utama berubah gelap saat aktif
+      popup.style.display = 'flex'; // Memunculkan popup persis di tengah layar
+      mainBtn.style.background = '#111827'; // Tombol berubah gelap saat aktif
       mainBtn.style.borderColor = '#111827';
     } else {
-      popup.style.display = 'none'; // Sembunyikan popup
+      popup.style.display = 'none'; // Menutup popup
       mainBtn.style.background = '#10b981'; // Tombol kembali Hijau Emerald
       mainBtn.style.borderColor = '#059669';
     }
   }
+
+  // Menutup popup otomatis jika pengguna mengklik area luar kotak putihnya
+  document.addEventListener('click', function(event) {
+    const popup = document.getElementById('denah-filter-popup');
+    const mainBtn = document.getElementById('btn-toggle-denah');
+    if (popup && popup.style.display === 'flex' && event.target === popup) {
+      toggleDenahMenu();
+    }
+  });
     
     function bukaModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'flex';
