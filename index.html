@@ -453,7 +453,7 @@ function perbaruiAplikasiSekarang() {
     🟢 Semua Data Ter-sinkron
   </div>
 
-  <!-- Panel pencarian dan filter melayang -->
+<!-- Panel pencarian dan filter melayang -->
   <div id="top-panel">
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
@@ -472,29 +472,36 @@ function perbaruiAplikasiSekarang() {
 
       <div class="filter-row">
         <button type="button" onclick="bukaModalInventaris()" class="btn-filter" style="background: #8b5cf6; color: white; border-color: #7c3aed; font-size: 11px; padding: 6px 4px; cursor: pointer;">
-           📦 Inventaris Perkakas
+            📦 Inventaris Perkakas
         </button>
         <button type="button" onclick="bukaModalWargaBaru()" class="btn-filter" style="background: #0000FF; color: white; border-color: #512da8; font-size: 11px; padding: 6px 4px; cursor: pointer;">
           📝 Form Warga Baru
         </button>
       </div>
 
-      <div class="filter-row">
-        <button class="btn-filter" style="background: #10b981; color: white; border-color: #059669;" onclick="bukaModalRiwayatJimpitan()">
+  <div class="filter-row">
+        <!-- TOMBOL REKAP JIMPITAN -->
+        <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" onclick="bukaModalRiwayatJimpitan()">
           🪙 Rekap Jimpitan
         </button>
-        <button class="btn-filter" onclick="filterKategori('minimarket', this)">🏪 Minimarket</button>
-      </div>
 
-      <div class="filter-row">
-        <button class="btn-filter active" onclick="filterKategori('semua', this)">🌍 Semua</button>
-        <button class="btn-filter" onclick="filterKategori('kost', this)">🛏️ Kost</button>
-      </div>
+        <!-- TOMBOL UTAMA & MENU POP-UP DENAH RT 05 -->
+        <div style="flex: 1; position: relative;">
+          <button type="button" id="btn-toggle-denah" onclick="toggleDenahMenu()" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
+            🗺️ Denah RT 05
+          </button>
 
-      <div class="filter-row">
-        <button class="btn-filter" onclick="filterKategori('fasum', this)">🏛️ Fasum</button>
-        <button class="btn-filter" onclick="filterKategori('kuliner', this)">🍽️ Kuliner</button>
+          <!-- DAFTAR PILIHAN FILTER: Menggunakan efek Transparan Glassmorphism & Tanpa Kotak Putih Pekat -->
+          <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: -100%; width: 220px; margin-top: 6px; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(2px); padding: 10px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15); z-index: 100;">
+            <button class="btn-filter active" onclick="pilihFilterDenah('semua', this)" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
+            <button class="btn-filter" onclick="pilihFilterDenah('minimarket', this)" style="width: 100%;">🏪 Minimarket</button>
+            <button class="btn-filter" onclick="pilihFilterDenah('kost', this)" style="width: 100%;">🛏️ Kost</button>
+            <button class="btn-filter" onclick="pilihFilterDenah('fasum', this)" style="width: 100%;">🏛️ Fasum</button>
+            <button class="btn-filter" onclick="pilihFilterDenah('kuliner', this)" style="width: 100%;">🍽️ Kuliner</button>
+          </div>
+        </div>
       </div>
+      
     </div>
   </div>
 
@@ -1729,6 +1736,68 @@ function tutupModalInventaris() {
     });
   }
 
+let isDenahOpen = false;
+
+  function toggleDenahMenu() {
+    isDenahOpen = !isDenahOpen;
+    const popup = document.getElementById('denah-filter-popup');
+    const mainBtn = document.getElementById('btn-toggle-denah');
+
+    if (isDenahOpen) {
+      popup.style.display = 'grid'; // Tampilkan dengan grid 2 kolom
+      mainBtn.style.background = '#111827'; // Tombol utama berubah gelap saat aktif
+      mainBtn.style.borderColor = '#111827';
+    } else {
+      popup.style.display = 'none'; // Sembunyikan
+      mainBtn.style.background = '#10b981'; // Tombol kembali Hijau Emerald
+      mainBtn.style.borderColor = '#059669';
+    }
+  }
+
+  // Menutup menu otomatis jika diklik di luar area
+  document.addEventListener('click', function(event) {
+    const container = document.getElementById('btn-toggle-denah');
+    const popup = document.getElementById('denah-filter-popup');
+    if (container && popup && !container.contains(event.target) && !popup.contains(event.target)) {
+      if (isDenahOpen) {
+        toggleDenahMenu();
+      }
+    }
+  });
+
+let denahTimer = null; // Variabel untuk menyimpan timer
+
+  function pilihFilterDenah(kategori, element) {
+    // 1. Panggil fungsi filter asli Anda
+    filterKategori(kategori, element);
+
+    // 2. Hapus kelas 'active' dari semua tombol di dalam popup denah
+    const popup = document.getElementById('denah-filter-popup');
+    if (popup) {
+      const buttons = popup.querySelectorAll('.btn-filter');
+      buttons.forEach(btn => btn.classList.remove('active'));
+    }
+
+    // 3. Tambahkan kelas 'active' HANYA ke tombol yang sedang diklik
+    if (element) {
+      element.classList.add('active');
+    }
+
+    // 4. BATALKAN timer sebelumnya jika user mengeklik tombol lain sebelum 3 detik habis
+    if (denahTimer) {
+      clearTimeout(denahTimer);
+    }
+
+    // 5. ATUR TIMER BARU: Tutup otomatis popup setelah 3 detik (3000 ms)
+    denahTimer = setTimeout(() => {
+      // Periksa apakah popup sedang terbuka, lalu tutup menggunakan fungsi toggle
+      const popupEl = document.getElementById('denah-filter-popup');
+      if (popupEl && popupEl.style.display === 'grid') {
+        toggleDenahMenu();
+      }
+    }, 3000);
+  }
+    
     
     function bukaModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'flex';
