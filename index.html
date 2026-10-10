@@ -479,20 +479,20 @@ function perbaruiAplikasiSekarang() {
         </button>
       </div>
 
-   <div class="filter-row">
-        <!-- TOMBOL REKAP JIMPITAN (Konsisten menggunakan class btn-filter) -->
+  <div class="filter-row">
+        <!-- TOMBOL REKAP JIMPITAN -->
         <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" onclick="bukaModalRiwayatJimpitan()">
           🪙 Rekap Jimpitan
         </button>
 
-        <!-- TOMBOL UTAMA & MENU POP-UP DENAH RT 05 (Warna Hijau Emerald Default) -->
+        <!-- TOMBOL UTAMA & MENU POP-UP DENAH RT 05 -->
         <div style="flex: 1; position: relative;">
           <button type="button" id="btn-toggle-denah" onclick="toggleDenahMenu()" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
             🗺️ Denah RT 05
           </button>
 
-          <!-- DAFTAR PILIHAN FILTER: Ditata 2 Kolom (Grid Kanan-Kiri) -->
-          <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 6px; display: none; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(6px); padding: 8px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); border: 1px solid #e5e7eb; z-index: 100;">
+          <!-- DAFTAR PILIHAN FILTER: Digeser ke tengah layar menggunakan absolute, left: -100% & width lebih lebar -->
+          <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: -100%; width: 220px; margin-top: 6px; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(6px); padding: 8px; border-radius: 12px; box-shadow: 0 6px 20px rgba(0,0,0,0.25); border: 1px solid #e5e7eb; z-index: 100;">
             <button class="btn-filter active" onclick="filterKategori('semua', this); toggleDenahMenu();" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
             <button class="btn-filter" onclick="filterKategori('minimarket', this); toggleDenahMenu();" style="width: 100%;">🏪 Minimarket</button>
             <button class="btn-filter" onclick="filterKategori('kost', this); toggleDenahMenu();" style="width: 100%;">🛏️ Kost</button>
@@ -1744,22 +1744,24 @@ let isDenahOpen = false;
     const mainBtn = document.getElementById('btn-toggle-denah');
 
     if (isDenahOpen) {
-      popup.style.display = 'flex'; // Memunculkan popup persis di tengah layar
-      mainBtn.style.background = '#111827'; // Tombol berubah gelap saat aktif
+      popup.style.display = 'grid'; // Tampilkan dengan grid 2 kolom
+      mainBtn.style.background = '#111827'; // Tombol utama berubah gelap saat aktif
       mainBtn.style.borderColor = '#111827';
     } else {
-      popup.style.display = 'none'; // Menutup popup
+      popup.style.display = 'none'; // Sembunyikan
       mainBtn.style.background = '#10b981'; // Tombol kembali Hijau Emerald
       mainBtn.style.borderColor = '#059669';
     }
   }
 
-  // Menutup popup otomatis jika pengguna mengklik area luar kotak putihnya
+  // Menutup menu otomatis jika diklik di luar area
   document.addEventListener('click', function(event) {
+    const container = document.getElementById('btn-toggle-denah');
     const popup = document.getElementById('denah-filter-popup');
-    const mainBtn = document.getElementById('btn-toggle-denah');
-    if (popup && popup.style.display === 'flex' && event.target === popup) {
-      toggleDenahMenu();
+    if (container && popup && !container.contains(event.target) && !popup.contains(event.target)) {
+      if (isDenahOpen) {
+        toggleDenahMenu();
+      }
     }
   });
     
