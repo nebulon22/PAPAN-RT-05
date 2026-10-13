@@ -1462,60 +1462,72 @@ document.addEventListener('visibilitychange', () => {
       });
     }
         
- function renderSingleMessage(msg, isUnread = false, msgKey = '') {
-      const chatStream = document.getElementById('chat-stream');
-      if (!chatStream) return;
-      
-      const div = document.createElement('div');
-      div.className = "msg-row";
-      if (msgKey) div.setAttribute('data-msg-id', msgKey);
+function renderSingleMessage(msg, isUnread = false, msgKey = '') {
+  // PENGAMAN: Jika teks pesan kosong, abaikan
+  if (!msg.text || !msg.text.trim()) return;
 
-      if (isUnread) {
-        div.style.transition = "background-color 2s ease, border-color 2s ease";
-        div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
-        div.style.borderLeft = "3px solid #38bdf8";
-        div.style.paddingLeft = "8px";
+  const chatStream = document.getElementById('chat-stream');
+  if (!chatStream) return;
+  
+  const div = document.createElement('div');
+  div.className = "msg-row";
+  if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
-        setTimeout(() => {
+  // 👇 1. EFEK ANIMASI UNREAD (Background putih tipis yang memudar - KEMBALIKAN BAGIAN INI)
+  if (isUnread) {
+      div.style.transition = "background-color 2s ease, border-color 2s ease";
+      div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
+      div.style.borderLeft = "3px solid #38bdf8";
+      div.style.paddingLeft = "8px";
+
+      setTimeout(() => {
           div.style.backgroundColor = "transparent";
           div.style.borderLeftColor = "transparent"; 
-        }, 2000);
-      }
+      }, 2000);
+  }
 
-      let nameClass = "role-user";
-      let textClass = "msg-text"; // Default teks warga di Grup Publik (Putih)
+  let nameClass = "role-user";
+  let textClass = "msg-text";
+  let customStyleName = "";
+  let customStyleText = ""; // Untuk warna teks pesan khusus jika ada
 
-      // 1. Jika pengirim adalah Admin -> Tetap Biru di room manapun
-      if (msg.role === 'admin') {
-        nameClass = "role-admin";
-        textClass = "msg-text msg-text-admin";
-      } 
-      // 2. Jika di Room Private -> Terapkan skema Kuning & Oranye untuk warga
-      else if (activeChatType === 'private') {
-        if (msg.uid === currentUser?.uid) {
+  if (msg.role === 'admin') {
+      nameClass = "role-admin";
+      textClass = "msg-text msg-text-admin";
+  } 
+  else if (activeChatType === 'private') {
+      if (msg.uid === currentUser?.uid) {
           nameClass = "role-self";
-          textClass = "msg-text msg-text-self";   // Saya sendiri = Kuning
-        } else {
-          nameClass = "role-user";
-          textClass = "msg-text msg-text-other";  // Lawan chat = Oranye
-        }
-      } 
-      // 3. Jika di Grup Publik biasa
-      else if (msg.uid === currentUser?.uid) {
-        nameClass = "role-self";
+          textClass = "msg-text msg-text-self";
+      } else {
+          nameClass = "role-text-other";
+          textClass = "msg-text msg-text-other";
       }
+  } 
+  else if (msg.uid === currentUser?.uid) {
+      nameClass = "role-self";
+  } else {
+      // 👇 2. WARNA WARNI NAMA WARGA DI GRUP CHAT (Fitur yang sempat Anda ubah sebelumnya)
+      const uniqueColor = getUniqueColorFromName(msg.sender);
+      customStyleName = `style="color: ${uniqueColor}; font-weight: bold;"`;
+      
+      // Jika Anda kemarin juga sempat mengubah warna teks pesannya agar selaras dengan nama:
+      // customStyleText = `style="color: ${uniqueColor};"`; 
+  }
 
-      const clickHandler = (msg.uid !== currentUser?.uid) 
-        ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
-        : '';
+  const clickHandler = (msg.uid !== currentUser?.uid) 
+      ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
+      : '';
 
-      div.innerHTML = `
-        <span class="${nameClass}" ${clickHandler}>${escapeHTML(msg.sender)}:</span>
-        <span class="${textClass}">${escapeHTML(msg.text)}</span>
-      `;
+  let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" ? msg.text : escapeHTML(msg.text);
 
-      chatStream.appendChild(div);
-    }
+  div.innerHTML = `
+      <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
+      <span class="${textClass}" ${customStyleText}>${displayMsgText}</span>
+  `;
+
+  chatStream.appendChild(div);
+}
     
     window.renderWargaSidebar = () => {
       const listContainer = document.getElementById('warga-list');
