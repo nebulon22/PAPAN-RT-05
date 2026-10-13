@@ -485,7 +485,7 @@
   </div>
 </div>
 
-   <!-- FORM LOGIN -->
+<!-- FORM LOGIN -->
 <div id="section-login" style="display: none;">
   <div style="text-align: center; margin-bottom: 16px;">
     <h2 style="font-size: 16px; font-weight: bold; color: #fff;">Masuk Akun Chat</h2>
@@ -493,12 +493,13 @@
   </div>
 
   <form onsubmit="handleLogin(event)">
-    <div class="form-group">
+    <!-- Ubah struktur datalist menjadi div dropdown kustom dengan posisi relative -->
+    <div class="form-group" style="position: relative;">
       <label for="login-user-input">Pilih atau Cari Akun Kamu *</label>
-      <input type="text" id="login-user-input" list="login-user-options-list" required placeholder="Ketik nama atau hunian..." class="form-control" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
-      <datalist id="login-user-options-list">
-        <!-- Opsi akun dimuat dinamis -->
-      </datalist>
+      <input type="text" id="login-user-input" oninput="filterUserDropdown(this.value)" required placeholder="Ketik nama atau hunian..." class="form-control" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+      
+      <!-- Kotak Dropdown Kustom (Selalu nempel di bawah input) -->
+      <div id="custom-dropdown-list" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #020617; border: 1px solid #334155; border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 99; margin-top: 2px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);"></div>
     </div>
 
     <div class="form-group">
@@ -1658,14 +1659,12 @@ document.addEventListener('visibilitychange', () => {
       }
     };
 
-   function loadLoginUserOptions() {
+   let allRegisteredUsers = [];
+
+    function loadLoginUserOptions() {
       const usersRef = ref(db, 'users');
       get(usersRef).then((snapshot) => {
-        const datalist = document.getElementById('login-user-options-list');
-        if (!datalist) return;
-        datalist.innerHTML = '';
-
-        // Objek pemetaan untuk mencocokkan teks pilihan dengan UID asli
+        allRegisteredUsers = [];
         window.loginUserMap = {};
 
         if (snapshot.exists()) {
@@ -1674,14 +1673,47 @@ document.addEventListener('visibilitychange', () => {
             if (u.status === 'aktif') {
               const displayString = `${u.nama} (${u.hunian})`;
               window.loginUserMap[displayString] = u.uid;
-
-              const opt = document.createElement('option');
-              opt.value = displayString;
-              datalist.appendChild(opt);
+              allRegisteredUsers.push(displayString);
             }
           });
         }
       });
+    }
+
+    // Fungsi filter pencarian untuk dropdown kustom di bawah input
+    function filterUserDropdown(keyword) {
+      const dropdown = document.getElementById('custom-dropdown-list');
+      if (!dropdown) return;
+      
+      dropdown.innerHTML = '';
+      
+      if (!keyword.trim()) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      const filtered = allRegisteredUsers.filter(item => item.toLowerCase().includes(keyword.toLowerCase()));
+
+      if (filtered.length > 0) {
+        dropdown.style.display = 'block';
+        filtered.forEach(name => {
+          const itemDiv = document.createElement('div');
+          itemDiv.style.cssText = "padding: 8px 10px; font-size: 12px; color: #fff; cursor: pointer; border-bottom: 1px solid rgba(51,65,85,0.3);";
+          itemDiv.innerText = name;
+          
+          itemDiv.onclick = () => {
+            document.getElementById('login-user-input').value = name;
+            dropdown.style.display = 'none';
+          };
+          
+          itemDiv.onmouseenter = () => itemDiv.style.background = '#1e293b';
+          itemDiv.onmouseleave = () => itemDiv.style.background = 'transparent';
+
+          dropdown.appendChild(itemDiv);
+        });
+      } else {
+        dropdown.style.display = 'none';
+      }
     }
 
    window.handleLogin = (e) => {
