@@ -1204,7 +1204,7 @@ document.addEventListener('visibilitychange', () => {
     // Bind fungsi secara global ke window agar terbaca penuh oleh form HTML
     window.sendChatMessage = executeSendMessage;
 
-  // Pemantau Pesan Unread Grup Chat Publik
+ // Pemantau Pesan Unread Grup Chat Publik
     let publicGroupListener = null;
 
     function listenPublicGroupUnread() {
@@ -1228,36 +1228,37 @@ document.addEventListener('visibilitychange', () => {
         const lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
 
         let unreadPublicCount = 0;
-        let lastMsg = null;
-        let countAfterKey = false;
-
-        if (!lastReadPublicMapKey) countAfterKey = true;
+        let countAfterKey = !lastReadPublicMapKey;
 
         snapshot.forEach((msgSnap) => {
           const msgKey = msgSnap.key;
           const msgData = msgSnap.val();
-          lastMsg = msgData;
 
           if (msgKey === lastReadPublicMapKey) {
             countAfterKey = true;
             unreadPublicCount = 0;
-          } else if (countAfterKey && msgData.uid !== currentUser.uid) {
-            unreadPublicCount++;
+          } else if (countAfterKey) {
+            // Pengaman Mutlak: Abaikan pesan dari diri sendiri
+            if (msgData.uid !== currentUser.uid) {
+              unreadPublicCount++;
+            }
           }
         });
 
-        if (lastMsg && lastMsg.uid === currentUser.uid) {
+        // 🛠️ TAMBAHAN UTAMA: Jika pengguna sedang aktif di tab publik, paksa unread jadi 0
+        if (activeChatType === 'public') {
           unreadPublicCount = 0;
         }
 
-        // Selalu perbarui badge tab publik jika ada pesan baru yang belum dibaca
+        // Selalu perbarui badge tab publik
         updatePublicTabBadge(unreadPublicCount);
 
         // Kirim jumlah unread publik ke halaman utama (index.html)
         sendUnreadCountToParent(unreadPublicCount);
       }); 
-    } // <--- PASTIKAN KURUNG KURAWAL INI ADA UNTUK MENUTUP FUNGSI listenPublicGroupUnread
+    }
 
+    
     function updatePublicTabBadge(count) {
       const tabBadge = document.getElementById('badge-public-tab');
       if (tabBadge) {
