@@ -1002,7 +1002,8 @@ function perbaruiAplikasiSekarang() {
 
 </div>
 
-<script>
+
+ <script>
   function toggleChatModal() {
     const modal = document.getElementById('chat-overlay-modal');
     const iframe = modal ? modal.querySelector('iframe') : null;
@@ -1029,7 +1030,7 @@ function perbaruiAplikasiSekarang() {
     }
   }
 
-  // Mendengarkan Pembaruan Badge Unread dari iframe chat.html
+  // Mendengarkan Pembaruan Badge Unread dari iframe chat.html (TERPADU & AMAN)
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
       const badge = document.getElementById('badge-chat-main');
@@ -1038,10 +1039,11 @@ function perbaruiAplikasiSekarang() {
       const modal = document.getElementById('chat-overlay-modal');
 
       const isModalOpen = (modal && modal.style.display === 'flex');
+      const effectiveCount = isModalOpen ? 0 : count;
 
       if (badge && chatBtn) {
-        if (count > 0 && !isModalOpen) {
-          badge.innerText = count > 99 ? '99+' : count;
+        if (effectiveCount > 0) {
+          badge.innerText = effectiveCount > 99 ? '99+' : effectiveCount;
           badge.style.display = 'inline-block';
           
           // 🔥 Nyalakan animasi lembut ketika ada pesan baru masuk
@@ -1058,8 +1060,8 @@ function perbaruiAplikasiSekarang() {
       // Update badge ikon aplikasi PWA di Home Screen HP
       if ('setAppBadge' in navigator) {
         try {
-          if (count > 0 && !isModalOpen) {
-            navigator.setAppBadge(count).catch(err => console.log(err));
+          if (effectiveCount > 0) {
+            navigator.setAppBadge(effectiveCount).catch(err => console.log(err));
           } else {
             navigator.clearAppBadge().catch(err => console.log(err));
           }
@@ -1067,39 +1069,7 @@ function perbaruiAplikasiSekarang() {
       }
     }
   });
-  // Fungsi untuk memperbarui Badge pada Ikon Aplikasi PWA (Home Screen)
-  function updatePWABadge(totalUnread) {
-    if ('setAppBadge' in navigator) {
-      try {
-        if (totalUnread > 0) {
-          navigator.setAppBadge(totalUnread).catch(err => console.log("Badge PWA error:", err));
-        } else {
-          navigator.clearAppBadge().catch(err => console.log("Clear badge error:", err));
-        }
-      } catch (e) {
-        // Abaikan jika browser tidak mendukung
-      }
-    }
-  }
 
-  function updatePublicTabBadge(count) {
-  const badge = document.getElementById('badge-chat-main');
-  const chatBtn = document.getElementById('floating-chat-btn');
-
-  if (count > 0) {
-    badge.style.display = 'inline-block';
-    badge.innerText = count > 99 ? '99+' : count;
-    
-    // 🔥 NYALAKAN ANIMASI LEMBUT KETIKA ADA PESAN BARU
-    chatBtn.classList.add('chat-btn-animated');
-  } else {
-    badge.style.display = 'none';
-    badge.innerText = '0';
-    
-    // 🛑 MATIKAN ANIMASI JIKA SUDAH DIBACA
-    chatBtn.classList.remove('chat-btn-animated');
-  }
-}
   </script>
     
   <script src="html5-qrcode.min.js"></script>
