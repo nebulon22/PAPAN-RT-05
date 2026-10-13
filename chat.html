@@ -1266,6 +1266,93 @@ document.addEventListener('visibilitychange', () => {
       });
     }
 
+// Pemantau Pesan Unread Grup Chat Publik (Paling Akurat)
+    let publicGroupListener = null;
+    let isFirstPublicLoad = true;
+
+    function listenPublicGroupUnread() {
+      if (!currentUser?.uid || currentUser.status !== 'aktif') return;
+
+      if (publicGroupListener) {
+        publicGroupListener();
+        publicGroupListener = null;
+        isFirstPublicLoad = true;
+      }
+
+      const chatsRef = query(ref(db, 'chats'), limitToLast(100));
+
+      publicGroupListener = onValue(chatsRef, (snapshot) => {
+        if (!snapshot.exists()) {
+          updatePublicTabBadge(0);
+          sendUnreadCountToParent(0);
+          isFirstPublicLoad = false;
+          return;
+        }
+
+        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+        const lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+
+        let unreadPublicCount = 0;
+        let lastMsg = null;
+        let messages = [];
+
+        snapshot.forEach((msgSnap) => {
+          messages.push({
+            key: msgSnap.key,
+            ...msgSnap.val()
+          });
+        });
+
+        if (messages.length > 0) {
+          lastMsg = messages[messages.length - 1];
+        }
+
+        // Jika belum ada key yang tersimpan di localStorage, inisialisasi ke pesan terakhir agar tidak melompat ke 99+
+        if (!lastReadPublicMapKey && messages.length > 0) {
+          lastReadPublicMap[currentUser.uid] = lastMsg.key;
+          localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+          updatePublicTabBadge(0);
+          sendUnreadCountToParent(0);
+          isFirstPublicLoad = false;
+          return;
+        }
+
+        // Hitung pesan dari orang lain SETELAH key yang terakhir dibaca
+        let countAfter = false;
+        messages.forEach((msg) => {
+          if (countAfter && msg.uid !== currentUser.uid) {
+            unreadPublicCount++;
+          }
+          if (msg.key === lastReadPublicMapKey) {
+            countAfter = true;
+          }
+        });
+
+        if (lastMsg && lastMsg.uid === currentUser.uid) {
+          unreadPublicCount = 0;
+        }
+
+        // 🔥 CEK APAKAH MODAL CHAT DI INDEX.HTML BENAR-BENAR TERBUKA
+        const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
+        const isModalOpen = (modal && modal.style.display === 'flex');
+        
+        // Grup dianggap sedang dilihat HANYA JIKA modal terbuka DAN sedang di tab public
+        const isViewingGroupPublic = (isModalOpen && activeChatType === 'public');
+
+        if (!isViewingGroupPublic && unreadPublicCount > 0) {
+          updatePublicTabBadge(unreadPublicCount);
+          if (!isFirstPublicLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
+            playKlingSound();
+          }
+        } else {
+          updatePublicTabBadge(0);
+        }
+
+        sendUnreadCountToParent(isViewingGroupPublic ? 0 : unreadPublicCount);
+        isFirstPublicLoad = false;
+      });
+    }
+
     function updatePublicTabBadge(count) {
       const tabBadge = document.getElementById('badge-public-tab');
       if (tabBadge) {
@@ -1325,10 +1412,13 @@ document.addEventListener('visibilitychange', () => {
         }
       }
 
-      window.parent.postMessage({
-        type: 'RT05_CHAT_UNREAD_UPDATE',
-        unreadPublicCount: grandTotalUnread 
-      }, '*');
+      if (window.parent) {
+        window.parent.postMessage({
+          type: 'RT05_CHAT_UNREAD_UPDATE',
+          unreadPublicCount: lastPublicUnreadCount,
+          totalUnread: grandTotalUnread
+        }, '*');
+      }
     }
 
     function sendUnreadCountToParent(count) {
