@@ -1822,44 +1822,57 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
     div.className = "msg-row";
     if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
+    // 👇 EFEK ANIMASI UNREAD (Background putih tipis yang memudar)
+    if (isUnread) {
+        div.style.transition = "background-color 2s ease, border-color 2s ease";
+        div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
+        div.style.borderLeft = "3px solid #38bdf8";
+        div.style.paddingLeft = "8px";
+
+        setTimeout(() => {
+            div.style.backgroundColor = "transparent";
+            div.style.borderLeftColor = "transparent"; 
+        }, 2000);
+    }
+
     let nameClass = "role-user";
     let textClass = "msg-text";
     let customStyleName = "";
 
     if (msg.role === 'admin') {
-      nameClass = "role-admin";
-      textClass = "msg-text msg-text-admin";
+        nameClass = "role-admin";
+        textClass = "msg-text msg-text-admin";
     } 
     else if (activeChatType === 'private') {
-      if (msg.uid === currentUser?.uid) {
-        nameClass = "role-self";
-        textClass = "msg-text msg-text-self";
-      } else {
-        nameClass = "role-text-other";
-        textClass = "msg-text msg-text-other";
-      }
+        if (msg.uid === currentUser?.uid) {
+            nameClass = "role-self";
+            textClass = "msg-text msg-text-self";
+        } else {
+            nameClass = "role-text-other";
+            textClass = "msg-text msg-text-other";
+        }
     } 
     else if (msg.uid === currentUser?.uid) {
-      nameClass = "role-self";
+        nameClass = "role-self";
     } else {
-      const uniqueColor = getUniqueColorFromName(msg.sender);
-      customStyleName = `style="color: ${uniqueColor}; font-weight: bold;"`;
+        const uniqueColor = getUniqueColorFromName(msg.sender);
+        customStyleName = `style="color: ${uniqueColor}; font-weight: bold;"`;
     }
 
     const clickHandler = (msg.uid !== currentUser?.uid) 
-      ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
-      : '';
+        ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
+        : '';
 
     // Jika pesan dikirim oleh SYSTEM / Admin hasil polling, biarkan HTML-nya aktif
     let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" ? msg.text : escapeHTML(msg.text);
 
     div.innerHTML = `
-      <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
-      <span class="${textClass}">${displayMsgText}</span>
+        <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
+        <span class="${textClass}">${displayMsgText}</span>
     `;
 
     chatStream.appendChild(div);
-  }
+}
 
     // Fungsi pembuat warna unik otomatis dari 360° roda warna (menghasilkan jutaan variasi)
  // Fungsi pembuat warna unik (Eksklusif: Menghindari rentang warna kuning agar tidak sama dengan self)
