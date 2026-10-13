@@ -1800,50 +1800,71 @@ if (messages.length > 0 && messages[messages.length - 1].uid === currentUser.uid
       });
     };
 
-    let isInitialPublicChatLoaded = false;
+   let isInitialPublicChatLoaded = false;
 
-    function loadChatStream() {
-      const chatRef = query(ref(db, 'chats'), limitToLast(500));
-      const chatStream = document.getElementById('chat-stream');
+function loadChatStream() {
+  const chatRef = query(ref(db, 'chats'), limitToLast(500));
+  const chatStream = document.getElementById('chat-stream');
 
-      currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
-        if (activeChatType !== 'public') return;
+  currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
+    if (activeChatType !== 'public') return;
+    if (!chatStream) return;
+    
+    chatStream.innerHTML = '';
 
-        if (!chatStream) return;
-        chatStream.innerHTML = '';
-
-        if (!snapshot.exists()) {
-          chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
-          isInitialPublicChatLoaded = true;
-          return;
-        }
-
-        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
-
-        let isUnreadSection = false;
-        if (!lastReadPublicMapKey) isUnreadSection = true;
-
-        snapshot.forEach((childSnap) => {
-          const msgKey = childSnap.key;
-          const msgData = childSnap.val();
-
-          let isUnreadMsg = false;
-          if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
-            isUnreadMsg = true;
-          }
-
-          if (msgKey === lastReadPublicMapKey) {
-            isUnreadSection = true;
-          }
-
-          renderSingleMessage(msgData, isUnreadMsg, msgKey);
-        });
-
-        isInitialPublicChatLoaded = true;
-        chatStream.scrollTop = chatStream.scrollHeight;
-      });
+    if (!snapshot.exists()) {
+      chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
+      isInitialPublicChatLoaded = true;
+      return;
     }
+
+    // Ambil mapping key terbaca milik user saat ini
+    const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+    const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
+
+    // Jika belum pernah tersimpan sama sekali, ambil key dari pesan paling akhir agar tidak merembet ke pesan lama
+    if (!lastReadPublicMapKey) {
+      let lastKey = null;
+      snapshot.forEach(child => { lastKey = child.key; });
+      if (lastKey) {
+        lastReadPublicMap[currentUser.uid] = lastKey;
+        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+      }
+    }
+
+    // Muat ulang key target setelah dipastikan aman
+    const currentLastRead = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+    const targetKey = currentLastRead[currentUser?.uid];
+
+    let isUnreadSection = false;
+    // Jika targetKey tidak ada di memori, anggap semuanya sudah dibaca pada pemuatan awal
+    if (!targetKey) isUnreadSection = true;
+
+    snapshot.forEach((childSnap) => {
+      const msgKey = childSnap.key;
+      const msgData = childSnap.val();
+
+      let isUnreadMsg = false;
+
+      // 🛠️ INTI PERBAIKAN: Jika kita sudah melewati targetKey, dan pesan bukan dari diri sendiri, 
+      // serta data awal sudah selesai dimuat -> Berikan status unread (trigger animasi putih)
+      if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
+        isUnreadMsg = true;
+      }
+
+      // Jika iterasi mencapai key terakhir yang dibaca, aktifkan flag unread untuk pesan berikutnya
+      if (msgKey === targetKey) {
+        isUnreadSection = true;
+      }
+
+      // Memanggil fungsi renderSingleMessage bawaan Anda secara utuh tanpa mengubahnya
+      renderSingleMessage(msgData, isUnreadMsg, msgKey);
+    });
+
+    isInitialPublicChatLoaded = true;
+    chatStream.scrollTop = chatStream.scrollHeight;
+  });
+}
         
 function renderSingleMessage(msg, isUnread = false, msgKey = '') {
     // 🛠️ PENGAMAN: Jika teks pesan kosong atau hanya spasi, abaikan/jangan render agar tidak muncul titik dua kosong
