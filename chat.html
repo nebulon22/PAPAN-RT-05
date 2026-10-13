@@ -1200,6 +1200,7 @@ document.addEventListener('visibilitychange', () => {
 
 // Pemantau Pesan Unread Grup Chat Publik
     let publicGroupListener = null;
+    let isFirstPublicLoad = true;
 
     function listenPublicGroupUnread() {
       if (!currentUser?.uid || currentUser.status !== 'aktif') return;
@@ -1207,6 +1208,7 @@ document.addEventListener('visibilitychange', () => {
       if (publicGroupListener) {
         publicGroupListener();
         publicGroupListener = null;
+        isFirstPublicLoad = true;
       }
 
       const chatsRef = query(ref(db, 'chats'), limitToLast(500));
@@ -1215,6 +1217,7 @@ document.addEventListener('visibilitychange', () => {
         if (!snapshot.exists()) {
           updatePublicTabBadge(0);
           sendUnreadCountToParent(0);
+          isFirstPublicLoad = false;
           return;
         }
 
@@ -1244,13 +1247,22 @@ document.addEventListener('visibilitychange', () => {
           unreadPublicCount = 0;
         }
 
-        if (activeChatType === 'private') {
+        // Cek apakah user sedang benar-benar melihat tab grup publik dan modal terbuka
+        const isViewingGroupPublic = (activeChatType === 'public' && isChatVisible);
+
+        if (!isViewingGroupPublic && unreadPublicCount > 0) {
           updatePublicTabBadge(unreadPublicCount);
+          // Mainkan suara kling jika ada pesan masuk baru dari orang lain
+          if (!isFirstPublicLoad && lastMsg && lastMsg.uid !== currentUser.uid) {
+            playKlingSound();
+          }
         } else {
           updatePublicTabBadge(0);
         }
 
-        sendUnreadCountToParent(unreadPublicCount);
+        // Kirim status unread ke halaman utama (index.html)
+        sendUnreadCountToParent(isViewingGroupPublic ? 0 : unreadPublicCount);
+        isFirstPublicLoad = false;
       });
     }
 
