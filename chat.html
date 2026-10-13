@@ -1228,10 +1228,14 @@ document.addEventListener('visibilitychange', () => {
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
         let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
 
-        // 🛠️ PERBAIKAN 1: Jika localStorage kosong (pertama buka), jadikan pesan paling akhir saat ini sebagai titik acuan (0 unread)
         if (!lastReadPublicMapKey) {
           let latestKey = null;
-          snapshot.forEach(child => { latestKey = child.key; });
+          snapshot.forEach((msgSnap) => {
+            // 🛠️ PENGAMAN: Jangan jadikan polling sebagai acuan kunci
+            if (msgSnap.key !== 'pinned_poll') {
+              latestKey = msgSnap.key; 
+            }
+          });
           if (latestKey) {
             lastReadPublicMap[currentUser.uid] = latestKey;
             localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
@@ -1246,18 +1250,20 @@ document.addEventListener('visibilitychange', () => {
           const msgKey = msgSnap.key;
           const msgData = msgSnap.val();
 
+          // 🛠️ PENGAMAN MUTLAK: Abaikan node polling dari perhitungan unread!
+          if (msgKey === 'pinned_poll') return;
+
           if (msgKey === lastReadPublicMapKey) {
             countAfterKey = true;
             unreadPublicCount = 0;
           } else if (countAfterKey) {
-            // Abaikan pesan dari diri sendiri
             if (msgData.uid !== currentUser.uid) {
               unreadPublicCount++;
             }
           }
         });
 
-        // 🛠️ PERBAIKAN 2: Paksa unread 0 HANYA JIKA aktif di tab publik DAN layar HP sedang menyala/terbuka
+        // Paksa unread 0 HANYA JIKA aktif di tab publik DAN layar HP sedang menyala/terbuka
         if (activeChatType === 'public' && isChatVisible) {
           unreadPublicCount = 0;
         }
@@ -1280,14 +1286,19 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
-    window.markPublicGroupAsRead = () => {
+  window.markPublicGroupAsRead = () => {
       if (!currentUser?.uid) return;
 
-      const chatsRef = query(ref(db, 'chats'), limitToLast(1));
+      // 🛠️ PERBAIKAN: Ambil 5 data terakhir, cari yang BUKAN pinned_poll
+      const chatsRef = query(ref(db, 'chats'), limitToLast(5));
       get(chatsRef).then((snapshot) => {
         if (snapshot.exists()) {
           let lastKey = null;
-          snapshot.forEach(child => { lastKey = child.key; });
+          snapshot.forEach(child => {
+            if (child.key !== 'pinned_poll') { // 👈 Abaikan polling
+              lastKey = child.key;
+            }
+          });
 
           if (lastKey) {
             const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
@@ -1830,7 +1841,7 @@ document.addEventListener('visibilitychange', () => {
       });
     };
 
-    let isInitialPublicChatLoaded = false;
+  let isInitialPublicChatLoaded = false;
 
     function loadChatStream() {
       const chatRef = query(ref(db, 'chats'), limitToLast(500));
@@ -1857,6 +1868,9 @@ document.addEventListener('visibilitychange', () => {
         snapshot.forEach((childSnap) => {
           const msgKey = childSnap.key;
           const msgData = childSnap.val();
+
+          // 🛠️ PENGAMAN: Abaikan data polling dari daftar render obrolan!
+          if (msgKey === 'pinned_poll') return;
 
           let isUnreadMsg = false;
           if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
