@@ -350,17 +350,45 @@
     <!-- Area Obrolan Stream Utama -->
     <main style="flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative;">
       
-      <!-- BAR TAB CHAT (Grup & Room Private) -->
-      <div id="chat-tabs-bar" style="display: flex; gap: 4px; padding: 6px 8px; background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid rgba(255, 255, 255, 0.1); overflow-x: auto; flex-shrink: 0; scrollbar-width: none;">
-        <!-- Tab Grup Utama dengan Badge Unread -->
-       <button id="tab-room-public" onclick="switchChatRoom('public')" class="btn" style="background: #0288d1; color: #fff; border: 1px solid #38bdf8; box-shadow: 0 0 6px rgba(56, 189, 248, 0.4); font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;">
-          <i class="fa-solid fa-users"></i> Grup RT 05
-          <span id="badge-public-tab" style="display: none; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; min-width: 16px; height: 16px; line-height: 1; text-align: center; box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);">0</span>
-       </button>
-        <!-- Tab Private Chat -->
-        <div id="dynamic-private-tabs" style="display: flex; gap: 4px;"></div>
-      </div>
+     <!-- BAR TAB CHAT (Grup & Room Private) -->
+<div id="chat-tabs-bar" style="display: flex; gap: 4px; padding: 6px 8px; background: rgba(15, 23, 42, 0.6); border-bottom: 1px solid rgba(255, 255, 255, 0.1); overflow-x: auto; flex-shrink: 0; scrollbar-width: none;">
+  <!-- Tab Grup Utama dengan Badge Unread -->
+  <button id="tab-room-public" onclick="switchChatRoom('public')" class="btn" style="background: #0288d1; color: #fff; border: 1px solid #38bdf8; box-shadow: 0 0 6px rgba(56, 189, 248, 0.4); font-size: 11px; font-weight: bold; padding: 4px 10px; border-radius: 6px; white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;">
+    <i class="fa-solid fa-users"></i> Grup RT 05
+    <span id="badge-public-tab" style="display: none; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; min-width: 16px; height: 16px; line-height: 1; text-align: center; box-shadow: 0 0 4px rgba(239, 68, 68, 0.3);">0</span>
+  </button>
+  
+  <!-- Tab Private Chat -->
+  <div id="dynamic-private-tabs" style="display: flex; gap: 4px;"></div>
 
+  <!-- TOMBOL TAMBAHAN BUAT POLLING KHUSUS ADMIN -->
+  <button id="btn-create-poll-admin" onclick="promptGantiPolling()" class="btn" style="display: none; background: #0288d1; color: #fff; font-size: 10px; padding: 4px 8px; border-radius: 6px; margin-left: auto; white-space: nowrap; align-items: center; gap: 4px;">
+    <i class="fa-solid fa-square-poll-vertical"></i> Buat Polling
+  </button>
+</div>
+
+      <!-- KOTAK PINNED POLL DI ATAS CHAT -->
+<div id="pinned-poll-container" style="display: none; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(8px); border-bottom: 1px solid rgba(255, 255, 255, 0.15); padding: 10px 12px; font-size: 12px; color: #fff; z-index: 10;">
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+    <span style="font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-thumbtack"></i> Polling Aktif RT 05</span>
+    <span id="poll-status-badge" style="font-size: 10px; background: #10b981; padding: 2px 6px; border-radius: 4px; color: #fff;">Berlangsung</span>
+  </div>
+  <div id="poll-question" style="font-weight: 500; margin-bottom: 8px;">Memuat pertanyaan...</div>
+  <div id="poll-options-container" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px;">
+    <!-- Tombol pilihan opsi -->
+  </div>
+  
+  <!-- PANEL KONTROL KHUSUS ADMIN (Hanya muncul jika user adalah admin) -->
+  <div id="admin-poll-controls" style="display: none; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 6px; display: flex; gap: 6px; justify-content: flex-end;">
+    <button onclick="tutupDanSimpulkanPolling()" class="btn" style="font-size: 10px; padding: 3px 8px; background: #f59e0b; color: #020617; border: none; font-weight: bold;">
+      <i class="fa-solid fa-flag-checkered"></i> Selesaikan
+    </button>
+    <button onclick="hapusPolling()" class="btn btn-danger" style="font-size: 10px; padding: 3px 8px;">
+      <i class="fa-solid fa-trash"></i> Hapus
+    </button>
+  </div>
+</div>
+      
       <!-- Area Stream Pesan -->
       <div id="chat-stream" style="flex: 1; display: flex; flex-direction: column; padding: 8px; overflow-y: auto !important; gap: 4px; font-family: monospace; font-size: 12px; line-height: 1.4;">
         <div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;" id="loading-chat">
@@ -457,7 +485,7 @@
   </div>
 </div>
 
-   <!-- FORM LOGIN -->
+<!-- FORM LOGIN -->
 <div id="section-login" style="display: none;">
   <div style="text-align: center; margin-bottom: 16px;">
     <h2 style="font-size: 16px; font-weight: bold; color: #fff;">Masuk Akun Chat</h2>
@@ -465,12 +493,13 @@
   </div>
 
   <form onsubmit="handleLogin(event)">
-    <div class="form-group">
+    <!-- Ubah struktur datalist menjadi div dropdown kustom dengan posisi relative -->
+    <div class="form-group" style="position: relative;">
       <label for="login-user-input">Pilih atau Cari Akun Kamu *</label>
-      <input type="text" id="login-user-input" list="login-user-options-list" required placeholder="Ketik nama atau hunian..." class="form-control" autocomplete="off">
-      <datalist id="login-user-options-list">
-        <!-- Opsi akun dimuat dinamis -->
-      </datalist>
+      <input type="text" id="login-user-input" oninput="filterUserDropdown(this.value)" required placeholder="Ketik nama atau hunian..." class="form-control" autocomplete="off" autocorrect="off" autocapitalize="none" spellcheck="false">
+      
+      <!-- Kotak Dropdown Kustom (Selalu nempel di bawah input) -->
+      <div id="custom-dropdown-list" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: #020617; border: 1px solid #334155; border-radius: 6px; max-height: 150px; overflow-y: auto; z-index: 99; margin-top: 2px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5);"></div>
     </div>
 
     <div class="form-group">
@@ -520,7 +549,7 @@
   <!-- Firebase SDK Modular -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
    // 👇 TAMBAHKAN MODUL FIREBASE MESSAGING DI SINI 👇
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
@@ -556,6 +585,195 @@
         : '';
     }
 
+// Fungsi untuk mendengarkan dan merender Polling dari Firebase secara Real-time
+  function listenPinnedPoll() {
+    const pollRef = ref(db, 'chats/pinned_poll');
+    
+    onValue(pollRef, (snapshot) => {
+      const pollData = snapshot.val();
+      const container = document.getElementById('pinned-poll-container');
+      
+      if (!pollData || pollData.status !== 'active') {
+        if (container) container.style.display = 'none';
+        return;
+      }
+
+      if (container) container.style.display = 'block';
+      const qEl = document.getElementById('poll-question');
+      if (qEl) qEl.innerText = pollData.question;
+
+      const optionsContainer = document.getElementById('poll-options-container');
+      if (!optionsContainer) return;
+      optionsContainer.innerHTML = '';
+
+      let totalVotes = 0;
+      if (pollData.options) {
+        Object.values(pollData.options).forEach(opt => {
+          if (opt.votes) totalVotes += Object.keys(opt.votes).length;
+        });
+      }
+
+      if (pollData.options) {
+        Object.entries(pollData.options).forEach(([optKey, optVal]) => {
+          const votesCount = optVal.votes ? Object.keys(optVal.votes).length : 0;
+          const percentage = totalVotes > 0 ? Math.round((votesCount / totalVotes) * 100) : 0;
+          
+          const hasVotedThis = currentUser && optVal.votes && optVal.votes[currentUser.uid];
+
+          const btn = document.createElement('button');
+          btn.style.cssText = `
+            width: 100%; text-align: left; padding: 8px 10px; border-radius: 6px; 
+            border: 1px solid ${hasVotedThis ? '#10b981' : 'rgba(255,255,255,0.2)'}; 
+            background: ${hasVotedThis ? 'rgba(16, 185, 129, 0.25)' : 'rgba(255,255,255,0.05)'}; 
+            color: #fff; cursor: pointer; position: relative; overflow: hidden; font-size: 11px;
+            transition: all 0.2s ease;
+          `;
+          
+          btn.innerHTML = `
+            <div style="display: flex; justify-content: space-between; position: relative; z-index: 2;">
+              <span>${escapeHTML(optVal.text)}</span>
+              <span style="font-weight: bold;">${votesCount} suara (${percentage}%)</span>
+            </div>
+            <div style="position: absolute; top: 0; left: 0; bottom: 0; width: ${percentage}%; background: rgba(16, 185, 129, 0.35); z-index: 1; transition: width 0.3s ease;"></div>
+          `;
+
+          btn.onclick = () => votePoll(optKey);
+          optionsContainer.appendChild(btn);
+        });
+      }
+    });
+  }
+
+// Fungsi untuk mengirim/memperbarui suara voting (Sudah dibersihkan)
+    function votePoll(optKey) {
+      if (!currentUser) {
+        alert("Silakan login terlebih dahulu untuk melakukan voting.");
+        return;
+      }
+      
+      const optionsRef = ref(db, 'chats/pinned_poll/options');
+      
+      get(optionsRef).then((snapshot) => {
+        const options = snapshot.val();
+        let updates = {};
+
+        if (options) {
+          Object.keys(options).forEach(key => {
+            if (options[key].votes && options[key].votes[currentUser.uid]) {
+              updates[`chats/pinned_poll/options/${key}/votes/${currentUser.uid}`] = null;
+            }
+          });
+        }
+
+        updates[`chats/pinned_poll/options/${optKey}/votes/${currentUser.uid}`] = true;
+        
+        // Langsung gunakan fungsi update() karena sudah di-import di atas skrip
+        update(ref(db), updates).then(() => {
+          console.log("Suara berhasil direkam!");
+        }).catch((err) => {
+          console.error("Gagal melakukan voting:", err);
+        });
+      });
+    }
+
+// Di dalam fungsi listenPinnedPoll(), tambahkan pengecekan hak akses Admin:
+  const adminControls = document.getElementById('admin-poll-controls');
+  if (adminControls) {
+    if (currentUser && currentUser.role === 'admin') {
+      adminControls.style.display = 'flex';
+    } else {
+      adminControls.style.display = 'none';
+    }
+  }
+
+  // Aksi 1: Membuat / Mengganti Polling Baru via Prompt Praktis
+  window.promptGantiPolling = () => {
+    const pertanyaan = prompt("Masukkan Pertanyaan Polling Baru:");
+    if (!pertanyaan) return;
+    
+    const opsi1 = prompt("Masukkan Opsi Pilihan 1:");
+    const opsi2 = prompt("Masukkan Opsi Pilihan 2:");
+    if (!opsi1 || !opsi2) {
+      alert("Minimal harus ada 2 opsi pilihan!");
+      return;
+    }
+
+    const newPollData = {
+      question: pertanyaan,
+      status: "active",
+      options: {
+        opt1: { text: opsi1, votes: {} },
+        opt2: { text: opsi2, votes: {} }
+      }
+    };
+
+    set(ref(db, 'chats/pinned_poll'), newPollData).then(() => {
+      alert("✅ Polling baru berhasil disematkan di chat warga!");
+    });
+  };
+
+  // Aksi 2: Menyelesaikan / Menyimpulkan Polling (Mengirim hasil ke chat publik)
+window.tutupDanSimpulkanPolling = () => {
+    const pollRef = ref(db, 'chats/pinned_poll');
+    get(pollRef).then((snapshot) => {
+      if (!snapshot.exists()) return;
+      const data = snapshot.val();
+      
+      let totalSemuaSuara = 0;
+      let rincianOpsi = [];
+      let opsiPemenang = null;
+      let maxSuara = -1;
+      
+      Object.values(data.options).forEach(opt => {
+        const jml = opt.votes ? Object.keys(opt.votes).length : 0;
+        totalSemuaSuara += jml;
+        rincianOpsi.push({ text: opt.text, count: jml });
+
+        if (jml > maxSuara) {
+          maxSuara = jml;
+          opsiPemenang = opt.text;
+        }
+      });
+
+      // Susun teks hasil polling dengan pemisah <br> yang aman
+      let hasilTeks = `📊 [HASIL AKHIR POLLING]: "${data.question}"<br>`;
+      rincianOpsi.forEach(o => {
+        let pct = totalSemuaSuara > 0 ? Math.round((o.count / totalSemuaSuara) * 100) : 0;
+        hasilTeks += `• ${o.text}: ${o.count} suara (${pct}%)<br>`;
+      });
+
+      let kesimpulanTeks = totalSemuaSuara > 0 
+        ? `Kesimpulan-- ${data.question} ${opsiPemenang}.` 
+        : `Kesimpulan-- Belum ada suara yang masuk.`;
+
+      // Tambahkan span merah dengan pemisah baris
+      hasilTeks += `<br><span style="color: #ef4444; font-weight: bold; text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000;">🔴 ${kesimpulanTeks}</span>`;
+
+      const newMsgRef = push(ref(db, 'chats'));
+      set(newMsgRef, {
+        uid: currentUser.uid,
+        sender: "SYSTEM / PENGURUS RT",
+        role: "admin",
+        text: hasilTeks,
+        timestamp: serverTimestamp()
+      });
+
+      update(ref(db, 'chats/pinned_poll'), { status: 'closed' }).then(() => {
+        alert("🏁 Polling selesai!");
+      });
+    });
+  };
+
+  // Aksi 3: Menghapus Polling Sepenuhnya
+  window.hapusPolling = () => {
+    if (confirm("Yakin ingin menghapus polling aktif ini dari layar warga?")) {
+      set(ref(db, 'chats/pinned_poll'), null).then(() => {
+        alert("🗑️ Polling berhasil dihapus.");
+      });
+    }
+  };
+    
+    
     window.logoutUser = () => {
       if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
         if (currentUser && currentUser.uid) {
@@ -910,7 +1128,7 @@ document.addEventListener('visibilitychange', () => {
       });
     }
     
-   // 6. Pengiriman Pesan (Keyboard Tetap Terbuka & Auto-Clear Highlight)
+  // 6. Pengiriman Pesan (Keyboard Tetap Terbuka & Auto-Clear Highlight)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -926,21 +1144,27 @@ document.addEventListener('visibilitychange', () => {
       input.value = '';
       input.focus();
 
-      if (activeChatType === 'public') {
+     if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
 
-        // 🛠️ PERBAIKAN: Langsung tandai ID pesan ini sebagai 'terbaca' agar highlight putih di chat lama otomatis padam!
-        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        lastReadPublicMap[currentUser.uid] = newKey;
-        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
-
+        // Kirim data pesan terlebih dahulu ke Firebase
         set(newMsgRef, {
           uid: currentUser.uid,
           sender: currentUser.username || currentUser.nama,
           role: currentUser.role || 'warga',
           text: text,
           timestamp: serverTimestamp()
+        }).then(() => {
+          // SETELAH BERHASIL TERSIMPAN DI FIREBASE, baru simpan ke localStorage
+          const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+          lastReadPublicMap[currentUser.uid] = newKey;
+          localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+
+          // Opsional: Langsung reset badge ke 0 karena Anda yang mengirimnya
+          updatePublicTabBadge(0);
+        }).catch((error) => {
+            console.error("Gagal mengirim pesan publik:", error);
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
@@ -981,7 +1205,7 @@ document.addEventListener('visibilitychange', () => {
     // Bind fungsi secara global ke window agar terbaca penuh oleh form HTML
     window.sendChatMessage = executeSendMessage;
 
-    // Pemantau Pesan Unread Grup Chat Publik
+ // Pemantau Pesan Unread Grup Chat Publik
     let publicGroupListener = null;
 
     function listenPublicGroupUnread() {
@@ -1002,41 +1226,54 @@ document.addEventListener('visibilitychange', () => {
         }
 
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        const lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+        let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+
+        if (!lastReadPublicMapKey) {
+          let latestKey = null;
+          snapshot.forEach((msgSnap) => {
+            // 🛠️ PENGAMAN: Jangan jadikan polling sebagai acuan kunci
+            if (msgSnap.key !== 'pinned_poll') {
+              latestKey = msgSnap.key; 
+            }
+          });
+          if (latestKey) {
+            lastReadPublicMap[currentUser.uid] = latestKey;
+            localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+            lastReadPublicMapKey = latestKey;
+          }
+        }
 
         let unreadPublicCount = 0;
-        let lastMsg = null;
-        let countAfterKey = false;
-
-        if (!lastReadPublicMapKey) countAfterKey = true;
+        let countAfterKey = !lastReadPublicMapKey;
 
         snapshot.forEach((msgSnap) => {
           const msgKey = msgSnap.key;
           const msgData = msgSnap.val();
-          lastMsg = msgData;
+
+          // 🛠️ PENGAMAN MUTLAK: Abaikan node polling dari perhitungan unread!
+          if (msgKey === 'pinned_poll') return;
 
           if (msgKey === lastReadPublicMapKey) {
             countAfterKey = true;
             unreadPublicCount = 0;
-          } else if (countAfterKey && msgData.uid !== currentUser.uid) {
-            unreadPublicCount++;
+          } else if (countAfterKey) {
+            if (msgData.uid !== currentUser.uid) {
+              unreadPublicCount++;
+            }
           }
         });
 
-        if (lastMsg && lastMsg.uid === currentUser.uid) {
+        // Paksa unread 0 HANYA JIKA aktif di tab publik DAN layar HP sedang menyala/terbuka
+        if (activeChatType === 'public' && isChatVisible) {
           unreadPublicCount = 0;
         }
 
-        if (activeChatType === 'private') {
-          updatePublicTabBadge(unreadPublicCount);
-        } else {
-          updatePublicTabBadge(0);
-        }
-
+        updatePublicTabBadge(unreadPublicCount);
         sendUnreadCountToParent(unreadPublicCount);
-      });
+      }); 
     }
 
+    
     function updatePublicTabBadge(count) {
       const tabBadge = document.getElementById('badge-public-tab');
       if (tabBadge) {
@@ -1049,14 +1286,19 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
-    window.markPublicGroupAsRead = () => {
+  window.markPublicGroupAsRead = () => {
       if (!currentUser?.uid) return;
 
-      const chatsRef = query(ref(db, 'chats'), limitToLast(1));
+      // 🛠️ PERBAIKAN: Ambil 5 data terakhir, cari yang BUKAN pinned_poll
+      const chatsRef = query(ref(db, 'chats'), limitToLast(5));
       get(chatsRef).then((snapshot) => {
         if (snapshot.exists()) {
           let lastKey = null;
-          snapshot.forEach(child => { lastKey = child.key; });
+          snapshot.forEach(child => {
+            if (child.key !== 'pinned_poll') { // 👈 Abaikan polling
+              lastKey = child.key;
+            }
+          });
 
           if (lastKey) {
             const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
@@ -1203,9 +1445,27 @@ document.addEventListener('visibilitychange', () => {
       });
 
       // 3. DETEKSI BERALIH TAB (Visibility Change menggunakan anti-kedip 3 detik)
-      document.addEventListener('visibilitychange', () => {
-        evaluateStatus(false);
-      });
+     // Deteksi jika layar HP mati / minimize / kembali dari idle
+document.addEventListener('visibilitychange', () => {
+  isChatVisible = !document.hidden;
+  
+  if (isChatVisible) {
+    // Paksa Firebase mengaktifkan kembali WebSocket jika sempat terputus/idle
+    if (typeof firebase !== 'undefined' && firebase.database) {
+      firebase.database().goOnline();
+    }
+
+    if (activeChatType === 'private' && activePrivateUID) {
+      unreadCounts[activePrivateUID] = 0;
+      markRoomAsRead(activePrivateUID);
+      renderPrivateTabsUI();
+    } else if (activeChatType === 'public') {
+      // 🛠️ PERBAIKAN 3: Jika layar menyala kembali dan Anda berada di tab publik, langsung tandai semua terbaca
+      updatePublicTabBadge(0);
+      markPublicGroupAsRead();
+    }
+  }
+});
 
       // 4. EKSPOSE FUNGSI SAAT TOMBOL CHAT DITUTUP/DIBUKA (Instan)
       window.updatePresenceOnChatToggle = function() {
@@ -1269,6 +1529,8 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
+
+    
     // Logika Pemantau Warga Online
     let previousOnlineUsers = new Set();
     let isInitialUsersLoaded = false;
@@ -1341,7 +1603,7 @@ document.addEventListener('visibilitychange', () => {
       console.log('Pesan diterima saat aplikasi aktif:', payload);
     });
         
-    function checkUserStatus() {
+   function checkUserStatus() {
       const chatContainer = document.getElementById('chat-container');
       const chatFooter = document.querySelector('footer');
       const regModal = document.getElementById('reg-modal');
@@ -1383,11 +1645,22 @@ document.addEventListener('visibilitychange', () => {
           
           const userInfo = document.getElementById('user-info-text');
           if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
-          // Tambahkan baris ini untuk memperbarui label di sebelah kolom ketik:
+          
           const labelUserKetik = document.getElementById('chat-current-user-label');
           if (labelUserKetik) {
-          labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
-        }
+            labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
+          }
+
+          // 👇 TAMBAHKAN KODE INI UNTUK MENGATUR TOMBOL "BUAT POLLING" ADMIN 👇
+          const btnCreatePoll = document.getElementById('btn-create-poll-admin');
+          if (btnCreatePoll) {
+            if (currentUser.role === 'admin') {
+              btnCreatePoll.style.display = 'inline-flex';
+            } else {
+              btnCreatePoll.style.display = 'none';
+            }
+          }
+          // ----------------------------------------------------------------
           
           setupPresence();
           
@@ -1395,17 +1668,19 @@ document.addEventListener('visibilitychange', () => {
           loadUsersList();
           renderPrivateTabsUI();
           listenAllPrivateChats();
-          listenPublicGroupUnread(); // <--- Hitung unread dari localStorage sebelum ditimpa!
+          listenPublicGroupUnread();
           requestNotificationPermission();
           initFCMToken(currentUser.uid);
+          listenPinnedPoll();
 
-          // 2. Set ruang aktif ke public TANPA langsung menandainya sebagai 'read' secara paksa
+          // 2. Set ruang aktif ke public
           activeChatType = 'public';
           loadChatStream();
         }
       });
     }
 
+    
     window.toggleAuthMode = (mode) => {
       const secReg = document.getElementById('section-register');
       const secLog = document.getElementById('section-login');
@@ -1421,14 +1696,12 @@ document.addEventListener('visibilitychange', () => {
       }
     };
 
-   function loadLoginUserOptions() {
+   let allRegisteredUsers = [];
+
+    function loadLoginUserOptions() {
       const usersRef = ref(db, 'users');
       get(usersRef).then((snapshot) => {
-        const datalist = document.getElementById('login-user-options-list');
-        if (!datalist) return;
-        datalist.innerHTML = '';
-
-        // Objek pemetaan untuk mencocokkan teks pilihan dengan UID asli
+        allRegisteredUsers = [];
         window.loginUserMap = {};
 
         if (snapshot.exists()) {
@@ -1437,14 +1710,48 @@ document.addEventListener('visibilitychange', () => {
             if (u.status === 'aktif') {
               const displayString = `${u.nama} (${u.hunian})`;
               window.loginUserMap[displayString] = u.uid;
-
-              const opt = document.createElement('option');
-              opt.value = displayString;
-              datalist.appendChild(opt);
+              allRegisteredUsers.push(displayString);
             }
           });
         }
       });
+    }
+
+    // Fungsi filter pencarian untuk dropdown kustom di bawah input
+  // Ubah deklarasi fungsinya menjadi menempel ke window
+    window.filterUserDropdown = function(keyword) {
+      const dropdown = document.getElementById('custom-dropdown-list');
+      if (!dropdown) return;
+      
+      dropdown.innerHTML = '';
+      
+      if (!keyword.trim()) {
+        dropdown.style.display = 'none';
+        return;
+      }
+
+      const filtered = allRegisteredUsers.filter(item => item.toLowerCase().includes(keyword.toLowerCase()));
+
+      if (filtered.length > 0) {
+        dropdown.style.display = 'block';
+        filtered.forEach(name => {
+          const itemDiv = document.createElement('div');
+          itemDiv.style.cssText = "padding: 8px 10px; font-size: 12px; color: #fff; cursor: pointer; border-bottom: 1px solid rgba(51,65,85,0.3);";
+          itemDiv.innerText = name;
+          
+          itemDiv.onclick = () => {
+            document.getElementById('login-user-input').value = name;
+            dropdown.style.display = 'none';
+          };
+          
+          itemDiv.onmouseenter = () => itemDiv.style.background = '#1e293b';
+          itemDiv.onmouseleave = () => itemDiv.style.background = 'transparent';
+
+          dropdown.appendChild(itemDiv);
+        });
+      } else {
+        dropdown.style.display = 'none';
+      }
     }
 
    window.handleLogin = (e) => {
@@ -1534,7 +1841,7 @@ document.addEventListener('visibilitychange', () => {
       });
     };
 
-    let isInitialPublicChatLoaded = false;
+  let isInitialPublicChatLoaded = false;
 
     function loadChatStream() {
       const chatRef = query(ref(db, 'chats'), limitToLast(500));
@@ -1562,6 +1869,9 @@ document.addEventListener('visibilitychange', () => {
           const msgKey = childSnap.key;
           const msgData = childSnap.val();
 
+          // 🛠️ PENGAMAN: Abaikan data polling dari daftar render obrolan!
+          if (msgKey === 'pinned_poll') return;
+
           let isUnreadMsg = false;
           if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
             isUnreadMsg = true;
@@ -1579,65 +1889,74 @@ document.addEventListener('visibilitychange', () => {
       });
     }
         
- function renderSingleMessage(msg, isUnread = false, msgKey = '') {
-      const chatStream = document.getElementById('chat-stream');
-      if (!chatStream) return;
-      
-      const div = document.createElement('div');
-      div.className = "msg-row";
-      if (msgKey) div.setAttribute('data-msg-id', msgKey);
+function renderSingleMessage(msg, isUnread = false, msgKey = '') {
+  // PENGAMAN: Jika teks pesan kosong, abaikan
+  if (!msg.text || !msg.text.trim()) return;
 
-      if (isUnread) {
-        div.style.transition = "background-color 2s ease, border-color 2s ease";
-        div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
-        div.style.borderLeft = "3px solid #38bdf8";
-        div.style.paddingLeft = "8px";
+  const chatStream = document.getElementById('chat-stream');
+  if (!chatStream) return;
+  
+  const div = document.createElement('div');
+  div.className = "msg-row";
+  if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
-        setTimeout(() => {
+  // 👇 1. EFEK ANIMASI UNREAD (Background putih tipis yang memudar - KEMBALIKAN BAGIAN INI)
+  if (isUnread) {
+      div.style.transition = "background-color 2s ease, border-color 2s ease";
+      div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
+      div.style.borderLeft = "3px solid #38bdf8";
+      div.style.paddingLeft = "8px";
+
+      setTimeout(() => {
           div.style.backgroundColor = "transparent";
           div.style.borderLeftColor = "transparent"; 
-        }, 2000);
-      }
+      }, 2000);
+  }
 
-   let nameClass = "role-user";
-      let textClass = "msg-text"; // Default teks warga di Grup Publik (Putih)
-      let customStyleName = "";   // Variabel untuk menampung warna unik warga publik
+  let nameClass = "role-user";
+  let textClass = "msg-text";
+  let customStyleName = "";
+  let customStyleText = ""; // Untuk warna teks pesan khusus jika ada
 
-      // 1. Jika pengirim adalah Admin -> Tetap Biru di room manapun
-      if (msg.role === 'admin') {
-        nameClass = "role-admin";
-        textClass = "msg-text msg-text-admin";
-      } 
-      // 2. Jika di Room Private -> Terapkan skema Kuning & Oranye untuk warga
-      else if (activeChatType === 'private') {
-        if (msg.uid === currentUser?.uid) {
+  if (msg.role === 'admin') {
+      nameClass = "role-admin";
+      textClass = "msg-text msg-text-admin";
+  } 
+  else if (activeChatType === 'private') {
+      if (msg.uid === currentUser?.uid) {
           nameClass = "role-self";
-          textClass = "msg-text msg-text-self";   // Saya sendiri = Kuning
-        } else {
-          nameClass = "role-text-other";         // Lawan chat = Oranye
-          textClass = "msg-text msg-text-other"; 
-        }
-      } 
-      // 3. Jika di Grup Publik biasa (Terapkan Jutaan Warna Unik Anti-Kembar untuk Warga)
-      else if (msg.uid === currentUser?.uid) {
-        nameClass = "role-self";
+          textClass = "msg-text msg-text-self";
       } else {
-        // WARNA UNIK OTOMATIS BERBASIS HSL UNTUK WARGA DI GRUP PUBLIK
-        const uniqueColor = getUniqueColorFromName(msg.sender);
-        customStyleName = `style="color: ${uniqueColor}; font-weight: bold;"`;
+          nameClass = "role-text-other";
+          textClass = "msg-text msg-text-other";
       }
-   
-      const clickHandler = (msg.uid !== currentUser?.uid) 
-        ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
-        : '';
+  } 
+  else if (msg.uid === currentUser?.uid) {
+      nameClass = "role-self";
+  } else {
+      // 👇 2. WARNA WARNI NAMA WARGA DI GRUP CHAT (Fitur yang sempat Anda ubah sebelumnya)
+      const uniqueColor = getUniqueColorFromName(msg.sender);
+      customStyleName = `style="color: ${uniqueColor}; font-weight: bold;"`;
+      
+      // Jika Anda kemarin juga sempat mengubah warna teks pesannya agar selaras dengan nama:
+      // customStyleText = `style="color: ${uniqueColor};"`; 
+  }
 
-      div.innerHTML = `
-        <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
-        <span class="${textClass}">${escapeHTML(msg.text)}</span>
-      `;
+  const clickHandler = (msg.uid !== currentUser?.uid) 
+      ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
+      : '';
 
-      chatStream.appendChild(div);
-    }
+  let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" ? msg.text : escapeHTML(msg.text);
+
+  div.innerHTML = `
+      <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
+      <span class="${textClass}" ${customStyleText}>${displayMsgText}</span>
+  `;
+
+  chatStream.appendChild(div);
+}
+
+      
 
     // Fungsi pembuat warna unik otomatis dari 360° roda warna (menghasilkan jutaan variasi)
  // Fungsi pembuat warna unik (Eksklusif: Menghindari rentang warna kuning agar tidak sama dengan self)
