@@ -1147,18 +1147,26 @@ document.addEventListener('visibilitychange', () => {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
 
-        // 🛠️ PERBAIKAN: Langsung tandai ID pesan ini sebagai 'terbaca' agar highlight putih di chat lama otomatis padam!
-        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        lastReadPublicMap[currentUser.uid] = newKey;
-        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+        // 🛠️ PERBAIKAN: Buat referensi push baru agar mendapatkan key unik yang valid dari Firebase
+const publicChatRef = ref(db, 'public_chats'); // Sesuaikan dengan path database Anda
+const newMsgRef = push(publicChatRef);
+const newKey = newMsgRef.key; // Dapatkan key uniknya di sini
 
-        set(newMsgRef, {
-          uid: currentUser.uid,
-          sender: currentUser.username || currentUser.nama,
-          role: currentUser.role || 'warga',
-          text: text,
-          timestamp: serverTimestamp()
-        });
+// Tandai ID pesan ini sebagai 'terbaca' di localStorage agar highlight dan unread sesuai
+const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+lastReadPublicMap[currentUser.uid] = newKey;
+localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+
+// Kirim data pesan ke Firebase menggunakan referensi yang sama
+set(newMsgRef, {
+  uid: currentUser.uid,
+  sender: currentUser.username || currentUser.nama,
+  role: currentUser.role || 'warga',
+  text: text,
+  timestamp: serverTimestamp()
+}).catch((error) => {
+    console.error("Gagal mengirim pesan:", error);
+});
 
       } else if (activeChatType === 'private' && activePrivateUID) {
         const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
