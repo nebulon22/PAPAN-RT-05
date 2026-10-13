@@ -1226,7 +1226,18 @@ document.addEventListener('visibilitychange', () => {
         }
 
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        const lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+        let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+
+        // 🛠️ PERBAIKAN 1: Jika localStorage kosong (pertama buka), jadikan pesan paling akhir saat ini sebagai titik acuan (0 unread)
+        if (!lastReadPublicMapKey) {
+          let latestKey = null;
+          snapshot.forEach(child => { latestKey = child.key; });
+          if (latestKey) {
+            lastReadPublicMap[currentUser.uid] = latestKey;
+            localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+            lastReadPublicMapKey = latestKey;
+          }
+        }
 
         let unreadPublicCount = 0;
         let countAfterKey = !lastReadPublicMapKey;
@@ -1239,22 +1250,19 @@ document.addEventListener('visibilitychange', () => {
             countAfterKey = true;
             unreadPublicCount = 0;
           } else if (countAfterKey) {
-            // Pengaman Mutlak: Abaikan pesan dari diri sendiri
+            // Abaikan pesan dari diri sendiri
             if (msgData.uid !== currentUser.uid) {
               unreadPublicCount++;
             }
           }
         });
 
-        // 🛠️ TAMBAHAN UTAMA: Jika pengguna sedang aktif di tab publik, paksa unread jadi 0
-        if (activeChatType === 'public') {
+        // 🛠️ PERBAIKAN 2: Paksa unread 0 HANYA JIKA aktif di tab publik DAN layar HP sedang menyala/terbuka
+        if (activeChatType === 'public' && isChatVisible) {
           unreadPublicCount = 0;
         }
 
-        // Selalu perbarui badge tab publik
         updatePublicTabBadge(unreadPublicCount);
-
-        // Kirim jumlah unread publik ke halaman utama (index.html)
         sendUnreadCountToParent(unreadPublicCount);
       }); 
     }
@@ -1426,9 +1434,27 @@ document.addEventListener('visibilitychange', () => {
       });
 
       // 3. DETEKSI BERALIH TAB (Visibility Change menggunakan anti-kedip 3 detik)
-      document.addEventListener('visibilitychange', () => {
-        evaluateStatus(false);
-      });
+     // Deteksi jika layar HP mati / minimize / kembali dari idle
+document.addEventListener('visibilitychange', () => {
+  isChatVisible = !document.hidden;
+  
+  if (isChatVisible) {
+    // Paksa Firebase mengaktifkan kembali WebSocket jika sempat terputus/idle
+    if (typeof firebase !== 'undefined' && firebase.database) {
+      firebase.database().goOnline();
+    }
+
+    if (activeChatType === 'private' && activePrivateUID) {
+      unreadCounts[activePrivateUID] = 0;
+      markRoomAsRead(activePrivateUID);
+      renderPrivateTabsUI();
+    } else if (activeChatType === 'public') {
+      // 🛠️ PERBAIKAN 3: Jika layar menyala kembali dan Anda berada di tab publik, langsung tandai semua terbaca
+      updatePublicTabBadge(0);
+      markPublicGroupAsRead();
+    }
+  }
+});
 
       // 4. EKSPOSE FUNGSI SAAT TOMBOL CHAT DITUTUP/DIBUKA (Instan)
       window.updatePresenceOnChatToggle = function() {
