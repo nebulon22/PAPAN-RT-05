@@ -643,37 +643,37 @@
     });
   }
 
-  // Fungsi untuk mengirim/memperbarui suara voting
-  function votePoll(optKey) {
-    if (!currentUser) {
-      alert("Silakan login terlebih dahulu untuk melakukan voting.");
-      return;
-    }
-    
-    const optionsRef = ref(db, 'chats/pinned_poll/options');
-    
-    get(optionsRef).then((snapshot) => {
-      const options = snapshot.val();
-      let updates = {};
-
-      if (options) {
-        Object.keys(options).forEach(key => {
-          if (options[key].votes && options[key].votes[currentUser.uid]) {
-            updates[`chats/pinned_poll/options/${key}/votes/${currentUser.uid}`] = null;
-          }
-        });
+// Fungsi untuk mengirim/memperbarui suara voting (Sudah dibersihkan)
+    function votePoll(optKey) {
+      if (!currentUser) {
+        alert("Silakan login terlebih dahulu untuk melakukan voting.");
+        return;
       }
-
-      updates[`chats/pinned_poll/options/${optKey}/votes/${currentUser.uid}`] = true;
       
-      // Gunakan fungsi update dari modular firebase (import dulu jika belum ada, atau set langsung)
-      import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js").then(({ update }) => {
+      const optionsRef = ref(db, 'chats/pinned_poll/options');
+      
+      get(optionsRef).then((snapshot) => {
+        const options = snapshot.val();
+        let updates = {};
+
+        if (options) {
+          Object.keys(options).forEach(key => {
+            if (options[key].votes && options[key].votes[currentUser.uid]) {
+              updates[`chats/pinned_poll/options/${key}/votes/${currentUser.uid}`] = null;
+            }
+          });
+        }
+
+        updates[`chats/pinned_poll/options/${optKey}/votes/${currentUser.uid}`] = true;
+        
+        // Langsung gunakan fungsi update() karena sudah di-import di atas skrip
         update(ref(db), updates).then(() => {
           console.log("Suara berhasil direkam!");
+        }).catch((err) => {
+          console.error("Gagal melakukan voting:", err);
         });
       });
-    });
-  }
+    }
 
 // Di dalam fungsi listenPinnedPoll(), tambahkan pengecekan hak akses Admin:
   const adminControls = document.getElementById('admin-poll-controls');
@@ -1127,7 +1127,7 @@ document.addEventListener('visibilitychange', () => {
       });
     }
     
-   // 6. Pengiriman Pesan (Keyboard Tetap Terbuka & Auto-Clear Highlight)
+  // 6. Pengiriman Pesan (Keyboard Tetap Terbuka & Auto-Clear Highlight)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -1144,29 +1144,23 @@ document.addEventListener('visibilitychange', () => {
       input.focus();
 
       if (activeChatType === 'public') {
+        // 🛠️ Perbaikan path publik konsisten menggunakan 'chats' dan mengambil newKey dengan benar
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
 
-        // 🛠️ PERBAIKAN: Buat referensi push baru agar mendapatkan key unik yang valid dari Firebase
-const publicChatRef = ref(db, 'public_chats'); // Sesuaikan dengan path database Anda
-const newMsgRef = push(publicChatRef);
-const newKey = newMsgRef.key; // Dapatkan key uniknya di sini
+        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+        lastReadPublicMap[currentUser.uid] = newKey;
+        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
 
-// Tandai ID pesan ini sebagai 'terbaca' di localStorage agar highlight dan unread sesuai
-const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-lastReadPublicMap[currentUser.uid] = newKey;
-localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
-
-// Kirim data pesan ke Firebase menggunakan referensi yang sama
-set(newMsgRef, {
-  uid: currentUser.uid,
-  sender: currentUser.username || currentUser.nama,
-  role: currentUser.role || 'warga',
-  text: text,
-  timestamp: serverTimestamp()
-}).catch((error) => {
-    console.error("Gagal mengirim pesan:", error);
-});
+        set(newMsgRef, {
+          uid: currentUser.uid,
+          sender: currentUser.username || currentUser.nama,
+          role: currentUser.role || 'warga',
+          text: text,
+          timestamp: serverTimestamp()
+        }).catch((error) => {
+            console.error("Gagal mengirim pesan:", error);
+        });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
         const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
