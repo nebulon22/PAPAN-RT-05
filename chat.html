@@ -1143,23 +1143,27 @@ document.addEventListener('visibilitychange', () => {
       input.value = '';
       input.focus();
 
-      if (activeChatType === 'public') {
-        // 🛠️ Perbaikan path publik konsisten menggunakan 'chats' dan mengambil newKey dengan benar
+     if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
 
-        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        lastReadPublicMap[currentUser.uid] = newKey;
-        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
-
+        // Kirim data pesan terlebih dahulu ke Firebase
         set(newMsgRef, {
           uid: currentUser.uid,
           sender: currentUser.username || currentUser.nama,
           role: currentUser.role || 'warga',
           text: text,
           timestamp: serverTimestamp()
+        }).then(() => {
+          // SETELAH BERHASIL TERSIMPAN DI FIREBASE, baru simpan ke localStorage
+          const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+          lastReadPublicMap[currentUser.uid] = newKey;
+          localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+
+          // Opsional: Langsung reset badge ke 0 karena Anda yang mengirimnya
+          updatePublicTabBadge(0);
         }).catch((error) => {
-            console.error("Gagal mengirim pesan:", error);
+            console.error("Gagal mengirim pesan publik:", error);
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
