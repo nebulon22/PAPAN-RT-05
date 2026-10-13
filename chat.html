@@ -930,13 +930,13 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
-    if (type === 'public') {
-      updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
-      markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
-    } else if (type === 'private' && targetUID) {
-      unreadCounts[targetUID] = 0; 
-      markRoomAsRead(targetUID);   
-    }
+   if (type === 'public') {
+    updatePublicTabBadge(0);       // Bersihkan badge merah di tab Grup RT 05
+    markPublicGroupAsRead();       // 🛠️ PASTIKAN INI MENGEKSEKUSI PENYIMPANAN KEY TERBARU
+  } else if (type === 'private' && targetUID) {
+    unreadCounts[targetUID] = 0;  
+    markRoomAsRead(targetUID);   
+  }
 
     if (currentChatUnsubscribe) {
       currentChatUnsubscribe();
@@ -1251,26 +1251,30 @@ document.addEventListener('visibilitychange', () => {
         }
 
         // Hitung pesan dari orang lain SETELAH key yang terakhir dibaca
-        let countAfter = false;
-        messages.forEach((msg) => {
-          // 🛠️ Abaikan pesan yang dikirim oleh diri sendiri secara mutlak
-          if (countAfter && msg.uid !== currentUser.uid) {
-            unreadPublicCount++;
-          }
-          if (msg.key === lastReadPublicMapKey) {
-            countAfter = true;
-          }
-        });
+let countAfter = false;
+messages.forEach((msg) => {
+  if (msg.key === lastReadPublicMapKey) {
+    countAfter = true;
+    return; // Lewati key yang sama persis dengan yang sudah dibaca
+  }
 
-        if (lastMsg && lastMsg.uid === currentUser.uid) {
-          unreadPublicCount = 0;
-        }
+  // Jika sudah melewati key terakhir yang dibaca DAN pengirimnya BUKAN diri sendiri
+  if (countAfter && msg.uid !== currentUser.uid) {
+    unreadPublicCount++;
+  }
+});
 
-        // 🔥 CEK APAKAH MODAL CHAT DI INDEX.HTML BENAR-BENAR TERBUKA
+// Pengaman ekstra jika pesan terakhir dikirim oleh diri sendiri
+if (messages.length > 0 && messages[messages.length - 1].uid === currentUser.uid) {
+  unreadPublicCount = 0;
+}
+
+       // 🔥 CEK APAKAH MODAL CHAT DI INDEX.HTML BENAR-BENAR TERBUKA
         const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
         const isModalOpen = (modal && modal.style.display === 'flex');
-       // 🛠️ Ubah ini: Tab grup hanya dianggap "sedang dilihat" jika modal terbuka DAN tab aktif saat ini adalah 'public'
-        const isViewingGroupPublic = (activeChatType === 'public'); 
+
+      // 🛠️ UBAH BAGIAN INI: Pastikan hanya 0 jika tab aktif saat ini adalah 'public' DAN chat sedang dilihat
+        const isViewingGroupPublic = (activeChatType === 'public' && isChatVisible);
        
 
         if (!isViewingGroupPublic && unreadPublicCount > 0) {
