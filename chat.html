@@ -1253,6 +1253,7 @@ document.addEventListener('visibilitychange', () => {
         // Hitung pesan dari orang lain SETELAH key yang terakhir dibaca
         let countAfter = false;
         messages.forEach((msg) => {
+          // 🛠️ Abaikan pesan yang dikirim oleh diri sendiri secara mutlak
           if (countAfter && msg.uid !== currentUser.uid) {
             unreadPublicCount++;
           }
@@ -1268,9 +1269,9 @@ document.addEventListener('visibilitychange', () => {
         // 🔥 CEK APAKAH MODAL CHAT DI INDEX.HTML BENAR-BENAR TERBUKA
         const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
         const isModalOpen = (modal && modal.style.display === 'flex');
-        
-        // Grup dianggap sedang dilihat HANYA JIKA modal terbuka DAN sedang di tab public
-        const isViewingGroupPublic = (isModalOpen && activeChatType === 'public');
+       // 🛠️ Ubah ini: Tab grup hanya dianggap "sedang dilihat" jika modal terbuka DAN tab aktif saat ini adalah 'public'
+        const isViewingGroupPublic = (activeChatType === 'public'); 
+       
 
         if (!isViewingGroupPublic && unreadPublicCount > 0) {
           updatePublicTabBadge(unreadPublicCount);
