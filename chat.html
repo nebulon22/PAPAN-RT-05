@@ -1444,28 +1444,31 @@ document.addEventListener('visibilitychange', () => {
         }, { passive: true });
       });
 
-      // 3. DETEKSI BERALIH TAB (Visibility Change menggunakan anti-kedip 3 detik)
-     // Deteksi jika layar HP mati / minimize / kembali dari idle
-document.addEventListener('visibilitychange', () => {
-  isChatVisible = !document.hidden;
-  
-  if (isChatVisible) {
-    // Paksa Firebase mengaktifkan kembali WebSocket jika sempat terputus/idle
-    if (typeof firebase !== 'undefined' && firebase.database) {
-      firebase.database().goOnline();
-    }
+      // 3. DETEKSI BERALIH TAB / MINIMIZE / TEKAN TOMBOL HOME
+      document.addEventListener('visibilitychange', () => {
+        isChatVisible = !document.hidden;
+        
+        if (document.hidden) {
+          // 🛠️ LANGSUNG UBAH JADI OFFLINE/IDLE SEKETIKA SAAT DI-MINIMIZE ATAU PINDAH APLIKASI
+          setMyState('offline'); 
+        } else {
+          // Paksa Firebase mengaktifkan kembali WebSocket jika kembali dibuka
+          if (typeof firebase !== 'undefined' && firebase.database) {
+            firebase.database().goOnline();
+          }
 
-    if (activeChatType === 'private' && activePrivateUID) {
-      unreadCounts[activePrivateUID] = 0;
-      markRoomAsRead(activePrivateUID);
-      renderPrivateTabsUI();
-    } else if (activeChatType === 'public') {
-      // 🛠️ PERBAIKAN 3: Jika layar menyala kembali dan Anda berada di tab publik, langsung tandai semua terbaca
-      updatePublicTabBadge(0);
-      markPublicGroupAsRead();
-    }
-  }
-});
+          evaluateStatus(true); // Langsung kembalikan status jadi online
+
+          if (activeChatType === 'private' && activePrivateUID) {
+            unreadCounts[activePrivateUID] = 0;
+            markRoomAsRead(activePrivateUID);
+            renderPrivateTabsUI();
+          } else if (activeChatType === 'public') {
+            updatePublicTabBadge(0);
+            markPublicGroupAsRead();
+          }
+        }
+      });
 
       // 4. EKSPOSE FUNGSI SAAT TOMBOL CHAT DITUTUP/DIBUKA (Instan)
       window.updatePresenceOnChatToggle = function() {
