@@ -1355,7 +1355,8 @@ document.addEventListener('visibilitychange', () => {
       sendTotalUnreadToParent();
     }
 
-  // --- LOGIKA PRESENCE & IDLE USER ---
+ 
+// --- LOGIKA PRESENCE & IDLE USER ---
     let idleTimer = null;
     let antiKedipTimer = null;
     let isPresenceSetup = false;
@@ -1423,8 +1424,8 @@ document.addEventListener('visibilitychange', () => {
       // 1. PENGATURAN KONEKSI FIREBASE (Saat pertama kali terhubung / buka chat)
       onValue(connectedRef, (snap) => {
         if (snap.val() === true) {
+          // Hanya jadi offline murni jika koneksi benar-benar terputus total / tutup paksa
           onDisconnect(userStateRef).set('offline').then(() => {
-            // INSTAN: Langsung anggap ONLINE saat pertama buka tanpa menunggu delay!
             evaluateStatus(true);
           });
         }
@@ -1449,8 +1450,8 @@ document.addEventListener('visibilitychange', () => {
         isChatVisible = !document.hidden;
         
         if (document.hidden) {
-          // 🛠️ LANGSUNG UBAH JADI OFFLINE/IDLE SEKETIKA SAAT DI-MINIMIZE ATAU PINDAH APLIKASI
-          setMyState('offline'); 
+          // 🛠️ KUNCINYA DI SINI: Saat minimize atau pindah tab, ubah jadi IDLE (Kuning)
+          setMyState('idle'); 
         } else {
           // Paksa Firebase mengaktifkan kembali WebSocket jika kembali dibuka
           if (typeof firebase !== 'undefined' && firebase.database) {
@@ -1475,6 +1476,7 @@ document.addEventListener('visibilitychange', () => {
         evaluateStatus(true);
       };
     }
+ 
     
     function requestNotificationPermission() {
       if (!('Notification' in window) || !currentUser?.uid) return;
