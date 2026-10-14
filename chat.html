@@ -1536,41 +1536,44 @@ document.addEventListener('visibilitychange', () => {
 
 
     
-    // Logika Pemantau Warga Online
-    let previousOnlineUsers = new Set();
-    let isInitialUsersLoaded = false;
+  // Logika Pemantau Warga Online
+  let previousOnlineUsers = new Set();
+  let isInitialUsersLoaded = false;
 
-    function loadUsersList() {
-      const usersRef = ref(db, 'users');
-      onValue(usersRef, (snapshot) => {
-        if (!snapshot.exists()) return;
-        
-        allUsersCache = snapshot.val();
-        const currentOnlineUsers = new Set();
+  function loadUsersList() {
+    const usersRef = ref(db, 'users');
+    onValue(usersRef, (snapshot) => {
+      // 🛠️ PENGAMAN: Jika user sudah logout (currentUser null), abaikan callback agar tidak error
+      if (!currentUser || !currentUser.uid) return;
 
-        Object.values(allUsersCache).forEach(u => {
-          if (u.status === 'aktif' && u.state === 'online') {
-            currentOnlineUsers.add(u.uid);
+      if (!snapshot.exists()) return;
+      
+      allUsersCache = snapshot.val();
+      const currentOnlineUsers = new Set();
+
+      Object.values(allUsersCache).forEach(u => {
+        if (u.status === 'aktif' && u.state === 'online') {
+          currentOnlineUsers.add(u.uid);
+        }
+      });
+
+      if (isInitialUsersLoaded) {
+        currentOnlineUsers.forEach(uid => {
+          const isSelf = (uid === currentUser?.uid);
+          const wasNotOnline = !previousOnlineUsers.has(uid);
+
+          if (wasNotOnline && !isSelf) {
+            playKlingSound();
           }
         });
+      }
 
-        if (isInitialUsersLoaded) {
-          currentOnlineUsers.forEach(uid => {
-            const isSelf = (uid === currentUser?.uid);
-            const wasNotOnline = !previousOnlineUsers.has(uid);
+      previousOnlineUsers = currentOnlineUsers;
+      isInitialUsersLoaded = true;
 
-            if (wasNotOnline && !isSelf) {
-              playKlingSound();
-            }
-          });
-        }
-
-        previousOnlineUsers = currentOnlineUsers;
-        isInitialUsersLoaded = true;
-
-        renderWargaSidebar();
-      });
-    }
+      renderWargaSidebar();
+    });
+  }
 
 
    // 1. Minta izin & gunakan Service Worker utama untuk FCM Token perangkat warga
