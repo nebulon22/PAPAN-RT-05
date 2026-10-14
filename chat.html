@@ -773,18 +773,15 @@ window.tutupDanSimpulkanPolling = () => {
     }
   };
     
-    
- window.logoutUser = () => {
+    window.logoutUser = () => {
       if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
         if (currentUser && currentUser.uid) {
           set(ref(db, `users/${currentUser.uid}/state`), 'offline');
         }
         
-        // 🛠️ Matikan listener pemantau warga sebelum keluar
-        if (usersListUnsubscribe) {
-          usersListUnsubscribe();
-          usersListUnsubscribe = null;
-        }
+        // Matikan semua listener aktif
+        if (usersListUnsubscribe) { usersListUnsubscribe(); usersListUnsubscribe = null; }
+        if (globalPrivateListener) { globalPrivateListener(); globalPrivateListener = null; }
 
         localStorage.removeItem('rt05_chat_user');
         currentUser = null;
@@ -792,6 +789,7 @@ window.tutupDanSimpulkanPolling = () => {
       }
     };
 
+    
     window.addEventListener('DOMContentLoaded', () => {
       checkUserStatus();
       loadLoginUserOptions();
@@ -1052,11 +1050,13 @@ document.addEventListener('visibilitychange', () => {
       });
     }
 
- // 1. Pemantau Pesan Private Universal
+// 1. Pemantau Pesan Private Universal
     let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
-      if (!currentUser?.uid) return;
+      // Simpan referensi lokal user saat ini
+      const activeUser = currentUser;
+      if (!activeUser || !activeUser.uid) return;
 
       if (globalPrivateListener) {
         globalPrivateListener();
@@ -1067,6 +1067,9 @@ document.addEventListener('visibilitychange', () => {
       let isFirstLoad = true;
 
       globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
+        // Cek ulang dengan activeUser
+        if (!activeUser || !activeUser.uid) return;
+
         if (!snapshot.exists()) {
           isFirstLoad = false;
           sendTotalUnreadToParent(); 
@@ -1078,9 +1081,9 @@ document.addEventListener('visibilitychange', () => {
         snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
           
-          if (roomID.includes(currentUser.uid)) {
+          if (roomID.includes(activeUser.uid)) {
             const parts = roomID.split('_');
-            const targetUID = parts[0] === currentUser.uid ? parts[1] : parts[0];
+            const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
 
             let unreadTotalCount = 0;
             let lastMsg = null;
@@ -1097,12 +1100,12 @@ document.addEventListener('visibilitychange', () => {
               if (msgKey === lastReadKey) {
                 countAfterKey = true;
                 unreadTotalCount = 0;
-              } else if (countAfterKey && msgData.uid !== currentUser.uid) {
+              } else if (countAfterKey && msgData.uid !== activeUser.uid) {
                 unreadTotalCount++;
               }
             });
 
-            if (lastMsg && lastMsg.uid === currentUser.uid) {
+            if (lastMsg && lastMsg.uid === activeUser.uid) {
               unreadTotalCount = 0;
             }
 
@@ -1117,11 +1120,9 @@ document.addEventListener('visibilitychange', () => {
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-              // --- PENEMPATAN YANG BENAR ADA DI SINI ---
-              // Jika beda tab, ATAU modal sedang ditutup/layar mati (!isChatVisible)
               if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
                 unreadCounts[targetUID] = unreadTotalCount;
-                if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) playKlingSound();
+                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) playKlingSound();
               }
             } else {
               unreadCounts[targetUID] = 0;
