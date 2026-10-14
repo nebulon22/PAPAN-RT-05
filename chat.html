@@ -774,11 +774,18 @@ window.tutupDanSimpulkanPolling = () => {
   };
     
     
-    window.logoutUser = () => {
+ window.logoutUser = () => {
       if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
         if (currentUser && currentUser.uid) {
           set(ref(db, `users/${currentUser.uid}/state`), 'offline');
         }
+        
+        // 🛠️ Matikan listener pemantau warga sebelum keluar
+        if (usersListUnsubscribe) {
+          usersListUnsubscribe();
+          usersListUnsubscribe = null;
+        }
+
         localStorage.removeItem('rt05_chat_user');
         currentUser = null;
         location.reload();
@@ -1536,14 +1543,22 @@ document.addEventListener('visibilitychange', () => {
 
 
     
-  // Logika Pemantau Warga Online
+ // Logika Pemantau Warga Online
   let previousOnlineUsers = new Set();
   let isInitialUsersLoaded = false;
+  let usersListUnsubscribe = null; // 🛠️ Tambahkan variabel penampung unsubscribe
 
   function loadUsersList() {
     const usersRef = ref(db, 'users');
-    onValue(usersRef, (snapshot) => {
-      // 🛠️ PENGAMAN: Jika user sudah logout (currentUser null), abaikan callback agar tidak error
+    
+    // Matikan listener sebelumnya jika sudah ada agar tidak numpuk
+    if (usersListUnsubscribe) {
+      usersListUnsubscribe();
+      usersListUnsubscribe = null;
+    }
+
+    usersListUnsubscribe = onValue(usersRef, (snapshot) => {
+      // 🛠️ PENGAMAN: Jika user sudah logout (currentUser null), abaikan callback
       if (!currentUser || !currentUser.uid) return;
 
       if (!snapshot.exists()) return;
