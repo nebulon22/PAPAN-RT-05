@@ -4,15 +4,23 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Denah Interaktif & Keuangan RT 05 Kayen</title>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-   <!-- FontAwesome Icons -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Leaflet CSS dengan Non-Blocking Load -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
+
+  <!-- FontAwesome Icons (Non-Blocking Load) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+  
   <!-- PWA Settings -->
   <link rel="manifest" href="manifest.json?v=1.5.5">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
- 
- <script src="utils.js"></script>
+  
+  <script src="utils.js"></script>
+  <!-- Tambahkan atribut defer pada Leaflet JS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  
  <script>
  var serviceWorkerMenunggu = null;
 
@@ -91,7 +99,13 @@ function perbaruiAplikasiSekarang() {
     font-family: sans-serif; 
     overflow: hidden; /* Mencegah halaman utama/peta ikut scroll saat modal terbuka */
   }
-  #map { width: 100%; height: 100vh; }
+  
+  /* Tambahkan background placeholder agar LCP merespons lebih cepat */
+  #map { 
+    width: 100%; 
+    height: 100vh; 
+    background-color: #e2e8f0; 
+  }
   
   .btn-back-floating {
     position: absolute;
@@ -892,7 +906,7 @@ function perbaruiAplikasiSekarang() {
   </div>
 
 
- <!-- Modal Kamera QR Scanner -->
+<!-- Modal Kamera QR Scanner -->
 <div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
   <div class="modal-content" style="max-width: 320px; text-align: center;">
     <div class="modal-header">
@@ -1199,40 +1213,47 @@ function perbaruiAplikasiSekarang() {
     }
   }
 </script>
-    
-  <script src="html5-qrcode.min.js"></script>
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <script>
-    // --- KODE PETA & DATA ---
+  // --- KODE PETA & DATA ---
    
-    var GID_PENGUMUMAN = '1885853390'; 
-    var GID_KEUANGAN = '1568425671';
+  var GID_PENGUMUMAN = '1885853390'; 
+  var GID_KEUANGAN = '1568425671';
 
-   var SHEET_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`;
-//              ^                                                                                 ^
-    var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
-    var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
+  var SHEET_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`;
+  var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
+  var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
 
-    var map = L.map('map').setView([-7.7423, 110.3842], 17);
+  var map; 
+  var daftarPin = [];
+  var daftarPengumuman = [];
+  var dataKeuangan = [];
+  var pinRumahAktif = null;
 
-    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-        attribution: '&copy; Google Maps'
-    }).addTo(map);
+  // ==========================================
+  // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
+  // ==========================================
 
-   L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
- 
-    var daftarPin = [];
-    var daftarPengumuman = [];
-    var dataKeuangan = [];
-    var pinRumahAktif = null;
+  // 🔥 INISIALISASI PETA DENGAN DEFERRED LOADING (Ditunda 150ms agar UI mulus dulu)
+  window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      map = L.map('map').setView([-7.7423, 110.3842], 17);
 
-    // ==========================================
-    // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
-    // ==========================================
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+          maxZoom: 20,
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: '&copy; Google Maps'
+      }).addTo(map);
 
- // 1. Muat Data Peta (Offline Ready & Auto Update)
+      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+
+      // Setelah peta siap, jalankan fungsi pemuatan data peta di bawah
+      muatDataPetaWarga();
+    }, 150);
+  });
+  
+  // 1. Bungkus ke dalam fungsi muatDataPetaWarga()
+  function muatDataPetaWarga() {
     ambilDataSheets('cache_peta_warga', SHEET_URL, (data, fromCache) => {
       if (!data) return;
       var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
@@ -1246,7 +1267,6 @@ function perbaruiAplikasiSekarang() {
           var latClean = perbaikiKoordinat(kolom[1]);
           var lngClean = perbaikiKoordinat(kolom[2]);
           
-          // PERBAIKAN: Bungkus dengan String() sebelum di-trim agar tidak error jika tipe data Boolean/Number
           var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
           var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
           var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
@@ -1264,7 +1284,7 @@ function perbaruiAplikasiSekarang() {
           if (isNaN(item.lat) || isNaN(item.lng)) return;
 
           var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+          var htmlFoto = item.foto ? `<br><img src="${item.foto}" loading="lazy" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
           var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
           
           var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
@@ -1276,7 +1296,11 @@ function perbaruiAplikasiSekarang() {
           });
           
           var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-          if (!item.hidden) marker.addTo(map);
+          
+          // 🔥 HANYA TAMPILKAN KATEGORI 'FASUM' DI AWAL PEMUATAN
+          if (!item.hidden && dataIkon.kategori === 'fasum') {
+            marker.addTo(map);
+          }
 
           daftarPin.push({ 
             namaRaw: item.nameAsli,
@@ -1290,7 +1314,9 @@ function perbaruiAplikasiSekarang() {
         }
       });
     });
+  }
 
+    
 // 2. Muat Data Pengumuman
 ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
   if (!data) return;
@@ -1357,60 +1383,65 @@ function escapeHTML(text) {
 
 function bukaModalInfo() {
   var container = document.getElementById('list-pengumuman');
-  container.innerHTML = '';
+  
+  // 1. Tampilkan modalnya dulu secara instan
+  document.getElementById('modal-info').style.display = 'flex';
 
-  if (daftarPengumuman.length === 0) {
-    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
-  } else {
+  // 2. Fungsi helper untuk merender daftar pengumuman ke HTML
+  function renderDaftarPengumuman() {
+    container.innerHTML = '';
+
+    if (daftarPengumuman.length === 0) {
+      container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
+      return;
+    }
+
     daftarPengumuman.forEach(function(info, idx) {
       var lokasiParam = encodeURIComponent(info.lokasi);
       
       var htmlFoto = '';
-  if (info.foto) {
-  var urlFoto = info.foto.toLowerCase();
-  
-  if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
-    // Tampilan Thumbnail Video di dalam Kartu Pengumuman
-    htmlFoto = `
-      <div onclick="bukaModalVideo('${info.foto}')" style="
-        position: relative; 
-        width: 100%; 
-        max-height: 200px; 
-        border-radius: 6px; 
-        overflow: hidden; 
-        margin-top: 8px; 
-        background: #000; 
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">
-        <video src="${info.foto}#t=0.5" preload="metadata" style="
-          width: 100%; 
-          max-height: 200px; 
-          object-fit: cover; 
-          opacity: 0.8;
-          pointer-events: none;
-        "></video>
+      if (info.foto) {
+        var urlFoto = info.foto.toLowerCase();
         
-        <!-- Icon Play Melayang di Atas Thumbnail -->
-        <div style="
-          position: absolute; 
-          background: rgba(239, 68, 68, 0.9); 
-          color: #fff; 
-          border-radius: 50%; 
-          width: 48px; height: 48px; 
-          display: flex; align-items: center; justify-content: center; 
-          font-size: 22px; 
-          box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-        ">▶</div>
-      </div>`;
-  } else {
-    // Jika gambar biasa
-    htmlFoto = `
-      <img src="${info.foto}" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
-  }
-}
+        if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+          htmlFoto = `
+            <div onclick="bukaModalVideo('${info.foto}')" style="
+              position: relative; 
+              width: 100%; 
+              max-height: 200px; 
+              border-radius: 6px; 
+              overflow: hidden; 
+              margin-top: 8px; 
+              background: #000; 
+              cursor: pointer;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+            ">
+              <video src="${info.foto}#t=0.5" preload="metadata" style="
+                width: 100%; 
+                max-height: 200px; 
+                object-fit: cover; 
+                opacity: 0.8;
+                pointer-events: none;
+              "></video>
+              <div style="
+                position: absolute; 
+                background: rgba(239, 68, 68, 0.9); 
+                color: #fff; 
+                border-radius: 50%; 
+                width: 48px; height: 48px; 
+                display: flex; align-items: center; justify-content: center; 
+                font-size: 22px; 
+                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+              ">▶</div>
+            </div>`;
+        } else {
+          htmlFoto = `
+            <img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
+        }
+      }
+
       var html = `
         <div class="card-info">
           ${info.tanggal ? `<div class="tgl">📅 ${escapeHTML(info.tanggal)}</div>` : ''}
@@ -1422,10 +1453,70 @@ function bukaModalInfo() {
       `;
       container.innerHTML += html;
     });
-
-   
   }
-  document.getElementById('modal-info').style.display = 'flex';
+
+  // 3. Jika data di memori sudah ada, langsung render seketika (mengambil dari cache localStorage via helper)
+  if (daftarPengumuman.length > 0) {
+    renderDaftarPengumuman();
+  } else {
+    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Memuat informasi...</p>';
+  }
+
+  // 4. Ambil data terbaru dari server di latar belakang untuk memastikan selalu sinkron
+  ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
+    if (!data) return;
+    var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
+    var pengumumanBaru = [];
+
+    baris.forEach(function(kolom) {
+      if (kolom.length >= 2 && kolom[1] !== '') {
+        var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
+        if (status === 'AKTIF') {
+          var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
+          var tglRapi = tglRaw;
+          
+          if (tglRapi.includes('T')) {
+            var parts = tglRapi.split('T')[0].split('-');
+            if (parts.length === 3) {
+              tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+          }
+
+          pengumumanBaru.push({
+            tanggal: tglRapi,
+            judul: kolom[1] ? String(kolom[1]).trim() : '',
+            detail: kolom[2] ? String(kolom[2]).trim() : '',
+            lokasi: kolom[3] ? String(kolom[3]).trim() : '',
+            foto: kolom[5] ? String(kolom[5]).trim() : ''
+          });
+        }
+      }
+    });
+
+    pengumumanBaru.sort((a, b) => {
+      var partsA = a.tanggal.split('/');
+      var partsB = b.tanggal.split('/');
+      var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
+      var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
+      return dateB - dateA;
+    });
+
+    daftarPengumuman = pengumumanBaru.slice(0, 10);
+    
+    // Perbarui badge notifikasi
+    var badge = document.getElementById('badge-count');
+    if (badge) {
+      if (daftarPengumuman.length > 0) {
+        badge.innerText = daftarPengumuman.length;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // Render ulang tampilan jika ada data baru dari server
+    renderDaftarPengumuman();
+  });
 }
     
 
@@ -1970,9 +2061,8 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       };
     }
 
-    // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
+   // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
     
-
     let audioCtx = null;
     let html5QrcodeScanner = null;
     let sedangScanning = false;
@@ -2017,7 +2107,28 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
     }
 
+    // 🔥 1. PINTU UTAMA (LAZY LOAD): Pustaka diunduh HANYA saat tombol ditekan
     function mulaiScanJimpitan() {
+      if (typeof Html5Qrcode === 'undefined' && typeof Html5QrcodeScanner === 'undefined') {
+        console.log("Memuat pustaka QR Scanner...");
+        
+        let script = document.createElement('script');
+        script.src = 'html5-qrcode.min.js';
+        script.onload = () => {
+          console.log("Pustaka QR Scanner berhasil dimuat.");
+          eksekusiMulaiScanJimpitan(); 
+        };
+        script.onerror = () => {
+          alert("Gagal memuat modul kamera. Periksa koneksi internet Anda.");
+        };
+        document.head.appendChild(script);
+      } else {
+        eksekusiMulaiScanJimpitan();
+      }
+    }
+
+    // 🔥 2. FUNGSI EKSEKUSI KAMERA (Logika asli Anda di sini)
+    function eksekusiMulaiScanJimpitan() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
@@ -2379,7 +2490,7 @@ function muatDataJimpitan() {
           cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
           cacheDataHarian[keyTanggal].subtotal += nominal;
 
-        
+         
 
           
           // --- DATA BULANAN ---
