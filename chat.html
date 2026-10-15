@@ -585,6 +585,35 @@
         : '';
     }
 
+// Fungsi pintar pemformat waktu pesan (Mencegah timestamp kembar/bingung)
+function formatWaktuPesan(timestamp) {
+    if (!timestamp) return '';
+    
+    const sekarang = new Date();
+    const pesanDate = new Date(timestamp);
+    
+    if (isNaN(pesanDate.getTime())) return '';
+
+    const jamMenit = pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    
+    const d1 = new Date(sekarang.getFullYear(), sekarang.getMonth(), sekarang.getDate());
+    const d2 = new Date(pesanDate.getFullYear(), pesanDate.getMonth(), pesanDate.getDate());
+    const selisihHari = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
+
+    if (selisihHari === 0) {
+        return jamMenit; // Hari ini: jam saja
+    } else if (selisihHari === 1) {
+        return `Kemarin, ${jamMenit}`; // Kemarin
+    } else if (selisihHari > 1 && selisihHari < 7) {
+        const namaHari = pesanDate.toLocaleDateString('id-ID', { weekday: 'long' });
+        return `${namaHari}, ${jamMenit}`; // 2-6 hari lalu
+    } else {
+        const tanggalBulan = pesanDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+        return `${tanggalBulan}, ${jamMenit}`; // Lebih dari seminggu
+    }
+}
+
+    
 // Fungsi untuk mendengarkan dan merender Polling dari Firebase secara Real-time
   function listenPinnedPoll() {
     const pollRef = ref(db, 'chats/pinned_poll');
@@ -1924,7 +1953,7 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   div.className = "msg-row";
   if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
-  // 👇 1. EFEK ANIMASI UNREAD (Background putih tipis yang memudar - KEMBALIKAN BAGIAN INI)
+  // 👇 1. EFEK ANIMASI UNREAD (Background putih tipis yang memudar)
   if (isUnread) {
       div.style.transition = "background-color 2s ease, border-color 2s ease";
       div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
@@ -1958,12 +1987,9 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   else if (msg.uid === currentUser?.uid) {
       nameClass = "role-self";
   } else {
-      // 👇 2. WARNA WARNI NAMA WARGA DI GRUP CHAT (Fitur yang sempat Anda ubah sebelumnya)
+      // 👇 2. WARNA WARNI NAMA WARGA DI GRUP CHAT
       const uniqueColor = getUniqueColorFromName(msg.sender);
       customStyleName = `style="color: ${uniqueColor}; font-weight: bold;"`;
-      
-      // Jika Anda kemarin juga sempat mengubah warna teks pesannya agar selaras dengan nama:
-      // customStyleText = `style="color: ${uniqueColor};"`; 
   }
 
   const clickHandler = (msg.uid !== currentUser?.uid) 
@@ -1972,9 +1998,23 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
 
   let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" ? msg.text : escapeHTML(msg.text);
 
+  // 👇 3. PENGELOLAAN TIMESTAMP AGAR TIDAK KEMBAR / ERROR SAAT BARU DIKIRIM
+  let waktuFormatted = "";
+  if (msg.timestamp) {
+      waktuFormatted = formatWaktuPesan(msg.timestamp);
+  } else {
+      waktuFormatted = "Baru saja"; // Penanganan aman jika serverTimestamp masih proses
+  }
+
+  const timeHTML = waktuFormatted 
+      ? `<span style="font-size: 10px; color: #64748b; margin-left: 6px; font-weight: normal; text-shadow: none;">[${waktuFormatted}]</span>` 
+      : '';
+
+  // 👇 4. MASUKKAN timeHTML KE DALAM TEMPLATE HTML
   div.innerHTML = `
       <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
       <span class="${textClass}" ${customStyleText}>${displayMsgText}</span>
+      ${timeHTML}
   `;
 
   chatStream.appendChild(div);
