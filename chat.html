@@ -585,31 +585,47 @@
         : '';
     }
 
-// Fungsi pintar pemformat waktu pesan (Mencegah timestamp kembar/bingung)
+// Fungsi pintar pemformat waktu pesan (Mendukung "Baru saja", menit lalu, hingga format tanggal)
 function formatWaktuPesan(timestamp) {
-    if (!timestamp) return '';
+    if (!timestamp) return 'Baru saja';
     
     const sekarang = new Date();
     const pesanDate = new Date(timestamp);
     
-    if (isNaN(pesanDate.getTime())) return '';
+    if (isNaN(pesanDate.getTime())) return 'Baru saja';
 
-    const jamMenit = pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-    
+    const selisihDetik = Math.floor((sekarang - pesanDate) / 1000);
+    const selisihMenit = Math.floor(selisihDetik / 60);
+    const selisihJam = Math.floor(selisihMenit / 60);
+
+    // 1. Jika kurang dari 1 menit yang lalu
+    if (selisihDetik < 60) {
+        return 'Baru saja';
+    }
+    // 2. Jika dalam rentang 1 sampai 59 menit yang lalu
+    else if (selisihMenit < 60) {
+        return `${selisihMenit} menit lalu`;
+    }
+    // 3. Jika dalam rentang 1 sampai 23 jam yang lalu di hari yang sama
+    else if (selisihJam < 24 && pesanDate.getDate() === sekarang.getDate()) {
+        return pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    // 4. Perhitungan hari untuk kemarin dan seterusnya
     const d1 = new Date(sekarang.getFullYear(), sekarang.getMonth(), sekarang.getDate());
     const d2 = new Date(pesanDate.getFullYear(), pesanDate.getMonth(), pesanDate.getDate());
     const selisihHari = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
 
-    if (selisihHari === 0) {
-        return jamMenit; // Hari ini: jam saja
-    } else if (selisihHari === 1) {
+    const jamMenit = pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+    if (selisihHari === 1) {
         return `Kemarin, ${jamMenit}`; // Kemarin
     } else if (selisihHari > 1 && selisihHari < 7) {
         const namaHari = pesanDate.toLocaleDateString('id-ID', { weekday: 'long' });
         return `${namaHari}, ${jamMenit}`; // 2-6 hari lalu
     } else {
         const tanggalBulan = pesanDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-        return `${tanggalBulan}, ${jamMenit}`; // Lebih dari seminggu
+        return `${tanggalBulan}, ${jamMenit}`; // Lebih dari sepekan
     }
 }
 
