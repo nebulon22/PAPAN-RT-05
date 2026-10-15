@@ -1200,7 +1200,6 @@ function perbaruiAplikasiSekarang() {
   }
 </script>
     
-  <script src="html5-qrcode.min.js"></script>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
   // --- KODE PETA & DATA ---
@@ -2049,9 +2048,8 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       };
     }
 
-    // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
+   // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
     
-
     let audioCtx = null;
     let html5QrcodeScanner = null;
     let sedangScanning = false;
@@ -2096,7 +2094,28 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
     }
 
+    // 🔥 1. PINTU UTAMA (LAZY LOAD): Pustaka diunduh HANYA saat tombol ditekan
     function mulaiScanJimpitan() {
+      if (typeof Html5Qrcode === 'undefined' && typeof Html5QrcodeScanner === 'undefined') {
+        console.log("Memuat pustaka QR Scanner...");
+        
+        let script = document.createElement('script');
+        script.src = 'html5-qrcode.min.js';
+        script.onload = () => {
+          console.log("Pustaka QR Scanner berhasil dimuat.");
+          eksekusiMulaiScanJimpitan(); 
+        };
+        script.onerror = () => {
+          alert("Gagal memuat modul kamera. Periksa koneksi internet Anda.");
+        };
+        document.head.appendChild(script);
+      } else {
+        eksekusiMulaiScanJimpitan();
+      }
+    }
+
+    // 🔥 2. FUNGSI EKSEKUSI KAMERA (Logika asli Anda di sini)
+    function eksekusiMulaiScanJimpitan() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       }
