@@ -323,19 +323,23 @@ function perbaruiAplikasiSekarang() {
     box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
   }
 
+/* ========================================== */
+/* 1. TOMBOL FLOATING DI LUAR */
+/* ========================================== */
 .btn-qr-floating {
   position: fixed;
   bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1500;
-  width: 65px;
-  height: 65px;
-  background-color: #0288d1;
+  width: 68px;
+  height: 68px;
+  background-color: rgba(2, 136, 209, 0.9); /* Biru semi-transparan */
+  backdrop-filter: blur(4px);
   color: white;
   border: none;
-  border-radius: 16px;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.35);
+  border-radius: 18px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
   cursor: pointer;
   display: flex;
   flex-direction: column;
@@ -344,27 +348,116 @@ function perbaruiAplikasiSekarang() {
   padding: 4px;
 }
 
-.btn-qr-floating::before {
-  content: '';
+.btn-qr-floating .icon-container {
+  position: relative;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 2px;
+}
+
+.btn-qr-floating .icon-container img {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  z-index: 1;
+}
+
+/* Sudut Siku Kecil di Tombol Floating */
+.btn-qr-floating .corner {
   position: absolute;
-  top: 10px; 
-  left: 10px; 
-  right: 10px; 
-  bottom: 14px; /* Disesuaikan agar ada ruang untuk teks di bawahnya */
+  width: 10px;
+  height: 10px;
+  border-color: white;
+  border-style: solid;
+  border-width: 0;
   pointer-events: none;
-  border: 3px solid white;
-  border-radius: 8px; /* Mengatur tingkat kelengkungan sudut */
-  /* Membuat bagian tengahnya transparan sehingga hanya menyisakan garis tepi (border) */
-  background: transparent; 
+}
+
+.btn-qr-floating .top-left {
+  top: 0; left: 0;
+  border-top-width: 2.5px; border-left-width: 2.5px;
+  border-top-left-radius: 4px;
+}
+.btn-qr-floating .top-right {
+  top: 0; right: 0;
+  border-top-width: 2.5px; border-right-width: 2.5px;
+  border-top-right-radius: 4px;
+}
+.btn-qr-floating .bottom-left {
+  bottom: 0; left: 0;
+  border-bottom-width: 2.5px; border-left-width: 2.5px;
+  border-bottom-left-radius: 4px;
+}
+.btn-qr-floating .bottom-right {
+  bottom: 0; right: 0;
+  border-bottom-width: 2.5px; border-right-width: 2.5px;
+  border-bottom-right-radius: 4px;
 }
 
 .btn-qr-floating span {
   font-size: 9px;
-  font-weight: bold;
+  font-weight: 600;
   line-height: 1;
-  margin-top: 2px;
 }
 
+
+/* ========================================== */
+/* 2. MODAL KAMERA SCANNER (Sesuai HTML Anda) */
+/* ========================================== */
+.qr-scanner-wrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+}
+
+.qr-corner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  box-sizing: border-box;
+  padding: 30px; /* Jarak bingkai siku dari tepi kamera */
+}
+
+/* Desain Siku Besar untuk Modal Kamera */
+.qr-corner-overlay .corner {
+  position: absolute;
+  width: 35px;
+  height: 35px;
+  border-color: #ffffff;
+  border-style: solid;
+  border-width: 0;
+}
+
+.qr-corner-overlay .top-left {
+  top: 20px; left: 20px;
+  border-top-width: 4px; border-left-width: 4px;
+  border-top-left-radius: 12px;
+}
+
+.qr-corner-overlay .top-right {
+  top: 20px; right: 20px;
+  border-top-width: 4px; border-right-width: 4px;
+  border-top-right-radius: 12px;
+}
+
+.qr-corner-overlay .bottom-left {
+  bottom: 20px; left: 20px;
+  border-bottom-width: 4px; border-left-width: 4px;
+  border-bottom-left-radius: 12px;
+}
+
+.qr-corner-overlay .bottom-right {
+  bottom: 20px; right: 20px;
+  border-bottom-width: 4px; border-right-width: 4px;
+  border-bottom-right-radius: 12px;
+}
+   
    
   @keyframes pulse {
     0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
@@ -802,18 +895,31 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
- <!-- Modal Kamera QR Scanner -->
 
-  <div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
-    <div class="modal-content" style="max-width: 320px; text-align: center;">
-      <div class="modal-header">
-        <h3>📷 Scan QR Rumah Warga</h3>
-        <button class="close-btn" onclick="stopScanQR()">&times;</button>
-      </div>
-      <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
-      <button onclick="stopScanQR()" style="margin-top: 12px; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">❌ Batal</button>
+ <!-- Modal Kamera QR Scanner -->
+<div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
+  <div class="modal-content" style="max-width: 320px; text-align: center;">
+    <div class="modal-header">
+      <h3>📷 Scan QR Rumah Warga</h3>
+      <button class="close-btn" onclick="stopScanQR()">&times;</button>
     </div>
-  </div> 
+    
+    <!-- Wrapper untuk kamera dan bingkai sudut siku -->
+    <div class="qr-scanner-wrapper" style="position: relative; width: 100%; border-radius: 8px; overflow: hidden;">
+      <div id="qr-reader" style="width: 100%;"></div>
+      
+      <!-- Bingkai Sudut Siku Melengkung (Overlay) -->
+      <div class="qr-corner-overlay">
+        <div class="corner top-left"></div>
+        <div class="corner top-right"></div>
+        <div class="corner bottom-left"></div>
+        <div class="corner bottom-right"></div>
+      </div>
+    </div>
+
+    <button onclick="stopScanQR()" style="margin-top: 12px; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">❌ Batal</button>
+  </div>
+</div>
 
 <!-- Tombol Senter -->
 <button onclick="toggleSenterRonda()" id="btn-senter-ronda" title="Senter Ronda" style="position: fixed; bottom: 20px; left: calc(50% + 45px); z-index: 1000; background: #1e293b; color: #fbbf24; border: 1px solid #334155; padding: 6px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 42px; transition: all 0.2s;">
