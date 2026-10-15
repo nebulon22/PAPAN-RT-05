@@ -452,12 +452,12 @@
 
   <form onsubmit="handleRegistration(event)">
     <div class="form-group">
-      <label for="reg-nama">Nama Lengkap / Panggilan *</label>
-      <input type="text" id="reg-nama" required placeholder="Contoh: Pak Budi / Nebu" class="form-control">
+      <label for="reg-nama">Nama Lengkap atau Nama Panggilan *</label>
+      <input type="text" id="reg-nama" required placeholder="Contoh: Budi Sudarsono / Nebu" class="form-control">
     </div>
     <div class="form-group">
-      <label for="reg-hunian">No. Rumah / Kost / Kontrakan *</label>
-      <input type="text" id="reg-hunian" required placeholder="Contoh: No. 12 / Kost Kenanga" class="form-control">
+      <label for="reg-hunian">No. Rumah / Kost / Kontrakan (salah satu) *</label>
+      <input type="text" id="reg-hunian" required placeholder="Contoh: 12 / Kost Kenanga / Kontrakan Pak Dewo" class="form-control">
     </div>
     <div class="form-group">
       <label for="reg-pin">Buat PIN Rahasia (4-6 Angka) *</label>
@@ -466,7 +466,7 @@
     
     <!-- Kolom Konfirmasi PIN untuk Registrasi -->
     <div class="form-group">
-      <label for="reg-pin-confirm">Ulangi PIN Rahasia *</label>
+      <label for="reg-pin-confirm">Ulangi PIN Rahasia sekali lagi*</label>
       <input type="password" id="reg-pin-confirm" required maxlength="6" pattern="[0-9]*" inputmode="numeric" placeholder="Ketik ulang PIN kamu..." class="form-control">
     </div>
 
@@ -773,18 +773,23 @@ window.tutupDanSimpulkanPolling = () => {
     }
   };
     
-    
     window.logoutUser = () => {
       if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
         if (currentUser && currentUser.uid) {
           set(ref(db, `users/${currentUser.uid}/state`), 'offline');
         }
+        
+        // Matikan semua listener aktif
+        if (usersListUnsubscribe) { usersListUnsubscribe(); usersListUnsubscribe = null; }
+        if (globalPrivateListener) { globalPrivateListener(); globalPrivateListener = null; }
+
         localStorage.removeItem('rt05_chat_user');
         currentUser = null;
         location.reload();
       }
     };
 
+    
     window.addEventListener('DOMContentLoaded', () => {
       checkUserStatus();
       loadLoginUserOptions();
@@ -1045,11 +1050,13 @@ document.addEventListener('visibilitychange', () => {
       });
     }
 
- // 1. Pemantau Pesan Private Universal
+// 1. Pemantau Pesan Private Universal
     let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
-      if (!currentUser?.uid) return;
+      // Simpan referensi lokal user saat ini
+      const activeUser = currentUser;
+      if (!activeUser || !activeUser.uid) return;
 
       if (globalPrivateListener) {
         globalPrivateListener();
@@ -1060,6 +1067,9 @@ document.addEventListener('visibilitychange', () => {
       let isFirstLoad = true;
 
       globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
+        // Cek ulang dengan activeUser
+        if (!activeUser || !activeUser.uid) return;
+
         if (!snapshot.exists()) {
           isFirstLoad = false;
           sendTotalUnreadToParent(); 
@@ -1071,9 +1081,9 @@ document.addEventListener('visibilitychange', () => {
         snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
           
-          if (roomID.includes(currentUser.uid)) {
+          if (roomID.includes(activeUser.uid)) {
             const parts = roomID.split('_');
-            const targetUID = parts[0] === currentUser.uid ? parts[1] : parts[0];
+            const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
 
             let unreadTotalCount = 0;
             let lastMsg = null;
@@ -1090,12 +1100,12 @@ document.addEventListener('visibilitychange', () => {
               if (msgKey === lastReadKey) {
                 countAfterKey = true;
                 unreadTotalCount = 0;
-              } else if (countAfterKey && msgData.uid !== currentUser.uid) {
+              } else if (countAfterKey && msgData.uid !== activeUser.uid) {
                 unreadTotalCount++;
               }
             });
 
-            if (lastMsg && lastMsg.uid === currentUser.uid) {
+            if (lastMsg && lastMsg.uid === activeUser.uid) {
               unreadTotalCount = 0;
             }
 
@@ -1110,11 +1120,9 @@ document.addEventListener('visibilitychange', () => {
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-              // --- PENEMPATAN YANG BENAR ADA DI SINI ---
-              // Jika beda tab, ATAU modal sedang ditutup/layar mati (!isChatVisible)
               if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
                 unreadCounts[targetUID] = unreadTotalCount;
-                if (!isFirstLoad && lastMsg && lastMsg.uid !== currentUser.uid) playKlingSound();
+                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) playKlingSound();
               }
             } else {
               unreadCounts[targetUID] = 0;
@@ -1355,7 +1363,8 @@ document.addEventListener('visibilitychange', () => {
       sendTotalUnreadToParent();
     }
 
-  // --- LOGIKA PRESENCE & IDLE USER ---
+ 
+// --- LOGIKA PRESENCE & IDLE USER ---
     let idleTimer = null;
     let antiKedipTimer = null;
     let isPresenceSetup = false;
@@ -1423,8 +1432,8 @@ document.addEventListener('visibilitychange', () => {
       // 1. PENGATURAN KONEKSI FIREBASE (Saat pertama kali terhubung / buka chat)
       onValue(connectedRef, (snap) => {
         if (snap.val() === true) {
+          // Hanya jadi offline murni jika koneksi benar-benar terputus total / tutup paksa
           onDisconnect(userStateRef).set('offline').then(() => {
-            // INSTAN: Langsung anggap ONLINE saat pertama buka tanpa menunggu delay!
             evaluateStatus(true);
           });
         }
@@ -1444,34 +1453,38 @@ document.addEventListener('visibilitychange', () => {
         }, { passive: true });
       });
 
-      // 3. DETEKSI BERALIH TAB (Visibility Change menggunakan anti-kedip 3 detik)
-     // Deteksi jika layar HP mati / minimize / kembali dari idle
-document.addEventListener('visibilitychange', () => {
-  isChatVisible = !document.hidden;
-  
-  if (isChatVisible) {
-    // Paksa Firebase mengaktifkan kembali WebSocket jika sempat terputus/idle
-    if (typeof firebase !== 'undefined' && firebase.database) {
-      firebase.database().goOnline();
-    }
+      // 3. DETEKSI BERALIH TAB / MINIMIZE / TEKAN TOMBOL HOME
+      document.addEventListener('visibilitychange', () => {
+        isChatVisible = !document.hidden;
+        
+        if (document.hidden) {
+          // 🛠️ KUNCINYA DI SINI: Saat minimize atau pindah tab, ubah jadi IDLE (Kuning)
+          setMyState('idle'); 
+        } else {
+          // Paksa Firebase mengaktifkan kembali WebSocket jika kembali dibuka
+          if (typeof firebase !== 'undefined' && firebase.database) {
+            firebase.database().goOnline();
+          }
 
-    if (activeChatType === 'private' && activePrivateUID) {
-      unreadCounts[activePrivateUID] = 0;
-      markRoomAsRead(activePrivateUID);
-      renderPrivateTabsUI();
-    } else if (activeChatType === 'public') {
-      // 🛠️ PERBAIKAN 3: Jika layar menyala kembali dan Anda berada di tab publik, langsung tandai semua terbaca
-      updatePublicTabBadge(0);
-      markPublicGroupAsRead();
-    }
-  }
-});
+          evaluateStatus(true); // Langsung kembalikan status jadi online
+
+          if (activeChatType === 'private' && activePrivateUID) {
+            unreadCounts[activePrivateUID] = 0;
+            markRoomAsRead(activePrivateUID);
+            renderPrivateTabsUI();
+          } else if (activeChatType === 'public') {
+            updatePublicTabBadge(0);
+            markPublicGroupAsRead();
+          }
+        }
+      });
 
       // 4. EKSPOSE FUNGSI SAAT TOMBOL CHAT DITUTUP/DIBUKA (Instan)
       window.updatePresenceOnChatToggle = function() {
         evaluateStatus(true);
       };
     }
+ 
     
     function requestNotificationPermission() {
       if (!('Notification' in window) || !currentUser?.uid) return;
@@ -1531,41 +1544,52 @@ document.addEventListener('visibilitychange', () => {
 
 
     
-    // Logika Pemantau Warga Online
-    let previousOnlineUsers = new Set();
-    let isInitialUsersLoaded = false;
+ // Logika Pemantau Warga Online
+  let previousOnlineUsers = new Set();
+  let isInitialUsersLoaded = false;
+  let usersListUnsubscribe = null; // 🛠️ Tambahkan variabel penampung unsubscribe
 
-    function loadUsersList() {
-      const usersRef = ref(db, 'users');
-      onValue(usersRef, (snapshot) => {
-        if (!snapshot.exists()) return;
-        
-        allUsersCache = snapshot.val();
-        const currentOnlineUsers = new Set();
+  function loadUsersList() {
+    const usersRef = ref(db, 'users');
+    
+    // Matikan listener sebelumnya jika sudah ada agar tidak numpuk
+    if (usersListUnsubscribe) {
+      usersListUnsubscribe();
+      usersListUnsubscribe = null;
+    }
 
-        Object.values(allUsersCache).forEach(u => {
-          if (u.status === 'aktif' && u.state === 'online') {
-            currentOnlineUsers.add(u.uid);
+    usersListUnsubscribe = onValue(usersRef, (snapshot) => {
+      // 🛠️ PENGAMAN: Jika user sudah logout (currentUser null), abaikan callback
+      if (!currentUser || !currentUser.uid) return;
+
+      if (!snapshot.exists()) return;
+      
+      allUsersCache = snapshot.val();
+      const currentOnlineUsers = new Set();
+
+      Object.values(allUsersCache).forEach(u => {
+        if (u.status === 'aktif' && u.state === 'online') {
+          currentOnlineUsers.add(u.uid);
+        }
+      });
+
+      if (isInitialUsersLoaded) {
+        currentOnlineUsers.forEach(uid => {
+          const isSelf = (uid === currentUser?.uid);
+          const wasNotOnline = !previousOnlineUsers.has(uid);
+
+          if (wasNotOnline && !isSelf) {
+            playKlingSound();
           }
         });
+      }
 
-        if (isInitialUsersLoaded) {
-          currentOnlineUsers.forEach(uid => {
-            const isSelf = (uid === currentUser?.uid);
-            const wasNotOnline = !previousOnlineUsers.has(uid);
+      previousOnlineUsers = currentOnlineUsers;
+      isInitialUsersLoaded = true;
 
-            if (wasNotOnline && !isSelf) {
-              playKlingSound();
-            }
-          });
-        }
-
-        previousOnlineUsers = currentOnlineUsers;
-        isInitialUsersLoaded = true;
-
-        renderWargaSidebar();
-      });
-    }
+      renderWargaSidebar();
+    });
+  }
 
 
    // 1. Minta izin & gunakan Service Worker utama untuk FCM Token perangkat warga

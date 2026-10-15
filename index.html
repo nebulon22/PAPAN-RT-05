@@ -8,7 +8,7 @@
    <!-- FontAwesome Icons -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.5.4">
+  <link rel="manifest" href="manifest.json?v=1.5.5">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
  
@@ -323,57 +323,138 @@ function perbaruiAplikasiSekarang() {
     box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
   }
 
-  .btn-qr-floating {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1500;
-    width: 65px;
-    height: 65px;
-    background-color: #0288d1;
-    color: white;
-    border: none;
-    border-radius: 16px;
-    box-shadow: 0 6px 16px rgba(0,0,0,0.35);
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 4px;
-  }
+/* ========================================== */
+/* 1. TOMBOL FLOATING DI LUAR */
+/* ========================================== */
+.btn-qr-floating {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1500;
+  width: 64px;
+  height: 64px;
+  
+  /* Efek Glassmorphism */
+  /* Warna biru dengan transparansi */
+  background-color: rgba(2, 136, 209, 0.7); 
+  /* Efek blur pada area di belakang tombol */
+  backdrop-filter: blur(2px); 
+ /* Border tipis warna biru tua */
+  border: 1px solid rgba(1, 87, 155, 0.3);
+  
+  color: white;
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  transition: all 0.3s ease; /* Transisi halus saat hover/tekan */
+}
 
-  .btn-qr-floating::before {
-    content: '';
-    position: absolute;
-    top: 8px; left: 8px; right: 8px; bottom: 8px;
-    pointer-events: none;
-    background-image: 
-      linear-gradient(to right, #ffffff 3px, transparent 3px),
-      linear-gradient(to bottom, #ffffff 3px, transparent 3px),
-      linear-gradient(to left, #ffffff 3px, transparent 3px),
-      linear-gradient(to bottom, #ffffff 3px, transparent 3px),
-      linear-gradient(to right, #ffffff 3px, transparent 3px),
-      linear-gradient(to top, #ffffff 3px, transparent 3px),
-      linear-gradient(to left, #ffffff 3px, transparent 3px),
-      linear-gradient(to top, #ffffff 3px, transparent 3px);
-    background-position: 
-      0 0, 0 0, 
-      100% 0, 100% 0, 
-      0 100%, 0 100%, 
-      100% 100%, 100% 100%;
-    background-size: 10px 10px;
-    background-repeat: no-repeat;
-  }
+/* Pengaturan Sudut Siku Sesuai Ukuran Baru */
+.btn-qr-floating .corner {
+  position: absolute;
+  width: 10px;  /* Ukuran siku diperkecil agar pas */
+  height: 10px;
+  border-color: white;
+  border-style: solid;
+  border-width: 0;
+  pointer-events: none;
+}
 
-  .btn-qr-floating span {
-    font-size: 9px;
-    font-weight: bold;
-    line-height: 1;
-    margin-top: 2px;
-  }
+/* Posisi sudut siku yang pas dan rapi di dalam tombol 64px */
+.btn-qr-floating .top-left {
+  top: 5px; 
+  left: 5px;
+  border-top-width: 2.5px; 
+  border-left-width: 2.5px;
+  border-top-left-radius: 6px;
+}
 
+.btn-qr-floating .top-right {
+  top: 5px; 
+  right: 5px;
+  border-top-width: 2.5px; 
+  border-right-width: 2.5px;
+  border-top-right-radius: 6px;
+}
+
+.btn-qr-floating .bottom-left {
+  bottom: 5px; 
+  left: 5px;
+  border-bottom-width: 2.5px; 
+  border-left-width: 2.5px;
+  border-bottom-left-radius: 6px;
+}
+
+.btn-qr-floating .bottom-right {
+  bottom: 5px; 
+  right: 5px;
+  border-bottom-width: 2.5px; 
+  border-right-width: 2.5px;
+  border-bottom-right-radius: 6px;
+}
+
+   
+/* ========================================== */
+/* 2. MODAL KAMERA SCANNER (Sesuai HTML Anda) */
+/* ========================================== */
+.qr-scanner-wrapper {
+  position: relative;
+  width: 100%;
+  background: #000;
+}
+
+.qr-corner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  box-sizing: border-box;
+  padding: 30px; /* Jarak bingkai siku dari tepi kamera */
+}
+
+/* Desain Siku Besar untuk Modal Kamera */
+.qr-corner-overlay .corner {
+  position: absolute;
+  width: 35px;
+  height: 35px;
+  border-color: #ffffff;
+  border-style: solid;
+  border-width: 0;
+}
+
+.qr-corner-overlay .top-left {
+  top: 20px; left: 20px;
+  border-top-width: 4px; border-left-width: 4px;
+  border-top-left-radius: 12px;
+}
+
+.qr-corner-overlay .top-right {
+  top: 20px; right: 20px;
+  border-top-width: 4px; border-right-width: 4px;
+  border-top-right-radius: 12px;
+}
+
+.qr-corner-overlay .bottom-left {
+  bottom: 20px; left: 20px;
+  border-bottom-width: 4px; border-left-width: 4px;
+  border-bottom-left-radius: 12px;
+}
+
+.qr-corner-overlay .bottom-right {
+  bottom: 20px; right: 20px;
+  border-bottom-width: 4px; border-right-width: 4px;
+  border-bottom-right-radius: 12px;
+}
+   
+   
   @keyframes pulse {
     0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
     70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
@@ -810,18 +891,59 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
- <!-- Modal Kamera QR Scanner -->
 
-  <div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
-    <div class="modal-content" style="max-width: 320px; text-align: center;">
-      <div class="modal-header">
-        <h3>📷 Scan QR Rumah Warga</h3>
-        <button class="close-btn" onclick="stopScanQR()">&times;</button>
-      </div>
-      <div id="qr-reader" style="width: 100%; border-radius: 8px; overflow: hidden;"></div>
-      <button onclick="stopScanQR()" style="margin-top: 12px; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">❌ Batal</button>
+ <!-- Modal Kamera QR Scanner -->
+<div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
+  <div class="modal-content" style="max-width: 320px; text-align: center;">
+    <div class="modal-header">
+      <h3>📷 Scan QR Rumah Warga</h3>
+      <button class="close-btn" onclick="stopScanQR()">&times;</button>
     </div>
-  </div> 
+    
+    <!-- Wrapper untuk kamera dan bingkai sudut siku -->
+    <div class="qr-scanner-wrapper" style="position: relative; width: 100%; border-radius: 8px; overflow: hidden;">
+      <div id="qr-reader" style="width: 100%;"></div>
+      
+      <!-- Bingkai Sudut Siku Melengkung (Overlay) -->
+      <div class="qr-corner-overlay">
+        <div class="corner top-left"></div>
+        <div class="corner top-right"></div>
+        <div class="corner bottom-left"></div>
+        <div class="corner bottom-right"></div>
+      </div>
+    </div>
+
+    <button onclick="stopScanQR()" style="margin-top: 12px; background: #ef4444; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer;">❌ Batal</button>
+  </div>
+</div>
+
+  <!-- Tombol Melayang Scan QR -->
+  <button id="btn-scan-jimpitan" onclick="mulaiScanJimpitan()" class="btn-qr-floating">
+    
+    <!-- 4 Sudut Siku Putih Melengkung (Melingkupi seluruh tombol) -->
+    <div class="corner top-left"></div>
+    <div class="corner top-right"></div>
+    <div class="corner bottom-left"></div>
+    <div class="corner bottom-right"></div>
+
+    <!-- Gambar Kentongan -->
+    <img src="kentongan-slit-drum.png" alt="Kentongan" style="
+      width: 28px; 
+      height: 28px; 
+      object-fit: contain; 
+      margin-bottom: 2px;
+      filter: brightness(0) invert(1) drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
+    ">
+    
+    <!-- Teks Ronda Broo -->
+    <span style="
+      font-size: 8px; 
+      font-weight: bold; 
+      line-height: 1; 
+      color: #ffffff; 
+      text-shadow: 0 0 2px #ffffff, 0 0 6px rgba(255, 255, 255, 0.9);
+    ">Ronda Broo</span>
+  </button>
 
 <!-- Tombol Senter -->
 <button onclick="toggleSenterRonda()" id="btn-senter-ronda" title="Senter Ronda" style="position: fixed; bottom: 20px; left: calc(50% + 45px); z-index: 1000; background: #1e293b; color: #fbbf24; border: 1px solid #334155; padding: 6px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 42px; transition: all 0.2s;">
@@ -933,23 +1055,7 @@ function perbaruiAplikasiSekarang() {
   </div>
 </div>
 
-  <!-- Tombol Melayang Scan QR -->
-  <button id="btn-scan-jimpitan" onclick="mulaiScanJimpitan()" class="btn-qr-floating">
-    <img src="kentongan-slit-drum.png" alt="Kentongan" style="
-      width: 28px; 
-      height: 28px; 
-      object-fit: contain; 
-      margin-bottom: 2px; 
-      filter: brightness(0) invert(1) drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
-    ">
-    <span style="
-      font-size: 8px; 
-      font-weight: bold; 
-      line-height: 1; 
-      color: #ffffff; 
-      text-shadow: 0 0 2px #ffffff, 0 0 6px rgba(255, 255, 255, 0.9);
-    ">Ronda Broo</span>
-  </button>
+
 
 
 <style>
@@ -1817,14 +1923,14 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       clearTimeout(denahTimer);
     }
 
-    // 5. ATUR TIMER BARU: Tutup otomatis popup setelah 3 detik (3000 ms)
+    // 5. ATUR TIMER BARU: Tutup otomatis popup setelah 2 detik (2000 ms)
     denahTimer = setTimeout(() => {
       // Periksa apakah popup sedang terbuka, lalu tutup menggunakan fungsi toggle
       const popupEl = document.getElementById('denah-filter-popup');
       if (popupEl && popupEl.style.display === 'grid') {
         toggleDenahMenu();
       }
-    }, 3000);
+    }, 2000);
   }
     
     
@@ -2273,6 +2379,8 @@ function muatDataJimpitan() {
           cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
           cacheDataHarian[keyTanggal].subtotal += nominal;
 
+        
+
           
           // --- DATA BULANAN ---
           var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
@@ -2297,6 +2405,10 @@ function muatDataJimpitan() {
         }
       }
     });
+
+      Object.keys(cacheDataHarian).forEach(key => {
+          cacheDataHarian[key].items.reverse();
+          });
 
     // Urutkan dropdown harian berdasarkan isoDate dari yang paling baru
     arrayTanggal.sort((a, b) => {
@@ -2496,11 +2608,22 @@ window.refreshDataJimpitan = function() {
     
     // --- CHANGELOG ---
     const dataChangelog = [
+       {
+        versi: "v1.5.5",
+        tanggal: "14 Okt 2026",
+        status: "Terbaru",
+        warna: "#4CAF50",
+        fitur: [
+          "Penambahan fitur Polling di grup chat",
+          "Perbaikan warna username saat chat di grup chat",
+          "Perbaikan fitur badge unread dan notifikasi chat baru"
+        ]
+      },
       {
         versi: "v1.5.4",
         tanggal: "8 Okt 2026",
-        status: "Terbaru",
-        warna: "#4CAF50",
+        status: "",
+        warna: "#888",
         fitur: [
           "Penambahan fitur Push Notification",
           "Perbaikan tampilan tombol di halaman Admin",
