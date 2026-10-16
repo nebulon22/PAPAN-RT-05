@@ -1946,16 +1946,18 @@ document.addEventListener('visibilitychange', () => {
 
     
     
-// 1. Definisikan batas awal dan batas maksimal di luar fungsi
+// === 1. VARIABEL KONTROL LIMIT & STATUS CHAT (Deklarasi Sekali di Sini) ===
 let currentPublicLimit = 50;
 const MAX_SCROLL_LIMIT = 500;
 let isInitialPublicChatLoaded = false;
 
-// Variabel limit untuk chat privat
 let currentPrivateLimit = {};
 const MAX_PRIVATE_LIMIT = 500;
+let isInitialPrivateChatLoaded = {}; // 🛠️ Ditambahkan agar tidak error ReferenceError
+
+
+// === 2. FUNGSI PEMUAT CHAT PUBLIK ===
 function loadChatStream() {
-    // 2. Gunakan variabel dinamis (currentPublicLimit) pada query
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
 
@@ -1999,48 +2001,16 @@ function loadChatStream() {
         chatStream.scrollTop = chatStream.scrollHeight;
     });
 }
-// 3. SATU-SATUNYA Event Listener Scroll Utama (Gabungan Publik & Privat)
-const chatStreamEl = document.getElementById('chat-stream');
-if (chatStreamEl) {
-    chatStreamEl.addEventListener('scroll', () => {
-        if (chatStreamEl.scrollTop === 0) {
-            
-            // A. Jika yang sedang aktif adalah Chat Publik
-            if (activeChatType === 'public') {
-                if (currentPublicLimit < MAX_SCROLL_LIMIT) {
-                    currentPublicLimit += 50;
-                    console.log("Memuat lebih banyak riwayat publik, batas:", currentPublicLimit);
-                    loadChatStream(); // <-- Memanggil fungsi loadChatStream di atas
-                }
-            }
-            
-            // B. Jika yang sedang aktif adalah Chat Pribadi (Private)
-            else if (activeChatType === 'private' && activePrivateUID) {
-                const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
-                const currentLimit = currentPrivateLimit[roomID] || 50;
-
-                if (currentLimit < MAX_PRIVATE_LIMIT) {
-                    currentPrivateLimit[roomID] = currentLimit + 50;
-                    console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
-                    loadPrivateChatStream(activePrivateUID);
-                }
-            }
-
-        }
-    });
-}
 
 
-
+// === 3. FUNGSI PEMUAT CHAT PRIVAT (Diletakkan SEBELUM Event Listener Scroll) ===
 function loadPrivateChatStream(targetUID) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
     
-    // Jika limit untuk room ini belum ada, set awal ke 50
     if (!currentPrivateLimit[roomID]) {
         currentPrivateLimit[roomID] = 50;
     }
 
-    //  Gunakan limit dinamis sesuai room-nya
     const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(currentPrivateLimit[roomID]));
     const chatStream = document.getElementById('chat-stream');
 
@@ -2090,6 +2060,37 @@ function loadPrivateChatStream(targetUID) {
     });
 }
 
+
+// === 4. SATU-SATUNYA EVENT LISTENER SCROLL UTAMA (Di Paling Bawah) ===
+const chatStreamEl = document.getElementById('chat-stream');
+if (chatStreamEl) {
+    chatStreamEl.addEventListener('scroll', () => {
+        if (chatStreamEl.scrollTop === 0) {
+            
+            // A. Jika yang sedang aktif adalah Chat Publik
+            if (activeChatType === 'public') {
+                if (currentPublicLimit < MAX_SCROLL_LIMIT) {
+                    currentPublicLimit += 50;
+                    console.log("Memuat lebih banyak riwayat publik, batas:", currentPublicLimit);
+                    loadChatStream();
+                }
+            }
+            
+            // B. Jika yang sedang aktif adalah Chat Pribadi (Private)
+            else if (activeChatType === 'private' && activePrivateUID) {
+                const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+                const currentLimit = currentPrivateLimit[roomID] || 50;
+
+                if (currentLimit < MAX_PRIVATE_LIMIT) {
+                    currentPrivateLimit[roomID] = currentLimit + 50;
+                    console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
+                    loadPrivateChatStream(activePrivateUID);
+                }
+            }
+
+        }
+    });
+}
         
 function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   // PENGAMAN: Jika teks pesan kosong, abaikan
