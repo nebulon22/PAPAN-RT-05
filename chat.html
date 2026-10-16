@@ -1304,7 +1304,7 @@ document.addEventListener('visibilitychange', () => {
       });
     }
     
- // 6. Pengiriman Pesan (Dioptimalkan untuk kelancaran UX Mobile)
+// 6. Pengiriman Pesan (Smooth Mobile Keyboard - Tanpa Kedip)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -1317,9 +1317,8 @@ document.addEventListener('visibilitychange', () => {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
-      // Kosongkan input dan blur sejenak agar keyboard mobile tidak "nyangkut"
+      // Kosongkan input secara instan tapi JANGAN panggil blur() agar keyboard tidak kedip/tertutup
       input.value = '';
-      input.blur(); 
 
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
@@ -1333,19 +1332,13 @@ document.addEventListener('visibilitychange', () => {
           text: text,
           timestamp: serverTimestamp()
         }).then(() => {
-          // SETELAH BERHASIL TERSIMPAN DI FIREBASE, baru simpan ke localStorage
           const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
           lastReadPublicMap[currentUser.uid] = newKey;
           localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
 
-          // Opsional: Langsung reset badge ke 0 karena Anda yang mengirimnya
           updatePublicTabBadge(0);
-
-          // Kembalikan fokus ke input secara mulus
-          setTimeout(() => { input.focus(); }, 50);
         }).catch((error) => {
             console.error("Gagal mengirim pesan publik:", error);
-            setTimeout(() => { input.focus(); }, 50);
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
@@ -1363,8 +1356,6 @@ document.addEventListener('visibilitychange', () => {
           const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
           lastReadKeyMap[activePrivateUID] = newKey;
           localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
-
-          setTimeout(() => { input.focus(); }, 50);
 
           const targetUser = allUsersCache[activePrivateUID];
           const gasUrl = getGasUrl();
