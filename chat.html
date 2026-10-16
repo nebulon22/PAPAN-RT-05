@@ -1877,14 +1877,23 @@ document.addEventListener('visibilitychange', () => {
                     }
                 }
 
-                // 🛠️ Autentikasi otomatis agar rules `auth != null` terpenuhi
+              // 🛠️ Autentikasi otomatis dengan pengaman jaringan
                 try {
                     const pseudoEmail = val.authEmail || `${currentUser.uid.toLowerCase()}@rt05kayen.internal`;
                     const securePassword = (val.pin || '') + "RT05Key";
-                    await signInWithEmailAndPassword(auth, pseudoEmail, securePassword);
-                    console.log("Firebase Auth berhasil masuk, rules `auth != null` terpenuhi.");
+                    
+                    // Cek apakah auth sedang proses atau user masih valid
+                    if (auth.currentUser?.email !== pseudoEmail) {
+                        await signInWithEmailAndPassword(auth, pseudoEmail, securePassword);
+                        console.log("Firebase Auth berhasil masuk, rules `auth != null` terpenuhi.");
+                    }
                 } catch (authErr) {
-                    console.log("Catatan Auth login session:", authErr);
+                    // Abaikan error network-request-failed saat transisi logout/reload agar console tetap bersih
+                    if (authErr.code !== 'auth/network-request-failed') {
+                        console.log("Catatan Auth login session:", authErr);
+                    } else {
+                        console.log("Catatan jaringan: Menggunakan sesi auth lokal yang ada.");
+                    }
                 }
                 
                 setupPresence();
