@@ -953,12 +953,20 @@ function cekLogin() {
     },
     body: JSON.stringify(payloadTes)
   })
-
-  .then(res => res.json())
-
-  .then(data => {
+  .then(res => res.text()) // <--- AMBIL SEBAGAI TEKS DULU AGAR AMAN DARI ERROR FORMAT
+  .then(text => {
     btnLogin.innerText = "Buka Kunci";
     btnLogin.disabled = false;
+
+    let data;
+    try {
+      data = JSON.parse(text); // Coba parsing teks ke JSON
+    } catch (e) {
+      // Jika server mengembalikan pesan error (misal: "ERROR: Server sibuk...")
+      alert("❌ " + text);
+      document.getElementById('adminPin').value = "";
+      return;
+    }
 
     if (data.status === "SUCCESS" && data.token) {
 
@@ -968,7 +976,7 @@ function cekLogin() {
       // 2. Simpan TOKEN
       localStorage.setItem('adminToken', data.token);
 
-      // 3. TAMBAHKAN INI: Catat Waktu Login Sekarang (Timestamp)
+      // 3. Catat Waktu Login Sekarang (Timestamp)
       localStorage.setItem('admin_login_time', Date.now().toString());
 
       // Bersihkan PIN dari input
@@ -981,7 +989,6 @@ function cekLogin() {
       document.getElementById('adminPin').value = "";
     }
   })
-
   .catch(err => {
     console.error("❌ Gagal memverifikasi PIN:", err);
 
@@ -991,8 +998,6 @@ function cekLogin() {
     alert("❌ Gagal menghubungi server. PIN belum dapat diverifikasi.");
   });
 }
-
-
     
 
 // BARU (Otomatis muat data begitu PIN berhasil di-ACC):
