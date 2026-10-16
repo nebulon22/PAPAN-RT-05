@@ -432,8 +432,7 @@
 
     <input type="text" id="chat-input" placeholder="Ketik pesan obrolan di sini..." autocomplete="off" maxlength="300">
     
-    <!-- Tombol Kirim dengan Mousedown & Touchstart PreventDefault -->
-    <button type="submit" class="btn-send" title="Kirim Pesan" onmousedown="event.preventDefault();" ontouchstart="event.preventDefault();">
+    <button type="submit" class="btn-send" title="Kirim Pesan">
       <i class="fa-solid fa-paper-plane"></i>
     </button>
   </form>
@@ -1320,7 +1319,7 @@ document.addEventListener('visibilitychange', () => {
       // Kosongkan input secara instan tapi JANGAN panggil blur() agar keyboard tidak kedip/tertutup
       input.value = '';
 
-      if (activeChatType === 'public') {
+   if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
 
@@ -1337,8 +1336,12 @@ document.addEventListener('visibilitychange', () => {
           localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
 
           updatePublicTabBadge(0);
+          
+          // 💡 Tambahkan ini agar fokus kembali terjaga secara halus
+          setTimeout(() => { input.focus(); }, 100);
         }).catch((error) => {
             console.error("Gagal mengirim pesan publik:", error);
+            setTimeout(() => { input.focus(); }, 100);
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
@@ -1357,6 +1360,9 @@ document.addEventListener('visibilitychange', () => {
           lastReadKeyMap[activePrivateUID] = newKey;
           localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
 
+          // 💡 Tambahkan ini juga di private chat
+          setTimeout(() => { input.focus(); }, 100);
+
           const targetUser = allUsersCache[activePrivateUID];
           const gasUrl = getGasUrl();
           if (targetUser && targetUser.state !== 'online' && gasUrl) {
@@ -1372,6 +1378,9 @@ document.addEventListener('visibilitychange', () => {
               })
             }).catch(err => console.log(err));
           }
+        }).catch((error) => {
+            console.error("Gagal mengirim pesan private:", error);
+            setTimeout(() => { input.focus(); }, 100);
         });
       }
     }
