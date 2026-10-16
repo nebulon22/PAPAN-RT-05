@@ -583,7 +583,6 @@
         : '';
     }
 
-// Fungsi pemformat waktu pesan (Rentang < 7 hari = nama hari, >= 7 hari = tanggal & bulan)
 function formatWaktuPesan(timestamp) {
     if (!timestamp) return 'Baru saja';
     
@@ -596,35 +595,30 @@ function formatWaktuPesan(timestamp) {
     const selisihMenit = Math.floor(selisihDetik / 60);
     const selisihJam = Math.floor(selisihMenit / 60);
 
-    // 1. Kurang dari 1 menit yang lalu
     if (selisihDetik < 60) {
         return 'Baru saja';
-    }
-    // 2. Dalam rentang 1 sampai 59 menit yang lalu
-    else if (selisihMenit < 60) {
+    } else if (selisihMenit < 60) {
         return `${selisihMenit} menit lalu`;
-    }
-    // 3. Hari yang sama (kurang dari 24 jam di tanggal yang sama)
-    else if (selisihJam < 24 && pesanDate.getDate() === sekarang.getDate()) {
+    } else if (selisihJam < 24 && pesanDate.getDate() === sekarang.getDate()) {
         return pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     }
 
     const jamMenit = pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
-    // Hitung selisih hari murni
     const d1 = new Date(sekarang.getFullYear(), sekarang.getMonth(), sekarang.getDate());
     const d2 = new Date(pesanDate.getFullYear(), pesanDate.getMonth(), pesanDate.getDate());
     const selisihHari = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
 
+    // 1 hari lalu (Kemarin)
     if (selisihHari === 1) {
         return `Kemarin, ${jamMenit}`;
     } 
-    // Jika usianya 2 sampai 6 hari lalu (masih dalam pekan ini), tampilkan nama hari
-    else if (selisihHari > 1 && selisihHari < 7) {
+    // 2 sampai 3 hari lalu (Tampilkan nama hari)
+    else if (selisihHari > 1 && selisihHari <= 3) {
         const namaHari = pesanDate.toLocaleDateString('id-ID', { weekday: 'long' });
         return `${namaHari}, ${jamMenit}`; 
     } 
-    // Jika sudah lewat 7 hari atau lebih (artinya sudah masuk pekan lalu/sebelumnya), tampilkan tanggal
+    // Lebih dari 3 hari (Otomatis pakai tanggal & bulan)
     else {
         const tanggalBulan = pesanDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
         return `${tanggalBulan}, ${jamMenit}`; 
