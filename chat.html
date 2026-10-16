@@ -757,9 +757,15 @@ function formatWaktuPesan(timestamp) {
     };
 
     // === LOGOUT ===
-    window.logoutUser = async () => {
+   window.logoutUser = async () => {
       if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
         if (currentUser && currentUser.uid) {
+          // Hapus token FCM dari database untuk user ini di perangkat ini sebelum logout
+          try {
+            await set(ref(db, `users/${currentUser.uid}/fcmToken`), null);
+          } catch (err) {
+            console.log(err);
+          }
           await set(ref(db, `users/${currentUser.uid}/state`), 'offline');
         }
         
@@ -779,7 +785,6 @@ function formatWaktuPesan(timestamp) {
         location.reload();
       }
     };
-
 
   
 
