@@ -1806,12 +1806,14 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
-    // 2. Tangkap pesan saat aplikasi SEDANG DIBUKA (Foreground)
+// 2. Tangkap pesan saat aplikasi SEDANG DIBUKA (Foreground)
     onMessage(messaging, (payload) => {
-      console.log('Pesan diterima saat aplikasi aktif:', payload);
+        console.log('Pesan diterima saat aplikasi aktif:', payload);
     });
-        
-  async function checkUserStatus() {
+
+    let isInitialized = preventDuplicateInit(); // Flag pengaman agar listener tidak dipanggil berulang kali
+
+    async function checkUserStatus() {
         const chatContainer = document.getElementById('chat-container');
         const chatFooter = document.querySelector('footer');
         const regModal = document.getElementById('reg-modal');
@@ -1872,7 +1874,7 @@ document.addEventListener('visibilitychange', () => {
                     }
                 }
 
-                // 🛠️ WAJIB ADA: Autentikasi otomatis agar rules `auth != null` terpenuhi
+                // 🛠️ Autentikasi otomatis agar rules `auth != null` terpenuhi
                 try {
                     const pseudoEmail = val.authEmail || `${currentUser.uid.toLowerCase()}@rt05kayen.internal`;
                     const securePassword = (val.pin || '') + "RT05Key";
@@ -1884,33 +1886,23 @@ document.addEventListener('visibilitychange', () => {
                 
                 setupPresence();
                 
-                // Jalankan semua listener setelah sesi auth aktif
-                loadUsersList();
-                renderPrivateTabsUI();
-                listenAllPrivateChats();
-                listenPublicGroupUnread();
-                requestNotificationPermission();
-                initFCMToken(currentUser.uid);
-                listenPinnedPoll();
+                // Jalankan kumpulan listener SEKALI SAJA agar tidak terjadi duplikasi koneksi
+                if (!window.hasLoadedListeners) {
+                    window.hasLoadedListeners = true;
+                    loadUsersList();
+                    renderPrivateTabsUI();
+                    listenAllPrivateChats();
+                    listenPublicGroupUnread();
+                    requestNotificationPermission();
+                    initFCMToken(currentUser.uid);
+                    listenPinnedPoll();
 
-                activeChatType = 'public';
-                loadChatStream();
+                    activeChatType = 'public';
+                    loadChatStream();
+                }
             }
         });
     }
-          // ----------------------------------------------------------------
-          
-          setupPresence();
-          
-          // 1. Jalankan semua listener pemantau pesan terlebih dahulu
-          loadUsersList();
-          renderPrivateTabsUI();
-          listenAllPrivateChats();
-          listenPublicGroupUnread();
-          requestNotificationPermission();
-          initFCMToken(currentUser.uid);
-          listenPinnedPoll();
-
           // 2. Set ruang aktif ke public
           activeChatType = 'public';
           loadChatStream();
