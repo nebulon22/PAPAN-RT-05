@@ -423,7 +423,8 @@
 
   </div>
 
- <footer>
+<!-- Footer / Input Form Chat -->
+<footer>
   <form id="chat-form" onsubmit="sendChatMessage(event)">
     <!-- Label Nama User Aktif -->
     <span id="chat-current-user-label" style="font-size: 12px; font-weight: bold; color: #facc15; white-space: nowrap; font-family: monospace; display: flex; align-items: center;">
@@ -1303,7 +1304,7 @@ document.addEventListener('visibilitychange', () => {
       });
     }
     
-// 6. Pengiriman Pesan (Smooth Mobile Keyboard - Tanpa Kedip)
+// 6. Pengiriman Pesan (Smooth Mobile Keyboard - Tanpa Kedip & Kompatibel Badge/GAS)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -1316,14 +1317,20 @@ document.addEventListener('visibilitychange', () => {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
-      // Kosongkan input secara instan tapi JANGAN panggil blur() agar keyboard tidak kedip/tertutup
+      // Kosongkan input dan langsung kunci fokus agar keyboard HP tidak sempat minimize
       input.value = '';
+      input.focus();
 
-   if (activeChatType === 'public') {
+      if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
 
-        // Kirim data pesan terlebih dahulu ke Firebase
+        // Tandai ID pesan publik sebagai terbaca agar highlight padam
+        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+        lastReadPublicMap[currentUser.uid] = newKey;
+        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+
+        // Kirim data ke Firebase
         set(newMsgRef, {
           uid: currentUser.uid,
           sender: currentUser.username || currentUser.nama,
@@ -1331,17 +1338,9 @@ document.addEventListener('visibilitychange', () => {
           text: text,
           timestamp: serverTimestamp()
         }).then(() => {
-          const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-          lastReadPublicMap[currentUser.uid] = newKey;
-          localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
-
           updatePublicTabBadge(0);
-          
-          // 💡 Tambahkan ini agar fokus kembali terjaga secara halus
-          setTimeout(() => { input.focus(); }, 100);
         }).catch((error) => {
-            console.error("Gagal mengirim pesan publik:", error);
-            setTimeout(() => { input.focus(); }, 100);
+          console.error("Gagal mengirim pesan publik:", error);
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
@@ -1360,8 +1359,8 @@ document.addEventListener('visibilitychange', () => {
           lastReadKeyMap[activePrivateUID] = newKey;
           localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
 
-          // 💡 Tambahkan ini juga di private chat
-          setTimeout(() => { input.focus(); }, 100);
+          // Pastikan fokus tetap terjaga di input setelah promise private selesai
+          input.focus();
 
           const targetUser = allUsersCache[activePrivateUID];
           const gasUrl = getGasUrl();
@@ -1379,8 +1378,7 @@ document.addEventListener('visibilitychange', () => {
             }).catch(err => console.log(err));
           }
         }).catch((error) => {
-            console.error("Gagal mengirim pesan private:", error);
-            setTimeout(() => { input.focus(); }, 100);
+          console.error("Gagal mengirim pesan private:", error);
         });
       }
     }
