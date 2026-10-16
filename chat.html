@@ -583,7 +583,7 @@
         : '';
     }
 
-// Fungsi pintar pemformat waktu pesan (Mendukung "Baru saja", menit lalu, hingga format tanggal)
+// Fungsi pemformat waktu pesan (Pekan ini = tampilkan hari, Pekan lalu/sebelumnya = tampilkan tanggal)
 function formatWaktuPesan(timestamp) {
     if (!timestamp) return 'Baru saja';
     
@@ -596,34 +596,43 @@ function formatWaktuPesan(timestamp) {
     const selisihMenit = Math.floor(selisihDetik / 60);
     const selisihJam = Math.floor(selisihMenit / 60);
 
-    // 1. Jika kurang dari 1 menit yang lalu
+    // 1. Kurang dari 1 menit yang lalu
     if (selisihDetik < 60) {
         return 'Baru saja';
     }
-    // 2. Jika dalam rentang 1 sampai 59 menit yang lalu
+    // 2. Dalam rentang 1 sampai 59 menit yang lalu
     else if (selisihMenit < 60) {
         return `${selisihMenit} menit lalu`;
     }
-    // 3. Jika dalam rentang 1 sampai 23 jam yang lalu di hari yang sama
+    // 3. Hari yang sama (kurang dari 24 jam di tanggal yang sama)
     else if (selisihJam < 24 && pesanDate.getDate() === sekarang.getDate()) {
         return pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     }
 
-    // 4. Perhitungan hari untuk kemarin dan seterusnya
+    const jamMenit = pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+    // Cek apakah "Kemarin"
     const d1 = new Date(sekarang.getFullYear(), sekarang.getMonth(), sekarang.getDate());
     const d2 = new Date(pesanDate.getFullYear(), pesanDate.getMonth(), pesanDate.getDate());
     const selisihHari = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
 
-    const jamMenit = pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-
     if (selisihHari === 1) {
-        return `Kemarin, ${jamMenit}`; // Kemarin
-    } else if (selisihHari > 1 && selisihHari < 7) {
+        return `Kemarin, ${jamMenit}`;
+    }
+
+    // 4. Menentukan awal pekan ini (mulai hari Senin minggu ini)
+    const hariIni = sekarang.getDay(); // 0 = Minggu, 1 = Senin, dst.
+    const jarakKeSenin = hariIni === 0 ? -6 : 1 - hariIni;
+    const awalPekanIni = new Date(sekarang.getFullYear(), sekarang.getMonth(), sekarang.getDate() + jarakKeSenin);
+
+    // 5. Jika pesan berada di dalam pekan ini (>= Senin minggu ini)
+    if (pesanDate >= awalPekanIni) {
         const namaHari = pesanDate.toLocaleDateString('id-ID', { weekday: 'long' });
-        return `${namaHari}, ${jamMenit}`; // 2-6 hari lalu
+        return `${namaHari}, ${jamMenit}`; // Contoh: Selasa, 12.00
     } else {
+        // 6. Jika sudah lewat dari pekan sebelumnya (minggu lalu atau lebih lama)
         const tanggalBulan = pesanDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-        return `${tanggalBulan}, ${jamMenit}`; // Lebih dari sepekan
+        return `${tanggalBulan}, ${jamMenit}`; // Contoh: 8 Okt, 12.00
     }
 }
 
