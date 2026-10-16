@@ -583,7 +583,7 @@
         : '';
     }
 
-// Fungsi pemformat waktu pesan (Pekan ini = tampilkan hari, Pekan lalu/sebelumnya = tampilkan tanggal)
+// Fungsi pemformat waktu pesan (Rentang < 7 hari = nama hari, >= 7 hari = tanggal & bulan)
 function formatWaktuPesan(timestamp) {
     if (!timestamp) return 'Baru saja';
     
@@ -611,31 +611,27 @@ function formatWaktuPesan(timestamp) {
 
     const jamMenit = pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
-    // Cek apakah "Kemarin"
+    // Hitung selisih hari murni
     const d1 = new Date(sekarang.getFullYear(), sekarang.getMonth(), sekarang.getDate());
     const d2 = new Date(pesanDate.getFullYear(), pesanDate.getMonth(), pesanDate.getDate());
     const selisihHari = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
 
     if (selisihHari === 1) {
         return `Kemarin, ${jamMenit}`;
-    }
-
-    // 4. Menentukan awal pekan ini (mulai hari Senin minggu ini)
-    const hariIni = sekarang.getDay(); // 0 = Minggu, 1 = Senin, dst.
-    const jarakKeSenin = hariIni === 0 ? -6 : 1 - hariIni;
-    const awalPekanIni = new Date(sekarang.getFullYear(), sekarang.getMonth(), sekarang.getDate() + jarakKeSenin);
-
-    // 5. Jika pesan berada di dalam pekan ini (>= Senin minggu ini)
-    if (pesanDate >= awalPekanIni) {
+    } 
+    // Jika usianya 2 sampai 6 hari lalu (masih dalam pekan ini), tampilkan nama hari
+    else if (selisihHari > 1 && selisihHari < 7) {
         const namaHari = pesanDate.toLocaleDateString('id-ID', { weekday: 'long' });
-        return `${namaHari}, ${jamMenit}`; // Contoh: Selasa, 12.00
-    } else {
-        // 6. Jika sudah lewat dari pekan sebelumnya (minggu lalu atau lebih lama)
+        return `${namaHari}, ${jamMenit}`; 
+    } 
+    // Jika sudah lewat 7 hari atau lebih (artinya sudah masuk pekan lalu/sebelumnya), tampilkan tanggal
+    else {
         const tanggalBulan = pesanDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-        return `${tanggalBulan}, ${jamMenit}`; // Contoh: 8 Okt, 12.00
+        return `${tanggalBulan}, ${jamMenit}`; 
     }
 }
 
+    
 // === REGISTRASI DENGAN FIREBASE AUTH (PSEUDO EMAIL) ===
     window.handleRegistration = async (e) => {
       e.preventDefault();
