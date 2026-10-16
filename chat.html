@@ -2061,19 +2061,24 @@ function loadPrivateChatStream(targetUID) {
 }
 
 
-// === 4. SATU-SATUNYA EVENT LISTENER SCROLL UTAMA (Dengan Pengaman Anti-Loop Mutlak) ===
+// === 4. SATU-SATUNYA EVENT LISTENER SCROLL UTAMA (Anti-Loop Mutlak dengan Flag User) ===
 const chatStreamEl = document.getElementById('chat-stream');
-let isFetchingMore = false; 
+let isFetchingMore = false;
+let userScrolledManually = false;
 
+// Deteksi apakah user benar-benar menyentuh/menggulir manual
 if (chatStreamEl) {
-    chatStreamEl.addEventListener('scroll', () => {
-        if (isFetchingMore) return;
+    chatStreamEl.addEventListener('touchstart', () => { userScrolledManually = true; }, { passive: true });
+    chatStreamEl.addEventListener('wheel', () => { userScrolledManually = true; }, { passive: true });
+    chatStreamEl.addEventListener('mousedown', () => { userScrolledManually = true; }, { passive: true });
 
-        // Hanya jalankan jika posisi scroll benar-benar di paling atas (<= 2) 
-        // dan tinggi konten lebih besar dari kontainer (memang bisa di-scroll)
-        if (chatStreamEl.scrollTop <= 2 && chatStreamEl.scrollHeight > chatStreamEl.clientHeight) {
+    chatStreamEl.addEventListener('scroll', () => {
+        if (isFetchingMore || !userScrolledManually) return;
+
+        // Hanya trigger jika benar-benar menyentuh ujung paling atas (0)
+        if (chatStreamEl.scrollTop === 0) {
             
-            // A. Jika yang sedang aktif adalah Chat Publik
+            // A. Chat Publik
             if (activeChatType === 'public') {
                 if (currentPublicLimit < MAX_SCROLL_LIMIT) {
                     isFetchingMore = true;
@@ -2082,15 +2087,15 @@ if (chatStreamEl) {
                     
                     loadChatStream();
                     
-                    // Beri jeda cooldown & geser posisi scroll ke 40px agar menjauhi angka 0
                     setTimeout(() => {
-                        chatStreamEl.scrollTop = 40; 
+                        chatStreamEl.scrollTop = 50; // Dorong ke bawah sedikit
                         isFetchingMore = false;
-                    }, 600);
+                        userScrolledManually = false; // Reset flag manual
+                    }, 500);
                 }
             }
             
-            // B. Jika yang sedang aktif adalah Chat Pribadi (Private)
+            // B. Chat Pribadi
             else if (activeChatType === 'private' && activePrivateUID) {
                 const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
                 const currentLimit = currentPrivateLimit[roomID] || 50;
@@ -2102,14 +2107,13 @@ if (chatStreamEl) {
                     
                     loadPrivateChatStream(activePrivateUID);
                     
-                    // Beri jeda cooldown & geser posisi scroll ke 40px agar menjauhi angka 0
                     setTimeout(() => {
-                        chatStreamEl.scrollTop = 40;
+                        chatStreamEl.scrollTop = 50; // Dorong ke bawah sedikit
                         isFetchingMore = false;
-                    }, 600);
+                        userScrolledManually = false; // Reset flag manual
+                    }, 500);
                 }
             }
-
         }
     });
 }
