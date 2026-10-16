@@ -583,13 +583,18 @@
         : '';
     }
 
+// Fungsi pemformat waktu pesan (Terbaru & Sesuai Konfirmasi)
 function formatWaktuPesan(timestamp) {
     if (!timestamp) return 'Baru saja';
     
-    const sekarang = new Date();
-    const pesanDate = new Date(timestamp);
+    // Penanganan pengaman jika timestamp tersimpan dalam format detik (10 digit)
+    let rawTime = Number(timestamp);
+    if (rawTime < 10000000000) {
+        rawTime *= 1000;
+    }
 
-  console.log("Hasil konversi tanggal:", pesanDate.toString());
+    const sekarang = new Date();
+    const pesanDate = new Date(rawTime);
     
     if (isNaN(pesanDate.getTime())) return 'Baru saja';
 
@@ -597,16 +602,22 @@ function formatWaktuPesan(timestamp) {
     const selisihMenit = Math.floor(selisihDetik / 60);
     const selisihJam = Math.floor(selisihMenit / 60);
 
+    // 1. Kurang dari 1 menit yang lalu
     if (selisihDetik < 60) {
         return 'Baru saja';
-    } else if (selisihMenit < 60) {
+    }
+    // 2. Dalam rentang 1 sampai 59 menit yang lalu
+    else if (selisihMenit < 60) {
         return `${selisihMenit} menit lalu`;
-    } else if (selisihJam < 24 && pesanDate.getDate() === sekarang.getDate()) {
+    }
+    // 3. Hari yang sama (kurang dari 24 jam di tanggal yang sama)
+    else if (selisihJam < 24 && pesanDate.getDate() === sekarang.getDate()) {
         return pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
     }
 
     const jamMenit = pesanDate.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
 
+    // Hitung selisih hari murni
     const d1 = new Date(sekarang.getFullYear(), sekarang.getMonth(), sekarang.getDate());
     const d2 = new Date(pesanDate.getFullYear(), pesanDate.getMonth(), pesanDate.getDate());
     const selisihHari = Math.round((d1 - d2) / (1000 * 60 * 60 * 24));
@@ -615,18 +626,17 @@ function formatWaktuPesan(timestamp) {
     if (selisihHari === 1) {
         return `Kemarin, ${jamMenit}`;
     } 
-    // 2 sampai 3 hari lalu (Tampilkan nama hari)
-    else if (selisihHari > 1 && selisihHari <= 3) {
+    // Hanya 2 hari lalu saja yang tampilkan nama hari
+    else if (selisihHari === 2) {
         const namaHari = pesanDate.toLocaleDateString('id-ID', { weekday: 'long' });
         return `${namaHari}, ${jamMenit}`; 
     } 
-    // Lebih dari 3 hari (Otomatis pakai tanggal & bulan)
+    // 3 hari lalu atau lebih (Otomatis pakai tanggal & bulan)
     else {
         const tanggalBulan = pesanDate.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
         return `${tanggalBulan}, ${jamMenit}`; 
     }
 }
-
     
 // === REGISTRASI DENGAN FIREBASE AUTH (PSEUDO EMAIL) ===
     window.handleRegistration = async (e) => {
