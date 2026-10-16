@@ -2061,17 +2061,17 @@ function loadPrivateChatStream(targetUID) {
 }
 
 
-// === 4. SATU-SATUNYA EVENT LISTENER SCROLL UTAMA (Dengan Pengaman Anti-Loop) ===
+// === 4. SATU-SATUNYA EVENT LISTENER SCROLL UTAMA (Dengan Pengaman Anti-Loop Mutlak) ===
 const chatStreamEl = document.getElementById('chat-stream');
-let isFetchingMore = false; // Pengaman agar tidak menumpuk
+let isFetchingMore = false; 
 
 if (chatStreamEl) {
     chatStreamEl.addEventListener('scroll', () => {
-        // Jika sedang dalam proses memuat, abaikan event scroll sementara
         if (isFetchingMore) return;
 
-        // Gunakan ambang batas kecil (<= 5) untuk mendeteksi posisi paling atas
-        if (chatStreamEl.scrollTop <= 5) {
+        // Hanya jalankan jika posisi scroll benar-benar di paling atas (<= 2) 
+        // dan tinggi konten lebih besar dari kontainer (memang bisa di-scroll)
+        if (chatStreamEl.scrollTop <= 2 && chatStreamEl.scrollHeight > chatStreamEl.clientHeight) {
             
             // A. Jika yang sedang aktif adalah Chat Publik
             if (activeChatType === 'public') {
@@ -2082,11 +2082,11 @@ if (chatStreamEl) {
                     
                     loadChatStream();
                     
-                    // Beri jeda cooldown & geser sedikit posisi scroll agar tidak looping
+                    // Beri jeda cooldown & geser posisi scroll ke 40px agar menjauhi angka 0
                     setTimeout(() => {
-                        chatStreamEl.scrollTop = 20; 
+                        chatStreamEl.scrollTop = 40; 
                         isFetchingMore = false;
-                    }, 400);
+                    }, 600);
                 }
             }
             
@@ -2102,11 +2102,11 @@ if (chatStreamEl) {
                     
                     loadPrivateChatStream(activePrivateUID);
                     
-                    // Beri jeda cooldown & geser sedikit posisi scroll agar tidak looping
+                    // Beri jeda cooldown & geser posisi scroll ke 40px agar menjauhi angka 0
                     setTimeout(() => {
-                        chatStreamEl.scrollTop = 20;
+                        chatStreamEl.scrollTop = 40;
                         isFetchingMore = false;
-                    }, 400);
+                    }, 600);
                 }
             }
 
