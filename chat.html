@@ -956,7 +956,6 @@ function formatWaktuPesan(timestamp) {
     
     window.addEventListener('DOMContentLoaded', () => {
       checkUserStatus();
-      loadLoginUserOptions();
 
       const regModal = document.getElementById('reg-modal');
       if (regModal) {
@@ -1792,17 +1791,23 @@ document.addEventListener('visibilitychange', () => {
     });
         
    function checkUserStatus() {
-      const chatContainer = document.getElementById('chat-container');
-      const chatFooter = document.querySelector('footer');
-      const regModal = document.getElementById('reg-modal');
-      const pendingModal = document.getElementById('pending-modal');
+     const chatContainer = document.getElementById('chat-container');
+     const chatFooter = document.querySelector('footer');
+     const regModal = document.getElementById('reg-modal');
+     const pendingModal = document.getElementById('pending-modal');
 
-      if (!currentUser) {
-        if (chatContainer) chatContainer.classList.add('hidden');
-        if (chatFooter) chatFooter.classList.add('hidden');
-        if (regModal) regModal.classList.remove('hidden');
-        return;
-      }
+     if (!currentUser) {
+       if (chatContainer) chatContainer.classList.add('hidden');
+       if (chatFooter) chatFooter.classList.add('hidden');
+       if (regModal) regModal.classList.remove('hidden');
+       
+       // ✅ PINDAHKAN KESINI: Hanya muat opsi list user jika user belum login/masuk modal registrasi
+       if (typeof loadLoginUserOptions === 'function') {
+         loadLoginUserOptions();
+       }
+       return;
+     }
+
 
       const userRef = ref(db, `users/${currentUser.uid}`);
       onValue(userRef, (snapshot) => {
