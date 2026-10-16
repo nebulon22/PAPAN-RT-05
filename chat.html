@@ -2061,18 +2061,32 @@ function loadPrivateChatStream(targetUID) {
 }
 
 
-// === 4. SATU-SATUNYA EVENT LISTENER SCROLL UTAMA (Di Paling Bawah) ===
+// === 4. SATU-SATUNYA EVENT LISTENER SCROLL UTAMA (Dengan Pengaman Anti-Loop) ===
 const chatStreamEl = document.getElementById('chat-stream');
+let isFetchingMore = false; // Pengaman agar tidak menumpuk
+
 if (chatStreamEl) {
     chatStreamEl.addEventListener('scroll', () => {
-        if (chatStreamEl.scrollTop === 0) {
+        // Jika sedang dalam proses memuat, abaikan event scroll sementara
+        if (isFetchingMore) return;
+
+        // Gunakan ambang batas kecil (<= 5) untuk mendeteksi posisi paling atas
+        if (chatStreamEl.scrollTop <= 5) {
             
             // A. Jika yang sedang aktif adalah Chat Publik
             if (activeChatType === 'public') {
                 if (currentPublicLimit < MAX_SCROLL_LIMIT) {
+                    isFetchingMore = true;
                     currentPublicLimit += 50;
                     console.log("Memuat lebih banyak riwayat publik, batas:", currentPublicLimit);
+                    
                     loadChatStream();
+                    
+                    // Beri jeda cooldown & geser sedikit posisi scroll agar tidak looping
+                    setTimeout(() => {
+                        chatStreamEl.scrollTop = 20; 
+                        isFetchingMore = false;
+                    }, 400);
                 }
             }
             
@@ -2082,9 +2096,17 @@ if (chatStreamEl) {
                 const currentLimit = currentPrivateLimit[roomID] || 50;
 
                 if (currentLimit < MAX_PRIVATE_LIMIT) {
+                    isFetchingMore = true;
                     currentPrivateLimit[roomID] = currentLimit + 50;
                     console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
+                    
                     loadPrivateChatStream(activePrivateUID);
+                    
+                    // Beri jeda cooldown & geser sedikit posisi scroll agar tidak looping
+                    setTimeout(() => {
+                        chatStreamEl.scrollTop = 20;
+                        isFetchingMore = false;
+                    }, 400);
                 }
             }
 
