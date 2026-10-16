@@ -1304,7 +1304,7 @@ document.addEventListener('visibilitychange', () => {
       });
     }
     
-  // 6. Pengiriman Pesan (Keyboard Tetap Terbuka & Auto-Clear Highlight)
+ // 6. Pengiriman Pesan (Dioptimalkan untuk kelancaran UX Mobile)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -1317,10 +1317,11 @@ document.addEventListener('visibilitychange', () => {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
+      // Kosongkan input dan blur sejenak agar keyboard mobile tidak "nyangkut"
       input.value = '';
-      input.focus();
+      input.blur(); 
 
-     if (activeChatType === 'public') {
+      if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
 
@@ -1339,8 +1340,12 @@ document.addEventListener('visibilitychange', () => {
 
           // Opsional: Langsung reset badge ke 0 karena Anda yang mengirimnya
           updatePublicTabBadge(0);
+
+          // Kembalikan fokus ke input secara mulus
+          setTimeout(() => { input.focus(); }, 50);
         }).catch((error) => {
             console.error("Gagal mengirim pesan publik:", error);
+            setTimeout(() => { input.focus(); }, 50);
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
@@ -1358,6 +1363,8 @@ document.addEventListener('visibilitychange', () => {
           const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
           lastReadKeyMap[activePrivateUID] = newKey;
           localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
+
+          setTimeout(() => { input.focus(); }, 50);
 
           const targetUser = allUsersCache[activePrivateUID];
           const gasUrl = getGasUrl();
