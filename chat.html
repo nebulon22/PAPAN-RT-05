@@ -1884,9 +1884,16 @@ document.addEventListener('visibilitychange', () => {
                 
                 setupPresence();
                 
-                // Jalankan kumpulan listener SEKALI SAJA agar tidak terjadi duplikasi koneksi
+               // Jalankan kumpulan listener SEKALI SAJA
                 if (!window.hasLoadedListeners) {
                     window.hasLoadedListeners = true;
+                    
+                    // 🛠️ PENGAMAN UTAMA: Pastikan saat pertama kali sesi akun ini aktif,
+                    // posisinya langsung ditandai sudah dibaca agar tidak memicu unread palsu.
+                    if (typeof markPublicGroupAsRead === 'function') {
+                        markPublicGroupAsRead();
+                    }
+
                     loadUsersList();
                     renderPrivateTabsUI();
                     listenAllPrivateChats();
