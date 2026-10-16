@@ -1239,25 +1239,6 @@ function loadPrivateChatStream(targetUID) {
     });
 }
 
-// 3. Event Listener Scroll untuk Chat Pribadi (Menambah limit saat digulir ke atas)
-const chatStreamEl = document.getElementById('chat-stream');
-if (chatStreamEl) {
-    chatStreamEl.addEventListener('scroll', () => {
-        // Pastikan yang sedang aktif adalah chat tipe private
-        if (chatStreamEl.scrollTop === 0 && activeChatType === 'private' && activePrivateUID) {
-            const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
-            const currentLimit = currentPrivateLimit[roomID] || 50;
-
-            if (currentLimit < MAX_PRIVATE_LIMIT) {
-                currentPrivateLimit[roomID] = currentLimit + 50; // Naikkan 50 pesan ke atas
-                console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
-                
-                // Muat ulang stream privat dengan targetUID yang sedang aktif
-                loadPrivateChatStream(activePrivateUID);
-            }
-        }
-    });
-}
 
 // 1. Pemantau Pesan Private Universal
     let globalPrivateListener = null;
@@ -2026,11 +2007,14 @@ if (chatStreamEl) {
 
     
     
- // 1. Definisikan batas awal dan batas maksimal di luar fungsi
+// 1. Definisikan batas awal dan batas maksimal di luar fungsi
 let currentPublicLimit = 50;
 const MAX_SCROLL_LIMIT = 500;
 let isInitialPublicChatLoaded = false;
 
+// Variabel limit untuk chat privat
+let currentPrivateLimit = {};
+const MAX_PRIVATE_LIMIT = 500;
 function loadChatStream() {
     // 2. Gunakan variabel dinamis (currentPublicLimit) pada query
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
@@ -2076,21 +2060,37 @@ function loadChatStream() {
         chatStream.scrollTop = chatStream.scrollHeight;
     });
 }
-
-// 3. Pasang Event Listener Scroll (Cukup dipasang sekali di luar fungsi)
+// 3. SATU-SATUNYA Event Listener Scroll Utama (Gabungan Publik & Privat)
 const chatStreamEl = document.getElementById('chat-stream');
 if (chatStreamEl) {
     chatStreamEl.addEventListener('scroll', () => {
-        // Jika posisinya sedang di paling atas dan tipe chat yang aktif adalah publik
-        if (chatStreamEl.scrollTop === 0 && activeChatType === 'public') {
-            if (currentPublicLimit < MAX_SCROLL_LIMIT) {
-                currentPublicLimit += 50; // Naikkan 50 pesan setiap kali scroll ke atas
-                console.log("Memuat lebih banyak riwayat publik, batas:", currentPublicLimit);
-                loadChatStream(); // Muat ulang dengan batas baru
+        if (chatStreamEl.scrollTop === 0) {
+            
+            // A. Jika yang sedang aktif adalah Chat Publik
+            if (activeChatType === 'public') {
+                if (currentPublicLimit < MAX_SCROLL_LIMIT) {
+                    currentPublicLimit += 50;
+                    console.log("Memuat lebih banyak riwayat publik, batas:", currentPublicLimit);
+                    loadChatStream(); // <-- Memanggil fungsi loadChatStream di atas
+                }
             }
+            
+            // B. Jika yang sedang aktif adalah Chat Pribadi (Private)
+            else if (activeChatType === 'private' && activePrivateUID) {
+                const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+                const currentLimit = currentPrivateLimit[roomID] || 50;
+
+                if (currentLimit < MAX_PRIVATE_LIMIT) {
+                    currentPrivateLimit[roomID] = currentLimit + 50;
+                    console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
+                    loadPrivateChatStream(activePrivateUID);
+                }
+            }
+
         }
     });
 }
+
         
 function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   // PENGAMAN: Jika teks pesan kosong, abaikan
