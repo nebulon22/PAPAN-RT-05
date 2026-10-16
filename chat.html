@@ -1811,69 +1811,93 @@ document.addEventListener('visibilitychange', () => {
       console.log('Pesan diterima saat aplikasi aktif:', payload);
     });
         
-   function checkUserStatus() {
-     const chatContainer = document.getElementById('chat-container');
-     const chatFooter = document.querySelector('footer');
-     const regModal = document.getElementById('reg-modal');
-     const pendingModal = document.getElementById('pending-modal');
+  async function checkUserStatus() {
+        const chatContainer = document.getElementById('chat-container');
+        const chatFooter = document.querySelector('footer');
+        const regModal = document.getElementById('reg-modal');
+        const pendingModal = document.getElementById('pending-modal');
 
-     if (!currentUser) {
-       if (chatContainer) chatContainer.classList.add('hidden');
-       if (chatFooter) chatFooter.classList.add('hidden');
-       if (regModal) regModal.classList.remove('hidden');
-       
-       // ✅ PINDAHKAN KESINI: Hanya muat opsi list user jika user belum login/masuk modal registrasi
-       if (typeof loadLoginUserOptions === 'function') {
-         loadLoginUserOptions();
-       }
-       return;
-     }
-
-
-      const userRef = ref(db, `users/${currentUser.uid}`);
-      onValue(userRef, (snapshot) => {
-        const val = snapshot.val();
-        if (!val) {
-          localStorage.removeItem('rt05_chat_user');
-          location.reload();
-          return;
+        if (!currentUser) {
+            if (chatContainer) chatContainer.classList.add('hidden');
+            if (chatFooter) chatFooter.classList.add('hidden');
+            if (regModal) regModal.classList.remove('hidden');
+            
+            if (typeof loadLoginUserOptions === 'function') {
+                loadLoginUserOptions();
+            }
+            return;
         }
 
-        currentUser.status = val.status;
-        currentUser.role = val.role || 'warga';
-        currentUser.username = val.username || val.nama;
-        localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
+        const userRef = ref(db, `users/${currentUser.uid}`);
+        onValue(userRef, async (snapshot) => {
+            const val = snapshot.val();
+            if (!val) {
+                localStorage.removeItem('rt05_chat_user');
+                location.reload();
+                return;
+            }
 
-        if (val.status === 'pending') {
-          const pendingName = document.getElementById('pending-user-name');
-          if (pendingName) pendingName.innerText = `${val.nama} (${val.hunian})`;
-          if (pendingModal) pendingModal.classList.remove('hidden');
-          if (regModal) regModal.classList.add('hidden');
-          if (chatContainer) chatContainer.classList.add('hidden');
-          if (chatFooter) chatFooter.classList.add('hidden');
-        } else if (val.status === 'aktif') {
-          if (pendingModal) pendingModal.classList.add('hidden');
-          if (regModal) regModal.classList.add('hidden');
-          if (chatContainer) chatContainer.classList.remove('hidden');
-          if (chatFooter) chatFooter.classList.remove('hidden');
-          
-          const userInfo = document.getElementById('user-info-text');
-          if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
-          
-          const labelUserKetik = document.getElementById('chat-current-user-label');
-          if (labelUserKetik) {
-            labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
-          }
+            currentUser.status = val.status;
+            currentUser.role = val.role || 'warga';
+            currentUser.username = val.username || val.nama;
+            localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
 
-          // 👇 PERBAIKAN: Perkuat pengecekan role ATAU nama admin agar tombol langsung muncul
-         const btnCreatePoll = document.getElementById('btn-create-poll-admin');
-         if (btnCreatePoll) {
-           if (currentUser.role === 'admin' || currentUser.username === 'Admin1' || currentUser.nama === 'Admin1') {
-             btnCreatePoll.style.display = 'inline-flex';
-           } else {
-             btnCreatePoll.style.display = 'none';
-           }
-         }
+            if (val.status === 'pending') {
+                const pendingName = document.getElementById('pending-user-name');
+                if (pendingName) pendingName.innerText = `${val.nama} (${val.hunian})`;
+                if (pendingModal) pendingModal.classList.remove('hidden');
+                if (regModal) regModal.classList.add('hidden');
+                if (chatContainer) chatContainer.classList.add('hidden');
+                if (chatFooter) chatFooter.classList.add('hidden');
+            } else if (val.status === 'aktif') {
+                if (pendingModal) pendingModal.classList.add('hidden');
+                if (regModal) regModal.classList.add('hidden');
+                if (chatContainer) chatContainer.classList.remove('hidden');
+                if (chatFooter) chatFooter.classList.remove('hidden');
+                
+                const userInfo = document.getElementById('user-info-text');
+                if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
+                
+                const labelUserKetik = document.getElementById('chat-current-user-label');
+                if (labelUserKetik) {
+                    labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
+                }
+
+                const btnCreatePoll = document.getElementById('btn-create-poll-admin');
+                if (btnCreatePoll) {
+                    if (currentUser.role === 'admin' || currentUser.username === 'Admin1' || currentUser.nama === 'Admin1') {
+                        btnCreatePoll.style.display = 'inline-flex';
+                    } else {
+                        btnCreatePoll.style.display = 'none';
+                    }
+                }
+
+                // 🛠️ WAJIB ADA: Autentikasi otomatis agar rules `auth != null` terpenuhi
+                try {
+                    const pseudoEmail = val.authEmail || `${currentUser.uid.toLowerCase()}@rt05kayen.internal`;
+                    const securePassword = (val.pin || '') + "RT05Key";
+                    await signInWithEmailAndPassword(auth, pseudoEmail, securePassword);
+                    console.log("Firebase Auth berhasil masuk, rules `auth != null` terpenuhi.");
+                } catch (authErr) {
+                    console.log("Catatan Auth login session:", authErr);
+                }
+                
+                setupPresence();
+                
+                // Jalankan semua listener setelah sesi auth aktif
+                loadUsersList();
+                renderPrivateTabsUI();
+                listenAllPrivateChats();
+                listenPublicGroupUnread();
+                requestNotificationPermission();
+                initFCMToken(currentUser.uid);
+                listenPinnedPoll();
+
+                activeChatType = 'public';
+                loadChatStream();
+            }
+        });
+    }
           // ----------------------------------------------------------------
           
           setupPresence();
