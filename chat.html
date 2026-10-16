@@ -1177,67 +1177,6 @@ document.addEventListener('visibilitychange', () => {
       }
     };
 
-// 1. Definisikan pelacak batas limit dinamis per room privat
-let currentPrivateLimit = {};
-const MAX_PRIVATE_LIMIT = 500;
-
-function loadPrivateChatStream(targetUID) {
-    const roomID = [currentUser.uid, targetUID].sort().join('_');
-    
-    // Jika limit untuk room ini belum ada, set awal ke 50
-    if (!currentPrivateLimit[roomID]) {
-        currentPrivateLimit[roomID] = 50;
-    }
-
-    // 2. Gunakan limit dinamis sesuai room-nya
-    const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(currentPrivateLimit[roomID]));
-    const chatStream = document.getElementById('chat-stream');
-
-    currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
-        if (!chatStream) return;
-        if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
-
-        chatStream.innerHTML = '';
-
-        if (!snapshot.exists()) {
-            chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID] || 'Warga')}. Mulai percakapan!</div>`;
-            isInitialPrivateChatLoaded[targetUID] = true;
-            return;
-        }
-
-        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
-        const lastReadKey = lastReadKeyMap[targetUID];
-
-        let isUnreadSection = false;
-        if (!lastReadKey) isUnreadSection = true;
-
-        snapshot.forEach((childSnap) => {
-            const msgKey = childSnap.key;
-            const msgData = childSnap.val();
-
-            let isUnreadMsg = false;
-            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
-                isUnreadMsg = true;
-            }
-
-            if (msgKey === lastReadKey) {
-                isUnreadSection = true;
-            }
-
-            renderSingleMessage(msgData, isUnreadMsg, msgKey);
-        });
-
-        isInitialPrivateChatLoaded[targetUID] = true;
-        
-        requestAnimationFrame(() => {
-            chatStream.scrollTop = chatStream.scrollHeight;
-        });
-
-        if (isChatVisible) {
-            markRoomAsRead(targetUID);
-        }
-    });
-}
 
 
 // 1. Pemantau Pesan Private Universal
@@ -2087,6 +2026,66 @@ if (chatStreamEl) {
                 }
             }
 
+        }
+    });
+}
+
+
+
+function loadPrivateChatStream(targetUID) {
+    const roomID = [currentUser.uid, targetUID].sort().join('_');
+    
+    // Jika limit untuk room ini belum ada, set awal ke 50
+    if (!currentPrivateLimit[roomID]) {
+        currentPrivateLimit[roomID] = 50;
+    }
+
+    //  Gunakan limit dinamis sesuai room-nya
+    const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(currentPrivateLimit[roomID]));
+    const chatStream = document.getElementById('chat-stream');
+
+    currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
+        if (!chatStream) return;
+        if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
+
+        chatStream.innerHTML = '';
+
+        if (!snapshot.exists()) {
+            chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID] || 'Warga')}. Mulai percakapan!</div>`;
+            isInitialPrivateChatLoaded[targetUID] = true;
+            return;
+        }
+
+        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+        const lastReadKey = lastReadKeyMap[targetUID];
+
+        let isUnreadSection = false;
+        if (!lastReadKey) isUnreadSection = true;
+
+        snapshot.forEach((childSnap) => {
+            const msgKey = childSnap.key;
+            const msgData = childSnap.val();
+
+            let isUnreadMsg = false;
+            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
+                isUnreadMsg = true;
+            }
+
+            if (msgKey === lastReadKey) {
+                isUnreadSection = true;
+            }
+
+            renderSingleMessage(msgData, isUnreadMsg, msgKey);
+        });
+
+        isInitialPrivateChatLoaded[targetUID] = true;
+        
+        requestAnimationFrame(() => {
+            chatStream.scrollTop = chatStream.scrollHeight;
+        });
+
+        if (isChatVisible) {
+            markRoomAsRead(targetUID);
         }
     });
 }
