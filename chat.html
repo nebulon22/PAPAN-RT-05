@@ -1996,15 +1996,18 @@ let isFetchingMore = false;
 let previousScrollHeight = 0;
 
 
-// === FUNGSI PEMUAT CHAT PUBLIK (Final, Live, Anti-Flicker & Mendukung Callback) ===
+// === FUNGSI PEMUAT CHAT PUBLIK (Diperbarui agar tidak menarik layar ke bawah secara paksa) ===
 function loadChatStream(onLoadedCallback = null) {
-    // Tetap pertahankan limit dinamis Anda (misal: currentPublicLimit)
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit || 50));
     const chatStream = document.getElementById('chat-stream');
 
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
+
+        // 🌟 Cek posisi scroll sebelum DOM dirender ulang
+        const threshold = 100;
+        const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= threshold;
 
         chatStream.innerHTML = '';
 
@@ -2040,19 +2043,19 @@ function loadChatStream(onLoadedCallback = null) {
 
         isInitialPublicChatLoaded = true;
 
-        // 🌟 KUNCI UTAMA: Ikuti pola versi lama yang bersih & stabil
         if (typeof onLoadedCallback === 'function') {
-            onLoadedCallback(); // Digunakan saat pagination tarik ke atas
-        } else {
+            onLoadedCallback(); 
+        } else if (isAtBottom) {
+            // 🌟 Hanya turun ke bawah otomatis JIKA posisi user memang sedang di bawah
             requestAnimationFrame(() => {
                 chatStream.scrollTop = chatStream.scrollHeight;
             });
         }
+        // Jika user sedang di atas/tengah, layar dibiarkan tenang di posisinya!
     });
 }
 
-    
-// === 2. FUNGSI PEMUAT CHAT PRIVAT (Live Real-Time & Mendukung Callback) ===
+// === FUNGSI PEMUAT CHAT PRIVAT (Diperbarui dengan pengaman posisi scroll) ===
 function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
     
@@ -2066,6 +2069,10 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
     currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
         if (!chatStream) return;
         if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
+
+        // 🌟 Cek posisi scroll sebelum DOM dirender ulang
+        const threshold = 100;
+        const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= threshold;
 
         chatStream.innerHTML = '';
 
@@ -2083,7 +2090,8 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
         
         if (typeof onLoadedCallback === 'function') {
             onLoadedCallback();
-        } else {
+        } else if (isAtBottom) {
+            // 🌟 Hanya turun ke bawah otomatis JIKA posisi user memang sedang di bawah
             requestAnimationFrame(() => {
                 chatStream.scrollTop = chatStream.scrollHeight;
             });
@@ -2092,9 +2100,10 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
         if (isChatVisible) {
             markRoomAsRead(targetUID);
         }
-    }); // <-- { onlyOnce: true } SUDAH DIHAPUS DI SINI AGAR LIVE REAL-TIME
+    });
 }
 
+    
 // === 3. FUNGSI TRIGGER LOAD MORE PUBLIK DENGAN INDIKATOR ===
 function triggerLoadMorePublic() {
     if (isLoadingMore) return;
