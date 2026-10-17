@@ -1179,7 +1179,7 @@ document.addEventListener('visibilitychange', () => {
 
 
 
-// 1. Pemantau Pesan Private Universal
+// 5. Pemantau Pesan Private Universal
     let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
@@ -1265,7 +1265,8 @@ document.addEventListener('visibilitychange', () => {
       });
     }
     
-// 6. Pengiriman Pesan (Smooth Mobile Keyboard - Tanpa Kedip & Kompatibel Badge/GAS)
+
+   // 6. Pengiriman Pesan (Smooth Mobile Keyboard - Tanpa Kedip & Kompatibel Badge/GAS)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -1282,7 +1283,7 @@ document.addEventListener('visibilitychange', () => {
       input.value = '';
       input.focus();
 
-     if (activeChatType === 'public') {
+      if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
 
@@ -1301,7 +1302,9 @@ document.addEventListener('visibilitychange', () => {
         }).then(() => {
           updatePublicTabBadge(0);
 
-          // 🌟 SAMAKAN DENGAN PRIVAT: Gunakan behavior: 'smooth' agar sama-sama halus
+          // Pastikan fokus tetap terjaga di input
+          input.focus();
+
           const chatStream = document.getElementById('chat-stream');
           if (chatStream) {
               requestAnimationFrame(() => {
@@ -1369,6 +1372,7 @@ document.addEventListener('visibilitychange', () => {
     // Bind fungsi secara global ke window agar terbaca penuh oleh form HTML
     window.sendChatMessage = executeSendMessage;
 
+    
  // Pemantau Pesan Unread Grup Chat Publik
     let publicGroupListener = null;
 
@@ -1985,15 +1989,13 @@ let previousScrollHeight = 0;
 
 // === FUNGSI PEMUAT CHAT PUBLIK (Final, Live, Anti-Flicker & Mendukung Callback) ===
 function loadChatStream(onLoadedCallback = null) {
-    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
+    // Tetap pertahankan limit dinamis Anda (misal: currentPublicLimit)
+    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit || 50));
     const chatStream = document.getElementById('chat-stream');
 
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
-        
-        // Cek posisi scroll: apakah pengguna sedang berada di dekat bagian bawah (jarak < 150px)
-        const isNearBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight < 150;
 
         chatStream.innerHTML = '';
 
@@ -2027,19 +2029,14 @@ function loadChatStream(onLoadedCallback = null) {
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
-        const wasFirstLoad = !isInitialPublicChatLoaded;
         isInitialPublicChatLoaded = true;
 
-        // Logika render & scroll yang aman tanpa kedip kasar
+        // 🌟 KUNCI UTAMA: Ikuti pola versi lama yang bersih & stabil
         if (typeof onLoadedCallback === 'function') {
-            onLoadedCallback(); // Dijalankan saat menarik riwayat lama ke atas
-        } else if (wasFirstLoad || isNearBottom) {
-            // Hanya turun otomatis jika pertama kali dibuka atau user memang sedang di bawah
+            onLoadedCallback(); // Digunakan saat pagination tarik ke atas
+        } else {
             requestAnimationFrame(() => {
-                chatStream.scrollTo({
-                    top: chatStream.scrollHeight,
-                    behavior: 'smooth' // Pergerakan turun yang sangat halus
-                });
+                chatStream.scrollTop = chatStream.scrollHeight;
             });
         }
     });
