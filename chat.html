@@ -2052,7 +2052,7 @@ function loadChatStream(onLoadedCallback = null) {
         }
     });
 }
-
+    
 // === 2. FUNGSI PEMUAT CHAT PRIVAT (Stabil & Normal) ===
 function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
@@ -2098,10 +2098,12 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
         }
     });
 }
-
-// === 3. TRIGGER LOAD MORE PUBLIK (Sesuai kode awal Anda) ===
+    
+// === 3. FUNGSI TRIGGER LOAD MORE PUBLIK DENGAN INDIKATOR ===
 function triggerLoadMorePublic() {
     if (isLoadingMore) return;
+    if (currentPublicLimit >= MAX_SCROLL_LIMIT) return; // Batas aman maksimal 500
+    
     isLoadingMore = true;
 
     const indicator = document.getElementById('load-more-indicator');
@@ -2116,7 +2118,7 @@ function triggerLoadMorePublic() {
     const oldScrollHeight = chatStreamEl.scrollHeight;
     const oldScrollTop = chatStreamEl.scrollTop;
 
-    currentPublicLimit += 50;
+    currentPublicLimit = Math.min(currentPublicLimit + 50, MAX_SCROLL_LIMIT);
     console.log("Memuat riwayat publik lebih banyak, batas:", currentPublicLimit);
 
     loadChatStream(() => {
@@ -2136,9 +2138,12 @@ function triggerLoadMorePublic() {
     });
 }
 
-// === 4. TRIGGER LOAD MORE PRIVATE (Sesuai kode awal Anda) ===
+// === 4. FUNGSI TRIGGER LOAD MORE PRIVATE DENGAN INDIKATOR ===
 function triggerLoadMorePrivate(roomID, targetUID) {
     if (isLoadingMore) return;
+    const currentLimit = currentPrivateLimit[roomID] || 50;
+    if (currentLimit >= MAX_PRIVATE_LIMIT) return; // Batas aman maksimal 500
+
     isLoadingMore = true;
 
     const indicator = document.getElementById('load-more-indicator');
@@ -2153,7 +2158,7 @@ function triggerLoadMorePrivate(roomID, targetUID) {
     const oldScrollHeight = chatStreamEl.scrollHeight;
     const oldScrollTop = chatStreamEl.scrollTop;
 
-    currentPrivateLimit[roomID] = (currentPrivateLimit[roomID] || 50) + 50;
+    currentPrivateLimit[roomID] = Math.min(currentLimit + 50, MAX_PRIVATE_LIMIT);
     console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
 
     loadPrivateChatStream(targetUID, () => {
