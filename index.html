@@ -1255,66 +1255,93 @@ function perbaruiAplikasiSekarang() {
   });
   
   // 1. Bungkus ke dalam fungsi muatDataPetaWarga()
-  function muatDataPetaWarga() {
+function muatDataPetaWarga() {
     ambilDataSheets('cache_peta_warga', SHEET_URL, (data, fromCache) => {
       if (!data) return;
       var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
       
-      // Bersihkan marker lama jika ada update dari background (mencegah marker ganda)
+      // Bersihkan marker lama jika ada update dari background
       daftarPin.forEach(pin => map.removeLayer(pin.marker));
       daftarPin = [];
 
-      baris.forEach(function(kolom) {
-        if (kolom.length >= 3 && kolom[0] !== '') {
-          var latClean = perbaikiKoordinat(kolom[1]);
-          var lngClean = perbaikiKoordinat(kolom[2]);
-          
-          var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
-          var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
-          var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
-          var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
+      // Konfigurasi Chunking (Pecah per 20 data agar main thread tidak terblokir)
+      var index = 0;
+      var chunkSize = 20;
 
-          var item = {
-            name: namaAsli,
-            nameAsli: namaAsli,
-            lat: parseFloat(latClean),
-            lng: parseFloat(lngClean),
-            hidden: statusHidden,
-            foto: urlFoto
-          };
+      function prosesChunk() {
+        var batas = Math.min(index + chunkSize, baris.length);
+        
+        for (let i = index; i < batas; i++) {
+          var kolom = baris[i];
+          if (kolom.length >= 3 && kolom[0] !== '') {
+            var latClean = perbaikiKoordinat(kolom[1]);
+            var lngClean = perbaikiKoordinat(kolom[2]);
+            
+            var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
+            var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
+            var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
+            var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
 
-          if (isNaN(item.lat) || isNaN(item.lng)) return;
+            var item = {
+              name: namaAsli,
+              nameAsli: namaAsli,
+              lat: parseFloat(latClean),
+              lng: parseFloat(lngClean),
+              hidden: statusHidden,
+              foto: urlFoto
+            };
 
-          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-          var htmlFoto = item.foto ? `<br><img src="${item.foto}" loading="lazy" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
-          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-          
-          var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+            if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-          var customIcon = L.divIcon({
-            className: 'custom-pin',
-            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-          });
-          
-          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-          
-          // 🔥 HANYA TAMPILKAN KATEGORI 'FASUM' DI AWAL PEMUATAN
-          if (!item.hidden && dataIkon.kategori === 'fasum') {
-            marker.addTo(map);
+            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" loading="lazy" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+            
+            var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+
+            var customIcon = L.divIcon({
+              className: 'custom-pin',
+              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+            });
+            
+            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+            
+            // 🔥 HANYA TAMPILKAN KATEGORI 'FASUM' DI AWAL PEMUATAN
+            if (!item.hidden && dataIkon.kategori === 'fasum') {
+              marker.addTo(map);
+            }
+
+            daftarPin.push({ 
+              namaRaw: item.nameAsli,
+              nama: item.nameAsli.toLowerCase(), 
+              marker: marker, 
+              lat: item.lat, 
+              lng: item.lng,
+              hidden: item.hidden,
+              kategori: dataIkon.kategori 
+            });
           }
-
-          daftarPin.push({ 
-            namaRaw: item.nameAsli,
-            nama: item.nameAsli.toLowerCase(), 
-            marker: marker, 
-            lat: item.lat, 
-            lng: item.lng,
-            hidden: item.hidden,
-            kategori: dataIkon.kategori 
-          });
         }
-      });
+
+        index = batas;
+
+        // Jika masih ada sisa data, jadwalkan eksekusi chunk berikutnya
+        if (index < baris.length) {
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(prosesChunk, { timeout: 50 });
+          } else {
+            setTimeout(prosesChunk, 4);
+          }
+        }
+      }
+
+      // Mulai proses chunk pertama
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(prosesChunk, { timeout: 50 });
+      } else {
+        setTimeout(prosesChunk, 4);
+      }
     });
   }
 
