@@ -2190,19 +2190,6 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   div.className = "msg-row";
   if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
-  // 👇 1. EFEK ANIMASI UNREAD (Background putih tipis yang memudar)
-  if (isUnread) {
-      div.style.transition = "background-color 2s ease, border-color 2s ease";
-      div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
-      div.style.borderLeft = "3px solid #38bdf8";
-      div.style.paddingLeft = "8px";
-
-      setTimeout(() => {
-          div.style.backgroundColor = "transparent";
-          div.style.borderLeftColor = "transparent"; 
-      }, 2000);
-  }
-
   let nameClass = "role-user";
   let textClass = "msg-text";
   let customStyleName = "";
@@ -2244,20 +2231,37 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
       waktuFormatted = "Baru saja"; // Penanganan aman jika serverTimestamp masih proses
   }
 
- const timeHTML = waktuFormatted 
+  const timeHTML = waktuFormatted 
       ? `<span style="font-size: 10px; color: rgba(251, 191, 36, 0.55); margin-left: 6px; font-weight: normal; text-shadow: none;">[${waktuFormatted}]</span>` 
       : '';
 
-  // 👇 4. MASUKKAN timeHTML KE DALAM TEMPLATE HTML
+  // 👇 4. ISI KONTEN HTML KE DALAM DIV TERLEBIH DAHULU (Wajib sebelum append)
   div.innerHTML = `
       <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
       <span class="${textClass}" ${customStyleText}>${displayMsgText}</span>
       ${timeHTML}
   `;
 
-  chatStream.appendChild(div);
-}
+  // 👇 5. ATUR EFEK ANIMASI UNREAD JIKA PESAN TERSEBUT BARU
+  if (isUnread) {
+      div.style.transition = "background-color 2s ease, border-color 2s ease";
+      div.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+      div.style.borderLeft = "3px solid #38bdf8";
+      div.style.paddingLeft = "8px";
 
+      // Masukkan ke DOM
+      chatStream.appendChild(div);
+
+      // Beri jeda sedikit agar browser mencatat state awal, lalu pudar-kan
+      setTimeout(() => {
+          div.style.backgroundColor = "transparent";
+          div.style.borderLeftColor = "transparent"; 
+      }, 50);
+  } else {
+      // Jika bukan pesan unread (termasuk pesan lama hasil pagination), langsung append biasa
+      chatStream.appendChild(div);
+  }
+}
       
 
     // Fungsi pembuat warna unik otomatis dari 360° roda warna (menghasilkan jutaan variasi)
