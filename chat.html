@@ -1332,11 +1332,13 @@ document.addEventListener('visibilitychange', () => {
           // Pastikan fokus tetap terjaga di input setelah promise private selesai
           input.focus();
 
-          // 🌟 TAMBAHAN: Langsung turun ke bawah setelah pesan private terkirim
           const chatStream = document.getElementById('chat-stream');
           if (chatStream) {
               requestAnimationFrame(() => {
-                  chatStream.scrollTop = chatStream.scrollHeight;
+                  chatStream.scrollTo({
+                      top: chatStream.scrollHeight,
+                      behavior: 'smooth' // Membuat gerakannya sangat halus
+                  });
               });
           }
 
@@ -1978,17 +1980,18 @@ let isFetchingMore = false;
 let previousScrollHeight = 0;
 
 
-// === 1. FUNGSI PEMUAT CHAT PUBLIK (Mendukung Callback) ===
-// === PERBAIKAN PADA FUNGSI PEMUAT CHAT PUBLIK (Hapus { onlyOnce: true }) ===
+// === 1. FUNGSI PEMUAT CHAT PUBLIK (Live, Mendukung Callback & Anti-Flicker) ===
 function loadChatStream(onLoadedCallback = null) {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
 
-    // Hapus opsi { onlyOnce: true } agar listener aktif selamanya menerima data baru
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
         
+        // 🌟 KUNCI ANTI-FLICKER: Cek apakah user sedang berada di dekat bawah sebelum DOM di-reset
+        const isNearBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight < 150;
+
         chatStream.innerHTML = '';
 
         if (!snapshot.exists()) {
@@ -1997,21 +2000,50 @@ function loadChatStream(onLoadedCallback = null) {
             return;
         }
 
+        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+        const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
+
+        let isUnreadSection = false;
+        if (!lastReadPublicMapKey) isUnreadSection = true;
+
         snapshot.forEach((childSnap) => {
-            if (childSnap.key === 'pinned_poll') return;
-            renderSingleMessage(childSnap.val(), false, childSnap.key);
+            const msgKey = childSnap.key;
+            const msgData = childSnap.val();
+
+            if (msgKey === 'pinned_poll') return;
+
+            let isUnreadMsg = false;
+            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
+                isUnreadMsg = true;
+            }
+
+            if (msgKey === lastReadPublicMapKey) {
+                isUnreadSection = true;
+            }
+
+            renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
+        const wasFirstLoad = !isInitialPublicChatLoaded;
         isInitialPublicChatLoaded = true;
 
+        // 🌟 ATUR PERILAKU SCROLL AGAR HALUS:
         if (typeof onLoadedCallback === 'function') {
-            onLoadedCallback();
-        } else {
-            chatStream.scrollTop = chatStream.scrollHeight; // Otomatis ke bawah saat ada pesan baru
+            onLoadedCallback(); // Dijalankan saat tombol "load more" ditarik di atas
+        } else if (wasFirstLoad || isNearBottom) {
+            // Hanya turun ke bawah secara otomatis jika ini pemuatan pertama 
+            // atau jika posisi user memang sedang di bawah (bukan sedang scroll di atas)
+            requestAnimationFrame(() => {
+                chatStream.scrollTo({
+                    top: chatStream.scrollHeight,
+                    behavior: 'smooth' // Membuat pergerakan turunnya sangat halus
+                });
+            });
         }
-    }); // <-- Pastikan kurung tutup ini bersih tanpa parameter tambahan
+    });
 }
 
+    
 // === 2. FUNGSI PEMUAT CHAT PRIVAT (Live Real-Time & Mendukung Callback) ===
 function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
