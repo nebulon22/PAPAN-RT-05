@@ -1996,64 +1996,6 @@ let isFetchingMore = false;
 let previousScrollHeight = 0;
 
 
-// === FUNGSI PEMUAT CHAT PUBLIK (Diperbarui agar tidak menarik layar ke bawah secara paksa) ===
-function loadChatStream(onLoadedCallback = null) {
-    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit || 50));
-    const chatStream = document.getElementById('chat-stream');
-
-    currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
-        if (activeChatType !== 'public') return;
-        if (!chatStream) return;
-
-        // 🌟 Cek posisi scroll sebelum DOM dirender ulang
-        const threshold = 100;
-        const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= threshold;
-
-        chatStream.innerHTML = '';
-
-        if (!snapshot.exists()) {
-            chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
-            isInitialPublicChatLoaded = true;
-            return;
-        }
-
-        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
-
-        let isUnreadSection = false;
-        if (!lastReadPublicMapKey) isUnreadSection = true;
-
-        snapshot.forEach((childSnap) => {
-            const msgKey = childSnap.key;
-            const msgData = childSnap.val();
-
-            if (msgKey === 'pinned_poll') return;
-
-            let isUnreadMsg = false;
-            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
-                isUnreadMsg = true;
-            }
-
-            if (msgKey === lastReadPublicMapKey) {
-                isUnreadSection = true;
-            }
-
-            renderSingleMessage(msgData, isUnreadMsg, msgKey);
-        });
-
-        isInitialPublicChatLoaded = true;
-
-        if (typeof onLoadedCallback === 'function') {
-            onLoadedCallback(); 
-        } else if (isAtBottom) {
-            // 🌟 Hanya turun ke bawah otomatis JIKA posisi user memang sedang di bawah
-            requestAnimationFrame(() => {
-                chatStream.scrollTop = chatStream.scrollHeight;
-            });
-        }
-        // Jika user sedang di atas/tengah, layar dibiarkan tenang di posisinya!
-    });
-}
 
 // === 1. FUNGSI PEMUAT CHAT PUBLIK (Diperbarui agar mendukung Pagination hingga 500 baris) ===
 function loadChatStream(onLoadedCallback = null) {
