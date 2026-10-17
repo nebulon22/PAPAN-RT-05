@@ -1266,7 +1266,7 @@ document.addEventListener('visibilitychange', () => {
     }
     
 
-  // 6. Pengiriman Pesan (Smooth Mobile Keyboard - Tanpa Kedip & Kompatibel Badge/GAS)
+// 6. Pengiriman Pesan (Fix Kedip / Layar Lari Saat Kirim Pesan dari Posisi Atas)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -1282,6 +1282,14 @@ document.addEventListener('visibilitychange', () => {
       // Kosongkan input dan langsung kunci fokus agar keyboard HP tidak sempat minimize
       input.value = '';
       input.focus();
+
+      // Cek apakah posisi scroll user sedang berada di dekat bawah (dalam jarak 150px dari bawah)
+      const chatStream = document.getElementById('chat-stream');
+      let isNearBottom = true;
+      if (chatStream) {
+        const threshold = 150;
+        isNearBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= threshold;
+      }
 
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
@@ -1303,9 +1311,9 @@ document.addEventListener('visibilitychange', () => {
           updatePublicTabBadge(0);
           input.focus();
 
-          // 🛠️ PERBAIKAN: Gunakan pergeseran instan agar tidak terjadi efek lari ke atas/bouncing
-          const chatStream = document.getElementById('chat-stream');
-          if (chatStream) {
+          // 🛠️ PERBAIKAN: Hanya scroll ke bawah jika user memang sedang di bawah. 
+          // Jika sedang membaca di atas, layar diam tenang tanpa kedip/loncat.
+          if (chatStream && isNearBottom) {
               requestAnimationFrame(() => {
                   chatStream.scrollTop = chatStream.scrollHeight;
               });
@@ -1334,9 +1342,8 @@ document.addEventListener('visibilitychange', () => {
           // Pastikan fokus tetap terjaga di input setelah promise private selesai
           input.focus();
 
-          // 🛠️ PERBAIKAN: Gunakan pergeseran instan untuk bagian private juga
-          const chatStream = document.getElementById('chat-stream');
-          if (chatStream) {
+          // 🛠️ PERBAIKAN: Terapkan hal yang sama untuk private chat
+          if (chatStream && isNearBottom) {
               requestAnimationFrame(() => {
                   chatStream.scrollTop = chatStream.scrollHeight;
               });
