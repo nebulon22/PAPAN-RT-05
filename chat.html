@@ -2036,7 +2036,7 @@ function loadChatStream() {
     });
 }
 
-// === 2. PEMUAT CHAT PRIVAT SEDERHANA ===
+// === 2. PEMUAT CHAT PRIVAT SEDERHANA DENGAN ANIMASI UNREAD ===
 function loadPrivateChatStream(targetUID) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
     const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(500));
@@ -2056,8 +2056,29 @@ function loadPrivateChatStream(targetUID) {
             return;
         }
 
+        // Ambil key pesan terakhir yang sudah dibaca untuk room privat ini dari localStorage
+        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+        const lastReadKey = lastReadKeyMap[targetUID];
+
+        let isUnreadSection = false;
+        if (!lastReadKey) isUnreadSection = true;
+
         snapshot.forEach((childSnap) => {
-            renderSingleMessage(childSnap.val(), false, childSnap.key);
+            const msgKey = childSnap.key;
+            const msgData = childSnap.val();
+
+            let isUnreadMsg = false;
+            // Jika masuk area unread, pesan dari lawan chat, dan bukan muatan pertama kali buka chat
+            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
+                isUnreadMsg = true;
+            }
+
+            if (msgKey === lastReadKey) {
+                isUnreadSection = true;
+            }
+
+            // Kirim status isUnread ke renderSingleMessage agar animasi background putih tipis berjalan
+            renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
         isInitialPrivateChatLoaded[targetUID] = true;
