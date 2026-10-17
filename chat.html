@@ -1980,7 +1980,7 @@ let isFetchingMore = false;
 let previousScrollHeight = 0;
 
 
-// === 1. FUNGSI PEMUAT CHAT PUBLIK (Live, Mendukung Callback & Anti-Flicker) ===
+// === FUNGSI PEMUAT CHAT PUBLIK (Final, Live, Anti-Flicker & Mendukung Callback) ===
 function loadChatStream(onLoadedCallback = null) {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
@@ -1989,7 +1989,7 @@ function loadChatStream(onLoadedCallback = null) {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
         
-        // 🌟 KUNCI ANTI-FLICKER: Cek apakah user sedang berada di dekat bawah sebelum DOM di-reset
+        // Cek posisi scroll: apakah pengguna sedang berada di dekat bagian bawah (jarak < 150px)
         const isNearBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight < 150;
 
         chatStream.innerHTML = '';
@@ -2027,16 +2027,15 @@ function loadChatStream(onLoadedCallback = null) {
         const wasFirstLoad = !isInitialPublicChatLoaded;
         isInitialPublicChatLoaded = true;
 
-        // 🌟 ATUR PERILAKU SCROLL AGAR HALUS:
+        // Logika render & scroll yang aman tanpa kedip kasar
         if (typeof onLoadedCallback === 'function') {
-            onLoadedCallback(); // Dijalankan saat tombol "load more" ditarik di atas
+            onLoadedCallback(); // Dijalankan saat menarik riwayat lama ke atas
         } else if (wasFirstLoad || isNearBottom) {
-            // Hanya turun ke bawah secara otomatis jika ini pemuatan pertama 
-            // atau jika posisi user memang sedang di bawah (bukan sedang scroll di atas)
+            // Hanya turun otomatis jika pertama kali dibuka atau user memang sedang di bawah
             requestAnimationFrame(() => {
                 chatStream.scrollTo({
                     top: chatStream.scrollHeight,
-                    behavior: 'smooth' // Membuat pergerakan turunnya sangat halus
+                    behavior: 'smooth' // Pergerakan turun yang sangat halus
                 });
             });
         }
