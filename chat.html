@@ -1266,7 +1266,7 @@ document.addEventListener('visibilitychange', () => {
     }
     
 
-// 6. Pengiriman Pesan (Smooth Scroll ke Bawah - Hanya sekali saat kirim dari atas)
+// 6. Pengiriman Pesan (Turun Mulus ke Bawah 1x dari Posisi Atas/Tengah)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -1279,18 +1279,20 @@ document.addEventListener('visibilitychange', () => {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
+      const chatStream = document.getElementById('chat-stream');
+      
+      // 🌟 KUNCI 1: Selama posisi Anda bukan di paling bawah (bisa di atas atau di tengah), 
+      // kita tandai bahwa layar perlu turun ke bawah.
+      let needToScrollDown = false;
+      if (chatStream) {
+        const threshold = 50; // Jarak toleransi dari bawah
+        const distanceFromBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight;
+        needToScrollDown = distanceFromBottom > threshold;
+      }
+
       // Kosongkan input dan langsung kunci fokus agar keyboard HP tidak sempat minimize
       input.value = '';
       input.focus();
-
-      const chatStream = document.getElementById('chat-stream');
-      
-      // Cek apakah posisi user sedang berada di atas (artinya sedang membaca riwayat lama)
-      let isScrolledUp = false;
-      if (chatStream) {
-        const threshold = 150;
-        isScrolledUp = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) > threshold;
-      }
 
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
@@ -1312,10 +1314,9 @@ document.addEventListener('visibilitychange', () => {
           updatePublicTabBadge(0);
           input.focus();
 
-          // 🌟 KUNCI: Hanya lakukan smooth scroll ke bawah jika user sedang di atas.
-          // Sekali turun ke bawah, posisi Anda sudah di bawah, sehingga pengiriman berikutnya 
-          // tidak akan memicu perintah scroll berulang-ulang lagi.
-          if (chatStream && isScrolledUp) {
+          // 🌟 KUNCI 2: Jika posisi awal tadi di atas/tengah, luncurkan turun SEKALI secara smooth ke bawah.
+          // Karena setelah ini posisi Anda sudah di bawah, pengiriman berikutnya tidak akan mentrigger scroll lagi.
+          if (chatStream && needToScrollDown) {
               requestAnimationFrame(() => {
                   chatStream.scrollTo({
                       top: chatStream.scrollHeight,
@@ -1348,7 +1349,7 @@ document.addEventListener('visibilitychange', () => {
           input.focus();
 
           // 🌟 KUNCI UNTUK PRIVATE CHAT
-          if (chatStream && isScrolledUp) {
+          if (chatStream && needToScrollDown) {
               requestAnimationFrame(() => {
                   chatStream.scrollTo({
                       top: chatStream.scrollHeight,
