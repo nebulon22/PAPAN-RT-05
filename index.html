@@ -1290,9 +1290,15 @@ function perbaruiAplikasiSekarang() {
   // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
   // ==========================================
 
-  // 🔥 INISIALISASI PETA DENGAN DEFERRED LOADING (Ditunda 150ms agar UI mulus dulu)
+// 🔥 INISIALISASI PETA DENGAN DEFERRED LOADING & SAFETY CHECK
   window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
+      // Pastikan konfigurasi sudah siap agar tidak error
+      if (typeof RT05_CONFIG === 'undefined' || !RT05_CONFIG.BATAS_WILAYAH) {
+        console.warn("Menunggu konfigurasi utils.js selesai...");
+        return;
+      }
+
       map = L.map('map').setView([-7.7423, 110.3842], 17);
 
       L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
@@ -1304,8 +1310,10 @@ function perbaruiAplikasiSekarang() {
       L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
       // Setelah peta siap, jalankan fungsi pemuatan data peta di bawah
-      muatDataPetaWarga();
-    }, 200);
+      if (typeof muatDataPetaWarga === 'function') {
+          muatDataPetaWarga();
+      }
+    }, 350); // Mengikuti jeda kompromi yang tadi kita pilih
   });
   
   // 1. Bungkus ke dalam fungsi muatDataPetaWarga()
