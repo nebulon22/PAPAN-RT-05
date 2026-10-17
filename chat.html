@@ -1266,7 +1266,7 @@ document.addEventListener('visibilitychange', () => {
     }
     
 
-   // 6. Pengiriman Pesan (Smooth Mobile Keyboard - Tanpa Kedip & Kompatibel Badge/GAS)
+  // 6. Pengiriman Pesan (Smooth Mobile Keyboard - Tanpa Kedip & Kompatibel Badge/GAS)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -1301,17 +1301,13 @@ document.addEventListener('visibilitychange', () => {
           timestamp: serverTimestamp()
         }).then(() => {
           updatePublicTabBadge(0);
-
-          // Pastikan fokus tetap terjaga di input
           input.focus();
 
+          // 🛠️ PERBAIKAN: Gunakan pergeseran instan agar tidak terjadi efek lari ke atas/bouncing
           const chatStream = document.getElementById('chat-stream');
           if (chatStream) {
               requestAnimationFrame(() => {
-                  chatStream.scrollTo({
-                      top: chatStream.scrollHeight,
-                      behavior: 'smooth'
-                  });
+                  chatStream.scrollTop = chatStream.scrollHeight;
               });
           }
 
@@ -1338,13 +1334,11 @@ document.addEventListener('visibilitychange', () => {
           // Pastikan fokus tetap terjaga di input setelah promise private selesai
           input.focus();
 
+          // 🛠️ PERBAIKAN: Gunakan pergeseran instan untuk bagian private juga
           const chatStream = document.getElementById('chat-stream');
           if (chatStream) {
               requestAnimationFrame(() => {
-                  chatStream.scrollTo({
-                      top: chatStream.scrollHeight,
-                      behavior: 'smooth' // Membuat gerakannya sangat halus
-                  });
+                  chatStream.scrollTop = chatStream.scrollHeight;
               });
           }
 
@@ -1371,7 +1365,6 @@ document.addEventListener('visibilitychange', () => {
 
     // Bind fungsi secara global ke window agar terbaca penuh oleh form HTML
     window.sendChatMessage = executeSendMessage;
-
     
  // Pemantau Pesan Unread Grup Chat Publik
     let publicGroupListener = null;
