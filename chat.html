@@ -1266,7 +1266,8 @@ document.addEventListener('visibilitychange', () => {
     }
     
 
-function executeSendMessage(e) {
+// 6. Pengiriman Pesan (Sederhana & Langsung Paksa Turun)
+    function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -1278,9 +1279,9 @@ function executeSendMessage(e) {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
-      const chatStream = document.getElementById('chat-stream');
+      // 🌟 KUNCI SEDERHANA: Tandai bahwa pesan dikirim oleh kita, jadi wajib turun ke bawah tanpakedip!
+      shouldForceScrollDown = true;
 
-      // Kosongkan input dan langsung kunci fokus agar keyboard HP tidak sempat minimize
       input.value = '';
       input.focus();
 
@@ -1298,18 +1299,6 @@ function executeSendMessage(e) {
           role: currentUser.role || 'warga',
           text: text,
           timestamp: serverTimestamp()
-        }).then(() => {
-          updatePublicTabBadge(0);
-          input.focus();
-
-          // 🌟 PAKSA TURUN KE BAWAH SECARA MUTLAK SETELAH PESAN PUBLIK DIKIRIM
-          if (chatStream) {
-            requestAnimationFrame(() => {
-              chatStream.scrollTop = chatStream.scrollHeight;
-            });
-          }
-        }).catch((error) => {
-          console.error("Gagal mengirim pesan publik:", error);
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
@@ -1328,15 +1317,6 @@ function executeSendMessage(e) {
           lastReadKeyMap[activePrivateUID] = newKey;
           localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
 
-          input.focus();
-
-          // 🌟 PAKSA TURUN KE BAWAH SECARA MUTLAK SETELAH PESAN PRIVATE DIKIRIM
-          if (chatStream) {
-            requestAnimationFrame(() => {
-              chatStream.scrollTop = chatStream.scrollHeight;
-            });
-          }
-
           const targetUser = allUsersCache[activePrivateUID];
           const gasUrl = getGasUrl();
           if (targetUser && targetUser.state !== 'online' && gasUrl) {
@@ -1352,12 +1332,12 @@ function executeSendMessage(e) {
               })
             }).catch(err => console.log(err));
           }
-        }).catch((error) => {
-          console.error("Gagal mengirim pesan private:", error);
         });
       }
     }
 
+
+    
     // Bind fungsi secara global ke window agar terbaca penuh oleh form HTML
     window.sendChatMessage = executeSendMessage;
     
@@ -1976,19 +1956,21 @@ let previousScrollHeight = 0;
 
 
 
-// === 1. FUNGSI PEMUAT CHAT PUBLIK (Logika Sederhana & Mutlak di Bawah) ===
-function loadChatStream(onLoadedCallback = null) {
-    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit || 50));
+// Variable penanda sederhana untuk memaksa turun ke bawah
+let shouldForceScrollDown = false;
+
+// === 1. PEMUAT CHAT PUBLIK SEDERHANA ===
+function loadChatStream() {
+    const chatRef = query(ref(db, 'chats'), limitToLast(500));
     const chatStream = document.getElementById('chat-stream');
 
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
 
-        // 1. Cek apakah posisi scroll SEBELUM dirender memang berada di bawah (toleransi 100px)
+        // Cek apakah posisi user sedang di bawah (toleransi 100px) atau dipaksa turun oleh tombol Send
         const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
 
-        // Kosongkan dan render ulang pesan
         chatStream.innerHTML = '';
 
         if (!snapshot.exists()) {
@@ -2007,8 +1989,6 @@ function loadChatStream(onLoadedCallback = null) {
             const msgKey = childSnap.key;
             const msgData = childSnap.val();
 
-            if (msgKey === 'pinned_poll') return;
-
             let isUnreadMsg = false;
             if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
                 isUnreadMsg = true;
@@ -2023,33 +2003,24 @@ function loadChatStream(onLoadedCallback = null) {
 
         isInitialPublicChatLoaded = true;
 
-        if (typeof onLoadedCallback === 'function') {
-            onLoadedCallback(); 
-        } else if (isAtBottom) {
-            // 2. KUNCI UTAMA: Jika tadinya di bawah, setelah render selesai, PAKSA TETAP DI BAWAH!
-            requestAnimationFrame(() => {
-                chatStream.scrollTop = chatStream.scrollHeight;
-            });
+        // LOGIKA SEDERHANA: Jika posisi di bawah ATAU baru saja tekan tombol kirim (force), langsung turun!
+        if (isAtBottom || shouldForceScrollDown) {
+            chatStream.scrollTop = chatStream.scrollHeight;
+            shouldForceScrollDown = false; // Reset kembali status paksa
         }
     });
 }
 
-// === 2. FUNGSI PEMUAT CHAT PRIVAT (Logika Sederhana & Mutlak di Bawah) ===
-function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
+// === 2. PEMUAT CHAT PRIVAT SEDERHANA ===
+function loadPrivateChatStream(targetUID) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
-    
-    if (!currentPrivateLimit[roomID]) {
-        currentPrivateLimit[roomID] = 50;
-    }
-
-    const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(currentPrivateLimit[roomID]));
+    const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(500));
     const chatStream = document.getElementById('chat-stream');
 
     currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
         if (!chatStream) return;
         if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
 
-        // 1. Cek posisi scroll SEBELUM dirender
         const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
 
         chatStream.innerHTML = '';
@@ -2066,13 +2037,9 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
 
         isInitialPrivateChatLoaded[targetUID] = true;
         
-        if (typeof onLoadedCallback === 'function') {
-            onLoadedCallback();
-        } else if (isAtBottom) {
-            // 2. KUNCI UTAMA: Paksa tetap di bawah jika posisi sebelumnya memang di bawah
-            requestAnimationFrame(() => {
-                chatStream.scrollTop = chatStream.scrollHeight;
-            });
+        if (isAtBottom || shouldForceScrollDown) {
+            chatStream.scrollTop = chatStream.scrollHeight;
+            shouldForceScrollDown = false;
         }
 
         if (isChatVisible) {
