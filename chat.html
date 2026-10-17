@@ -1252,9 +1252,20 @@ document.addEventListener('visibilitychange', () => {
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-              if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
+             if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
                 unreadCounts[targetUID] = unreadTotalCount;
-                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) playKlingSound();
+                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
+                  // Panggil fungsi kontrol notifikasi (suara/getar/sunyi) dari induk/setting.js
+                  try {
+                    if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                      window.parent.picuNotifikasiMedia();
+                    } else {
+                      playKlingSound(); // Fallback ke suara default jika parent tidak ada
+                    }
+                  } catch (e) {
+                    playKlingSound();
+                  }
+                }
               }
             } else {
               unreadCounts[targetUID] = 0;
@@ -1988,13 +1999,21 @@ function loadChatStream() {
         let isUnreadSection = false;
         if (!lastReadPublicMapKey) isUnreadSection = true;
 
-        snapshot.forEach((childSnap) => {
+      snapshot.forEach((childSnap) => {
             const msgKey = childSnap.key;
             const msgData = childSnap.val();
 
             let isUnreadMsg = false;
             if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
                 isUnreadMsg = true;
+
+                // 🔔 TAMBAHKAN PEMANGGILAN NOTIFIKASI DI SINI:
+                // Hanya berbunyi/bergetar jika pesan baru masuk dari orang lain dan status awal sudah termuat
+                try {
+                    if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                        window.parent.picuNotifikasiMedia();
+                    }
+                } catch (e) {}
             }
 
             if (msgKey === lastReadPublicMapKey) {
@@ -2004,6 +2023,7 @@ function loadChatStream() {
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
+      
         isInitialPublicChatLoaded = true;
 
         // LOGIKA SEDERHANA: Jika posisi di bawah ATAU baru saja tekan tombol kirim (force), langsung turun!
