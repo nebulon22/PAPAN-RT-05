@@ -1291,31 +1291,25 @@ function perbaruiAplikasiSekarang() {
   // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
   // ==========================================
 
-// 🔥 INISIALISASI PETA DENGAN DEFERRED LOADING & SAFETY CHECK
-  window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      // Pastikan konfigurasi sudah siap agar tidak error
-      if (typeof RT05_CONFIG === 'undefined' || !RT05_CONFIG.BATAS_WILAYAH) {
-        console.warn("Menunggu konfigurasi utils.js selesai...");
-        return;
-      }
+// 🔥 Bungkus dengan DOMContentLoaded agar menunggu seluruh dokumen siap
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    // Pastikan variabel config sudah ada
+    if (typeof RT05_CONFIG === 'undefined') return;
 
-      map = L.map('map').setView([-7.7423, 110.3842], 17);
+    map = L.map('map').setView([-7.7423, 110.3842], 17);
 
-      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-          maxZoom: 20,
-          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-          attribution: '&copy; Google Maps'
-      }).addTo(map);
+    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps'
+    }).addTo(map);
 
-      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-      // Setelah peta siap, jalankan fungsi pemuatan data peta di bawah
-      if (typeof muatDataPetaWarga === 'function') {
-          muatDataPetaWarga();
-      }
-    }, 350); // Mengikuti jeda kompromi yang tadi kita pilih
-  });
+    muatDataPetaWarga();
+  }, 350);
+});
   
   // 1. Bungkus ke dalam fungsi muatDataPetaWarga()
 function muatDataPetaWarga() {
