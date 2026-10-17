@@ -1946,18 +1946,23 @@ document.addEventListener('visibilitychange', () => {
 
     
     
-// === 1. VARIABEL KONTROL LIMIT & STATUS CHAT (Deklarasi Sekali di Sini) ===
+// === VARIABEL KONTROL LIMIT & STATUS CHAT ===
 let currentPublicLimit = 50;
 const MAX_SCROLL_LIMIT = 500;
 let isInitialPublicChatLoaded = false;
+let publicHasMore = true; // Penanda apakah pesan publik di database masih ada
 
 let currentPrivateLimit = {};
 const MAX_PRIVATE_LIMIT = 500;
-let isInitialPrivateChatLoaded = {}; // 🛠️ Ditambahkan agar tidak error ReferenceError
+let isInitialPrivateChatLoaded = {};
+let privateHasMore = {}; // Penanda apakah pesan private masih ada
+
+let isFetchingMore = false;
+let previousScrollHeight = 0;
 
 
-// === 2. FUNGSI PEMUAT CHAT PUBLIK ===
-function loadChatStream() {
+// === 1. FUNGSI PEMUAT CHAT PUBLIK (Mendukung Callback) ===
+function loadChatStream(onLoadedCallback = null) {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
 
@@ -1973,38 +1978,24 @@ function loadChatStream() {
             return;
         }
 
-        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
-
-        let isUnreadSection = false;
-        if (!lastReadPublicMapKey) isUnreadSection = true;
-
         snapshot.forEach((childSnap) => {
-            const msgKey = childSnap.key;
-            const msgData = childSnap.val();
-
-            if (msgKey === 'pinned_poll') return;
-
-            let isUnreadMsg = false;
-            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
-                isUnreadMsg = true;
-            }
-
-            if (msgKey === lastReadPublicMapKey) {
-                isUnreadSection = true;
-            }
-
-            renderSingleMessage(msgData, isUnreadMsg, msgKey);
+            if (childSnap.key === 'pinned_poll') return;
+            renderSingleMessage(childSnap.val(), false, childSnap.key);
         });
 
         isInitialPublicChatLoaded = true;
-        chatStream.scrollTop = chatStream.scrollHeight;
-    });
+
+        // Jalankan callback (untuk pertahankan posisi scroll atau auto-fill layar kosong)
+        if (typeof onLoadedCallback === 'function') {
+            onLoadedCallback();
+        } else {
+            chatStream.scrollTop = chatStream.scrollHeight;
+        }
+    }, { onlyOnce: true });
 }
 
-
-// === 3. FUNGSI PEMUAT CHAT PRIVAT (Diletakkan SEBELUM Event Listener Scroll) ===
-function loadPrivateChatStream(targetUID) {
+// === 2. FUNGSI PEMUAT CHAT PRIVAT (Mendukung Callback) ===
+function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
     
     if (!currentPrivateLimit[roomID]) {
@@ -2026,93 +2017,106 @@ function loadPrivateChatStream(targetUID) {
             return;
         }
 
-        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
-        const lastReadKey = lastReadKeyMap[targetUID];
-
-        let isUnreadSection = false;
-        if (!lastReadKey) isUnreadSection = true;
-
         snapshot.forEach((childSnap) => {
-            const msgKey = childSnap.key;
-            const msgData = childSnap.val();
-
-            let isUnreadMsg = false;
-            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
-                isUnreadMsg = true;
-            }
-
-            if (msgKey === lastReadKey) {
-                isUnreadSection = true;
-            }
-
-            renderSingleMessage(msgData, isUnreadMsg, msgKey);
+            renderSingleMessage(childSnap.val(), false, childSnap.key);
         });
 
         isInitialPrivateChatLoaded[targetUID] = true;
         
-        requestAnimationFrame(() => {
-            chatStream.scrollTop = chatStream.scrollHeight;
-        });
+        if (typeof onLoadedCallback === 'function') {
+            onLoadedCallback();
+        } else {
+            requestAnimationFrame(() => {
+                chatStream.scrollTop = chatStream.scrollHeight;
+            });
+        }
 
         if (isChatVisible) {
             markRoomAsRead(targetUID);
         }
+    }, { onlyOnce: true });
+}
+
+// === 3. FUNGSI TRIGGER LOAD MORE PUBLIK DENGAN AUTO-FILL LAYAR KOSONG ===
+function triggerLoadMorePublic() {
+    if (isLoadingMore) return;
+    isLoadingMore = true;
+
+    const oldScrollHeight = chatStreamEl.scrollHeight;
+    const oldScrollTop = chatStreamEl.scrollTop;
+
+    currentPublicLimit += 50;
+    console.log("Memuat riwayat publik lebih banyak, batas:", currentPublicLimit);
+
+    loadChatStream(() => {
+        requestAnimationFrame(() => {
+            const newScrollHeight = chatStreamEl.scrollHeight;
+            chatStreamEl.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+
+            setTimeout(() => {
+                isLoadingMore = false;
+
+                // 🌟 KUNCI ALA WHATSAPP/TELEGRAM:
+                // Jika layar HP tinggi/lebar dan pesan belum memenuhi layar, tarik otomatis batch berikutnya
+                if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPublicLimit < MAX_SCROLL_LIMIT) {
+                    console.log("Layar publik masih kurang penuh, otomatis ambil pesan lagi...");
+                    triggerLoadMorePublic();
+                }
+            }, 150);
+        });
     });
 }
 
+// === 4. FUNGSI TRIGGER LOAD MORE PRIVATE DENGAN AUTO-FILL LAYAR KOSONG ===
+function triggerLoadMorePrivate(roomID, targetUID) {
+    if (isLoadingMore) return;
+    isLoadingMore = true;
 
-// === 4. SATU-SATUNYA EVENT LISTENER SCROLL UTAMA (Anti-Loop Mutlak dengan Flag User) ===
+    const oldScrollHeight = chatStreamEl.scrollHeight;
+    const oldScrollTop = chatStreamEl.scrollTop;
+
+    currentPrivateLimit[roomID] = (currentPrivateLimit[roomID] || 50) + 50;
+    console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
+
+    loadPrivateChatStream(targetUID, () => {
+        requestAnimationFrame(() => {
+            const newScrollHeight = chatStreamEl.scrollHeight;
+            chatStreamEl.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+
+            setTimeout(() => {
+                isLoadingMore = false;
+
+                if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPrivateLimit[roomID] < MAX_PRIVATE_LIMIT) {
+                    console.log("Layar private masih kurang penuh, otomatis ambil pesan lagi...");
+                    triggerLoadMorePrivate(roomID, targetUID);
+                }
+            }, 150);
+        });
+    });
+}
+
+// === 5. EVENT LISTENER SCROLL UTAMA (Anti-Bouncing & Presisi) ===
+let isLoadingMore = false;
 const chatStreamEl = document.getElementById('chat-stream');
-let isFetchingMore = false;
-let userScrolledManually = false;
 
-// Deteksi apakah user benar-benar menyentuh/menggulir manual
 if (chatStreamEl) {
-    chatStreamEl.addEventListener('touchstart', () => { userScrolledManually = true; }, { passive: true });
-    chatStreamEl.addEventListener('wheel', () => { userScrolledManually = true; }, { passive: true });
-    chatStreamEl.addEventListener('mousedown', () => { userScrolledManually = true; }, { passive: true });
-
     chatStreamEl.addEventListener('scroll', () => {
-        if (isFetchingMore || !userScrolledManually) return;
+        // Hanya trigger jika posisi scroll benar-benar di paling atas (<= 5)
+        if (isLoadingMore || chatStreamEl.scrollTop > 5) return;
 
-        // Hanya trigger jika benar-benar menyentuh ujung paling atas (0)
-        if (chatStreamEl.scrollTop === 0) {
-            
-            // A. Chat Publik
-            if (activeChatType === 'public') {
-                if (currentPublicLimit < MAX_SCROLL_LIMIT) {
-                    isFetchingMore = true;
-                    currentPublicLimit += 50;
-                    console.log("Memuat lebih banyak riwayat publik, batas:", currentPublicLimit);
-                    
-                    loadChatStream();
-                    
-                    setTimeout(() => {
-                        chatStreamEl.scrollTop = 50; // Dorong ke bawah sedikit
-                        isFetchingMore = false;
-                        userScrolledManually = false; // Reset flag manual
-                    }, 500);
-                }
+        // A. Chat Publik
+        if (activeChatType === 'public') {
+            if (currentPublicLimit < MAX_SCROLL_LIMIT) {
+                triggerLoadMorePublic();
             }
-            
-            // B. Chat Pribadi
-            else if (activeChatType === 'private' && activePrivateUID) {
-                const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
-                const currentLimit = currentPrivateLimit[roomID] || 50;
+        }
+        // B. Chat Pribadi
+        else if (activeChatType === 'private' && activePrivateUID) {
+            const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+            const currentLimit = currentPrivateLimit[roomID] || 50;
 
-                if (currentLimit < MAX_PRIVATE_LIMIT) {
-                    isFetchingMore = true;
-                    currentPrivateLimit[roomID] = currentLimit + 50;
-                    console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
-                    
-                    loadPrivateChatStream(activePrivateUID);
-                    
-                    setTimeout(() => {
-                        chatStreamEl.scrollTop = 50; // Dorong ke bawah sedikit
-                        isFetchingMore = false;
-                        userScrolledManually = false; // Reset flag manual
-                    }, 500);
-                }
+            if (currentLimit < MAX_PRIVATE_LIMIT) {
+                triggerLoadMorePrivate(roomID, activePrivateUID);
             }
         }
     });
