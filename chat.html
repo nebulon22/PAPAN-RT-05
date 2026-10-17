@@ -1155,7 +1155,7 @@ document.addEventListener('visibilitychange', () => {
     }
 
     if (type === 'public') {
-      loadChatStream();
+      ();
     } else if (type === 'private' && targetUID) {
       loadPrivateChatStream(targetUID);
     }
@@ -1868,7 +1868,7 @@ document.addEventListener('visibilitychange', () => {
                     listenPinnedPoll();
 
                     activeChatType = 'public';
-                    loadChatStream();
+                    ();
                 }
             }
         });
@@ -2005,13 +2005,17 @@ function loadChatStream() {
             if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
                 isUnreadMsg = true;
 
-                // 🔔 TAMBAHKAN PEMANGGILAN NOTIFIKASI DI SINI:
-                // Hanya berbunyi/bergetar jika pesan baru masuk dari orang lain dan status awal sudah termuat
-                try {
-                    if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-                        window.parent.picuNotifikasiMedia();
-                    }
-                } catch (e) {}
+                // 🔔 PENGAMAN TAMBAHAN: Cek apakah pesan ini sudah pernah dibunyikan sebelumnya
+                const notifKey = 'notified_' + msgKey;
+                if (!sessionStorage.getItem(notifKey)) {
+                    sessionStorage.setItem(notifKey, 'true');
+                    
+                    try {
+                        if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                            window.parent.picuNotifikasiMedia();
+                        }
+                    } catch (e) {}
+                }
             }
 
             if (msgKey === lastReadPublicMapKey) {
