@@ -1272,14 +1272,14 @@ function perbaruiAplikasiSekarang() {
 </script>
 
   <script>
-  // --- KODE PETA & DATA ---
-   
+ // --- KODE PETA & DATA ---
   var GID_PENGUMUMAN = '1885853390'; 
   var GID_KEUANGAN = '1568425671';
 
-  var SHEET_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`;
-  var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
-  var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
+  // Deklarasikan variabel URL kosong dulu
+  var SHEET_URL = '';
+  var PENGUMUMAN_URL = '';
+  var KEUANGAN_URL = '';
 
   var map; 
   var daftarPin = [];
@@ -1291,25 +1291,30 @@ function perbaruiAplikasiSekarang() {
   // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
   // ==========================================
 
-// 🔥 Bungkus dengan DOMContentLoaded agar menunggu seluruh dokumen siap
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    // Pastikan variabel config sudah ada
-    if (typeof RT05_CONFIG === 'undefined') return;
+  // 🔥 Bungkus dengan DOMContentLoaded agar menunggu seluruh dokumen & utils.js siap
+  window.addEventListener('DOMContentLoaded', () => {
+    setTimeout(() => {
+      // Pastikan variabel config sudah ada
+      if (typeof RT05_CONFIG === 'undefined') return;
 
-    map = L.map('map').setView([-7.7423, 110.3842], 17);
+      // Isi URL di sini setelah RT05_CONFIG dipastikan tersedia
+      SHEET_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`;
+      PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
+      KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
 
-    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-        attribution: '&copy; Google Maps'
-    }).addTo(map);
+      map = L.map('map').setView([-7.7423, 110.3842], 17);
 
-    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+          maxZoom: 20,
+          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+          attribution: '&copy; Google Maps'
+      }).addTo(map);
 
-    muatDataPetaWarga();
-  }, 350);
-});
+      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+
+      muatDataPetaWarga();
+    }, 350);
+  });
   
   // 1. Bungkus ke dalam fungsi muatDataPetaWarga()
 function muatDataPetaWarga() {
