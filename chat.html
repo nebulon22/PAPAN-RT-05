@@ -2055,7 +2055,65 @@ function loadChatStream(onLoadedCallback = null) {
     });
 }
 
-// === FUNGSI PEMUAT CHAT PRIVAT (Diperbarui dengan pengaman posisi scroll) ===
+// === 1. FUNGSI PEMUAT CHAT PUBLIK (Diperbarui agar mendukung Pagination hingga 500 baris) ===
+function loadChatStream(onLoadedCallback = null) {
+    // Pastikan menggunakan limit terbaru yang sudah bertambah
+    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit || 50));
+    const chatStream = document.getElementById('chat-stream');
+
+    currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
+        if (activeChatType !== 'public') return;
+        if (!chatStream) return;
+
+        const threshold = 100;
+        const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= threshold;
+
+        chatStream.innerHTML = '';
+
+        if (!snapshot.exists()) {
+            chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
+            isInitialPublicChatLoaded = true;
+            return;
+        }
+
+        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+        const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
+
+        let isUnreadSection = false;
+        if (!lastReadPublicMapKey) isUnreadSection = true;
+
+        snapshot.forEach((childSnap) => {
+            const msgKey = childSnap.key;
+            const msgData = childSnap.val();
+
+            if (msgKey === 'pinned_poll') return;
+
+            let isUnreadMsg = false;
+            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
+                isUnreadMsg = true;
+            }
+
+            if (msgKey === lastReadPublicMapKey) {
+                isUnreadSection = true;
+            }
+
+            renderSingleMessage(msgData, isUnreadMsg, msgKey);
+        });
+
+        isInitialPublicChatLoaded = true;
+
+        // 🌟 JALANKAN CALLBACK JIKA ADA (PENTING UNTUK MENJAGA POSISI SCROLL SAAT LOAD MORE)
+        if (typeof onLoadedCallback === 'function') {
+            onLoadedCallback(); 
+        } else if (isAtBottom) {
+            requestAnimationFrame(() => {
+                chatStream.scrollTop = chatStream.scrollHeight;
+            });
+        }
+    });
+}
+
+// === 2. FUNGSI PEMUAT CHAT PRIVAT (Diperbarui agar mendukung Pagination hingga 500 baris) ===
 function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
     
@@ -2070,7 +2128,6 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
         if (!chatStream) return;
         if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
 
-        // 🌟 Cek posisi scroll sebelum DOM dirender ulang
         const threshold = 100;
         const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= threshold;
 
@@ -2088,10 +2145,10 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
 
         isInitialPrivateChatLoaded[targetUID] = true;
         
+        // 🌟 JALANKAN CALLBACK JIKA ADA
         if (typeof onLoadedCallback === 'function') {
             onLoadedCallback();
         } else if (isAtBottom) {
-            // 🌟 Hanya turun ke bawah otomatis JIKA posisi user memang sedang di bawah
             requestAnimationFrame(() => {
                 chatStream.scrollTop = chatStream.scrollHeight;
             });
@@ -2103,22 +2160,27 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
     });
 }
 
-    
-// === 3. FUNGSI TRIGGER LOAD MORE PUBLIK DENGAN INDIKATOR ===
+// === 3. TRIGGER LOAD MORE PUBLIK (Dinaikkan limitnya dan diperbaiki penanganan scroll-nya) ===
 function triggerLoadMorePublic() {
     if (isLoadingMore) return;
+    if (currentPublicLimit >= MAX_SCROLL_LIMIT) return; // Batasi maksimal 500
+    
     isLoadingMore = true;
 
-    // Tampilkan teks indikator loading di atas
-    const indicator = document.getElementById('load-more-indicator');
-    if (indicator) indicator.style.display = 'block';
+    const chatStreamEl = document.getElementById('chat-stream');
+    if (!chatStreamEl) {
+        isLoadingMore = false;
+        return;
+    }
 
     const oldScrollHeight = chatStreamEl.scrollHeight;
     const oldScrollTop = chatStreamEl.scrollTop;
 
-    currentPublicLimit += 50;
+    // Tambah limit sebanyak 50 data setiap kali ditarik ke atas
+    currentPublicLimit = Math.min(currentPublicLimit + 50, MAX_SCROLL_LIMIT);
     console.log("Memuat riwayat publik lebih banyak, batas:", currentPublicLimit);
 
+    // Muat ulang dengan callback untuk mempertahankan posisi mata (scroll) agar tidak mental
     loadChatStream(() => {
         requestAnimationFrame(() => {
             const newScrollHeight = chatStreamEl.scrollHeight;
@@ -2126,28 +2188,28 @@ function triggerLoadMorePublic() {
 
             setTimeout(() => {
                 isLoadingMore = false;
-                if (indicator) indicator.style.display = 'none'; // Sembunyikan indikator
-
-                if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPublicLimit < MAX_SCROLL_LIMIT) {
-                    triggerLoadMorePublic();
-                }
-            }, 150);
+            }, 200);
         });
     });
 }
 
-// === 4. FUNGSI TRIGGER LOAD MORE PRIVATE DENGAN INDIKATOR ===
+// === 4. TRIGGER LOAD MORE PRIVATE (Dinaikkan limitnya dan diperbaiki penanganan scroll-nya) ===
 function triggerLoadMorePrivate(roomID, targetUID) {
     if (isLoadingMore) return;
+    if ((currentPrivateLimit[roomID] || 50) >= MAX_PRIVATE_LIMIT) return; // Batasi maksimal 500
+
     isLoadingMore = true;
 
-    const indicator = document.getElementById('load-more-indicator');
-    if (indicator) indicator.style.display = 'block';
+    const chatStreamEl = document.getElementById('chat-stream');
+    if (!chatStreamEl) {
+        isLoadingMore = false;
+        return;
+    }
 
     const oldScrollHeight = chatStreamEl.scrollHeight;
     const oldScrollTop = chatStreamEl.scrollTop;
 
-    currentPrivateLimit[roomID] = (currentPrivateLimit[roomID] || 50) + 50;
+    currentPrivateLimit[roomID] = Math.min((currentPrivateLimit[roomID] || 50) + 50, MAX_PRIVATE_LIMIT);
     console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
 
     loadPrivateChatStream(targetUID, () => {
@@ -2157,12 +2219,7 @@ function triggerLoadMorePrivate(roomID, targetUID) {
 
             setTimeout(() => {
                 isLoadingMore = false;
-                if (indicator) indicator.style.display = 'none';
-
-                if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPrivateLimit[roomID] < MAX_PRIVATE_LIMIT) {
-                    triggerLoadMorePrivate(roomID, targetUID);
-                }
-            }, 150);
+            }, 200);
         });
     });
 }
