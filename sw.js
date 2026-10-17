@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.5.5'; 
+const CACHE_NAME = 'rt-kayen-v1.5.6'; 
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
