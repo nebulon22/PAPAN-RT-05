@@ -2037,10 +2037,14 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
     }, { onlyOnce: true });
 }
 
-// === 3. FUNGSI TRIGGER LOAD MORE PUBLIK DENGAN AUTO-FILL LAYAR KOSONG ===
+// === 3. FUNGSI TRIGGER LOAD MORE PUBLIK DENGAN INDIKATOR ===
 function triggerLoadMorePublic() {
     if (isLoadingMore) return;
     isLoadingMore = true;
+
+    // Tampilkan teks indikator loading di atas
+    const indicator = document.getElementById('load-more-indicator');
+    if (indicator) indicator.style.display = 'block';
 
     const oldScrollHeight = chatStreamEl.scrollHeight;
     const oldScrollTop = chatStreamEl.scrollTop;
@@ -2055,11 +2059,9 @@ function triggerLoadMorePublic() {
 
             setTimeout(() => {
                 isLoadingMore = false;
+                if (indicator) indicator.style.display = 'none'; // Sembunyikan indikator
 
-                // 🌟 KUNCI ALA WHATSAPP/TELEGRAM:
-                // Jika layar HP tinggi/lebar dan pesan belum memenuhi layar, tarik otomatis batch berikutnya
                 if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPublicLimit < MAX_SCROLL_LIMIT) {
-                    console.log("Layar publik masih kurang penuh, otomatis ambil pesan lagi...");
                     triggerLoadMorePublic();
                 }
             }, 150);
@@ -2067,10 +2069,13 @@ function triggerLoadMorePublic() {
     });
 }
 
-// === 4. FUNGSI TRIGGER LOAD MORE PRIVATE DENGAN AUTO-FILL LAYAR KOSONG ===
+// === 4. FUNGSI TRIGGER LOAD MORE PRIVATE DENGAN INDIKATOR ===
 function triggerLoadMorePrivate(roomID, targetUID) {
     if (isLoadingMore) return;
     isLoadingMore = true;
+
+    const indicator = document.getElementById('load-more-indicator');
+    if (indicator) indicator.style.display = 'block';
 
     const oldScrollHeight = chatStreamEl.scrollHeight;
     const oldScrollTop = chatStreamEl.scrollTop;
@@ -2085,9 +2090,9 @@ function triggerLoadMorePrivate(roomID, targetUID) {
 
             setTimeout(() => {
                 isLoadingMore = false;
+                if (indicator) indicator.style.display = 'none';
 
                 if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPrivateLimit[roomID] < MAX_PRIVATE_LIMIT) {
-                    console.log("Layar private masih kurang penuh, otomatis ambil pesan lagi...");
                     triggerLoadMorePrivate(roomID, targetUID);
                 }
             }, 150);
