@@ -1300,6 +1300,15 @@ document.addEventListener('visibilitychange', () => {
           timestamp: serverTimestamp()
         }).then(() => {
           updatePublicTabBadge(0);
+
+          // 🌟 TAMBAHAN: Langsung turun ke bawah setelah pesan publik terkirim
+          const chatStream = document.getElementById('chat-stream');
+          if (chatStream) {
+              requestAnimationFrame(() => {
+                  chatStream.scrollTop = chatStream.scrollHeight;
+              });
+          }
+
         }).catch((error) => {
           console.error("Gagal mengirim pesan publik:", error);
         });
@@ -1322,6 +1331,14 @@ document.addEventListener('visibilitychange', () => {
 
           // Pastikan fokus tetap terjaga di input setelah promise private selesai
           input.focus();
+
+          // 🌟 TAMBAHAN: Langsung turun ke bawah setelah pesan private terkirim
+          const chatStream = document.getElementById('chat-stream');
+          if (chatStream) {
+              requestAnimationFrame(() => {
+                  chatStream.scrollTop = chatStream.scrollHeight;
+              });
+          }
 
           const targetUser = allUsersCache[activePrivateUID];
           const gasUrl = getGasUrl();
@@ -1962,10 +1979,12 @@ let previousScrollHeight = 0;
 
 
 // === 1. FUNGSI PEMUAT CHAT PUBLIK (Mendukung Callback) ===
+// === PERBAIKAN PADA FUNGSI PEMUAT CHAT PUBLIK (Hapus { onlyOnce: true }) ===
 function loadChatStream(onLoadedCallback = null) {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
 
+    // Hapus opsi { onlyOnce: true } agar listener aktif selamanya menerima data baru
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
@@ -1985,16 +2004,15 @@ function loadChatStream(onLoadedCallback = null) {
 
         isInitialPublicChatLoaded = true;
 
-        // Jalankan callback (untuk pertahankan posisi scroll atau auto-fill layar kosong)
         if (typeof onLoadedCallback === 'function') {
             onLoadedCallback();
         } else {
-            chatStream.scrollTop = chatStream.scrollHeight;
+            chatStream.scrollTop = chatStream.scrollHeight; // Otomatis ke bawah saat ada pesan baru
         }
-    }, { onlyOnce: true });
+    }); // <-- Pastikan kurung tutup ini bersih tanpa parameter tambahan
 }
 
-// === 2. FUNGSI PEMUAT CHAT PRIVAT (Mendukung Callback) ===
+// === 2. FUNGSI PEMUAT CHAT PRIVAT (Live Real-Time & Mendukung Callback) ===
 function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
     
@@ -2034,7 +2052,7 @@ function loadPrivateChatStream(targetUID, onLoadedCallback = null) {
         if (isChatVisible) {
             markRoomAsRead(targetUID);
         }
-    }, { onlyOnce: true });
+    }); // <-- { onlyOnce: true } SUDAH DIHAPUS DI SINI AGAR LIVE REAL-TIME
 }
 
 // === 3. FUNGSI TRIGGER LOAD MORE PUBLIK DENGAN INDIKATOR ===
