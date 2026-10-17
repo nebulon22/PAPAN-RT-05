@@ -93,6 +93,7 @@ self.addEventListener('push', (event) => {
     icon: './kentongan-slit-drum.png',
     badge: './kentongan-slit-drum.png', // Ikon monokrom kecil untuk status bar Android
     vibrate: [100, 50, 100],
+    silent: true,
     data: {
       url: data.url || './index.html',
       dateOfArrival: Date.now(),
