@@ -1252,21 +1252,19 @@ document.addEventListener('visibilitychange', () => {
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-             if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
-                unreadCounts[targetUID] = unreadTotalCount;
-                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
-                  // Panggil fungsi kontrol notifikasi (suara/getar/sunyi) dari induk/setting.js
-                  try {
-                    if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-                      window.parent.picuNotifikasiMedia();
-                    } else {
-                      playKlingSound(); // Fallback ke suara default jika parent tidak ada
+            if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
+            unreadCounts[targetUID] = unreadTotalCount;
+            if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
+            // Panggil fungsi kontrol notifikasi (suara/getar/sunyi) dari induk/setting.js
+            try {
+            if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                window.parent.picuNotifikasiMedia();
+            }
+        } catch (e) {
+            console.log("Error picu notif:", e);
                     }
-                  } catch (e) {
-                    playKlingSound();
-                  }
-                }
-              }
+          }
+        }
             } else {
               unreadCounts[targetUID] = 0;
             }
