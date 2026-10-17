@@ -1266,7 +1266,7 @@ document.addEventListener('visibilitychange', () => {
     }
     
 
-// 6. Pengiriman Pesan (Transisi Smooth Scroll Mulus ke Bawah Tanpa Kedip)
+// 6. Pengiriman Pesan (Smooth Scroll ke Bawah - Hanya sekali saat kirim dari atas)
     function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
@@ -1282,6 +1282,15 @@ document.addEventListener('visibilitychange', () => {
       // Kosongkan input dan langsung kunci fokus agar keyboard HP tidak sempat minimize
       input.value = '';
       input.focus();
+
+      const chatStream = document.getElementById('chat-stream');
+      
+      // Cek apakah posisi user sedang berada di atas (artinya sedang membaca riwayat lama)
+      let isScrolledUp = false;
+      if (chatStream) {
+        const threshold = 150;
+        isScrolledUp = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) > threshold;
+      }
 
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
@@ -1303,9 +1312,10 @@ document.addEventListener('visibilitychange', () => {
           updatePublicTabBadge(0);
           input.focus();
 
-          // 🌟 EFEK TURUN KE BAWAH SECARA HALUS (SMOOTH) TANPA KEDIP
-          const chatStream = document.getElementById('chat-stream');
-          if (chatStream) {
+          // 🌟 KUNCI: Hanya lakukan smooth scroll ke bawah jika user sedang di atas.
+          // Sekali turun ke bawah, posisi Anda sudah di bawah, sehingga pengiriman berikutnya 
+          // tidak akan memicu perintah scroll berulang-ulang lagi.
+          if (chatStream && isScrolledUp) {
               requestAnimationFrame(() => {
                   chatStream.scrollTo({
                       top: chatStream.scrollHeight,
@@ -1337,9 +1347,8 @@ document.addEventListener('visibilitychange', () => {
           // Pastikan fokus tetap terjaga di input setelah promise private selesai
           input.focus();
 
-          // 🌟 EFEK TURUN KE BAWAH SECARA HALUS (SMOOTH) UNTUK PRIVATE CHAT
-          const chatStream = document.getElementById('chat-stream');
-          if (chatStream) {
+          // 🌟 KUNCI UNTUK PRIVATE CHAT
+          if (chatStream && isScrolledUp) {
               requestAnimationFrame(() => {
                   chatStream.scrollTo({
                       top: chatStream.scrollHeight,
