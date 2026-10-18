@@ -2180,22 +2180,20 @@ function loadPrivateChatStream(targetUID, onLoaded) {
     });
 }
     
-// === 3. FUNGSI TRIGGER LOAD MORE PUBLIK DENGAN INDIKATOR ===
+// === 3. FUNGSI TRIGGER LOAD MORE PUBLIK (ANTI-BOUNCE KE ATAS) ===
 function triggerLoadMorePublic() {
     if (isLoadingMore) return;
-    if (currentPublicLimit >= MAX_SCROLL_LIMIT) return; // Batas aman maksimal 500
+    if (currentPublicLimit >= MAX_SCROLL_LIMIT) return; 
     
+    const chatStreamEl = document.getElementById('chat-stream');
+    if (!chatStreamEl) return;
+
     isLoadingMore = true;
 
     const indicator = document.getElementById('load-more-indicator');
     if (indicator) indicator.style.display = 'block';
 
-    const chatStreamEl = document.getElementById('chat-stream');
-    if (!chatStreamEl) {
-        isLoadingMore = false;
-        return;
-    }
-
+    // 🌟 KUNCI POSISI SCROLL & TINGGI SEBELUM LIMIT DITAMBAH
     const oldScrollHeight = chatStreamEl.scrollHeight;
     const oldScrollTop = chatStreamEl.scrollTop;
 
@@ -2203,19 +2201,14 @@ function triggerLoadMorePublic() {
     console.log("Memuat riwayat publik lebih banyak, batas:", currentPublicLimit);
 
     loadChatStream(() => {
-        requestAnimationFrame(() => {
-            const newScrollHeight = chatStreamEl.scrollHeight;
-            chatStreamEl.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+        // 🌟 PULIHKAN POSISI SCROL SEKETIKA TANPA JEDAH (Mencegah mental ke atas)
+        const newScrollHeight = chatStreamEl.scrollHeight;
+        chatStreamEl.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
 
-            setTimeout(() => {
-                isLoadingMore = false;
-                if (indicator) indicator.style.display = 'none';
-
-                if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPublicLimit < MAX_SCROLL_LIMIT) {
-                    triggerLoadMorePublic();
-                }
-            }, 150);
-        });
+        setTimeout(() => {
+            isLoadingMore = false;
+            if (indicator) indicator.style.display = 'none';
+        }, 100);
     });
 }
 
