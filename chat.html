@@ -1971,7 +1971,7 @@ let previousScrollHeight = 0;
 // Variable penanda sederhana untuk memaksa turun ke bawah
 let shouldForceScrollDown = false;
 
-// === 1. PEMUAT CHAT PUBLIK SEDERHANA DENGAN CALLBACK ===
+// === 1. PEMUAT CHAT PUBLIK DENGAN LOCALSTORAGE FALLBACK ===
 function loadChatStream(onLoaded) {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
@@ -1980,17 +1980,36 @@ function loadChatStream(onLoaded) {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
 
-        // 🌟 1. HITUNG POSISI BAWAH SEBELUM DOM DI-RESET (Mencegah Bouncing)
         const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
 
-        chatStream.innerHTML = '';
+        // Jika snapshot ada, simpan salinannya ke localStorage sebagai cache offline
+        if (snapshot.exists()) {
+            let cacheData = {};
+            snapshot.forEach(child => {
+                cacheData[child.key] = child.val();
+            });
+            localStorage.setItem('rt05_public_chat_cache', JSON.stringify(cacheData));
+        }
 
+        // Handle jika snapshot kosong (misal offline total dan belum ada cache sama sekali)
         if (!snapshot.exists()) {
-            chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
+            const cachedLocal = localStorage.getItem('rt05_public_chat_cache');
+            if (cachedLocal) {
+                // Gunakan data cadangan dari localStorage jika ada
+                renderCachedPublicMessages(cachedLocal, chatStream, isAtBottom);
+                if (typeof onLoaded === 'function') onLoaded();
+                return;
+            }
+
+            if (chatStream.children.length === 0) {
+                chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan atau menunggu sinkronisasi offline...</div>';
+            }
             isInitialPublicChatLoaded = true;
             if (typeof onLoaded === 'function') onLoaded();
             return;
         }
+
+        chatStream.innerHTML = '';
 
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
         const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
@@ -2026,19 +2045,45 @@ function loadChatStream(onLoaded) {
 
         isInitialPublicChatLoaded = true;
 
-        // 🌟 2. EKSEKUSI PENURUNAN SCROLL DENGAN AMAN
         if (isAtBottom || shouldForceScrollDown) {
             chatStream.scrollTop = chatStream.scrollHeight;
-            shouldForceScrollDown = false; 
+            shouldForceScrollDown = false;
         }
 
-        // 🌟 3. JALANKAN CALLBACK UNTUK PAGINATION (LOAD MORE)
         if (typeof onLoaded === 'function') {
             onLoaded();
+        }
+    }, (error) => {
+        console.error("Error koneksi, memuat cache offline publik:", error);
+        // Fallback darurat saat error koneksi / offline
+        const cachedLocal = localStorage.getItem('rt05_public_chat_cache');
+        if (cachedLocal && chatStream.children.length === 0) {
+            renderCachedPublicMessages(cachedLocal, chatStream, true);
+        } else if (chatStream.children.length === 0) {
+            chatStream.innerHTML = '<div style="text-align: center; color: #fb7185; font-size: 11px; padding: 10px;">Mode Offline: Tidak ada data cache tersimpan.</div>';
         }
     });
 }
 
+// Fungsi pembantu untuk merender pesan dari cache lokal
+function renderCachedPublicMessages(cachedJson, chatStream, forceScroll) {
+    try {
+        const dataObj = JSON.parse(cachedJson);
+        chatStream.innerHTML = '<div style="background: rgba(245, 158, 11, 0.1); color: #fcd34d; font-size: 10px; text-align: center; padding: 4px; margin-bottom: 4px; border-radius: 4px;">⚠️ Mode Offline (Menampilkan riwayat tersimpan)</div>';
+        
+        Object.entries(dataObj).forEach(([msgKey, msgData]) => {
+            renderSingleMessage(msgData, false, msgKey);
+        });
+
+        if (forceScroll) {
+            chatStream.scrollTop = chatStream.scrollHeight;
+        }
+    } catch (e) {
+        console.log("Gagal memparsing cache chat publik:", e);
+    }
+}
+
+    
 // === 2. PEMUAT CHAT PRIVAT DENGAN LIMIT DINAMIS & CALLBACK ===
 function loadPrivateChatStream(targetUID, onLoaded) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
