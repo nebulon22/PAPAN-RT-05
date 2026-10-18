@@ -74,7 +74,7 @@ self.addEventListener('message', (event) => {
   }
 });
 
-// --- TAMBAHAN: Penanganan Push Notification & App Badge di Background ---
+
 // --- TAMBAHAN: Penanganan Push Notification & App Badge di Background ---
 self.addEventListener('push', (event) => {
   let data = { title: 'Pesan Baru', body: 'Anda menerima pesan baru.' };
@@ -92,7 +92,6 @@ self.addEventListener('push', (event) => {
     body: data.body || 'Anda menerima pesan baru.',
     icon: './kentongan-slit-drum.png',
     badge: './kentongan-slit-drum.png', // Ikon monokrom kecil untuk status bar Android
-    vibrate: [100, 50, 100],
     silent: true,
     data: {
       url: data.url || './index.html',
