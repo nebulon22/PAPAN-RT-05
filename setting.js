@@ -3,7 +3,7 @@
 function bukaModalSetting() {
   const savedMode = localStorage.getItem('rt05_setting_mode') || 'normal';
   const savedChatActive = localStorage.getItem('rt05_setting_chat') !== 'false';
-  const savedSoundFile = localStorage.getItem('rt05_setting_sound_file') || 'notif.mp3'; // Default
+  const savedSoundFile = localStorage.getItem('rt05_setting_sound_file') || 'audio/bell2.mp3'; // Default ke folder audio
 
   document.getElementById('setting-mode-notif').value = savedMode;
   document.getElementById('setting-chat-active').checked = savedChatActive;
@@ -33,10 +33,10 @@ function picuNotifikasiMedia() {
   const mode = localStorage.getItem('rt05_setting_mode') || 'normal';
   if (mode === 'sunyi') return;
 
-  // 1. Jalankan Suara Berdasarkan Pilihan Pengguna
+  // 1. Jalankan Suara Berdasarkan Pilihan Pengguna dari Folder Audio
   if (mode === 'normal' || mode === 'suara') {
     try {
-      const selectedSound = localStorage.getItem('rt05_setting_sound_file') || 'notif.mp3';
+      const selectedSound = localStorage.getItem('rt05_setting_sound_file') || 'audio/bell2.mp3';
       var audio = new Audio(selectedSound); // Memutar file sesuai pilihan di dropdown
       
       audio.play().catch(e => {
