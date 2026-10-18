@@ -2099,14 +2099,11 @@ function renderCachedPublicMessages(cachedJson, chatStream, forceScroll) {
 }
 
     
-// === 2. PEMUAT CHAT PRIVAT DENGAN LIMIT DINAMIS & CALLBACK ===
+// === 2. PEMUAT CHAT PRIVAT DENGAN SCROLL FIX & CALLBACK ===
 function loadPrivateChatStream(targetUID, onLoaded) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
     
-    // 🌟 1. Ambil limit privat untuk room ini (default 50 jika belum ada)
     const currentLimit = currentPrivateLimit[roomID] || 50; 
-
-    // 🌟 2. Gunakan currentLimit, bukan angka 500 statis
     const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(currentLimit));
     const chatStream = document.getElementById('chat-stream');
 
@@ -2114,7 +2111,7 @@ function loadPrivateChatStream(targetUID, onLoaded) {
         if (!chatStream) return;
         if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
 
-        // Hitung posisi bawah sebelum DOM dibersihkan
+        // Cek posisi bawah sebelum DOM dibersihkan
         const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
 
         chatStream.innerHTML = '';
@@ -2150,6 +2147,7 @@ function loadPrivateChatStream(targetUID, onLoaded) {
 
         isInitialPrivateChatLoaded[targetUID] = true;
         
+        // 🌟 1. EKSEKUSI SCROLL BAWAH LEBIH AWAL & PASTIKAN BERJALAN
         if (isAtBottom || shouldForceScrollDown) {
             chatStream.scrollTop = chatStream.scrollHeight;
             shouldForceScrollDown = false;
@@ -2159,9 +2157,18 @@ function loadPrivateChatStream(targetUID, onLoaded) {
             markRoomAsRead(targetUID);
         }
 
-        // 🌟 3. Jalankan callback untuk menjaga posisi scroll saat load more berjalan
+        // 🌟 2. JALANKAN CALLBACK SETELAH SCROLL SELESAI
         if (typeof onLoaded === 'function') {
             onLoaded();
+        }
+
+        // 🌟 3. PENGAMAN TAMBAHAN (DOUBLE CHECK SCROLL)
+        // Mencegah race condition jika DOM butuh waktu sesaat untuk merender gambar/teks panjang
+        if (shouldForceScrollDown) {
+            setTimeout(() => {
+                chatStream.scrollTop = chatStream.scrollHeight;
+                shouldForceScrollDown = false;
+            }, 50);
         }
     });
 }
