@@ -1971,9 +1971,8 @@ let previousScrollHeight = 0;
 // Variable penanda sederhana untuk memaksa turun ke bawah
 let shouldForceScrollDown = false;
 
-// === 1. PEMUAT CHAT PUBLIK SEDERHANA ===
-function loadChatStream() {
-    // 🛠️ Ubah dari 500 statis menjadi menggunakan variabel currentPublicLimit
+// === 1. PEMUAT CHAT PUBLIK SEDERHANA DENGAN CALLBACK ===
+function loadChatStream(onLoaded) {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
 
@@ -1981,7 +1980,7 @@ function loadChatStream() {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
 
-        // Cek apakah posisi user sedang di bawah (toleransi 100px) atau dipaksa turun oleh tombol Send
+        // 🌟 1. HITUNG POSISI BAWAH SEBELUM DOM DI-RESET (Mencegah Bouncing)
         const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
 
         chatStream.innerHTML = '';
@@ -1989,6 +1988,7 @@ function loadChatStream() {
         if (!snapshot.exists()) {
             chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
             isInitialPublicChatLoaded = true;
+            if (typeof onLoaded === 'function') onLoaded();
             return;
         }
 
@@ -1998,7 +1998,7 @@ function loadChatStream() {
         let isUnreadSection = false;
         if (!lastReadPublicMapKey) isUnreadSection = true;
 
-      snapshot.forEach((childSnap) => {
+        snapshot.forEach((childSnap) => {
             const msgKey = childSnap.key;
             const msgData = childSnap.val();
 
@@ -2006,11 +2006,9 @@ function loadChatStream() {
             if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
                 isUnreadMsg = true;
 
-                // 🔔 PENGAMAN TAMBAHAN: Cek apakah pesan ini sudah pernah dibunyikan sebelumnya
                 const notifKey = 'notified_' + msgKey;
                 if (!sessionStorage.getItem(notifKey)) {
                     sessionStorage.setItem(notifKey, 'true');
-                    
                     try {
                         if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
                             window.parent.picuNotifikasiMedia();
@@ -2026,13 +2024,17 @@ function loadChatStream() {
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
-      
         isInitialPublicChatLoaded = true;
 
-        // LOGIKA SEDERHANA: Jika posisi di bawah ATAU baru saja tekan tombol kirim (force), langsung turun!
+        // 🌟 2. EKSEKUSI PENURUNAN SCROLL DENGAN AMAN
         if (isAtBottom || shouldForceScrollDown) {
             chatStream.scrollTop = chatStream.scrollHeight;
-            shouldForceScrollDown = false; // Reset kembali status paksa
+            shouldForceScrollDown = false; 
+        }
+
+        // 🌟 3. JALANKAN CALLBACK UNTUK PAGINATION (LOAD MORE)
+        if (typeof onLoaded === 'function') {
+            onLoaded();
         }
     });
 }
