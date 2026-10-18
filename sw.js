@@ -75,9 +75,8 @@ self.addEventListener('message', (event) => {
 });
 
 
-// --- TAMBAHAN: Penanganan Push Notification & App Badge di Background ---
 self.addEventListener('push', (event) => {
-  let data = { title: 'Pesan Baru', body: 'Anda menerima pesan baru.' };
+  let data = { title: 'Pesan Baru', body: 'Anda menerima pesan baru.', mode: 'normal' };
   
   if (event.data) {
     try {
@@ -88,11 +87,14 @@ self.addEventListener('push', (event) => {
   }
 
   const title = data.title || 'RT 05 Kayen';
+  
+  // Tentukan perilaku berdasarkan mode dari pengaturan user (normal, sound_only, vibrate_only, silent)
+  const notifMode = data.mode || 'normal'; 
+  
   const options = {
     body: data.body || 'Anda menerima pesan baru.',
     icon: './kentongan-slit-drum.png',
-    badge: './kentongan-slit-drum.png', // Ikon monokrom kecil untuk status bar Android
-    silent: true,
+    badge: './kentongan-slit-drum.png',
     data: {
       url: data.url || './index.html',
       dateOfArrival: Date.now(),
@@ -100,14 +102,28 @@ self.addEventListener('push', (event) => {
     }
   };
 
+  // Konfigurasi dinamis berdasarkan pilihan di UI Pengaturan Notifikasi:
+  if (notifMode === 'silent') {
+    options.silent = true;
+    // Tidak ada vibrate karena silent
+  } else if (notifMode === 'sound_only') {
+    options.silent = false;
+    // Tidak pakai vibrate, hanya suara bawaan / default
+  } else if (notifMode === 'vibrate_only') {
+    options.silent = true; // Agar tidak bentrok, set silent true tapi jalankan getar manual lewat setelan lain jika didukung, atau:
+    options.vibrate = [100, 50, 100];
+  } else {
+    // Mode Normal (Suara & Getar)
+    options.silent = false;
+    options.vibrate = [100, 50, 100];
+  }
+
   const count = data.unreadCount ? parseInt(data.unreadCount, 10) : 1;
 
   event.waitUntil(
     Promise.all([
-      // 1. Wajib ada agar Android merekam notifikasi di system tray & memicu badge sistem
       self.registration.showNotification(title, options),
       
-      // 2. Memperbarui App Badge di ikon home screen
       (async () => {
         if ('setAppBadge' in navigator) {
           try {
