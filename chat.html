@@ -1971,8 +1971,8 @@ let previousScrollHeight = 0;
 // Variable penanda sederhana untuk memaksa turun ke bawah
 let shouldForceScrollDown = false;
 
-// === 1. PEMUAT CHAT PUBLIK DENGAN LOCALSTORAGE FALLBACK ===
-function loadChatStream(onLoaded) {
+// === 1. PEMUAT CHAT PUBLIK (FUNGSI ASLI + CACHE OFFLINE AMAN) ===
+function loadChatStream() {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
 
@@ -1980,9 +1980,10 @@ function loadChatStream(onLoaded) {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
 
+        // Cek apakah posisi user sedang di bawah (toleransi 100px) atau dipaksa turun oleh tombol Send
         const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
 
-        // Jika snapshot ada, simpan salinannya ke localStorage sebagai cache offline
+        // 🌟 CACHE OFFLINE: Simpan salinan ke localStorage jika snapshot ada dari server/cache lokal Firebase
         if (snapshot.exists()) {
             let cacheData = {};
             snapshot.forEach(child => {
@@ -1991,21 +1992,30 @@ function loadChatStream(onLoaded) {
             localStorage.setItem('rt05_public_chat_cache', JSON.stringify(cacheData));
         }
 
-        // Handle jika snapshot kosong (misal offline total dan belum ada cache sama sekali)
+        // 🛡️ FALLBACK OFFLINE TOTAL: Jika snapshot benar-benar kosong/gagal total saat offline, ambil dari localStorage
         if (!snapshot.exists()) {
             const cachedLocal = localStorage.getItem('rt05_public_chat_cache');
             if (cachedLocal) {
-                // Gunakan data cadangan dari localStorage jika ada
-                renderCachedPublicMessages(cachedLocal, chatStream, isAtBottom);
-                if (typeof onLoaded === 'function') onLoaded();
-                return;
+                try {
+                    chatStream.innerHTML = '<div style="background: rgba(245, 158, 11, 0.1); color: #fcd34d; font-size: 10px; text-align: center; padding: 4px; margin-bottom: 4px; border-radius: 4px;">⚠️ Mode Offline (Menampilkan riwayat tersimpan)</div>';
+                    const dataObj = JSON.parse(cachedLocal);
+                    Object.entries(dataObj).forEach(([msgKey, msgData]) => {
+                        renderSingleMessage(msgData, false, msgKey);
+                    });
+                    isInitialPublicChatLoaded = true;
+                    if (isAtBottom || shouldForceScrollDown) {
+                        chatStream.scrollTop = chatStream.scrollHeight;
+                        shouldForceScrollDown = false;
+                    }
+                    return;
+                } catch (e) {
+                    console.log("Gagal memparsing cache lokal:", e);
+                }
             }
 
-            if (chatStream.children.length === 0) {
-                chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan atau menunggu sinkronisasi offline...</div>';
-            }
+            // Jika benar-benar kosong dan tidak ada cache
+            chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
             isInitialPublicChatLoaded = true;
-            if (typeof onLoaded === 'function') onLoaded();
             return;
         }
 
@@ -2025,9 +2035,11 @@ function loadChatStream(onLoaded) {
             if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
                 isUnreadMsg = true;
 
+                // 🔔 PENGAMAN TAMBAHAN: Cek apakah pesan ini sudah pernah dibunyikan sebelumnya
                 const notifKey = 'notified_' + msgKey;
                 if (!sessionStorage.getItem(notifKey)) {
                     sessionStorage.setItem(notifKey, 'true');
+                    
                     try {
                         if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
                             window.parent.picuNotifikasiMedia();
@@ -2045,26 +2057,29 @@ function loadChatStream(onLoaded) {
 
         isInitialPublicChatLoaded = true;
 
+        // LOGIKA ASLI: Jika posisi di bawah ATAU baru saja tekan tombol kirim (force), langsung turun!
         if (isAtBottom || shouldForceScrollDown) {
             chatStream.scrollTop = chatStream.scrollHeight;
-            shouldForceScrollDown = false;
-        }
-
-        if (typeof onLoaded === 'function') {
-            onLoaded();
+            shouldForceScrollDown = false; // Reset kembali status paksa
         }
     }, (error) => {
-        console.error("Error koneksi, memuat cache offline publik:", error);
-        // Fallback darurat saat error koneksi / offline
+        console.error("Error pada snapshot chat publik:", error);
+        // Fallback darurat jika onValue error (misal terputus di tengah jalan)
         const cachedLocal = localStorage.getItem('rt05_public_chat_cache');
         if (cachedLocal && chatStream.children.length === 0) {
-            renderCachedPublicMessages(cachedLocal, chatStream, true);
-        } else if (chatStream.children.length === 0) {
-            chatStream.innerHTML = '<div style="text-align: center; color: #fb7185; font-size: 11px; padding: 10px;">Mode Offline: Tidak ada data cache tersimpan.</div>';
+            try {
+                chatStream.innerHTML = '<div style="background: rgba(245, 158, 11, 0.1); color: #fcd34d; font-size: 10px; text-align: center; padding: 4px; margin-bottom: 4px; border-radius: 4px;">⚠️ Mode Offline (Koneksi terputus)</div>';
+                const dataObj = JSON.parse(cachedLocal);
+                Object.entries(dataObj).forEach(([msgKey, msgData]) => {
+                    renderSingleMessage(msgData, false, msgKey);
+                });
+                chatStream.scrollTop = chatStream.scrollHeight;
+            } catch (e) {}
         }
     });
 }
 
+    
 // Fungsi pembantu untuk merender pesan dari cache lokal
 function renderCachedPublicMessages(cachedJson, chatStream, forceScroll) {
     try {
