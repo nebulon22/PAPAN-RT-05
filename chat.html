@@ -2039,16 +2039,22 @@ function loadChatStream(onLoaded) {
     });
 }
 
-// === 2. PEMUAT CHAT PRIVAT SEDERHANA DENGAN ANIMASI UNREAD ===
-function loadPrivateChatStream(targetUID) {
+// === 2. PEMUAT CHAT PRIVAT DENGAN LIMIT DINAMIS & CALLBACK ===
+function loadPrivateChatStream(targetUID, onLoaded) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
-    const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(500));
+    
+    // 🌟 1. Ambil limit privat untuk room ini (default 50 jika belum ada)
+    const currentLimit = currentPrivateLimit[roomID] || 50; 
+
+    // 🌟 2. Gunakan currentLimit, bukan angka 500 statis
+    const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(currentLimit));
     const chatStream = document.getElementById('chat-stream');
 
     currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
         if (!chatStream) return;
         if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
 
+        // Hitung posisi bawah sebelum DOM dibersihkan
         const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
 
         chatStream.innerHTML = '';
@@ -2056,10 +2062,10 @@ function loadPrivateChatStream(targetUID) {
         if (!snapshot.exists()) {
             chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID] || 'Warga')}. Mulai percakapan!</div>`;
             isInitialPrivateChatLoaded[targetUID] = true;
+            if (typeof onLoaded === 'function') onLoaded();
             return;
         }
 
-        // Ambil key pesan terakhir yang sudah dibaca untuk room privat ini dari localStorage
         const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
         const lastReadKey = lastReadKeyMap[targetUID];
 
@@ -2071,7 +2077,6 @@ function loadPrivateChatStream(targetUID) {
             const msgData = childSnap.val();
 
             let isUnreadMsg = false;
-            // Jika masuk area unread, pesan dari lawan chat, dan bukan muatan pertama kali buka chat
             if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
                 isUnreadMsg = true;
             }
@@ -2080,7 +2085,6 @@ function loadPrivateChatStream(targetUID) {
                 isUnreadSection = true;
             }
 
-            // Kirim status isUnread ke renderSingleMessage agar animasi background putih tipis berjalan
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
@@ -2093,6 +2097,11 @@ function loadPrivateChatStream(targetUID) {
 
         if (isChatVisible) {
             markRoomAsRead(targetUID);
+        }
+
+        // 🌟 3. Jalankan callback untuk menjaga posisi scroll saat load more berjalan
+        if (typeof onLoaded === 'function') {
+            onLoaded();
         }
     });
 }
