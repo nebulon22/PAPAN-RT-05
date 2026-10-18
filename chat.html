@@ -1971,7 +1971,7 @@ let previousScrollHeight = 0;
 // Variable penanda sederhana untuk memaksa turun ke bawah
 let shouldForceScrollDown = false;
 
-// === 1. PEMUAT CHAT PUBLIK (LENGKAP: CACHE OFFLINE, UNREAD, & CALLBACK LOADMORE) ===
+// === 1. PEMUAT CHAT PUBLIK (FUNGSI ASLI ANDA + CALLBACK LOADMORE) ===
 function loadChatStream(onLoaded) {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
@@ -1980,10 +1980,10 @@ function loadChatStream(onLoaded) {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
 
-        // 🌟 1. HITUNG POSISI BAWAH SEBELUM DOM DIKOSONGKAN (Mencegah loncatan/bouncing)
+        // Cek apakah posisi user sedang di bawah (toleransi 100px) atau dipaksa turun oleh tombol Send
         const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
 
-        // 🌟 2. CACHE OFFLINE: Simpan salinan ke localStorage jika snapshot ada
+        // 🌟 CACHE OFFLINE: Simpan salinan ke localStorage jika snapshot ada dari server/cache lokal Firebase
         if (snapshot.exists()) {
             let cacheData = {};
             snapshot.forEach(child => {
@@ -1992,7 +1992,7 @@ function loadChatStream(onLoaded) {
             localStorage.setItem('rt05_public_chat_cache', JSON.stringify(cacheData));
         }
 
-        // 🌟 3. FALLBACK OFFLINE TOTAL: Jika snapshot kosong/gagal total saat offline
+        // 🛡️ FALLBACK OFFLINE TOTAL: Jika snapshot benar-benar kosong/gagal total saat offline, ambil dari localStorage
         if (!snapshot.exists()) {
             const cachedLocal = localStorage.getItem('rt05_public_chat_cache');
             if (cachedLocal) {
@@ -2003,26 +2003,24 @@ function loadChatStream(onLoaded) {
                         renderSingleMessage(msgData, false, msgKey);
                     });
                     isInitialPublicChatLoaded = true;
-
                     if (isAtBottom || shouldForceScrollDown) {
                         chatStream.scrollTop = chatStream.scrollHeight;
                         shouldForceScrollDown = false;
                     }
-
-                    if (typeof onLoaded === 'function') onLoaded();
+                    if (typeof onLoaded === 'function') onLoaded(); // 👈 Tambahan agar pagination jalan
                     return;
                 } catch (e) {
                     console.log("Gagal memparsing cache lokal:", e);
                 }
             }
 
+            // Jika benar-benar kosong dan tidak ada cache
             chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
             isInitialPublicChatLoaded = true;
-            if (typeof onLoaded === 'function') onLoaded();
+            if (typeof onLoaded === 'function') onLoaded(); // 👈 Tambahan agar pagination jalan
             return;
         }
 
-        // Kosongkan DOM untuk merender ulang data terbaru
         chatStream.innerHTML = '';
 
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
@@ -2039,7 +2037,7 @@ function loadChatStream(onLoaded) {
             if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
                 isUnreadMsg = true;
 
-                // 🔔 PENGAMAN NOTIFIKASI: Cek apakah pesan ini sudah pernah dibunyikan sebelumnya
+                // 🔔 PENGAMAN TAMBAHAN: Cek apakah pesan ini sudah pernah dibunyikan sebelumnya
                 const notifKey = 'notified_' + msgKey;
                 if (!sessionStorage.getItem(notifKey)) {
                     sessionStorage.setItem(notifKey, 'true');
@@ -2061,20 +2059,19 @@ function loadChatStream(onLoaded) {
 
         isInitialPublicChatLoaded = true;
 
-        // 🌟 4. LOGIKA UTAMA SCROLL BAWAH & TOMBOL SEND
+        // LOGIKA ASLI: Jika posisi di bawah ATAU baru saja tekan tombol kirim (force), langsung turun!
         if (isAtBottom || shouldForceScrollDown) {
             chatStream.scrollTop = chatStream.scrollHeight;
-            shouldForceScrollDown = false; // Reset status paksa setelah turun
+            shouldForceScrollDown = false; // Reset kembali status paksa
         }
 
-        // 🌟 5. JALANKAN CALLBACK AGAR FITUR LOAD MORE (PAGINATION) BISA BERJALAN
+        // 🌟 JALANKAN CALLBACK DI SINI AGAR LOAD MORE BISA MENYESUAIKAN POSISI SCROLL
         if (typeof onLoaded === 'function') {
             onLoaded();
         }
     }, (error) => {
         console.error("Error pada snapshot chat publik:", error);
-        
-        // Fallback darurat jika onValue error / terputus di tengah jalan
+        // Fallback darurat jika onValue error (misal terputus di tengah jalan)
         const cachedLocal = localStorage.getItem('rt05_public_chat_cache');
         if (cachedLocal && chatStream.children.length === 0) {
             try {
@@ -2086,10 +2083,7 @@ function loadChatStream(onLoaded) {
                 chatStream.scrollTop = chatStream.scrollHeight;
             } catch (e) {}
         }
-
-        if (typeof onLoaded === 'function') {
-            onLoaded();
-        }
+        if (typeof onLoaded === 'function') onLoaded();
     });
 }
     
