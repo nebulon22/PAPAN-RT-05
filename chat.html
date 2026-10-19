@@ -155,6 +155,41 @@
   font-weight: 700 !important;
   text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
 }
+
+/* Tombol Mengambang Panah ke Bawah (Scroll to Bottom) */
+#btn-scroll-bottom {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  background: #0288d1;
+  color: #fff;
+  border: 1px solid #38bdf8;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: none; /* Disembunyikan secara default */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  z-index: 40;
+  transition: transform 0.2s, background 0.2s;
+}
+#btn-scroll-bottom:hover {
+  background: #0277bd;
+  transform: scale(1.05);
+}
+#btn-scroll-bottom .unread-badge-floating {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 10px;
+}
     
     .badge-admin {
       background: rgba(56, 189, 248, 0.2);
@@ -398,7 +433,10 @@
           <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke ruang chat...
         </div>
       </div>
-
+      <!-- 🌟 TOMBOL MENGAMBANG PANAH KE BAWAH -->
+<button id="btn-scroll-bottom" onclick="scrollToBottom(true)" title="Kembali ke Pesan Terbaru">
+  <i class="fa-solid fa-angles-down" style="font-size: 14px;"></i>
+</button>
     </main>
 
     <!-- TOMBOL PANAH TOGGLE -->
@@ -1291,11 +1329,15 @@ document.addEventListener('visibilitychange', () => {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
-      // 🌟 KUNCI SEDERHANA: Tandai bahwa pesan dikirim oleh kita, jadi wajib turun ke bawah tanpakedip!
       shouldForceScrollDown = true;
 
       input.value = '';
       input.focus();
+
+      // 🌟 LANGSUNG PAKSA TURUN KE BAWAH SEKETIKA KETIKA KIRIM PESAN SENDIRI
+      if (typeof scrollToBottom === 'function') {
+          scrollToBottom(false); 
+      }
 
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
@@ -1348,10 +1390,6 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
-
-    
-    // Bind fungsi secara global ke window agar terbaca penuh oleh form HTML
-    window.sendChatMessage = executeSendMessage;
     
  // Pemantau Pesan Unread Grup Chat Publik
     let publicGroupListener = null;
@@ -1948,7 +1986,56 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
- 
+ // === KONTROL TOMBOL SCROLL KE BAWAH & DETEKSI POSISI ===
+const chatStreamEl = document.getElementById('chat-stream');
+const btnScrollBottom = document.getElementById('btn-scroll-bottom');
+
+// Fungsi untuk menggulirkan chat ke paling bawah secara mulus
+window.scrollToBottom = function(smooth = false) {
+    if (!chatStreamEl) return;
+    if (smooth) {
+        chatStreamEl.scrollTo({
+            top: chatStreamEl.scrollHeight,
+            behavior: 'smooth'
+        });
+    } else {
+        chatStreamEl.scrollTop = chatStreamEl.scrollHeight;
+    }
+    // Sembunyikan tombol saat sudah di bawah
+    if (btnScrollBottom) {
+        btnScrollBottom.style.display = 'none';
+    }
+};
+
+// Pantau pergerakan scroll pada stream chat
+if (chatStreamEl) {
+    chatStreamEl.addEventListener('scroll', () => {
+        // Hitung jarak dari posisi bawah (toleransi 150px)
+        const distanceFromBottom = chatStreamEl.scrollHeight - chatStreamEl.scrollTop - chatStreamEl.clientHeight;
+        
+        // Jika user menggulir ke atas menjauhi bagian bawah (> 150px)
+        if (distanceFromBottom > 150) {
+            if (btnScrollBottom) btnScrollBottom.style.display = 'flex';
+        } else {
+            if (btnScrollBottom) btnScrollBottom.style.display = 'none';
+        }
+
+        // Trigger pagination load more jika berada di paling atas (<= 5px)
+        if (!isLoadingMore && chatStreamEl.scrollTop <= 5) {
+            if (activeChatType === 'public') {
+                if (currentPublicLimit < MAX_SCROLL_LIMIT) {
+                    triggerLoadMorePublic();
+                }
+            } else if (activeChatType === 'private' && activePrivateUID) {
+                const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+                const currentLimit = currentPrivateLimit[roomID] || 50;
+                if (currentLimit < MAX_PRIVATE_LIMIT) {
+                    triggerLoadMorePrivate(roomID, activePrivateUID);
+                }
+            }
+        }
+    });
+}
 
     
     
@@ -1971,7 +2058,7 @@ let previousScrollHeight = 0;
 // Variable penanda sederhana untuk memaksa turun ke bawah
 let shouldForceScrollDown = false;
 
-// === 1. PEMUAT CHAT PUBLIK (FUNGSI ASLI ANDA + CALLBACK LOADMORE) ===
+// === 1. PEMUAT CHAT PUBLIK (DENGAN DUKUNGAN TOMBOL PANAH BAWAH) ===
 function loadChatStream(onLoaded) {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
@@ -2004,20 +2091,19 @@ function loadChatStream(onLoaded) {
                     });
                     isInitialPublicChatLoaded = true;
                     if (isAtBottom || shouldForceScrollDown) {
-                        chatStream.scrollTop = chatStream.scrollHeight;
+                        scrollToBottom(false);
                         shouldForceScrollDown = false;
                     }
-                    if (typeof onLoaded === 'function') onLoaded(); // 👈 Tambahan agar pagination jalan
+                    if (typeof onLoaded === 'function') onLoaded();
                     return;
                 } catch (e) {
                     console.log("Gagal memparsing cache lokal:", e);
                 }
             }
 
-            // Jika benar-benar kosong dan tidak ada cache
             chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
             isInitialPublicChatLoaded = true;
-            if (typeof onLoaded === 'function') onLoaded(); // 👈 Tambahan agar pagination jalan
+            if (typeof onLoaded === 'function') onLoaded();
             return;
         }
 
@@ -2059,10 +2145,17 @@ function loadChatStream(onLoaded) {
 
         isInitialPublicChatLoaded = true;
 
-        // LOGIKA ASLI: Jika posisi di bawah ATAU baru saja tekan tombol kirim (force), langsung turun!
+        // 🌟 LOGIKA UTAMA: Jika user di bawah atau kirim pesan sendiri, langsung turunkan.
+        // Jika user sedang di atas (baca riwayat), jangan dipaksa turun, tapi munculkan tombol panah bawah jika ada pesan baru.
         if (isAtBottom || shouldForceScrollDown) {
-            chatStream.scrollTop = chatStream.scrollHeight;
-            shouldForceScrollDown = false; // Reset kembali status paksa
+            scrollToBottom(false);
+            shouldForceScrollDown = false; 
+        } else {
+            // Jika user posisinya di atas dan ada pesan masuk baru, tampilkan tombol panah mengambang
+            const btnScrollBottom = document.getElementById('btn-scroll-bottom');
+            if (btnScrollBottom && isInitialPublicChatLoaded) {
+                btnScrollBottom.style.display = 'flex';
+            }
         }
 
         // 🌟 JALANKAN CALLBACK DI SINI AGAR LOAD MORE BISA MENYESUAIKAN POSISI SCROLL
@@ -2071,7 +2164,6 @@ function loadChatStream(onLoaded) {
         }
     }, (error) => {
         console.error("Error pada snapshot chat publik:", error);
-        // Fallback darurat jika onValue error (misal terputus di tengah jalan)
         const cachedLocal = localStorage.getItem('rt05_public_chat_cache');
         if (cachedLocal && chatStream.children.length === 0) {
             try {
@@ -2080,7 +2172,7 @@ function loadChatStream(onLoaded) {
                 Object.entries(dataObj).forEach(([msgKey, msgData]) => {
                     renderSingleMessage(msgData, false, msgKey);
                 });
-                chatStream.scrollTop = chatStream.scrollHeight;
+                scrollToBottom(false);
             } catch (e) {}
         }
         if (typeof onLoaded === 'function') onLoaded();
