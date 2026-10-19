@@ -2345,12 +2345,23 @@ function triggerLoadMorePrivate(roomID, targetUID) {
 }
 
 // === 5. EVENT LISTENER SCROLL UTAMA (Anti-Bouncing & Presisi) ===
-let isLoadingMore = false;
-const chatStreamEl = document.getElementById('chat-stream');
+// (Variabel chatStreamEl dan isLoadingMore sudah didefinisikan di atas, jadi langsung gunakan)
 
 if (chatStreamEl) {
     chatStreamEl.addEventListener('scroll', () => {
-        // Hanya trigger jika posisi scroll benar-benar di paling atas (<= 5)
+        // Hitung jarak dari posisi bawah untuk tombol floating scroll-to-bottom
+        const distanceFromBottom = chatStreamEl.scrollHeight - chatStreamEl.scrollTop - chatStreamEl.clientHeight;
+        const btnScrollBottom = document.getElementById('btn-scroll-bottom');
+        
+        if (btnScrollBottom) {
+            if (distanceFromBottom > 150) {
+                btnScrollBottom.style.display = 'flex';
+            } else {
+                btnScrollBottom.style.display = 'none';
+            }
+        }
+
+        // Hanya trigger load more jika posisi scroll benar-benar di paling atas (<= 5)
         if (isLoadingMore || chatStreamEl.scrollTop > 5) return;
 
         // A. Chat Publik
