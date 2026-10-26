@@ -1,9 +1,7 @@
-// utils.js - Kumpulan Variabel dan Fungsi Global RT 05 (Optimized & Complete)
+// utils.js - Kumpulan Variabel dan Fungsi Global RT 05 (Full Firebase)
 
   // Konfigurasi global dipasang langsung agar siap di awal
   const RT05_CONFIG = {
-      GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbz5RqSEYxjwq_wr3ItVkLRexeGWjKLUtxmhVdqbm7kIFdngulFWdBCLU0xqBOichmMQuw/exec",
-      SHEET_ID: "1zk_ZhczenW5-sZ7B_jvLpzAXEKeyJcxHCTd_qiqbW3Y",
       FIREBASE: {
           apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
           authDomain: "papan05-21a56.firebaseapp.com",
@@ -23,99 +21,26 @@
   };
 
 // ==========================================
-// PENGAMBILAN DATA GOOGLE SHEETS SUPER CEPAT & OFFLINE-READY (JSON / TEXT)
+// INISIALISASI FIREBASE SDK (CENTRALIZED)
 // ==========================================
-async function ambilDataSheets(urlCacheKey, targetUrl, callbackRender) {
-    const cachedString = localStorage.getItem(urlCacheKey);
-    
-    // 1. Tampilkan data dari cache lokal secara instan (0 detik) jika ada
-    if (cachedString) {
-        try {
-            const parsedData = cachedString.trim().startsWith('{') || cachedString.trim().startsWith('[') 
-                ? JSON.parse(cachedString) 
-                : parseCSV(cachedString);
-            
-            callbackRender(parsedData, true); // true = bersumber dari cache
-        } catch (e) {
-            console.error("Gagal membaca cache lokal:", e);
-        }
-    }
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.x.x/firebase-app.js";
+import { getDatabase, ref, get, child, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.x.x/firebase-database.js";
 
-    // 2. Jika perangkat offline, hentikan proses jaringan
-    if (!navigator.onLine) {
-        return;
-    }
+const app = initializeApp(RT05_CONFIG.FIREBASE);
+const db = getDatabase(app);
 
-    // PERBAIKAN: Dialihkan secara aman ke Web App Backend (GAS)
-    let fetchUrl = targetUrl;
-    const tokenAdmin = localStorage.getItem('adminToken') || '';
-    
-    if (targetUrl && targetUrl.includes("docs.google.com/spreadsheets") && targetUrl.includes("/export?format=csv")) {
-        let matchGid = targetUrl.match(/gid=([0-9]+)/);
-        let gid = matchGid ? matchGid[1] : null;
-        
-        if (gid) {
-            fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getSheetByGid&gid=${gid}&token=${encodeURIComponent(tokenAdmin)}`;
-        } else {
-            fetchUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
-        }
-    }
+// Ekspor objek database agar bisa diakses global oleh file lain
+window.db = db;
+window.firebaseRef = ref;
+window.firebaseGet = get;
+window.firebaseChild = child;
+window.firebasePush = push;
+window.firebaseSet = set;
+window.firebaseOnValue = onValue;
 
-    // 3. Ambil data terbaru di latar belakang (Background Sync)
-    try {
-        const response = await fetch(fetchUrl);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP Error Status: ${response.status}`);
-        }
-
-        const contentType = response.headers.get("content-type");
-        let finalData;
-        let rawCacheContent;
-
-        if (contentType && contentType.includes("application/json")) {
-            finalData = await response.json();
-            rawCacheContent = JSON.stringify(finalData);
-        } else {
-            const textData = await response.text();
-            rawCacheContent = textData;
-            finalData = parseCSV(textData);
-        }
-        
-        localStorage.setItem(urlCacheKey, rawCacheContent);
-        callbackRender(finalData, false); // false = data segar dari server
-    } catch (err) {
-        console.warn("Jaringan bermasalah, tetap menggunakan data cadangan lokal:", err);
-    }
-}
-
-// Fungsi Parsing CSV yang Dioptimalkan
-function parseCSV(text) {
-    if (!text) return [];
-    var lines = text.replace(/\r/g, '').split('\n');
-    var result = [];
-    
-    for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
-        if (!line) continue;
-        var row = []; var inQuotes = false; var cur = '';
-        var len = line.length;
-        
-        for (var c = 0; c < len; c++) {
-            var char = line[c];
-            if (char === '"') inQuotes = !inQuotes;
-            else if (char === ',' && !inQuotes) { 
-                row.push(cur.trim().replace(/^"|"$/g, '')); 
-                cur = ''; 
-            } else {
-                cur += char;
-            }
-        }
-        row.push(cur.trim().replace(/^"|"$/g, ''));
-        result.push(row);
-    }
-    return result;
-}
+// ==========================================
+// FUNGSI UTILITY PENDUKUNG (TETAP DIPERTAHANKAN)
+// ==========================================
 
 // Fungsi Normalisasi Koordinat
 function perbaikiKoordinat(val) {
@@ -223,4 +148,3 @@ window.toggleSenterRonda = async function() {
     if (status) status.innerText = 'OFF';
   }
 };
-
