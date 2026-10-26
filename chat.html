@@ -10,8 +10,9 @@
   <!-- IMPORTANT: Panggil utils.js terlebih dahulu agar RT05_CONFIG terdefinisi -->
   <script src="utils.js"></script>
 
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+ <!-- FontAwesome Icons (Non-Blocking Load) -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
   
   <style>
     /* Reset & Base Styles */
@@ -154,6 +155,41 @@
   color: #fb923c !important; /* Oranye Cerah (Pesan Lawan Chat) */
   font-weight: 700 !important;
   text-shadow: -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000, 1px 1px 0 #000 !important;
+}
+
+/* Tombol Mengambang Panah ke Bawah (Scroll to Bottom) */
+#btn-scroll-bottom {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  background: #0288d1;
+  color: #fff;
+  border: 1px solid #38bdf8;
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  display: none; /* Disembunyikan secara default */
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+  z-index: 40;
+  transition: transform 0.2s, background 0.2s;
+}
+#btn-scroll-bottom:hover {
+  background: #0277bd;
+  transform: scale(1.05);
+}
+#btn-scroll-bottom .unread-badge-floating {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #ef4444;
+  color: #fff;
+  font-size: 9px;
+  font-weight: bold;
+  padding: 1px 5px;
+  border-radius: 10px;
 }
     
     .badge-admin {
@@ -398,7 +434,10 @@
           <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke ruang chat...
         </div>
       </div>
-
+      <!-- 🌟 TOMBOL MENGAMBANG PANAH KE BAWAH -->
+<button id="btn-scroll-bottom" onclick="scrollToBottom(true)" title="Kembali ke Pesan Terbaru">
+  <i class="fa-solid fa-angles-down" style="font-size: 14px;"></i>
+</button>
     </main>
 
     <!-- TOMBOL PANAH TOGGLE -->
@@ -1155,7 +1194,7 @@ document.addEventListener('visibilitychange', () => {
     }
 
     if (type === 'public') {
-      loadChatStream();
+     loadChatStream();
     } else if (type === 'private' && targetUID) {
       loadPrivateChatStream(targetUID);
     }
@@ -1252,10 +1291,19 @@ document.addEventListener('visibilitychange', () => {
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-              if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
-                unreadCounts[targetUID] = unreadTotalCount;
-                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) playKlingSound();
-              }
+            if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
+            unreadCounts[targetUID] = unreadTotalCount;
+            if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
+            // Panggil fungsi kontrol notifikasi (suara/getar/sunyi) dari induk/setting.js
+            try {
+            if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                window.parent.picuNotifikasiMedia();
+            }
+        } catch (e) {
+            console.log("Error picu notif:", e);
+                    }
+          }
+        }
             } else {
               unreadCounts[targetUID] = 0;
             }
@@ -1282,12 +1330,12 @@ document.addEventListener('visibilitychange', () => {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
-      // 🌟 KUNCI SEDERHANA: Tandai bahwa pesan dikirim oleh kita, jadi wajib turun ke bawah tanpakedip!
-      shouldForceScrollDown = true;
+      shouldForceScrollDown = false;
 
       input.value = '';
       input.focus();
 
+     
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
@@ -1338,10 +1386,7 @@ document.addEventListener('visibilitychange', () => {
         });
       }
     }
-
-
-    
-    // Bind fungsi secara global ke window agar terbaca penuh oleh form HTML
+// 🌟 TAMBAHKAN BARIS INI AGAR FORM HTML BISA MENEMUKAN FUNSINYA
     window.sendChatMessage = executeSendMessage;
     
  // Pemantau Pesan Unread Grup Chat Publik
@@ -1939,7 +1984,56 @@ document.addEventListener('visibilitychange', () => {
       }
     }
 
- 
+ // === KONTROL TOMBOL SCROLL KE BAWAH & DETEKSI POSISI ===
+const chatStreamEl = document.getElementById('chat-stream');
+const btnScrollBottom = document.getElementById('btn-scroll-bottom');
+
+// Fungsi untuk menggulirkan chat ke paling bawah secara mulus
+window.scrollToBottom = function(smooth = false) {
+    if (!chatStreamEl) return;
+    if (smooth) {
+        chatStreamEl.scrollTo({
+            top: chatStreamEl.scrollHeight,
+            behavior: 'smooth'
+        });
+    } else {
+        chatStreamEl.scrollTop = chatStreamEl.scrollHeight;
+    }
+    // Sembunyikan tombol saat sudah di bawah
+    if (btnScrollBottom) {
+        btnScrollBottom.style.display = 'none';
+    }
+};
+
+// Pantau pergerakan scroll pada stream chat
+if (chatStreamEl) {
+    chatStreamEl.addEventListener('scroll', () => {
+        // Hitung jarak dari posisi bawah (toleransi 150px)
+        const distanceFromBottom = chatStreamEl.scrollHeight - chatStreamEl.scrollTop - chatStreamEl.clientHeight;
+        
+        // Jika user menggulir ke atas menjauhi bagian bawah (> 150px)
+        if (distanceFromBottom > 150) {
+            if (btnScrollBottom) btnScrollBottom.style.display = 'flex';
+        } else {
+            if (btnScrollBottom) btnScrollBottom.style.display = 'none';
+        }
+
+        // Trigger pagination load more jika berada di paling atas (<= 5px)
+        if (!isLoadingMore && chatStreamEl.scrollTop <= 5) {
+            if (activeChatType === 'public') {
+                if (currentPublicLimit < MAX_SCROLL_LIMIT) {
+                    triggerLoadMorePublic();
+                }
+            } else if (activeChatType === 'private' && activePrivateUID) {
+                const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+                const currentLimit = currentPrivateLimit[roomID] || 50;
+                if (currentLimit < MAX_PRIVATE_LIMIT) {
+                    triggerLoadMorePrivate(roomID, activePrivateUID);
+                }
+            }
+        }
+    });
+}
 
     
     
@@ -1957,30 +2051,39 @@ let privateHasMore = {}; // Penanda apakah pesan private masih ada
 let isFetchingMore = false;
 let previousScrollHeight = 0;
 
-
-
+let isLoadingMore = false; 
 // Variable penanda sederhana untuk memaksa turun ke bawah
 let shouldForceScrollDown = false;
 
-// === 1. PEMUAT CHAT PUBLIK SEDERHANA ===
-function loadChatStream() {
-    const chatRef = query(ref(db, 'chats'), limitToLast(500));
+function loadChatStream(onLoaded) {
+    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
 
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
 
-        // Cek apakah posisi user sedang di bawah (toleransi 100px) atau dipaksa turun oleh tombol Send
-        const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
+        // 🌟 1. SIMPAN POSISI SCROLL SEBELUM DOM DI-RESET
+        const oldScrollTop = chatStream.scrollTop;
+        const oldScrollHeight = chatStream.scrollHeight;
+        const isAtBottom = (oldScrollHeight - oldScrollTop - chatStream.clientHeight) <= 30;
 
-        chatStream.innerHTML = '';
+        // 🌟 CACHE OFFLINE
+        if (snapshot.exists()) {
+            let cacheData = {};
+            snapshot.forEach(child => {
+                cacheData[child.key] = child.val();
+            });
+            localStorage.setItem('rt05_public_chat_cache', JSON.stringify(cacheData));
+        }
 
         if (!snapshot.exists()) {
-            chatStream.innerHTML = '<div style="text-align: center; color: #64748b; font-size: 11px; padding: 10px;">Belum ada obrolan. Mulai obrolan pertama!</div>';
-            isInitialPublicChatLoaded = true;
+            // ... (kode fallback offline tetap sama) ...
             return;
         }
+
+        // 🌟 KOSONGKAN DOM
+        chatStream.innerHTML = '';
 
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
         const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
@@ -1995,6 +2098,16 @@ function loadChatStream() {
             let isUnreadMsg = false;
             if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
                 isUnreadMsg = true;
+
+                const notifKey = 'notified_' + msgKey;
+                if (!sessionStorage.getItem(notifKey)) {
+                    sessionStorage.setItem(notifKey, 'true');
+                    try {
+                        if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                            window.parent.picuNotifikasiMedia();
+                        }
+                    } catch (e) {}
+                }
             }
 
             if (msgKey === lastReadPublicMapKey) {
@@ -2006,67 +2119,154 @@ function loadChatStream() {
 
         isInitialPublicChatLoaded = true;
 
-        // LOGIKA SEDERHANA: Jika posisi di bawah ATAU baru saja tekan tombol kirim (force), langsung turun!
-        if (isAtBottom || shouldForceScrollDown) {
-            chatStream.scrollTop = chatStream.scrollHeight;
-            shouldForceScrollDown = false; // Reset kembali status paksa
+        // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS (Mencegah lari ke atas)
+        if (shouldForceScrollDown) {
+            // Jika dipaksa turun (misal tombol kirim ditekan)
+            scrollToBottom(false);
+            shouldForceScrollDown = false;
+        } else if (isAtBottom) {
+            // Jika sebelumnya memang berada di bawah, ikuti pertambahan tinggi chat baru
+            scrollToBottom(false);
+        } else {
+            // 🌟 JIKA SEDANG DI ATAS (BACA RIWAYAT), KEMBALIKAN KE POSISI SEMULA AGAR TIDAK LARI KE ATAS
+            const newScrollHeight = chatStream.scrollHeight;
+            chatStream.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+        }
+
+        // Tampilkan tombol panah bawah jika posisi di atas
+        const distanceFromBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight;
+        const btnScrollBottom = document.getElementById('btn-scroll-bottom');
+        if (btnScrollBottom) {
+            if (distanceFromBottom > 150) {
+                btnScrollBottom.style.display = 'flex';
+            } else {
+                btnScrollBottom.style.display = 'none';
+            }
+        }
+
+        if (typeof onLoaded === 'function') {
+            onLoaded();
         }
     });
 }
+    
+// Fungsi pembantu untuk merender pesan dari cache lokal
+function renderCachedPublicMessages(cachedJson, chatStream, forceScroll) {
+    try {
+        const dataObj = JSON.parse(cachedJson);
+        chatStream.innerHTML = '<div style="background: rgba(245, 158, 11, 0.1); color: #fcd34d; font-size: 10px; text-align: center; padding: 4px; margin-bottom: 4px; border-radius: 4px;">⚠️ Mode Offline (Menampilkan riwayat tersimpan)</div>';
+        
+        Object.entries(dataObj).forEach(([msgKey, msgData]) => {
+            renderSingleMessage(msgData, false, msgKey);
+        });
 
-// === 2. PEMUAT CHAT PRIVAT SEDERHANA ===
-function loadPrivateChatStream(targetUID) {
+        if (forceScroll) {
+            chatStream.scrollTop = chatStream.scrollHeight;
+        }
+    } catch (e) {
+        console.log("Gagal memparsing cache chat publik:", e);
+    }
+}
+
+    
+// === 2. PEMUAT CHAT PRIVAT DENGAN SCROLL FIX & CALLBACK ===
+function loadPrivateChatStream(targetUID, onLoaded) {
     const roomID = [currentUser.uid, targetUID].sort().join('_');
-    const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(500));
+    
+    const currentLimit = currentPrivateLimit[roomID] || 50; 
+    const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(currentLimit));
     const chatStream = document.getElementById('chat-stream');
 
     currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
         if (!chatStream) return;
         if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
 
-        const isAtBottom = (chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight) <= 100;
+        // 🌟 1. SIMPAN POSISI SCROLL SEBELUM DOM DI-RESET (Toleransi 0/ketat)
+        const oldScrollTop = chatStream.scrollTop;
+        const oldScrollHeight = chatStream.scrollHeight;
+        const isAtBottom = (oldScrollHeight - oldScrollTop - chatStream.clientHeight) <= 30; // atau 0 jika ingin murni manual
 
         chatStream.innerHTML = '';
 
         if (!snapshot.exists()) {
             chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID] || 'Warga')}. Mulai percakapan!</div>`;
             isInitialPrivateChatLoaded[targetUID] = true;
+            if (typeof onLoaded === 'function') onLoaded();
             return;
         }
 
+        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+        const lastReadKey = lastReadKeyMap[targetUID];
+
+        let isUnreadSection = false;
+        if (!lastReadKey) isUnreadSection = true;
+
         snapshot.forEach((childSnap) => {
-            renderSingleMessage(childSnap.val(), false, childSnap.key);
+            const msgKey = childSnap.key;
+            const msgData = childSnap.val();
+
+            let isUnreadMsg = false;
+            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
+                isUnreadMsg = true;
+            }
+
+            if (msgKey === lastReadKey) {
+                isUnreadSection = true;
+            }
+
+            renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
         isInitialPrivateChatLoaded[targetUID] = true;
         
-        if (isAtBottom || shouldForceScrollDown) {
+        // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS (Mencegah lari ke atas)
+        if (shouldForceScrollDown) {
             chatStream.scrollTop = chatStream.scrollHeight;
             shouldForceScrollDown = false;
+        } else if (isAtBottom) {
+            chatStream.scrollTop = chatStream.scrollHeight;
+        } else {
+            // Jika sedang di atas membaca riwayat, pertahankan posisi semula
+            const newScrollHeight = chatStream.scrollHeight;
+            chatStream.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+        }
+
+        // Tampilkan/sembunyikan tombol panah bawah berdasarkan jarak dari bawah
+        const distanceFromBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight;
+        const btnScrollBottom = document.getElementById('btn-scroll-bottom');
+        if (btnScrollBottom) {
+            if (distanceFromBottom > 150) {
+                btnScrollBottom.style.display = 'flex';
+            } else {
+                btnScrollBottom.style.display = 'none';
+            }
         }
 
         if (isChatVisible) {
             markRoomAsRead(targetUID);
         }
+
+        // 🌟 3. JALANKAN CALLBACK
+        if (typeof onLoaded === 'function') {
+            onLoaded();
+        }
     });
 }
     
-// === 3. FUNGSI TRIGGER LOAD MORE PUBLIK DENGAN INDIKATOR ===
+// === 3. FUNGSI TRIGGER LOAD MORE PUBLIK (ANTI-BOUNCE KE ATAS) ===
 function triggerLoadMorePublic() {
     if (isLoadingMore) return;
-    if (currentPublicLimit >= MAX_SCROLL_LIMIT) return; // Batas aman maksimal 500
+    if (currentPublicLimit >= MAX_SCROLL_LIMIT) return; 
     
+    const chatStreamEl = document.getElementById('chat-stream');
+    if (!chatStreamEl) return;
+
     isLoadingMore = true;
 
     const indicator = document.getElementById('load-more-indicator');
     if (indicator) indicator.style.display = 'block';
 
-    const chatStreamEl = document.getElementById('chat-stream');
-    if (!chatStreamEl) {
-        isLoadingMore = false;
-        return;
-    }
-
+    // 🌟 KUNCI POSISI SCROLL & TINGGI SEBELUM LIMIT DITAMBAH
     const oldScrollHeight = chatStreamEl.scrollHeight;
     const oldScrollTop = chatStreamEl.scrollTop;
 
@@ -2074,19 +2274,14 @@ function triggerLoadMorePublic() {
     console.log("Memuat riwayat publik lebih banyak, batas:", currentPublicLimit);
 
     loadChatStream(() => {
-        requestAnimationFrame(() => {
-            const newScrollHeight = chatStreamEl.scrollHeight;
-            chatStreamEl.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+        // 🌟 PULIHKAN POSISI SCROL SEKETIKA TANPA JEDAH (Mencegah mental ke atas)
+        const newScrollHeight = chatStreamEl.scrollHeight;
+        chatStreamEl.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
 
-            setTimeout(() => {
-                isLoadingMore = false;
-                if (indicator) indicator.style.display = 'none';
-
-                if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPublicLimit < MAX_SCROLL_LIMIT) {
-                    triggerLoadMorePublic();
-                }
-            }, 150);
-        });
+        setTimeout(() => {
+            isLoadingMore = false;
+            if (indicator) indicator.style.display = 'none';
+        }, 100);
     });
 }
 
@@ -2131,12 +2326,23 @@ function triggerLoadMorePrivate(roomID, targetUID) {
 }
 
 // === 5. EVENT LISTENER SCROLL UTAMA (Anti-Bouncing & Presisi) ===
-let isLoadingMore = false;
-const chatStreamEl = document.getElementById('chat-stream');
+// (Variabel chatStreamEl dan isLoadingMore sudah didefinisikan di atas, jadi langsung gunakan)
 
 if (chatStreamEl) {
     chatStreamEl.addEventListener('scroll', () => {
-        // Hanya trigger jika posisi scroll benar-benar di paling atas (<= 5)
+        // Hitung jarak dari posisi bawah untuk tombol floating scroll-to-bottom
+        const distanceFromBottom = chatStreamEl.scrollHeight - chatStreamEl.scrollTop - chatStreamEl.clientHeight;
+        const btnScrollBottom = document.getElementById('btn-scroll-bottom');
+        
+        if (btnScrollBottom) {
+            if (distanceFromBottom > 150) {
+                btnScrollBottom.style.display = 'flex';
+            } else {
+                btnScrollBottom.style.display = 'none';
+            }
+        }
+
+        // Hanya trigger load more jika posisi scroll benar-benar di paling atas (<= 5)
         if (isLoadingMore || chatStreamEl.scrollTop > 5) return;
 
         // A. Chat Publik
@@ -2167,19 +2373,6 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   const div = document.createElement('div');
   div.className = "msg-row";
   if (msgKey) div.setAttribute('data-msg-id', msgKey);
-
-  // 👇 1. EFEK ANIMASI UNREAD (Background putih tipis yang memudar)
-  if (isUnread) {
-      div.style.transition = "background-color 2s ease, border-color 2s ease";
-      div.style.backgroundColor = "rgba(255, 255, 255, 0.15)";
-      div.style.borderLeft = "3px solid #38bdf8";
-      div.style.paddingLeft = "8px";
-
-      setTimeout(() => {
-          div.style.backgroundColor = "transparent";
-          div.style.borderLeftColor = "transparent"; 
-      }, 2000);
-  }
 
   let nameClass = "role-user";
   let textClass = "msg-text";
@@ -2222,20 +2415,37 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
       waktuFormatted = "Baru saja"; // Penanganan aman jika serverTimestamp masih proses
   }
 
- const timeHTML = waktuFormatted 
+  const timeHTML = waktuFormatted 
       ? `<span style="font-size: 10px; color: rgba(251, 191, 36, 0.55); margin-left: 6px; font-weight: normal; text-shadow: none;">[${waktuFormatted}]</span>` 
       : '';
 
-  // 👇 4. MASUKKAN timeHTML KE DALAM TEMPLATE HTML
+  // 👇 4. ISI KONTEN HTML KE DALAM DIV TERLEBIH DAHULU (Wajib sebelum append)
   div.innerHTML = `
       <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
       <span class="${textClass}" ${customStyleText}>${displayMsgText}</span>
       ${timeHTML}
   `;
 
-  chatStream.appendChild(div);
-}
+  // 👇 5. ATUR EFEK ANIMASI UNREAD JIKA PESAN TERSEBUT BARU
+  if (isUnread) {
+      div.style.transition = "background-color 2s ease, border-color 2s ease";
+      div.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+      div.style.borderLeft = "3px solid #38bdf8";
+      div.style.paddingLeft = "8px";
 
+      // Masukkan ke DOM
+      chatStream.appendChild(div);
+
+      // Beri jeda sedikit agar browser mencatat state awal, lalu pudar-kan
+      setTimeout(() => {
+          div.style.backgroundColor = "transparent";
+          div.style.borderLeftColor = "transparent"; 
+      }, 50);
+  } else {
+      // Jika bukan pesan unread (termasuk pesan lama hasil pagination), langsung append biasa
+      chatStream.appendChild(div);
+  }
+}
       
 
     // Fungsi pembuat warna unik otomatis dari 360° roda warna (menghasilkan jutaan variasi)
