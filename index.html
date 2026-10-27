@@ -1290,293 +1290,164 @@ function perbaruiAplikasiSekarang() {
 </script>
 
   <script>
-  // --- KODE PETA & DATA ---
-   
-  var GID_PENGUMUMAN = '1885853390'; 
-  var GID_KEUANGAN = '1568425671';
+ // --- KODE PETA & DATA ---
 
-  var SHEET_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`;
-  var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
-  var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
+var map; 
+var daftarPin = [];
+var daftarPengumuman = [];
+var dataKeuangan = [];
+var pinRumahAktif = null;
 
-  var map; 
-  var daftarPin = [];
-  var daftarPengumuman = [];
-  var dataKeuangan = [];
-  var pinRumahAktif = null;
+// ==========================================
+// BAGIAN 1: PEMUATAN PETA & DATA WARGA (FIREBASE RTDB)
+// ==========================================
 
-  // ==========================================
-  // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
-  // ==========================================
+// 🔥 INISIALISASI PETA DENGAN DEFERRED LOADING (Ditunda 200ms agar UI mulus dulu)
+window.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    map = L.map('map').setView([-7.7423, 110.3842], 17);
 
-  // 🔥 INISIALISASI PETA DENGAN DEFERRED LOADING (Ditunda 150ms agar UI mulus dulu)
-  window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      map = L.map('map').setView([-7.7423, 110.3842], 17);
+    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps'
+    }).addTo(map);
 
-      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-          maxZoom: 20,
-          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-          attribution: '&copy; Google Maps'
-      }).addTo(map);
+    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
-
-      // Setelah peta siap, jalankan fungsi pemuatan data peta di bawah
-      muatDataPetaWarga();
-    }, 200);
-  });
-  
-  // 1. Bungkus ke dalam fungsi muatDataPetaWarga()
-function muatDataPetaWarga() {
-    ambilDataSheets('cache_peta_warga', SHEET_URL, (data, fromCache) => {
-      if (!data) return;
-      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-      
-      // Bersihkan marker lama jika ada update dari background
-      daftarPin.forEach(pin => map.removeLayer(pin.marker));
-      daftarPin = [];
-
-      // Konfigurasi Chunking (Pecah per 20 data agar main thread tidak terblokir)
-      var index = 0;
-      var chunkSize = 20;
-
-      function prosesChunk() {
-        var batas = Math.min(index + chunkSize, baris.length);
-        
-        for (let i = index; i < batas; i++) {
-          var kolom = baris[i];
-          if (kolom.length >= 3 && kolom[0] !== '') {
-            var latClean = perbaikiKoordinat(kolom[1]);
-            var lngClean = perbaikiKoordinat(kolom[2]);
-            
-            var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
-            var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
-            var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
-
-            var item = {
-              name: namaAsli,
-              nameAsli: namaAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
-              hidden: statusHidden,
-              foto: urlFoto
-            };
-
-            if (isNaN(item.lat) || isNaN(item.lng)) continue;
-
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" loading="lazy" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
-            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-            
-            var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
-
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            
-            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-            
-            // 🔥 HANYA TAMPILKAN KATEGORI 'FASUM' DI AWAL PEMUATAN
-            if (!item.hidden && dataIkon.kategori === 'fasum') {
-              marker.addTo(map);
-            }
-
-            daftarPin.push({ 
-              namaRaw: item.nameAsli,
-              nama: item.nameAsli.toLowerCase(), 
-              marker: marker, 
-              lat: item.lat, 
-              lng: item.lng,
-              hidden: item.hidden,
-              kategori: dataIkon.kategori 
-            });
-          }
-        }
-
-        index = batas;
-
-        // Jika masih ada sisa data, jadwalkan eksekusi chunk berikutnya
-        if (index < baris.length) {
-          if ('requestIdleCallback' in window) {
-            requestIdleCallback(prosesChunk, { timeout: 50 });
-          } else {
-            setTimeout(prosesChunk, 4);
-          }
-        }
-      }
-
-      // Mulai proses chunk pertama
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(prosesChunk, { timeout: 50 });
-      } else {
-        setTimeout(prosesChunk, 4);
-      }
-    });
-  }
-
-    
-// 2. Muat Data Pengumuman
-ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
-  if (!data) return;
-  var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-  daftarPengumuman = [];
-
-  baris.forEach(function(kolom) {
-    if (kolom.length >= 2 && kolom[1] !== '') {
-      var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
-      if (status === 'AKTIF') {
-        
-        // 🛠️ PERBAIKAN FORMAT TANGGAL ISO:
-        var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
-        var tglRapi = tglRaw;
-        
-        if (tglRapi.includes('T')) {
-          var parts = tglRapi.split('T')[0].split('-');
-          if (parts.length === 3) {
-            tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah "2026-09-14T..." menjadi "14/09/2026"
-          }
-        }
-
-        daftarPengumuman.push({
-          tanggal: tglRapi,
-          judul: kolom[1] ? String(kolom[1]).trim() : '',
-          detail: kolom[2] ? String(kolom[2]).trim() : '',
-          lokasi: kolom[3] ? String(kolom[3]).trim() : '',
-          foto: kolom[5] ? String(kolom[5]).trim() : '' // Membaca URL Foto/Video di Kolom F
-        });
-      }
-    }
-  });
-
-  // 🔄 URUTKAN BERDASARKAN TANGGAL EVENT
-  daftarPengumuman.sort((a, b) => {
-    var partsA = a.tanggal.split('/');
-    var partsB = b.tanggal.split('/');
-    
-    var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
-    var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
-    
-    return dateB - dateA;
-  });
-
-  // Tampilkan hanya 10 pengumuman terbaru di layar warga
-  daftarPengumuman = daftarPengumuman.slice(0, 10);
-  
-  // TAMPILKAN BADGE NOTIFIKASI
-  var badge = document.getElementById('badge-count');
-  if (badge) {
-    if (daftarPengumuman.length > 0) {
-      badge.innerText = daftarPengumuman.length;
-      badge.style.display = 'inline-block';
-    } else {
-      badge.style.display = 'none';
-    }
-  }
+    // Setelah peta siap, jalankan pemuatan data peta dari Firebase RTDB
+    muatDataPetaWarga();
+  }, 200);
 });
 
-function escapeHTML(text) {
-  if (!text) return '';
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
+function muatDataPetaWarga() {
+  const petaRef = window.firebaseRef(window.db, 'peta_warga');
 
-function bukaModalInfo() {
-  var container = document.getElementById('list-pengumuman');
-  
-  // 1. Tampilkan modalnya dulu secara instan
-  document.getElementById('modal-info').style.display = 'flex';
+  // Menggunakan onValue agar marker peta otomatis sinkron secara real-time
+  window.firebaseOnValue(petaRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    
+    // Bersihkan marker lama jika ada pembaruan dari database
+    daftarPin.forEach(pin => map.removeLayer(pin.marker));
+    daftarPin = [];
 
-  // 2. Fungsi helper untuk merender daftar pengumuman ke HTML
-  function renderDaftarPengumuman() {
-    container.innerHTML = '';
+    if (!dataObj) return;
 
-    if (daftarPengumuman.length === 0) {
-      container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
-      return;
-    }
+    // Konversi objek Firebase menjadi array data
+    var baris = [];
+    Object.keys(dataObj).forEach(key => {
+      var item = dataObj[key];
+      if (item && (item.nama || item.name)) {
+        baris.push(item);
+      }
+    });
 
-    daftarPengumuman.forEach(function(info, idx) {
-      var lokasiParam = encodeURIComponent(info.lokasi);
+    // Konfigurasi Chunking (Pecah per 20 data agar main thread HP tidak terblokir / lag)
+    var index = 0;
+    var chunkSize = 20;
+
+    function prosesChunk() {
+      var batas = Math.min(index + chunkSize, baris.length);
       
-      var htmlFoto = '';
-      if (info.foto) {
-        var urlFoto = info.foto.toLowerCase();
-        
-        if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
-          htmlFoto = `
-            <div onclick="bukaModalVideo('${info.foto}')" style="
-              position: relative; 
-              width: 100%; 
-              max-height: 200px; 
-              border-radius: 6px; 
-              overflow: hidden; 
-              margin-top: 8px; 
-              background: #000; 
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-            <video src="${info.foto}" preload="metadata" onloadeddata="this.currentTime=3" style="
-              width: 100%; 
-              max-height: 200px; 
-              object-fit: cover; 
-              opacity: 0.8;
-              pointer-events: none;
-            "></video>
-              <div style="
-                position: absolute; 
-                background: rgba(239, 68, 68, 0.9); 
-                color: #fff; 
-                border-radius: 50%; 
-                width: 48px; height: 48px; 
-                display: flex; align-items: center; justify-content: center; 
-                font-size: 22px; 
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-              ">▶</div>
-            </div>`;
-        } else {
-          htmlFoto = `
-            <img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
+      for (let i = index; i < batas; i++) {
+        var kolom = baris[i];
+        var namaAsli = String(kolom.nama || kolom.name || '').trim();
+
+        if (namaAsli !== '') {
+          var latClean = perbaikiKoordinat(kolom.lat || kolom.latitude || '');
+          var lngClean = perbaikiKoordinat(kolom.lng || kolom.longitude || '');
+          
+          var statusHidden = kolom.hidden ? String(kolom.hidden).trim().toUpperCase() === 'TRUE' : false;
+          var kategoriManual = kolom.kategori ? String(kolom.kategori).trim().toLowerCase() : '';
+          var urlFoto = kolom.foto ? String(kolom.foto).trim() : '';
+
+          var item = {
+            name: namaAsli,
+            nameAsli: namaAsli,
+            lat: parseFloat(latClean),
+            lng: parseFloat(lngClean),
+            hidden: statusHidden,
+            foto: urlFoto
+          };
+
+          if (isNaN(item.lat) || isNaN(item.lng)) continue;
+
+          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+          var htmlFoto = item.foto ? `<br><img src="${item.foto}" loading="lazy" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+          
+          var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+
+          var customIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+          });
+          
+          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+          
+          // 🔥 HANYA TAMPILKAN KATEGORI 'FASUM' DI AWAL PEMUATAN
+          if (!item.hidden && dataIkon.kategori === 'fasum') {
+            marker.addTo(map);
+          }
+
+          daftarPin.push({ 
+            namaRaw: item.nameAsli,
+            nama: item.nameAsli.toLowerCase(), 
+            marker: marker, 
+            lat: item.lat, 
+            lng: item.lng,
+            hidden: item.hidden,
+            kategori: dataIkon.kategori 
+          });
         }
       }
 
-      var html = `
-        <div class="card-info">
-          ${info.tanggal ? `<div class="tgl">📅 ${escapeHTML(info.tanggal)}</div>` : ''}
-          <div class="judul">${escapeHTML(info.judul)}</div>
-          <div class="detail">${escapeHTML(info.detail)}</div>
-          ${htmlFoto}
-          ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHTML(info.lokasi)})</button>` : ''}
-        </div>
-      `;
-      container.innerHTML += html;
-    });
-  }
+      index = batas;
 
-  // 3. Jika data di memori sudah ada, langsung render seketika (mengambil dari cache localStorage via helper)
-  if (daftarPengumuman.length > 0) {
-    renderDaftarPengumuman();
-  } else {
-    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Memuat informasi...</p>';
-  }
+      // Jika masih ada sisa data, jadwalkan eksekusi chunk berikutnya
+      if (index < baris.length) {
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(prosesChunk, { timeout: 50 });
+        } else {
+          setTimeout(prosesChunk, 4);
+        }
+      }
+    }
 
-  // 4. Ambil data terbaru dari server di latar belakang untuk memastikan selalu sinkron
-  ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
-    if (!data) return;
-    var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-    var pengumumanBaru = [];
+    // Mulai proses chunk pertama
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(prosesChunk, { timeout: 50 });
+    } else {
+      setTimeout(prosesChunk, 4);
+    }
+  }, (error) => {
+    console.error("Gagal memuat peta warga dari Firebase RTDB:", error);
+  });
+}
+    
+// ==========================================
+// 2. MUAT DATA PENGUMUMAN (REAL-TIME FIREBASE)
+// ==========================================
+function muatPengumumanFirebase() {
+  const pengumumanRef = window.firebaseRef(window.db, "pengumuman");
+  
+  // Menggunakan onValue agar otomatis sinkron secara real-time
+  window.firebaseOnValue(pengumumanRef, (snapshot) => {
+    const data = snapshot.val();
+    daftarPengumuman = [];
 
-    baris.forEach(function(kolom) {
-      if (kolom.length >= 2 && kolom[1] !== '') {
-        var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
+    if (data) {
+      // Karena data di Firebase berupa objek (bukan array baris CSV), kita looping pakai Object.keys
+      Object.keys(data).forEach(key => {
+        const item = data[key];
+        var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
+        
         if (status === 'AKTIF') {
-          var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
+          var tglRaw = item.tanggal || '';
           var tglRapi = tglRaw;
           
+          // Format ulang tanggal jika menggunakan format ISO (misal: 2026-09-14T...)
           if (tglRapi.includes('T')) {
             var parts = tglRapi.split('T')[0].split('-');
             if (parts.length === 3) {
@@ -1584,28 +1455,32 @@ function bukaModalInfo() {
             }
           }
 
-          pengumumanBaru.push({
+          daftarPengumuman.push({
             tanggal: tglRapi,
-            judul: kolom[1] ? String(kolom[1]).trim() : '',
-            detail: kolom[2] ? String(kolom[2]).trim() : '',
-            lokasi: kolom[3] ? String(kolom[3]).trim() : '',
-            foto: kolom[5] ? String(kolom[5]).trim() : ''
+            judul: item.judul || '',
+            detail: item.detail || '',
+            lokasi: item.lokasi || '',
+            foto: item.foto || '' // URL Foto atau Video
           });
         }
-      }
-    });
+      });
+    }
 
-    pengumumanBaru.sort((a, b) => {
+    // 🔄 URUTKAN BERDASARKAN TANGGAL EVENT TERBARU
+    daftarPengumuman.sort((a, b) => {
       var partsA = a.tanggal.split('/');
       var partsB = b.tanggal.split('/');
+      
       var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
       var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
+      
       return dateB - dateA;
     });
 
-    daftarPengumuman = pengumumanBaru.slice(0, 10);
+    // Tampilkan hanya 10 pengumuman terbaru di layar warga
+    daftarPengumuman = daftarPengumuman.slice(0, 10);
     
-    // Perbarui badge notifikasi
+    // TAMPILKAN BADGE NOTIFIKASI
     var badge = document.getElementById('badge-count');
     if (badge) {
       if (daftarPengumuman.length > 0) {
@@ -1615,16 +1490,96 @@ function bukaModalInfo() {
         badge.style.display = 'none';
       }
     }
-
-    // Render ulang tampilan jika ada data baru dari server
-    renderDaftarPengumuman();
   });
 }
+
+// Panggil fungsi ini saat halaman dimuat
+document.addEventListener('DOMContentLoaded', () => {
+  muatPengumumanFirebase();
+});
+
+function escapeHTML(text) {
+  if (!text) return '';
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+// ==========================================
+// MODUL INTERAKSI & TAMPILAN PENGUMUMAN (FIREBASE READY)
+// ==========================================
+
+function bukaModalInfo() {
+  var container = document.getElementById('list-pengumuman');
+  
+  // 1. Tampilkan modalnya secara instan
+  document.getElementById('modal-info').style.display = 'flex';
+  container.innerHTML = '';
+
+  if (!daftarPengumuman || daftarPengumuman.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
+    return;
+  }
+
+  // 2. Render langsung dari array 'daftarPengumuman' yang selalu sinkron secara real-time
+  daftarPengumuman.forEach(function(info) {
+    var lokasiParam = encodeURIComponent(info.lokasi);
+    var htmlFoto = '';
     
+    if (info.foto) {
+      var urlFoto = info.foto.toLowerCase();
+      
+      if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+        htmlFoto = `
+          <div onclick="bukaModalVideo('${info.foto}')" style="
+            position: relative; 
+            width: 100%; 
+            max-height: 200px; 
+            border-radius: 6px; 
+            overflow: hidden; 
+            margin-top: 8px; 
+            background: #000; 
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">
+          <video src="${info.foto}" preload="metadata" onloadeddata="this.currentTime=3" style="
+            width: 100%; 
+            max-height: 200px; 
+            object-fit: cover; 
+            opacity: 0.8;
+            pointer-events: none;
+          "></video>
+            <div style="
+              position: absolute; 
+              background: rgba(239, 68, 68, 0.9); 
+              color: #fff; 
+              border-radius: 50%; 
+              width: 48px; height: 48px; 
+              display: flex; align-items: center; justify-content: center; 
+              font-size: 22px; 
+              box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            ">▶</div>
+          </div>`;
+      } else {
+        htmlFoto = `
+          <img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
+      }
+    }
 
+    var html = `
+      <div class="card-info">
+        ${info.tanggal ? `<div class="tgl">📅 ${escapeHTML(info.tanggal)}</div>` : ''}
+        <div class="judul">${escapeHTML(info.judul)}</div>
+        <div class="detail">${escapeHTML(info.detail)}</div>
+        ${htmlFoto}
+        ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHTML(info.lokasi)})</button>` : ''}
+      </div>
+    `;
+    container.innerHTML += html;
+  });
+}
 
-
-// Variable status rotasi
+// Variable status rotasi video
 var isVideoRotated = false;
 
 // Fungsi Toggle Memutar Layar 90 Derajat
@@ -1658,7 +1613,6 @@ window.bukaModalVideo = function(videoUrl, event) {
   var player = document.getElementById('player-video-modal');
   var btnRotate = document.getElementById('btn-rotate-video');
 
-  // Reset rotasi & tombol saat video baru dibuka
   isVideoRotated = false;
   if (player) player.classList.remove('video-rotated');
   if (btnRotate) {
@@ -1672,7 +1626,6 @@ window.bukaModalVideo = function(videoUrl, event) {
     
     player.load();
     
-    // Deteksi Otomatis: Tampilkan tombol jika video Landscape
     player.onloadedmetadata = function() {
       if (player.videoWidth > player.videoHeight) {
         if (btnRotate) btnRotate.style.display = 'block';
@@ -1695,7 +1648,6 @@ window.tutupModalVideo = function() {
   var player = document.getElementById('player-video-modal');
   var btnRotate = document.getElementById('btn-rotate-video');
 
-  // Reset rotasi
   isVideoRotated = false;
   if (player) {
     player.classList.remove('video-rotated');
@@ -1710,16 +1662,17 @@ window.tutupModalVideo = function() {
   var modalInfo = document.getElementById('modal-info');
   if (modalInfo) modalInfo.style.display = 'flex';
 };
+
+// Pengontrol Modal Info Warga
+function tutupModalInfo() {  
+  document.getElementById('modal-info').style.display = 'none';  
+}
+
+function bukaTutupLuar(e) {  
+  if (e.target.id === 'modal-info') tutupModalInfo();  
+}
+
     
-// ✅ VERSI BERSIH & RINGKAS
-function tutupModalInfo() { 
-  document.getElementById('modal-info').style.display = 'none'; 
-}
-
-function bukaTutupLuar(e) { 
-  if (e.target.id === 'modal-info') tutupModalInfo(); 
-}
-
 function switchTabWarga(tab) {
   const panelInfo = document.getElementById('panel-tab-info');
   const panelRab = document.getElementById('panel-tab-rab');
@@ -1745,17 +1698,23 @@ function muatProgkerWarga() {
   if (!tbody) return;
 
   // Fungsi internal untuk merender data ke tabel & menghitung total RAB
-  function renderData(data) {
-    if (!data || !Array.isArray(data) || data.length === 0) {
+  function renderData(dataArray) {
+    if (!dataArray || dataArray.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
+      
+      const totalEstimasiEl = document.getElementById('warga-total-rab') || document.getElementById('warga-total-estimasi');
+      if (totalEstimasiEl) totalEstimasiEl.innerText = 'Rp 0';
+      
+      const totalRealisasiEl = document.getElementById('warga-total-realisasi');
+      if (totalRealisasiEl) totalRealisasiEl.innerText = 'Rp 0';
       return;
     }
 
-    var totalRabPerencanaan = 0; 
-    var totalRealisasiSelesai = 0; 
+    var totalRabPerencanaan = 0;  
+    var totalRealisasiSelesai = 0;  
     var html = '';
 
-    data.forEach(item => {
+    dataArray.forEach(item => {
       var angPlan = Number(item.anggaran || item.anggaran_disetujui || item.nominal || 0);
       var angRealisasi = Number(item.realisasi || 0);
       var statusRaw = String(item.status || 'Perencanaan').trim();
@@ -1775,19 +1734,19 @@ function muatProgkerWarga() {
       var labelStatus = 'Jangka Panjang';
 
       if (statusRaw === 'Disetujui') {
-        badgeColor = '#3b82f6'; 
+        badgeColor = '#3b82f6';  
         labelStatus = 'Jangka Pendek';
       } else if (statusRaw === 'Berjalan') {
-        badgeColor = '#10b981'; 
+        badgeColor = '#10b981';  
         labelStatus = 'Berjalan';
       } else if (statusRaw === 'Selesai') {
-        badgeColor = '#6b7280'; 
+        badgeColor = '#6b7280';  
         labelStatus = 'Selesai';
       }
 
       var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${labelStatus}</span>`;
 
-    // TABEL (Diperbarui dengan tambahan informasi Detail)
+      // TABEL (Diperbarui dengan tambahan informasi Detail)
       html += `
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 8px;">
@@ -1818,32 +1777,24 @@ function muatProgkerWarga() {
     }
   }
 
-  // 1. TAMPILKAN DARI CACHE LOKAL SECARA INSTAN JIKA ADA
-  const cachedData = localStorage.getItem('cache_progker_rt05');
-  if (cachedData) {
-    try {
-      renderData(JSON.parse(cachedData));
-    } catch (e) {
-      console.error("Gagal memuat cache progker:", e);
-    }
-  }
+  // Gunakan Firebase RTDB onValue untuk mendengarkan perubahan data secara real-time
+  const progkerRef = window.firebaseRef(window.db, "progker_rab");
+  window.firebaseOnValue(progkerRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    let dataArray = [];
 
-  // 2. AMBIL DATA TERBARU DARI SERVER DI LATAR BELAKANG
-  fetch(RT05_CONFIG.GAS_WEB_APP_URL + '?action=get_progker')
-    .then(res => res.json())
-    .then(data => {
-      if (data && Array.isArray(data)) {
-        // Simpan ke localStorage untuk kunjungan berikutnya
-        localStorage.setItem('cache_progker_rt05', JSON.stringify(data));
-        renderData(data);
-      }
-    })
-    .catch(err => {
-      console.warn("Gagal memperbarui data progker dari server, menggunakan cache lokal.", err);
-      if (!cachedData) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
-      }
-    });
+    if (dataObj) {
+      // Ubah objek Firebase menjadi array agar kompatibel dengan perenderan tabel
+      Object.keys(dataObj).forEach(key => {
+        dataArray.push(dataObj[key]);
+      });
+    }
+
+    renderData(dataArray);
+  }, (error) => {
+    console.error("Gagal memuat data RAB dari Firebase:", error);
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
+  });
 }
     
 function sorotLokasi(lokasiEncoded) {
@@ -1938,31 +1889,37 @@ function cariLokasi() {
   }
 }
 
- // 3. Muat Data Keuangan
-  function muatDataKeuangan() {
-    ambilDataSheets('cache_keuangan_warga', KEUANGAN_URL, (data, fromCache) => {
-      if (!data) return;
-      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-      dataKeuangan = [];
-      
-      // 🛠️ Gunakan Map agar terhindar dari duplikat huruf besar/kecil (Case-Insensitive Deduplication)
-      var divisiMap = new Map();
+// ==========================================
+// 3. MUAT DATA KEUANGAN (REAL-TIME FIREBASE)
+// ==========================================
+function muatDataKeuangan() {
+  const keuanganRef = window.firebaseRef(window.db, "keuangan");
 
-      baris.forEach(function(kolom) {
-        if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
-          var tglRaw = kolom[1] ? String(kolom[1]).trim() : (kolom[0] ? String(kolom[0]).split(' ')[0] : '-');
-          var divisi = kolom[2] ? String(kolom[2]).trim() : 'Umum';
-          var ket = kolom[3] ? String(kolom[3]).trim() : '-';
-          var tipeRaw = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'MASUK';
+  // Menggunakan onValue agar laporan keuangan otomatis sinkron real-time
+  window.firebaseOnValue(keuanganRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    dataKeuangan = [];
+    
+    var divisiMap = new Map();
+
+    if (dataObj) {
+      // Ubah objek Firebase menjadi array berdasarkan key node-nya
+      Object.keys(dataObj).forEach(key => {
+        var item = dataObj[key];
+        if (item) {
+          var tglRaw = item.tanggal || item.tgl || '-';
+          var divisi = item.divisi ? String(item.divisi).trim() : 'Umum';
+          var ket = item.keterangan || item.ket || '-';
+          var tipeRaw = item.tipe ? String(item.tipe).trim().toUpperCase() : 'MASUK';
           var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
           
-          var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
+          var nominalRaw = item.nominal !== undefined ? item.nominal : 0;
           var nominal = typeof nominalRaw === 'number' 
             ? nominalRaw 
             : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
 
-          // 🛠️ PERBAIKAN FORMAT TANGGAL ISO: Mengubah "2026-09-27T17:00:00.000Z" menjadi "27/09/2026"
-          var tgl = tglRaw;
+          // 🛠️ PERBAIKAN FORMAT TANGGAL ISO
+          var tgl = String(tglRaw);
           if (tgl.includes('T')) {
             var parts = tgl.split('T')[0].split('-');
             if (parts.length === 3) {
@@ -1970,7 +1927,7 @@ function cariLokasi() {
             }
           }
 
-          // 🛠️ DEDUPLIKASI DROPDOWN: Simpan nama divisi versi huruf rapi (Title Case)
+          // 🛠️ DEDUPLIKASI DROPDOWN DIVISI
           if (divisi) {
             var kunciLower = divisi.toLowerCase();
             if (!divisiMap.has(kunciLower) || divisi !== kunciLower) {
@@ -1981,30 +1938,34 @@ function cariLokasi() {
           dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
         }
       });
+    }
 
-      var selectDivisi = document.getElementById('filterDivisi');
-      var divisiSebelumnya = selectDivisi.value;
-      selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
-      
-      // 🛠️ Urutkan dan masukkan nama divisi rapi tanpa duplikat
-  Array.from(divisiMap.values()).sort().forEach(div => {
-  // Fungsi pemformat teks agar setiap awal kata menjadi Huruf Besar/Kapital
-  var divFormatRapi = div.replace(/\w\S*/g, function(teks) {
-    return teks.charAt(0).toUpperCase() + teks.substr(1).toLowerCase();
-  });
+    var selectDivisi = document.getElementById('filterDivisi');
+    if (!selectDivisi) return;
 
-  // Teks di dalam tag <option> memakai 'divFormatRapi' agar tampilan layar menjadi Kapital Rapi
-  selectDivisi.innerHTML += `<option value="${escapeHTML(div)}">${escapeHTML(divFormatRapi)}</option>`;
-});
-      
-      if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
-        selectDivisi.value = divisiSebelumnya;
-      } else {
-        selectDivisi.value = 'semua';
-      }
-      tampilkanRekeningKoran();
+    var divisiSebelumnya = selectDivisi.value;
+    selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
+    
+    // Urutkan dan masukkan nama divisi rapi tanpa duplikat
+    Array.from(divisiMap.values()).sort().forEach(div => {
+      var divFormatRapi = div.replace(/\w\S*/g, function(teks) {
+        return teks.charAt(0).toUpperCase() + teks.substr(1).toLowerCase();
+      });
+
+      selectDivisi.innerHTML += `<option value="${escapeHTML(div)}">${escapeHTML(divFormatRapi)}</option>`;
     });
-  }
+    
+    if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
+      selectDivisi.value = divisiSebelumnya;
+    } else {
+      selectDivisi.value = 'semua';
+    }
+
+    tampilkanRekeningKoran();
+  }, (error) => {
+    console.error("Gagal memuat data keuangan dari Firebase:", error);
+  });
+}
 
     function bukaModalInventaris() {
   document.getElementById('modal-inventaris').style.display = 'flex';
@@ -2136,7 +2097,7 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
-    // --- FITUR MALAM RONDA / JIMPITAN RONDA (PUBLIK) ---
+ // --- FITUR MALAM RONDA / JIMPITAN RONDA (PUBLIK) ---
     function getInfoMalamRonda(dateObj = new Date()) {
       let d = new Date(dateObj);
       let hour = d.getHours();
@@ -2164,7 +2125,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
     }
 
    // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
-    
     let audioCtx = null;
     let html5QrcodeScanner = null;
     let sedangScanning = false;
@@ -2229,7 +2189,7 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
     }
 
-    // 🔥 2. FUNGSI EKSEKUSI KAMERA (Logika asli Anda di sini)
+    // 🔥 2. FUNGSI EKSEKUSI KAMERA
     function eksekusiMulaiScanJimpitan() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2345,8 +2305,8 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       if (qrElement) qrElement.innerHTML = '';
     }
 
-    // --- SINKRONISASI OFFLINE ---
-   function perbaruiIndikatorSync() {
+    // --- SINKRONISASI OFFLINE & FIREBASE RTDB ---
+    function perbaruiIndikatorSync() {
       let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
       let badge = document.getElementById('status-sync');
       
@@ -2389,6 +2349,7 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
     }
     
+    // 🔥 PENGIRIMAN LANGSUNG KE FIREBASE RTDB
     async function kirimDataPendingJimpitan() {
       if (sedangMengirim) return;
 
@@ -2405,14 +2366,17 @@ let denahTimer = null; // Variabel untuk menyimpan timer
 
       for (let item of antrean) {
         try {
-          await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams(item)
+          // Menyimpan ke node Firebase RTDB (jimpitan / catatan_ronda)
+          const dbRef = window.firebaseRef(window.db, item.targetNode);
+          await window.firebasePush(dbRef, {
+            tanggal: item.tanggal,
+            kelompokMalam: item.kelompokMalam,
+            warga: item.warga,
+            nominal: item.nominal,
+            timestamp: Date.now()
           });
         } catch (err) {
-          console.warn("Gagal terhubung ke jaringan:", err);
+          console.warn("Gagal terhubung ke Firebase, menyimpan kembali ke antrean:", err);
           sisaAntrean.push(item);
         }
       }
@@ -2443,11 +2407,11 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
 
       let infoMalam = getInfoMalamRonda(new Date());
+      let targetNode = infoMalam.masukTabel ? 'jimpitan' : 'catatan_ronda';
 
       let dataBaru = {
-        action: infoMalam.masukTabel ? 'jimpitan' : 'jimpitan_catatan',
+        targetNode: targetNode,
         kelompokMalam: infoMalam.kelompokMalam,
-        masukTabel: infoMalam.masukTabel,
         tanggal: new Date().toLocaleString('id-ID'),
         warga: rawWarga,
         nominal: rawNominal
@@ -2473,7 +2437,7 @@ let denahTimer = null; // Variabel untuk menyimpan timer
     }
 
     window.addEventListener('online', () => {
-      console.log("Koneksi kembali terhubung. Mengirim data pending...");
+      console.log("Koneksi kembali terhubung. Mengirim data pending ke Firebase...");
       perbaruiIndikatorSync();
       kirimDataPendingJimpitan();
     });
@@ -2488,12 +2452,10 @@ let denahTimer = null; // Variabel untuk menyimpan timer
         kirimDataPendingJimpitan();
       }
     });
-
-
     
-// --- FITUR REKAP & RIWAYAT JIMPITAN ---
-var GID_JIMPITAN = '515393252'; 
-var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
+// ==========================================
+// MODUL REKAP & RIWAYAT JIMPITAN (FIREBASE READY)
+// ==========================================
 
 var cacheDataHarian = {};
 var cacheDataBulanan = {};
@@ -2502,128 +2464,101 @@ var arrayBulan = [];
 let isJimpitanLoaded = false;
 let modeJimpitan = 'harian'; 
 
-// Helper anti-error untuk merapikan teks (menggantikan escapeHTML yang rawan macet)
+// Helper anti-error untuk merapikan teks
 function teksAman(str) {
   return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
 }
 
-// ==========================================
-// BAGIAN 2: OPTIMASI RIWAYAT JIMPITAN
-// ==========================================
-
 function muatDataJimpitan() {
- 
   var gridContainer = document.getElementById('grid-jimpitan');
   
-  // Tampilkan loading HANYA jika data cache belum ada di HP
-  if (!localStorage.getItem('cache_jimpitan_warga') && gridContainer) {
-    gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data terbaru...</div>';
+  if (gridContainer) {
+    gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data jimpitan terbaru...</div>';
   }
 
-  // Menggunakan helper ambilDataSheets untuk caching
-  ambilDataSheets('cache_jimpitan_warga', JIMPITAN_URL, (data, fromCache) => {
-    if (!data || data.length === 0) {
-      if (!fromCache && gridContainer) {
-        gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data atau sedang offline.</div>';
-      }
-      return;
-    }
-
-    // Adaptasi otomatis jika respons berupa Array JSON atau teks CSV
-    var baris = Array.isArray(data) ? data.slice(1).slice(-2000) : parseCSV(data).slice(1).slice(-2000);
+  // Mengambil data secara real-time dari node 'jimpitan' di Firebase RTDB
+  const jimpitanRef = window.firebaseRef(window.db, 'jimpitan');
+  
+  window.firebaseOnValue(jimpitanRef, (snapshot) => {
+    const dataObj = snapshot.val();
     
     cacheDataHarian = {};
     cacheDataBulanan = {};
     arrayTanggal = [];
     arrayBulan = [];
 
-  baris.forEach(kolom => {
-      if (kolom.length >= 3 && kolom[0] !== '') {
-        // PERBAIKAN 1: Pastikan tanggal mutlak menjadi string agar .match() tidak memicu error
-        var tglStr = String(kolom[0] || '');
-        var malamManual = '';
-        var warga = '-';
-        var nominal = 0;
+    if (dataObj) {
+      // Looping data objek dari Firebase
+      Object.keys(dataObj).forEach(key => {
+        var kolom = dataObj[key];
+        if (kolom) {
+          var tglStr = String(kolom.tanggal || '');
+          var malamManual = String(kolom.kelompokMalam || '');
+          var warga = String(kolom.warga || '-');
+          var nominal = parseInt(kolom.nominal, 10) || 0;
 
-        // PERBAIKAN 2: Pastikan kolom 1 menjadi string sebelum dicek .startsWith() atau .trim()
-        var col1Str = String(kolom[1] || '');
-        
-        if (col1Str && (col1Str.startsWith('Malam') || col1Str === '-')) {
-          malamManual = col1Str.trim(); 
-          warga = String(kolom[2] || '-');
-          var nominalRaw = kolom[3] ? String(kolom[3]).replace(/[^0-9]/g, '') : '0';
-          nominal = parseInt(nominalRaw, 10) || 0;
-        } else {
-          warga = col1Str || '-';
-          var nominalRaw = kolom[2] ? String(kolom[2]).replace(/[^0-9]/g, '') : '0';
-          nominal = parseInt(nominalRaw, 10) || 0;
+          // Parsing tanggal untuk pengelompokan harian & bulanan
+          var angkaTanggal = tglStr.match(/\d+/g); 
+          if (angkaTanggal && angkaTanggal.length >= 3) {
+            var tgl = parseInt(angkaTanggal[0], 10);
+            var bln = parseInt(angkaTanggal[1], 10) - 1;
+            var thn = parseInt(angkaTanggal[2], 10);
+            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+
+            var dateObj = new Date(thn, bln, tgl, jam, menit);
+            var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
+            var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            
+            var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
+
+            // --- DATA HARIAN ---
+            var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
+            var isoTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
+            
+            var keyTanggal = (namaMalam + '_' + isoTanggal).replace(/\s+/g, '_');
+
+            if (!cacheDataHarian[keyTanggal]) {
+              cacheDataHarian[keyTanggal] = { 
+                label: namaMalam + ' (' + labelTanggal + ')', 
+                subtotal: 0, 
+                items: [],
+                isoDate: isoTanggal 
+              };
+              arrayTanggal.push(keyTanggal);
+            }
+            cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
+            cacheDataHarian[keyTanggal].subtotal += nominal;
+
+            // --- DATA BULANAN ---
+            var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
+            var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
+
+            if (!cacheDataBulanan[keyBulan]) {
+              cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
+              if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
+            }
+            
+            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
+              cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
+            }
+            
+            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
+              cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
+            }
+
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
+            cacheDataBulanan[keyBulan].total += nominal;
+          }
         }
+      });
+    }
 
-        var angkaTanggal = tglStr.match(/\d+/g); 
-        if (angkaTanggal && angkaTanggal.length >= 3) {
-          var tgl = parseInt(angkaTanggal[0], 10);
-          var bln = parseInt(angkaTanggal[1], 10) - 1;
-          var thn = parseInt(angkaTanggal[2], 10);
-          var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-          var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
-
-          var dateObj = new Date(thn, bln, tgl, jam, menit);
-          var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
-          var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-          
-          var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
-
-          // --- DATA HARIAN (Gantian Baru) ---
-          var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
-          var isoTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
-          
-          // Kunci Unik Gabungan Nama Malam + ISO Tanggal
-          var keyTanggal = (namaMalam + '_' + isoTanggal).replace(/\s+/g, '_');
-
-          if (!cacheDataHarian[keyTanggal]) {
-            cacheDataHarian[keyTanggal] = { 
-              label: namaMalam + ' (' + labelTanggal + ')', 
-              subtotal: 0, 
-              items: [],
-              isoDate: isoTanggal // Disimpan untuk pengurutan tanggal
-            };
-            arrayTanggal.push(keyTanggal);
-          }
-          cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
-          cacheDataHarian[keyTanggal].subtotal += nominal;
-
-         
-
-          
-          // --- DATA BULANAN ---
-          var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
-          var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
-
-          if (!cacheDataBulanan[keyBulan]) {
-            cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
-            if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
-          }
-          
-          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
-            cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
-          }
-          
-          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
-            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
-          }
-
-          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
-          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
-          cacheDataBulanan[keyBulan].total += nominal;
-        }
-      }
+    Object.keys(cacheDataHarian).forEach(key => {
+      cacheDataHarian[key].items.reverse();
     });
 
-      Object.keys(cacheDataHarian).forEach(key => {
-          cacheDataHarian[key].items.reverse();
-          });
-
-    // Urutkan dropdown harian berdasarkan isoDate dari yang paling baru
     arrayTanggal.sort((a, b) => {
       var dateA = cacheDataHarian[a].isoDate;
       var dateB = cacheDataHarian[b].isoDate;
@@ -2635,6 +2570,11 @@ function muatDataJimpitan() {
     
     setupToggleJimpitan();
     renderDropdownTanggal();
+  }, (error) => {
+    console.error("Gagal memuat rekap jimpitan dari Firebase:", error);
+    if (gridContainer) {
+      gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data dari Firebase.</div>';
+    }
   });
 }
     
