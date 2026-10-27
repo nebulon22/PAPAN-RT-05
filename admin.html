@@ -2431,7 +2431,7 @@ function bukaTabAdmin(tabName) {
   const app = initializeApp(RT05_CONFIG.FIREBASE);
   const db = getDatabase(app);
 
-// 1. EKSPOS KE GLOBAL AGAR BISA DIPAKAI OLEH SCRIPT LAMA DI ATAS
+  // EKSPOS KE GLOBAL window AGAR BISA DIAKSES OLEH SEMUA FUNGSI DI ATASNYA
   window.db = db;
   window.firebaseRef = ref;
   window.firebaseOnValue = onValue;
@@ -2441,7 +2441,23 @@ function bukaTabAdmin(tabName) {
   window.firebaseSet = set;
   window.firebaseGet = get;
 
-  // 2. KODE KELOLA USERS / CHAT (Asli milik Anda, tidak diubah)
+  // Global helper untuk tombol persetujuan chat di dalam modul
+  window.approveUser = (uid) => {
+    update(ref(db, `users/${uid}`), { status: 'aktif' });
+  };
+
+  window.rejectUser = (uid) => {
+    if (confirm("Hapus / Tolak pendaftaran warga ini?")) {
+      remove(ref(db, `users/${uid}`));
+    }
+  };
+
+  window.toggleRole = (uid, currentRole) => {
+    const newRole = currentRole === 'admin' ? 'warga' : 'admin';
+    update(ref(db, `users/${uid}`), { role: newRole });
+  };
+
+  // Listener Real-time untuk Chat/Users
   const usersRef = ref(db, 'users');
   onValue(usersRef, (snapshot) => {
     const pendingTable = document.getElementById('pending-users-list');
@@ -2540,21 +2556,6 @@ function bukaTabAdmin(tabName) {
       }
     }
   });
-
-  window.approveUser = (uid) => {
-    update(ref(db, `users/${uid}`), { status: 'aktif' });
-  };
-
-  window.rejectUser = (uid) => {
-    if (confirm("Hapus / Tolak pendaftaran warga ini?")) {
-      remove(ref(db, `users/${uid}`));
-    }
-  };
-
-  window.toggleRole = (uid, currentRole) => {
-    const newRole = currentRole === 'admin' ? 'warga' : 'admin';
-    update(ref(db, `users/${uid}`), { role: newRole });
-  };
 </script>
 </body>
 </html>
