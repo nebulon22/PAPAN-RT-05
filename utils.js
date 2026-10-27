@@ -29,6 +29,7 @@ import { getDatabase, ref, get, child, push, set, onValue } from "https://www.gs
 const app = initializeApp(RT05_CONFIG.FIREBASE);
 const db = getDatabase(app);
 
+window.RT05_CONFIG = RT05_CONFIG;
 // Ekspor objek database agar bisa diakses global oleh file lain
 window.db = db;
 window.firebaseRef = ref;
