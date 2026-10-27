@@ -930,8 +930,8 @@ function cekLogin() {
     return;
   }
 
-  // Cek ke Firebase RTDB
-  window.fbGet(window.fbRef(window.db, 'admin_config/pin')).then((snapshot) => {
+  // Cek ke Firebase RTDB (Diubah menggunakan window.firebaseGet & window.firebaseRef)
+  window.firebaseGet(window.firebaseRef(window.db, 'admin_config/pin')).then((snapshot) => {
     btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
     const validPin = snapshot.val();
     
@@ -1703,7 +1703,7 @@ function tutupModalLaporan() {
 
 function muatSemuaDataAdmin() {
   // 1. Dengarkan Data Peta (Real-time)
-  window.fbOnValue(window.fbRef(window.db, 'peta'), (snapshot) => {
+  window.firebaseOnValue(window.firebaseRef(window.db, 'peta'), (snapshot) => {
     globalDataRumah = [];
     listSemuaRumahAdmin = [];
     snapshot.forEach(child => {
@@ -1715,7 +1715,7 @@ function muatSemuaDataAdmin() {
   });
 
   // 2. Dengarkan Data Sensus Warga (Real-time)
-  window.fbOnValue(window.fbRef(window.db, 'warga_keluarga'), (snapshot) => {
+  window.firebaseOnValue(window.firebaseRef(window.db, 'warga_keluarga'), (snapshot) => {
     globalDataWarga = [];
     const dummyHeader = ["Kepala", "Anggota", "Rumah", "Total"]; // Mock untuk prosesDanTampilkanStatistik
     const resWarga = [dummyHeader]; 
@@ -1885,8 +1885,8 @@ async function simpanKeluargaAdmin() {
   btn.disabled = true; btn.innerText = "⏳ Menyimpan ke Database...";
 
   try {
-    const wargaRef = window.fbRef(window.db, 'warga_keluarga');
-    await window.fbPush(wargaRef, {
+    const wargaRef = window.firebaseRef(window.db, 'warga_keluarga');
+    await window.firebasePush(wargaRef, {
       kepalaKeluarga: kepala,
       namaRumah: rumah,
       anggotaKeluarga: anggota,
@@ -2431,15 +2431,15 @@ function bukaTabAdmin(tabName) {
   const app = initializeApp(RT05_CONFIG.FIREBASE);
   const db = getDatabase(app);
 
- // 1. EKSPOS KE GLOBAL AGAR BISA DIPAKAI OLEH SCRIPT LAMA DI ATAS
+// 1. EKSPOS KE GLOBAL AGAR BISA DIPAKAI OLEH SCRIPT LAMA DI ATAS
   window.db = db;
-  window.fbRef = ref;
-  window.fbOnValue = onValue;
-  window.fbUpdate = update;
-  window.fbRemove = remove;
-  window.fbPush = push;
-  window.fbSet = set;
-  window.fbGet = get;
+  window.firebaseRef = ref;
+  window.firebaseOnValue = onValue;
+  window.firebaseUpdate = update;
+  window.firebaseRemove = remove;
+  window.firebasePush = push;
+  window.firebaseSet = set;
+  window.firebaseGet = get;
 
   // 2. KODE KELOLA USERS / CHAT (Asli milik Anda, tidak diubah)
   const usersRef = ref(db, 'users');
