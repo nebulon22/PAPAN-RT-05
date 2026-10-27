@@ -133,4 +133,13 @@ window.perbaikiKoordinat = perbaikiKoordinat;
 window.escapeHTML = escapeHTML;
 window.getIkonKategori = getIkonKategori;
 
+// 👇 TAMBAHKAN BARIS FIREBASE INI DI BAWAHNYA 👇
+window.db = db;
+window.firebaseRef = ref;
+window.firebaseGet = get;
+window.firebaseChild = child;
+window.firebasePush = push;
+window.firebaseSet = set;
+window.firebaseOnValue = onValue;
+
 window.dispatchEvent(new Event('utilsSiap'));
