@@ -1,50 +1,41 @@
 // utils.js - Kumpulan Variabel dan Fungsi Global RT 05 (Full Firebase)
 
-  // Konfigurasi global dipasang langsung agar siap di awal
-  const RT05_CONFIG = {
-      FIREBASE: {
-          apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
-          authDomain: "papan05-21a56.firebaseapp.com",
-          databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
-          projectId: "papan05-21a56",
-          storageBucket: "papan05-21a56.firebasestorage.app",
-          messagingSenderId: "1068108426437",
-          appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
-      },
-      BATAS_WILAYAH: [
-          [-7.7441031, 110.3835], [-7.7447197, 110.3852273], [-7.743848, 110.3854633],
-          [-7.7440818, 110.3861822], [-7.742955, 110.3864933], [-7.7428593, 110.3858925],
-          [-7.7407331, 110.3866972], [-7.7404886, 110.3861929], [-7.740563, 110.3848089],
-          [-7.7399995, 110.3831674], [-7.740159, 110.382234], [-7.7414879, 110.3818906],
-          [-7.7421789, 110.3819979], [-7.7428699, 110.3838755], [-7.7441031, 110.3835]
-      ]
-  };
+export const RT05_CONFIG = {
+    FIREBASE: {
+        apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
+        authDomain: "papan05-21a56.firebaseapp.com",
+        databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "papan05-21a56",
+        storageBucket: "papan05-21a56.firebasestorage.app",
+        messagingSenderId: "1068108426437",
+        appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
+    },
+    BATAS_WILAYAH: [
+        [-7.7441031, 110.3835], [-7.7447197, 110.3852273], [-7.743848, 110.3854633],
+        [-7.7440818, 110.3861822], [-7.742955, 110.3864933], [-7.7428593, 110.3858925],
+        [-7.7407331, 110.3866972], [-7.7404886, 110.3861929], [-7.740563, 110.3848089],
+        [-7.7399995, 110.3831674], [-7.740159, 110.382234], [-7.7414879, 110.3818906],
+        [-7.7421789, 110.3819979], [-7.7428699, 110.3838755], [-7.7441031, 110.3835]
+    ]
+};
 
 // ==========================================
-// INISIALISASI FIREBASE SDK (CENTRALIZED)
+// INISIALISASI FIREBASE SDK
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, get, child, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const app = initializeApp(RT05_CONFIG.FIREBASE);
-const db = getDatabase(app);
+export const db = getDatabase(app);
 
-window.RT05_CONFIG = RT05_CONFIG;
-// Ekspor objek database agar bisa diakses global oleh file lain
-window.db = db;
-window.firebaseRef = ref;
-window.firebaseGet = get;
-window.firebaseChild = child;
-window.firebasePush = push;
-window.firebaseSet = set;
-window.firebaseOnValue = onValue;
+// EXPORT Firebase methods yang dibutuhkan file lain
+export { ref, get, child, push, set, onValue };
 
 // ==========================================
-// FUNGSI UTILITY PENDUKUNG (TETAP DIPERTAHANKAN)
+// FUNGSI UTILITY PENDUKUNG
 // ==========================================
 
-// Fungsi Normalisasi Koordinat
-function perbaikiKoordinat(val) {
+export function perbaikiKoordinat(val) {
     if (!val) return "";
     var str = val.toString().replace(/,/g, '.').replace(/\s+/g, '');
     var isNegatif = str.startsWith('-');
@@ -61,14 +52,12 @@ function perbaikiKoordinat(val) {
     return str;
 }
 
-// Fungsi Pengaman Text (Universal & Safe)
-function escapeHTML(str) {
+export function escapeHTML(str) {
     if (str === null || str === undefined) return '';
     return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
-// Fungsi Penentuan Gaya & Ikon Pin Peta
-function getIkonKategori(namaAsli, kategoriManual) {
+export function getIkonKategori(namaAsli, kategoriManual) {
     let emoji = '🏠'; let kategori = 'rumah';
     let namaUpper = namaAsli ? namaAsli.toUpperCase() : '';
     kategoriManual = kategoriManual ? kategoriManual.toLowerCase() : '';
@@ -103,6 +92,7 @@ function getIkonKategori(namaAsli, kategoriManual) {
 let mediaStreamSenter = null;
 let isSenterAktif = false;
 
+// TETAP gunakan window untuk fungsi yang dipanggil langsung dari tombol HTML (onclick="toggleSenterRonda()")
 window.toggleSenterRonda = async function() {
   const btn = document.getElementById('btn-senter-ronda');
   const icon = document.getElementById('icon-senter-ronda');
