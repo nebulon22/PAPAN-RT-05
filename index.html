@@ -1300,25 +1300,30 @@ var dataKeuangan = [];
 var pinRumahAktif = null;
 
 // ==========================================
-// BAGIAN 1: PEMUATAN PETA & DATA WARGA (FIREBASE RTDB)
+// BAGIAN 1: PEMUATAN PETA & DATA FIREBASE
 // ==========================================
 
-// 🔥 INISIALISASI PETA DENGAN DEFERRED LOADING (Ditunda 200ms agar UI mulus dulu)
-window.addEventListener('DOMContentLoaded', () => {
-  setTimeout(() => {
-    map = L.map('map').setView([-7.7423, 110.3842], 17);
+// 🔥 Dengarkan sinyal dari utils.js (Tidak perlu setTimeout lagi!)
+window.addEventListener('utilsSiap', () => {
+  
+  // 1. Render Peta Leaflet
+  map = L.map('map').setView([-7.7423, 110.3842], 17);
+  L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+  }).addTo(map);
+  L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-        attribution: '&copy; Google Maps'
-    }).addTo(map);
+  // 2. Tarik Data Utama dari Firebase
+  muatDataPetaWarga();
+  muatPengumumanFirebase();
 
-    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
-
-    // Setelah peta siap, jalankan pemuatan data peta dari Firebase RTDB
-    muatDataPetaWarga();
-  }, 200);
+  // 3. Cek Status Sinkronisasi Jimpitan Offline
+  perbaruiIndikatorSync();
+  if (navigator.onLine) {
+    kirimDataPendingJimpitan();
+  }
 });
 
 function muatDataPetaWarga() {
@@ -1494,10 +1499,7 @@ function muatPengumumanFirebase() {
   });
 }
 
-// Panggil fungsi ini saat halaman dimuat
-document.addEventListener('DOMContentLoaded', () => {
-  muatPengumumanFirebase();
-});
+
 
 function escapeHTML(text) {
   if (!text) return '';
@@ -2447,12 +2449,7 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       perbaruiIndikatorSync();
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
-      perbaruiIndikatorSync();
-      if (navigator.onLine) {
-        kirimDataPendingJimpitan();
-      }
-    });
+   
     
 // ==========================================
 // MODUL REKAP & RIWAYAT JIMPITAN (FIREBASE READY)
