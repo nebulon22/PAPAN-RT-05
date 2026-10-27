@@ -21,7 +21,7 @@
 <!-- Pastikan Leaflet dipanggil duluan -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
   <!-- Konfigurasi Global & Firebase Utils -->
-  <script src="utils.js"></script>
+ 
   
  <script>
  var serviceWorkerMenunggu = null;
@@ -2863,23 +2863,32 @@ async function simpanWargaBaru() {
     }
 }
   </script>
+  
   <script src="setting.js"></script>
+  
+  <!-- 1. Muat skrip konfigurasi & utils terlebih dahulu -->
+  <script src="utils.js"></script>
+
+  <!-- 2. Modul Firebase diinisialisasi dan diekspos ke window -->
   <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  const app = initializeApp(RT05_CONFIG.FIREBASE);
-  const db = getDatabase(app);
+    const app = initializeApp(RT05_CONFIG.FIREBASE);
+    const db = getDatabase(app);
 
-  // EKSPOS KE GLOBAL WINDOW AGAR TIDAK ERROR "is not a function"
-  window.db = db;
-  window.firebaseRef = ref;
-  window.firebaseOnValue = onValue;
-  window.firebaseUpdate = update;
-  window.firebaseRemove = remove;
-  window.firebasePush = push;
-  window.firebaseSet = set;
-  window.firebaseGet = get;
-</script>
+    // EKSPOS KE GLOBAL WINDOW AGAR TIDAK ERROR "is not a function"
+    window.db = db;
+    window.firebaseRef = ref;
+    window.firebaseOnValue = onValue;
+    window.firebaseUpdate = update;
+    window.firebaseRemove = remove;
+    window.firebasePush = push;
+    window.firebaseSet = set;
+    window.firebaseGet = get;
+
+    // 3. Picu event agar peta tahu bahwa Firebase & Utils sudah siap
+    window.dispatchEvent(new Event('utilsSiap'));
+  </script>
 </body>
 </html>
