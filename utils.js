@@ -1,6 +1,6 @@
-// utils.js - Kumpulan Variabel dan Fungsi Global RT 05 (Full Firebase)
+// utils.js - Kumpulan Variabel dan Fungsi Global RT 05 (Versi Tanpa Module)
 
-export const RT05_CONFIG = {
+const RT05_CONFIG = {
     FIREBASE: {
         apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
         authDomain: "papan05-21a56.firebaseapp.com",
@@ -20,22 +20,10 @@ export const RT05_CONFIG = {
 };
 
 // ==========================================
-// INISIALISASI FIREBASE SDK
-// ==========================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, get, child, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-const app = initializeApp(RT05_CONFIG.FIREBASE);
-export const db = getDatabase(app);
-
-// EXPORT Firebase methods yang dibutuhkan file lain
-export { ref, get, child, push, set, onValue };
-
-// ==========================================
 // FUNGSI UTILITY PENDUKUNG
 // ==========================================
 
-export function perbaikiKoordinat(val) {
+function perbaikiKoordinat(val) {
     if (!val) return "";
     var str = val.toString().replace(/,/g, '.').replace(/\s+/g, '');
     var isNegatif = str.startsWith('-');
@@ -52,12 +40,12 @@ export function perbaikiKoordinat(val) {
     return str;
 }
 
-export function escapeHTML(str) {
+function escapeHTML(str) {
     if (str === null || str === undefined) return '';
     return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
-export function getIkonKategori(namaAsli, kategoriManual) {
+function getIkonKategori(namaAsli, kategoriManual) {
     let emoji = '🏠'; let kategori = 'rumah';
     let namaUpper = namaAsli ? namaAsli.toUpperCase() : '';
     kategoriManual = kategoriManual ? kategoriManual.toLowerCase() : '';
@@ -92,7 +80,6 @@ export function getIkonKategori(namaAsli, kategoriManual) {
 let mediaStreamSenter = null;
 let isSenterAktif = false;
 
-// TETAP gunakan window untuk fungsi yang dipanggil langsung dari tombol HTML (onclick="toggleSenterRonda()")
 window.toggleSenterRonda = async function() {
   const btn = document.getElementById('btn-senter-ronda');
   const icon = document.getElementById('icon-senter-ronda');
@@ -140,16 +127,10 @@ window.toggleSenterRonda = async function() {
   }
 };
 
-// (Bagian paling bawah dari utils.js)
-
+// Daftarkan variabel & fungsi ke window agar bisa diakses global
 window.RT05_CONFIG = RT05_CONFIG;
-window.db = db;
-window.firebaseRef = ref;
-window.firebaseGet = get;
-window.firebaseChild = child;
-window.firebasePush = push;
-window.firebaseSet = set;
-window.firebaseOnValue = onValue;
+window.perbaikiKoordinat = perbaikiKoordinat;
+window.escapeHTML = escapeHTML;
+window.getIkonKategori = getIkonKategori;
 
-// 🔥 Beri sinyal ke index.html bahwa Firebase dan Utils sudah siap dieksekusi!
 window.dispatchEvent(new Event('utilsSiap'));
