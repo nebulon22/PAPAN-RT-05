@@ -3006,54 +3006,46 @@ window.refreshDataJimpitan = function() {
       document.getElementById('formWargaBaru').reset();
     }
 
-    async function simpanWargaBaru() {
-      const nama = document.getElementById('wargaNama').value.trim();
-      const noRumah = document.getElementById('wargaNoRumah').value.trim();
-      const hp = document.getElementById('wargaHp').value.trim();
-      const status = document.getElementById('wargaStatus').value;
-      const cerita = document.getElementById('wargaCerita').value.trim();
+   async function simpanWargaBaru() {
+    const nama = document.getElementById('wargaNama').value.trim();
+    const noRumah = document.getElementById('wargaNoRumah').value.trim();
+    const hp = document.getElementById('wargaHp').value.trim();
+    const status = document.getElementById('wargaStatus').value;
+    const cerita = document.getElementById('wargaCerita').value.trim();
 
-      if (!nama || !noRumah || !hp) {
-        alert('Mohon isi nama, nama kost/rumah, dan no HP dengan lengkap!');
-        return;
-      }
+    if (!nama || !noRumah || !hp) {
+      alert('Mohon isi nama, nama kost/rumah, dan no HP dengan lengkap!');
+      return;
+    }
 
-      const btn = document.getElementById('btnSimpanWarga');
-      btn.disabled = true;
-      btn.innerText = '⏳ Mengirim...';
+    const btn = document.getElementById('btnSimpanWarga');
+    btn.disabled = true;
+    btn.innerText = '⏳ Menyimpan ke Firebase...';
 
-      const payload = {
-        action: 'tambahWargaBaru',
+    try {
+      // Menggunakan Firebase RTDB untuk menyimpan data warga baru secara real-time
+      const wargaBaruRef = window.firebaseRef(window.db, 'warga_baru');
+      await window.firebasePush(wargaBaruRef, {
         nama: nama,
         noRumah: noRumah,
         hp: hp,
         status: status,
-        cerita: cerita
-      };
+        cerita: cerita,
+        tanggal: new Date().toLocaleString('id-ID'),
+        timestamp: Date.now()
+      });
 
-      try {
-        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-        const text = await res.text();
+      btn.disabled = false;
+      btn.innerText = '📤 Kirim Data Warga Baru';
 
-        btn.disabled = false;
-        btn.innerText = '📤 Kirim Data Warga Baru';
-
-        if (text.includes('SUCCESS')) {
-          alert('✅ Data Warga Baru berhasil terdaftar!');
-          tutupModalWargaBaru();
-        } else {
-          alert('❌ Gagal mengirim: ' + text);
-        }
-      } catch (err) {
-        btn.disabled = false;
-        btn.innerText = '📤 Kirim Data Warga Baru';
-        alert('❌ Error koneksi: ' + err);
-      }
+      alert('✅ Data Warga Baru berhasil terdaftar di database!');
+      tutupModalWargaBaru();
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerText = '📤 Kirim Data Warga Baru';
+      alert('❌ Gagal menyimpan ke Firebase: ' + err);
     }
+  }
   </script>
   <script src="setting.js"></script>
 </body>
