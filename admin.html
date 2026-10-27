@@ -1006,56 +1006,37 @@ function periksaSesiAdmin() {
 
  
 
-    document.getElementById('dataForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnSubmitForm');
-      btn.innerText = '⏳ Menyimpan...';
-      btn.disabled = true;
+  document.getElementById('dataForm').addEventListener('submit', function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnSubmitForm');
+  btn.innerText = '⏳ Menyimpan ke Firebase...';
+  btn.disabled = true;
 
-     
-const payload = {
-  token: localStorage.getItem('adminToken') || '',
-  nama: document.getElementById('inputNama').value,
-  lat: document.getElementById('inputLat').value,
-  lng: document.getElementById('inputLng').value,
-  kategori: document.getElementById('inputKategori').value,
-  hidden: document.getElementById('inputHidden').value,
-  foto: document.getElementById('inputFoto').value
-};
+  const payload = {
+    nama: document.getElementById('inputNama').value,
+    lat: document.getElementById('inputLat').value,
+    lng: document.getElementById('inputLng').value,
+    kategori: document.getElementById('inputKategori').value,
+    hidden: document.getElementById('inputHidden').value,
+    foto: document.getElementById('inputFoto').value
+  };
 
-
-      if (!navigator.onLine) {
-        btn.innerText = '💾 Simpan ke Google Sheet';
-        btn.disabled = false;
-        simpanPayloadKeAntrean('Data Peta Lokasi', payload);
-        tutupModalForm();
-        return;
-      }
-
-      fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.text())
-      .then(result => {
-        btn.innerText = '💾 Simpan ke Google Sheet';
-        btn.disabled = false;
-        if(result.includes('SUCCESS')) {
-          alert('✅ Data berhasil disimpan!');
-          tutupModalForm();
-          location.reload();
-        } else {
-          alert('❌ Gagal: ' + result);
-        }
-      })
-      .catch(err => {
-        btn.innerText = '💾 Simpan ke Google Sheet';
-        btn.disabled = false;
-        simpanPayloadKeAntrean('Data Peta Lokasi', payload);
-        tutupModalForm();
-      });
+  // Simpan langsung menggunakan Firebase push & set ke node 'peta_warga'
+  const newRef = firebasePush(firebaseRef(db, 'peta_warga'));
+  firebaseSet(newRef, payload)
+    .then(() => {
+      btn.innerText = '💾 Simpan ke Google Sheet'; // Atau ubah teks tombolnya sesuai keinginan
+      btn.disabled = false;
+      alert('✅ Data berhasil disimpan ke Firebase!');
+      tutupModalForm();
+      document.getElementById('dataForm').reset();
+    })
+    .catch((err) => {
+      btn.innerText = '💾 Simpan ke Google Sheet';
+      btn.disabled = false;
+      alert('❌ Gagal menyimpan: ' + err.message);
     });
+});
 
  function logoutAdmin() {
   // Hapus kredensial & cache sensitif dari memori browser
@@ -1077,95 +1058,102 @@ var pinHasilPencarian = null;
 function initMap() {
   if (map) return;
 
-  // SERTAKAN TOKEN DI SINI AGAR BEBAS ERROR 401/403 SAAT MENGAMBIL DATA PETA
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-  var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
+  map = L.map('map').setView([-7.7423, 110.3842], 17);
 
- 
-    map = L.map('map').setView([-7.7423, 110.3842], 17);
-
- ['modal-form', 'modal-admin-inventaris', 'modal-kelola-warga', 'tab-progker', 'modal-admin-pengumuman', 'modal-laporan'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) L.DomEvent.disableClickPropagation(el);
-});
+  ['modal-form', 'modal-admin-inventaris', 'modal-kelola-warga', 'tab-progker', 'modal-admin-pengumuman', 'modal-laporan'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) L.DomEvent.disableClickPropagation(el);
+  });
     
-     
-    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
+  L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { 
+    maxZoom: 20, 
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] 
+  }).addTo(map);
 
-    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+  L.polygon(RT05_CONFIG.BATAS_WILAYAH, { 
+    color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 
+  }).addTo(map);
 
-    // Tempelkan LayerGroup utama ke peta
-    markerGroup.addTo(map);
+  // Tempelkan LayerGroup utama ke peta
+  markerGroup.addTo(map);
 
-    map.on('click', function(e) {
-      if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex' || document.getElementById('modal-kelola-warga').style.display === 'flex') return;
-      document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
-      document.getElementById('inputNama').value = "";
-      document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
-      document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
-      document.getElementById('inputPinForm').value = localStorage.getItem('verifiedPin') || '';
-      document.getElementById('inputFoto').value = "";
-      document.getElementById('modal-form').style.display = 'flex';
-    });
+  map.on('click', function(e) {
+    if (document.getElementById('modal-form').style.display === 'flex' || 
+        document.getElementById('modal-admin-inventaris').style.display === 'flex' || 
+        document.getElementById('modal-kelola-warga').style.display === 'flex') return;
+    
+    document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
+    document.getElementById('inputNama').value = "";
+    document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
+    document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+    document.getElementById('inputFoto').value = "";
+    document.getElementById('modal-form').style.display = 'flex';
+  });
 
-    ambilDataSheets('cache_peta_admin', SHEET_URL, (data, fromCache) => {
-      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-      daftarPin = [];
+  // 🚀 AMBIL DATA PETA LANGSUNG DARI FIREBASE RTDB
+  const petaRef = firebaseRef(db, 'peta_warga');
+  firebaseOnValue(petaRef, (snapshot) => {
+    markerGroup.clearLayers();
+    daftarPin = [];
 
-      baris.forEach(function(kolom) {
-        if (kolom.length >= 3 && kolom[0] !== '') {
-          var latClean = perbaikiKoordinat(kolom[1]);
-          var lngClean = perbaikiKoordinat(kolom[2]);
-          
-          var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
-          var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
-          var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
-          var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
+    if (!snapshot.exists()) return;
 
-          var item = {
-            name: namaAsli,
-            nameAsli: namaAsli,
-            lat: parseFloat(latClean),
-            lng: parseFloat(lngClean),
-            hidden: statusHidden,
-            foto: urlFoto
-          };
+    snapshot.forEach((childSnap) => {
+      const val = childSnap.val();
+      if (!val) return;
 
-          if (isNaN(item.lat) || isNaN(item.lng)) return;
+      var latClean = perbaikiKoordinat(val.lat);
+      var lngClean = perbaikiKoordinat(val.lng);
+      
+      // Menyesuaikan format boolean atau string 'TRUE'/'FALSE' dari database
+      var statusHidden = typeof val.hidden === 'boolean' ? val.hidden : (val.hidden ? String(val.hidden).trim().toUpperCase() === 'TRUE' : false);
+      var kategoriManual = val.kategori ? String(val.kategori).trim().toLowerCase() : (val.type ? String(val.type).trim().toLowerCase() : '');
+      var urlFoto = val.foto ? String(val.foto).trim() : '';
+      var namaAsli = val.nama ? String(val.nama).trim() : '';
 
-          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
-          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-          
-          let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+      var item = {
+        name: namaAsli,
+        nameAsli: namaAsli,
+        lat: parseFloat(latClean),
+        lng: parseFloat(lngClean),
+        hidden: statusHidden,
+        foto: urlFoto
+      };
 
-          var customIcon = L.divIcon({
-            className: 'custom-pin',
-            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
-            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-          });
-          
-          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+      if (isNaN(item.lat) || isNaN(item.lng)) return;
 
-          var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
+      var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+      var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+      var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+      
+      let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
 
-          daftarPin.push({ 
-            namaRaw: item.nameAsli,
-            nama: item.nameAsli.toLowerCase(), 
-            marker: marker, 
-            lat: item.lat, 
-            lng: item.lng,
-            hidden: item.hidden,
-            kategori: katFinal
-          });
-        }
+      var customIcon = L.divIcon({
+        className: 'custom-pin',
+        html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
+        iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
       });
+      
+      var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-      // Terapkan filter pertama kali setelah seluruh data siap
-      filterKategori('semua');
+      var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
+
+      daftarPin.push({ 
+        namaRaw: item.nameAsli,
+        nama: item.nameAsli.toLowerCase(), 
+        marker: marker, 
+        lat: item.lat, 
+        lng: item.lng,
+        hidden: item.hidden,
+        kategori: katFinal
+      });
     });
-  }
 
+    // Terapkan filter pertama kali setelah seluruh data siap
+    filterKategori('semua');
+  });
+}
+    
 // 🛠️ FUNGSI FILTER BERSIH MENGGUNAKAN LAYERGROUP
   function filterKategori(kat) {
     var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
