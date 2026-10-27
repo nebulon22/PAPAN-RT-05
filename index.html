@@ -1442,6 +1442,12 @@ function muatDataPetaWarga() {
 // 2. MUAT DATA PENGUMUMAN (REAL-TIME FIREBASE)
 // ==========================================
 function muatPengumumanFirebase() {
+  // 🛡️ Pastikan modul Firebase sudah siap sebelum mengeksekusi fungsi database
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatPengumumanFirebase, 50);
+    return;
+  }
+
   const pengumumanRef = window.firebaseRef(window.db, "pengumuman");
   
   // Menggunakan onValue agar otomatis sinkron secara real-time
@@ -1504,7 +1510,6 @@ function muatPengumumanFirebase() {
     }
   });
 }
-
 
 
 function escapeHTML(text) {
