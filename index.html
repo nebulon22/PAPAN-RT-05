@@ -20,14 +20,14 @@
   
 <!-- Pastikan Leaflet dipanggil duluan -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
-  <!-- Baru Utils (Firebase) -->
+  <!-- Konfigurasi Global & Firebase Utils -->
+  <script src="config.js"></script>
   <script type="module" src="utils.js"></script>
   
  <script>
  var serviceWorkerMenunggu = null;
 
   if ('serviceWorker' in navigator) {
-    // 1. Auto-reload saat controller berpindah ke SW baru
     let sedangRefresh = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!sedangRefresh) {
@@ -36,7 +36,6 @@
       }
     });
 
-    // 2. Registrasi Service Worker & Penanganan Update
     navigator.serviceWorker.register('./sw.js').then(reg => {
       const tangkapSWWaiting = (sw) => {
         if (!sw) return;
@@ -44,12 +43,10 @@
         tampilkanLoncengUpdate();
       };
 
-      // Cek jika sudah ada file update yang siap dipasang
       if (reg.waiting) {
         tangkapSWWaiting(reg.waiting);
       }
 
-      // Deteksi saat ada update baru yang sedang terunduh
       reg.addEventListener('updatefound', () => {
         const workerBaru = reg.installing;
         if (workerBaru) {
@@ -65,32 +62,25 @@
     });
   }
 
- // Fungsi untuk memunculkan lonceng + teks "Ada update nih!"
 function tampilkanLoncengUpdate() {
   var container = document.getElementById('container-update-pwa');
   if (container) container.style.display = 'flex';
 }
 
-// Fungsi yang dipicu saat lonceng/teks diklik warga
 function perbaruiAplikasiSekarang() {
   var container = document.getElementById('container-update-pwa');
-  
-  // 1. Ubah tampilan tombol untuk memberi tahu warga bahwa proses sedang berjalan
   if (container) {
     container.innerHTML = '<span style="font-size: 11px; font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Memasang pembaruan...</span>';
   }
 
-  // 2. Kirim sinyal skipWaiting ke Service Worker
   if (serviceWorkerMenunggu) {
     serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
   } else {
-    // Jalankan reload paksa jika service worker tidak merespons
     setTimeout(() => {
       window.location.reload(true);
     }, 500);
   }
 }
-   
 </script>
 
  <style>
@@ -99,10 +89,9 @@ function perbaruiAplikasiSekarang() {
     padding: 0; 
     height: 100%; 
     font-family: sans-serif; 
-    overflow: hidden; /* Mencegah halaman utama/peta ikut scroll saat modal terbuka */
+    overflow: hidden; 
   }
   
-  /* Tambahkan background placeholder agar LCP merespons lebih cepat */
   #map { 
     width: 100%; 
     height: 100vh; 
@@ -244,7 +233,6 @@ function perbaruiAplikasiSekarang() {
     font-weight: bold;
   }
 
-  /* --- PERBAIKAN UTAMA MODAL --- */
   .modal-bg {
     display: none;
     position: fixed;
@@ -261,14 +249,14 @@ function perbaruiAplikasiSekarang() {
     background: white;
     width: 92%;
     max-width: 420px;
-    max-height: 82vh; /* Batasi tinggi maksimum modal agar pas di layar HP */
+    max-height: 82vh;
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.3);
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    overflow: hidden; /* Mencegah kotak modal meluber keluar */
+    overflow: hidden;
   }
 
   .modal-header {
@@ -278,22 +266,21 @@ function perbaruiAplikasiSekarang() {
     border-bottom: 1px solid #eee;
     padding-bottom: 8px;
     margin-bottom: 12px;
-    flex-shrink: 0; /* Header dikunci agar tidak ikut menyusut/bergeser */
+    flex-shrink: 0;
   }
   
   .modal-header h3 { margin: 0; font-size: 16px; color: #111; }
   .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #777; font-weight: bold; }
   
   .modal-body { 
-    overflow-y: auto; /* Memunculkan scrollbar vertikal mandiri */
+    overflow-y: auto; 
     flex: 1; 
     display: flex; 
     flex-direction: column; 
     gap: 12px;
     padding-right: 4px;
-    -webkit-overflow-scrolling: touch; /* Efek scroll halus di perangkat iOS */
+    -webkit-overflow-scrolling: touch;
   }
-  /* ------------------------------ */
   
   .card-info {
     background: #fdfdfd;
@@ -339,9 +326,6 @@ function perbaruiAplikasiSekarang() {
     box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
   }
 
-/* ========================================== */
-/* 1. TOMBOL FLOATING DI LUAR */
-/* ========================================== */
 .btn-qr-floating {
   position: fixed;
   bottom: 20px;
@@ -350,15 +334,9 @@ function perbaruiAplikasiSekarang() {
   z-index: 1500;
   width: 64px;
   height: 64px;
-  
-  /* Efek Glassmorphism */
-  /* Warna biru dengan transparansi */
   background-color: rgba(2, 136, 209, 0.7); 
-  /* Efek blur pada area di belakang tombol */
   backdrop-filter: blur(2px); 
- /* Border tipis warna biru tua */
   border: 1px solid rgba(1, 87, 155, 0.3);
-  
   color: white;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -368,13 +346,12 @@ function perbaruiAplikasiSekarang() {
   align-items: center;
   justify-content: center;
   padding: 4px;
-  transition: all 0.3s ease; /* Transisi halus saat hover/tekan */
+  transition: all 0.3s ease;
 }
 
-/* Pengaturan Sudut Siku Sesuai Ukuran Baru */
 .btn-qr-floating .corner {
   position: absolute;
-  width: 10px;  /* Ukuran siku diperkecil agar pas */
+  width: 10px; 
   height: 10px;
   border-color: white;
   border-style: solid;
@@ -382,7 +359,6 @@ function perbaruiAplikasiSekarang() {
   pointer-events: none;
 }
 
-/* Posisi sudut siku yang pas dan rapi di dalam tombol 64px */
 .btn-qr-floating .top-left {
   top: 5px; 
   left: 5px;
@@ -415,10 +391,6 @@ function perbaruiAplikasiSekarang() {
   border-bottom-right-radius: 6px;
 }
 
-   
-/* ========================================== */
-/* 2. MODAL KAMERA SCANNER (Sesuai HTML Anda) */
-/* ========================================== */
 .qr-scanner-wrapper {
   position: relative;
   width: 100%;
@@ -433,10 +405,9 @@ function perbaruiAplikasiSekarang() {
   height: 100%;
   pointer-events: none;
   box-sizing: border-box;
-  padding: 30px; /* Jarak bingkai siku dari tepi kamera */
+  padding: 30px;
 }
 
-/* Desain Siku Besar untuk Modal Kamera */
 .qr-corner-overlay .corner {
   position: absolute;
   width: 35px;
@@ -469,8 +440,7 @@ function perbaruiAplikasiSekarang() {
   border-bottom-width: 4px; border-right-width: 4px;
   border-bottom-right-radius: 12px;
 }
-   
-   
+  
   @keyframes pulse {
     0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
     70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
@@ -507,28 +477,21 @@ function perbaruiAplikasiSekarang() {
     object-fit: contain !important;
     transition: transform 0.3s ease !important;
   }
-
- 
-   
 </style>
 </head>
 <body>
   <main>
- <!-- Container Navigasi Pojok Kanan Atas -->
 <div style="position: fixed; top: 12px; right: 12px; z-index: 2000; display: flex; align-items: center; gap: 8px;">
   
-  <!-- Wrapper Update PWA (Melayang & Berkedip Bersama) -->
   <div id="container-update-pwa" onclick="perbaruiAplikasiSekarang()" 
     style="display: none; flex-direction: column; align-items: center; cursor: pointer; animation: floatPulse 1.5s infinite; position: relative;" 
     title="Versi baru tersedia! Klik untuk memperbarui">
     
-    <!-- Tombol Lonceng -->
     <button id="btn-update-pwa" type="button" 
       style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(239,68,68,0.5); display: flex; align-items: center; justify-content: center; padding: 0; outline: none; pointer-events: none;">
       🔔
     </button>
 
-    <!-- Teks Peringatan Kecil Melayang Tepat di Bawah Lonceng -->
     <span style="white-space: nowrap; background: #ef4444; color: #ffffff; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin-top: 3px; pointer-events: none;">
       Ada update nih!
     </span>
@@ -546,17 +509,14 @@ function perbaruiAplikasiSekarang() {
   <!-- Peta Utama -->
   <div id="map"></div>
   
- <!-- Container Pojok Kiri Atas (Tombol Setting & Banner Sinkronisasi) -->
 <div style="position: fixed; top: 12px; left: 12px; z-index: 1000; display: flex; align-items: center; gap: 6px;">
   
-  <!-- Tombol Pengaturan ⚙️ -->
   <button type="button" onclick="bukaModalSetting()" 
     style="background: #ffffff; color: #333; border: 1px solid #cbd5e1; border-radius: 50%; width: 32px; height: 32px; font-size: 15px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
     title="Pengaturan Notifikasi & Suara">
     ⚙️
   </button>
   
-  <!-- Banner/Indikator Sinkronisasi -->
   <div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-align: center; background-color: rgba(209, 250, 229, 0.9); color: #065f46; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px;">
     <span style="width: 8px; height: 8px; background: #34a853; border-radius: 50%; display: inline-block;"></span>
     <span id="teks-sinkron">Online</span>
@@ -564,7 +524,6 @@ function perbaruiAplikasiSekarang() {
 
 </div>
 
-<!-- Panel pencarian dan filter melayang -->
   <div id="top-panel">
     <div id="search-box">
       <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
@@ -591,18 +550,15 @@ function perbaruiAplikasiSekarang() {
       </div>
 
   <div class="filter-row">
-        <!-- TOMBOL REKAP JIMPITAN -->
         <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" onclick="bukaModalRiwayatJimpitan()">
           🪙 Rekap Jimpitan
         </button>
 
-        <!-- TOMBOL UTAMA & MENU POP-UP DENAH RT 05 -->
         <div style="flex: 1; position: relative;">
           <button type="button" id="btn-toggle-denah" onclick="toggleDenahMenu()" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
             🗺️ Denah RT 05
           </button>
 
-          <!-- DAFTAR PILIHAN FILTER: Menggunakan efek Transparan Glassmorphism & Tanpa Kotak Putih Pekat -->
           <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: -100%; width: 220px; margin-top: 6px; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(2px); padding: 10px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15); z-index: 100;">
             <button class="btn-filter active" onclick="pilihFilterDenah('semua', this)" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
             <button class="btn-filter" onclick="pilihFilterDenah('minimarket', this)" style="width: 100%;">🏪 Minimarket</button>
@@ -616,7 +572,6 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-  <!-- Modal Rekening Koran -->
   <div id="modal-keuangan" class="modal-bg" onclick="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
     <div class="modal-content" style="max-width: 650px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;">
       <div class="modal-header">
@@ -672,18 +627,14 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-
-<!-- Modal Pengumuman & RAB (Ukuran Konsisten & Smooth) -->
 <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
   <div class="modal-content" style="max-width: 500px; width: 92%; height: 80vh; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box;">
     
-    <!-- Header Modal (Tetap Di Atas) -->
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px; flex-shrink: 0;">
       <h3 style="margin: 0; font-size: 16px; color: #111;">📢 Informasi & RAB RT 05</h3>
       <button class="close-btn" onclick="tutupModalInfo()">&times;</button>
     </div>
 
-    <!-- TAB NAVIGASI ATAS (Tetap Di Atas) -->
     <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; flex-shrink: 0;">
       <button type="button" id="btn-tab-info" onclick="switchTabWarga('info')" 
               style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">
@@ -695,29 +646,23 @@ function perbaruiAplikasiSekarang() {
       </button>
     </div>
 
-   <!-- WADAH KONTEN (Area Scroll) -->
 <div style="flex: 1; overflow-y: auto; padding-right: 2px;">
   
-  <!-- WADAH TAB 1: INFORMASI UMUM / PENGUMUMAN -->
   <div id="panel-tab-info">
     <div class="modal-body" id="list-pengumuman">
       <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
     </div>
   </div>
 
-  <!-- WADAH TAB 2: RAB / PROGKER (READ ONLY FOR WARGA) -->
   <div id="panel-tab-rab" style="display: none;">
     
-    <!-- Ringkasan Anggaran (2 Card Side-by-Side) -->
     <div style="display: flex; gap: 8px; margin-bottom: 10px;">
       
-      <!-- KIRI: TOTAL ESTIMASI RAB (Proses, Rencana & Selesai) -->
       <div style="flex: 1; background: #eff6ff; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #3b82f6;">
         <span style="font-size: 9.5px; color: #1d4ed8; font-weight: bold; text-transform: uppercase; display: block;">Total Estimasi RAB</span>
         <div id="warga-total-rab" style="font-size: 15px; font-weight: bold; color: #1e40af;">Rp 0</div>
       </div>
 
-      <!-- KANAN: TOTAL REALISASI (Program Kerja Selesai) -->
       <div style="flex: 1; background: #ecfdf5; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #10b981;">
         <span style="font-size: 9.5px; color: #047857; font-weight: bold; text-transform: uppercase; display: block;">Realisasi Selesai</span>
         <div id="warga-total-realisasi" style="font-size: 15px; font-weight: bold; color: #065f46;">Rp 0</div>
@@ -725,7 +670,6 @@ function perbaruiAplikasiSekarang() {
 
     </div>
 
-    <!-- Tabel Transparansi Progker/RAB -->
     <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
       <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
         <thead>
@@ -743,15 +687,11 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-</div> <!-- Ini penutup WADAH KONTEN -->
+</div> 
 
-  <!-- TAMBAHKAN DUA BARIS INI -->
-  </div> <!-- Penutup modal-content -->
-</div> <!-- Penutup modal-info -->
+  </div> 
+</div>
 
-
-    
-<!-- Modal Foto Layar Penuh (Peta & Poster Pengumuman) -->
 <div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)" style="
   display: none; 
   position: fixed; 
@@ -764,8 +704,6 @@ function perbaruiAplikasiSekarang() {
 ">
   <div style="position: relative; max-width: 100%; max-height: 90vh; display: flex; align-items: center; justify-content: center;">
 
-   
-    <!-- Tombol X Merah Minimalis Melayang di Pojok Gambar -->
     <button type="button" onclick="tutupFotoBesar(event)" title="Tutup" style="
       position: absolute; 
       top: -12px; 
@@ -789,7 +727,6 @@ function perbaruiAplikasiSekarang() {
       ✕
     </button>
     
-    <!-- Gambar Poster/Flyer Tampil Pas di Tengah Layar HP -->
     <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()" style="
       max-width: 100%; 
       max-height: 85vh; 
@@ -803,7 +740,6 @@ function perbaruiAplikasiSekarang() {
   </div>
 </div>
 
-  <!-- Modal Popup khusus Video (Berdiri Mandiri & Bersih) -->
 <div id="modal-video-popup" style="
   display: none; 
   position: fixed; 
@@ -815,7 +751,6 @@ function perbaruiAplikasiSekarang() {
   align-items: center; 
   justify-content: center;
 ">
-  <!-- Tombol Rotate (Muncul Khusus Video Landscape) -->
   <button id="btn-rotate-video" type="button" onclick="toggleRotasiVideo()" title="Putar Layar" style="
     display: none; 
     position: absolute; 
@@ -834,7 +769,6 @@ function perbaruiAplikasiSekarang() {
     -webkit-backdrop-filter: blur(4px); 
     outline: none;
   ">🔄 Putar Layar</button>
- <!-- Tombol Close Minimalis & Elegan (Semi-Transparan) -->
 <button type="button" onclick="tutupModalVideo()" title="Tutup Video" style="
   position: absolute; 
   top: 16px; 
@@ -858,7 +792,6 @@ function perbaruiAplikasiSekarang() {
   outline: none;
 ">✖</button>
 
-  <!-- Container Pemutaran Video -->
   <div style="
     width: 100%; 
     height: 100%; 
@@ -880,7 +813,6 @@ function perbaruiAplikasiSekarang() {
   </div>
 </div>
 
-  <!-- Modal Inventaris Perkakas (Menggunakan iframe) -->
 <div id="modal-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-inventaris') tutupModalInventaris()">
   <div class="modal-content" style="max-width: 600px; width: 95%; height: 85vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
     
@@ -889,14 +821,11 @@ function perbaruiAplikasiSekarang() {
       <button class="close-btn" onclick="tutupModalInventaris()">&times;</button>
     </div>
     
-    <!-- Memanggil file inventaris.html ke dalam kotak popup secara mulus -->
     <iframe src="inventaris.html" style="width: 100%; flex: 1; border: none; background: #f9fafb;"></iframe>
     
   </div>
 </div>
 
-
-  <!-- Modal Riwayat Jimpitan -->
   <div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
     <div class="modal-content" style="max-width: 800px; width: 95%;">
       <div class="modal-header">
@@ -910,7 +839,6 @@ function perbaruiAplikasiSekarang() {
         </select>
       </div>
 
-      <!-- Ditambahkan id="label-total-jimpitan" pada span berikut -->
       <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
         <span id="label-total-jimpitan" style="font-size:11px; text-transform:uppercase; opacity:0.9;">TOTAL JIMPITAN HARI INI</span>
         <div id="total-jimpitan" style="font-size:22px; font-weight:bold;">Rp 0</div>
@@ -921,8 +849,6 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-
-<!-- Modal Kamera QR Scanner -->
 <div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
   <div class="modal-content" style="max-width: 320px; text-align: center;">
     <div class="modal-header">
@@ -930,11 +856,9 @@ function perbaruiAplikasiSekarang() {
       <button class="close-btn" onclick="stopScanQR()">&times;</button>
     </div>
     
-    <!-- Wrapper untuk kamera dan bingkai sudut siku -->
     <div class="qr-scanner-wrapper" style="position: relative; width: 100%; border-radius: 8px; overflow: hidden;">
       <div id="qr-reader" style="width: 100%;"></div>
       
-      <!-- Bingkai Sudut Siku Melengkung (Overlay) -->
       <div class="qr-corner-overlay">
         <div class="corner top-left"></div>
         <div class="corner top-right"></div>
@@ -947,16 +871,13 @@ function perbaruiAplikasiSekarang() {
   </div>
 </div>
 
-  <!-- Tombol Melayang Scan QR -->
   <button id="btn-scan-jimpitan" onclick="mulaiScanJimpitan()" class="btn-qr-floating">
     
-    <!-- 4 Sudut Siku Putih Melengkung (Melingkupi seluruh tombol) -->
     <div class="corner top-left"></div>
     <div class="corner top-right"></div>
     <div class="corner bottom-left"></div>
     <div class="corner bottom-right"></div>
 
-    <!-- Gambar Kentongan -->
     <img src="kentongan-slit-drum.png" alt="Kentongan" style="
       width: 28px; 
       height: 28px; 
@@ -965,7 +886,6 @@ function perbaruiAplikasiSekarang() {
       filter: brightness(0) invert(1) drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
     ">
     
-    <!-- Teks Ronda Broo -->
     <span style="
       font-size: 8px; 
       font-weight: bold; 
@@ -975,13 +895,11 @@ function perbaruiAplikasiSekarang() {
     ">Ronda Broo</span>
   </button>
 
-<!-- Tombol Senter -->
 <button onclick="toggleSenterRonda()" id="btn-senter-ronda" title="Senter Ronda" style="position: fixed; bottom: 20px; left: calc(50% + 45px); z-index: 1000; background: #1e293b; color: #fbbf24; border: 1px solid #334155; padding: 6px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 42px; transition: all 0.2s;">
   <i class="fa-solid fa-lightbulb" id="icon-senter-ronda" style="font-size: 16px;"></i>
   <span id="status-senter-ronda" style="font-size: 8px; font-weight: bold; margin-top: 2px;">OFF</span>
 </button>
 
-  <!-- Modal Form Input Jimpitan -->
   <div id="modal-jimpitan" class="modal-bg" style="display: none; z-index: 3000;">
     <div class="modal-content">
       <div class="modal-header">
@@ -1012,7 +930,6 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-  <!-- Modal Form Pendataan Warga Baru -->
   <div id="modal-warga-baru" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-warga-baru') tutupModalWargaBaru()">
     <div class="modal-content" style="max-width: 400px; width: 90%;">
       <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
@@ -1058,35 +975,27 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
   
-<!-- Modal Info / Changelog -->
 <div id="modal-changelog" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-changelog') tutupModalChangelog()">
   <div class="modal-content" style="max-width: 400px; max-height: 80vh; display: flex; flex-direction: column; text-align: left;">
     
-    <!-- Header (Tetap di atas) -->
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; flex-shrink: 0;">
       <h3 style="margin: 0; font-size: 16px; color: #333;">ℹ️ Informasi & Catatan Perubahan</h3>
       <span onclick="tutupModalChangelog()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
     </div>
 
-    <!-- Area Konten (Bisa di-scroll) -->
     <div id="konten-changelog" style="font-size: 13px; color: #444; line-height: 1.5; overflow-y: auto; flex: 1; padding-right: 4px;"></div>
 
-    <!-- Section Credits (Disisipkan di sini) -->
     <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee; text-align: center; font-size: 11px; color: #666; flex-shrink: 0;">
       <strong>Papan Informasi Digital RT 05 Kayen</strong><br>
       <span style="font-size: 10px; color: #888;">Dikembangkan oleh Pengurus RT 05 Kayen • Powered by Leaflet</span><br>
       <span style="font-size: 10px; color: #0288d1; font-weight: 500;">Developed with ❤️ by ©Deny Rinawan</span>
     </div>
 
-    <!-- Tombol Tutup (Tetap di bawah) -->
     <button type="button" onclick="tutupModalChangelog()" style="width: 100%; margin-top: 10px; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; flex-shrink: 0;">
       Tutup
     </button>
   </div>
 </div>
-
-
-
 
 <style>
   @keyframes softPulse {
@@ -1108,20 +1017,17 @@ function perbaruiAplikasiSekarang() {
     animation: softPulse 2s infinite ease-in-out !important;
   }
 </style>
-<!-- 1. TOMBOL CHAT MELAYANG (Pojok Kiri Bawah) -->
+
 <button id="floating-chat-btn" onclick="toggleChatModal()" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #22c55e; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer;" title="Buka Live Chat RT">
   <i class="fa-solid fa-comments" style="font-size: 20px;"></i>
   
-  <!-- BADGE UNREAD OBROLAN GRUP UTAMA -->
   <span id="badge-chat-main" style="display: none; position: absolute; top: -3px; right: -3px; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 12px; border: 2px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); min-width: 18px; text-align: center; line-height: 1;">
     0
   </span>
 </button>
 
-<!-- 2. KOTAK PANEL CHAT OVERLAY (Transparan Hitam 20% Okupasi) -->
 <div id="chat-overlay-modal" style="display: none; position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1000; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
   
-  <!-- Header Chat Overlay -->
   <div style="background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
     <div style="display: flex; align-items: center; gap: 8px;">
       <i class="fa-solid fa-comments" style="color: #38bdf8;"></i>
@@ -1132,13 +1038,10 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-
-  <!-- Frame Tampilan Chat (Iframe Transparan) -->
   <iframe src="chat.html" style="width: 100%; height: 100%; border: none; background: transparent;" allowtransparency="true"></iframe>
 
 </div>
 
-<!-- Modal Pengaturan Notifikasi & Suara -->
 <div id="modal-setting" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-setting') tutupModalSetting()">
   <div class="modal-content" style="max-width: 380px; display: flex; flex-direction: column; text-align: left;">
     
@@ -1149,7 +1052,6 @@ function perbaruiAplikasiSekarang() {
 
     <div style="font-size: 13px; color: #444; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: 60vh;">
       
-      <!-- Pilihan Mode Notifikasi -->
       <div style="background: #f8fafb; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
         <label for="setting-mode-notif" style="font-weight: bold; display: block; margin-bottom: 6px; color: #1e293b;">Mode Notifikasi (Chat, Update, & Info):</label>
         <select id="setting-mode-notif" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 500; outline: none;">
@@ -1160,7 +1062,6 @@ function perbaruiAplikasiSekarang() {
         </select>
       </div>
 
-<!-- Pilihan Suara Notifikasi -->
 <div style="margin-top: 10px;">
   <label for="setting-sound-choice" style="font-size: 11px; font-weight: bold; color: #374151; display: block; margin-bottom: 3px;">Pilih Nada Notifikasi:</label>
   <select id="setting-sound-choice" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 11px; background-color: #f9fafb; color: #1f2937;">
@@ -1180,7 +1081,6 @@ function perbaruiAplikasiSekarang() {
   </select>
 </div>
 
-      <!-- Toggle Khusus Chat -->
       <div style="background: #f8fafb; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
         <div>
           <span style="font-weight: bold; display: block; color: #1e293b;">Notifikasi Chat Masuk</span>
@@ -1191,13 +1091,12 @@ function perbaruiAplikasiSekarang() {
 
     </div>
 
-    <!-- Tombol Simpan -->
     <button type="button" onclick="simpanPengaturanApp()" style="width: 100%; margin-top: 15px; padding: 10px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
       💾 Simpan Pengaturan
     </button>
   </div>
 </div>
-    
+  
 </main>
 <script>
   function toggleChatModal() {
@@ -1209,15 +1108,12 @@ function perbaruiAplikasiSekarang() {
     if (modal.style.display === 'none' || modal.style.display === '') {
       modal.style.display = 'flex';
       
-      // Sembunyikan badge saat modal chat dibuka
       const badge = document.getElementById('badge-chat-main');
       if (badge) badge.style.display = 'none';
 
-      // 🛑 Matikan animasi tombol ketika modal dibuka
       const chatBtn = document.getElementById('floating-chat-btn');
       if (chatBtn) chatBtn.classList.remove('chat-btn-animated');
 
-      // Pindahkan ke Public Group & tandai terbaca HANYA saat modal DIBUKA
       if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
         iframe.contentWindow.switchChatRoom('public');
       }
@@ -1226,20 +1122,16 @@ function perbaruiAplikasiSekarang() {
     }
   }
 
-  // 📥 SATU-SATUNYA PENGHUBUNG PESAN DARI IFRAME CHAT
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
       const count = event.data.unreadPublicCount || 0;
       const modal = document.getElementById('chat-overlay-modal');
       const isModalOpen = (modal && modal.style.display === 'flex');
 
-      // Jika modal terbuka, anggap pesan sudah dibaca (count = 0)
       const effectiveCount = isModalOpen ? 0 : count;
 
-      // Perbarui tampilan badge di tombol luar dan animasinya
       updatePublicTabBadge(effectiveCount);
 
-      // Update badge ikon aplikasi PWA di Home Screen HP
       if ('setAppBadge' in navigator) {
         try {
           if (effectiveCount > 0) {
@@ -1247,14 +1139,11 @@ function perbaruiAplikasiSekarang() {
           } else {
             navigator.clearAppBadge().catch(err => console.log(err));
           }
-        } catch (e) {
-          // Abaikan jika browser tidak mendukung
-        }
+        } catch (e) {}
       }
     }
   });
 
-  // Fungsi untuk memperbarui Badge pada Ikon Aplikasi PWA (Home Screen)
   function updatePWABadge(totalUnread) {
     if ('setAppBadge' in navigator) {
       try {
@@ -1267,7 +1156,6 @@ function perbaruiAplikasiSekarang() {
     }
   }
 
-  // 🔥 FUNGSI UTAMA PENGATUR BADGE & ANIMASI BERDENYUT
   function updatePublicTabBadge(count) {
     const badge = document.getElementById('badge-chat-main');
     const chatBtn = document.getElementById('floating-chat-btn');
@@ -1277,36 +1165,23 @@ function perbaruiAplikasiSekarang() {
     if (count > 0) {
       badge.style.display = 'inline-block';
       badge.innerText = count > 99 ? '99+' : count;
-      
-      // 🔥 NYALAKAN ANIMASI LEMBUT KETIKA ADA PESAN BARU
       chatBtn.classList.add('chat-btn-animated');
     } else {
       badge.style.display = 'none';
       badge.innerText = '0';
-      
-      // 🛑 MATIKAN ANIMASI JIKA SUDAH DIBACA
       chatBtn.classList.remove('chat-btn-animated');
     }
   }
 </script>
 
-  <script>
- // --- KODE PETA & DATA ---
-
+ <script>
 var map; 
 var daftarPin = [];
 var daftarPengumuman = [];
 var dataKeuangan = [];
 var pinRumahAktif = null;
 
-// ==========================================
-// BAGIAN 1: PEMUATAN PETA & DATA FIREBASE
-// ==========================================
-
-// 🔥 Dengarkan sinyal dari utils.js (Tidak perlu setTimeout lagi!)
 window.addEventListener('utilsSiap', () => {
-  
-  // 1. Render Peta Leaflet
   map = L.map('map').setView([-7.7423, 110.3842], 17);
   L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
       maxZoom: 20,
@@ -1315,11 +1190,9 @@ window.addEventListener('utilsSiap', () => {
   }).addTo(map);
   L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-  // 2. Tarik Data Utama dari Firebase
   muatDataPetaWarga();
   muatPengumumanFirebase();
 
-  // 3. Cek Status Sinkronisasi Jimpitan Offline
   perbaruiIndikatorSync();
   if (navigator.onLine) {
     kirimDataPendingJimpitan();
@@ -1327,7 +1200,6 @@ window.addEventListener('utilsSiap', () => {
 });
 
 function muatDataPetaWarga() {
-  // 🛡️ Pastikan modul Firebase sudah siap sebelum mengeksekusi fungsi database
   if (typeof window.firebaseRef !== 'function' || !window.db) {
     setTimeout(muatDataPetaWarga, 50);
     return;
@@ -1335,17 +1207,14 @@ function muatDataPetaWarga() {
 
   const petaRef = window.firebaseRef(window.db, 'peta_warga');
 
-  // Menggunakan onValue agar marker peta otomatis sinkron secara real-time
   window.firebaseOnValue(petaRef, (snapshot) => {
     const dataObj = snapshot.val();
     
-    // Bersihkan marker lama jika ada pembaruan dari database
     daftarPin.forEach(pin => map.removeLayer(pin.marker));
     daftarPin = [];
 
     if (!dataObj) return;
 
-    // Konversi objek Firebase menjadi array data
     var baris = [];
     Object.keys(dataObj).forEach(key => {
       var item = dataObj[key];
@@ -1354,7 +1223,6 @@ function muatDataPetaWarga() {
       }
     });
 
-    // Konfigurasi Chunking (Pecah per 20 data agar main thread HP tidak terblokir / lag)
     var index = 0;
     var chunkSize = 20;
 
@@ -1398,7 +1266,6 @@ function muatDataPetaWarga() {
           
           var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
           
-          // 🔥 HANYA TAMPILKAN KATEGORI 'FASUM' DI AWAL PEMUATAN
           if (!item.hidden && dataIkon.kategori === 'fasum') {
             marker.addTo(map);
           }
@@ -1417,7 +1284,6 @@ function muatDataPetaWarga() {
 
       index = batas;
 
-      // Jika masih ada sisa data, jadwalkan eksekusi chunk berikutnya
       if (index < baris.length) {
         if ('requestIdleCallback' in window) {
           requestIdleCallback(prosesChunk, { timeout: 50 });
@@ -1427,7 +1293,6 @@ function muatDataPetaWarga() {
       }
     }
 
-    // Mulai proses chunk pertama
     if ('requestIdleCallback' in window) {
       requestIdleCallback(prosesChunk, { timeout: 50 });
     } else {
@@ -1438,11 +1303,7 @@ function muatDataPetaWarga() {
   });
 }
     
-// ==========================================
-// 2. MUAT DATA PENGUMUMAN (REAL-TIME FIREBASE)
-// ==========================================
 function muatPengumumanFirebase() {
-  // 🛡️ Pastikan modul Firebase sudah siap sebelum mengeksekusi fungsi database
   if (typeof window.firebaseRef !== 'function' || !window.db) {
     setTimeout(muatPengumumanFirebase, 50);
     return;
@@ -1450,13 +1311,11 @@ function muatPengumumanFirebase() {
 
   const pengumumanRef = window.firebaseRef(window.db, "pengumuman");
   
-  // Menggunakan onValue agar otomatis sinkron secara real-time
   window.firebaseOnValue(pengumumanRef, (snapshot) => {
     const data = snapshot.val();
     daftarPengumuman = [];
 
     if (data) {
-      // Karena data di Firebase berupa objek (bukan array baris CSV), kita looping pakai Object.keys
       Object.keys(data).forEach(key => {
         const item = data[key];
         var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
@@ -1465,7 +1324,6 @@ function muatPengumumanFirebase() {
           var tglRaw = item.tanggal || '';
           var tglRapi = tglRaw;
           
-          // Format ulang tanggal jika menggunakan format ISO (misal: 2026-09-14T...)
           if (tglRapi.includes('T')) {
             var parts = tglRapi.split('T')[0].split('-');
             if (parts.length === 3) {
@@ -1478,13 +1336,12 @@ function muatPengumumanFirebase() {
             judul: item.judul || '',
             detail: item.detail || '',
             lokasi: item.lokasi || '',
-            foto: item.foto || '' // URL Foto atau Video
+            foto: item.foto || ''
           });
         }
       });
     }
 
-    // 🔄 URUTKAN BERDASARKAN TANGGAL EVENT TERBARU
     daftarPengumuman.sort((a, b) => {
       var partsA = a.tanggal.split('/');
       var partsB = b.tanggal.split('/');
@@ -1495,10 +1352,8 @@ function muatPengumumanFirebase() {
       return dateB - dateA;
     });
 
-    // Tampilkan hanya 10 pengumuman terbaru di layar warga
     daftarPengumuman = daftarPengumuman.slice(0, 10);
     
-    // TAMPILKAN BADGE NOTIFIKASI
     var badge = document.getElementById('badge-count');
     if (badge) {
       if (daftarPengumuman.length > 0) {
@@ -1517,14 +1372,9 @@ function escapeHTML(text) {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
 }
 
-// ==========================================
-// MODUL INTERAKSI & TAMPILAN PENGUMUMAN (FIREBASE READY)
-// ==========================================
-
 function bukaModalInfo() {
   var container = document.getElementById('list-pengumuman');
   
-  // 1. Tampilkan modalnya secara instan
   document.getElementById('modal-info').style.display = 'flex';
   container.innerHTML = '';
 
@@ -1533,7 +1383,6 @@ function bukaModalInfo() {
     return;
   }
 
-  // 2. Render langsung dari array 'daftarPengumuman' yang selalu sinkron secara real-time
   daftarPengumuman.forEach(function(info) {
     var lokasiParam = encodeURIComponent(info.lokasi);
     var htmlFoto = '';
@@ -1593,10 +1442,8 @@ function bukaModalInfo() {
   });
 }
 
-// Variable status rotasi video
 var isVideoRotated = false;
 
-// Fungsi Toggle Memutar Layar 90 Derajat
 window.toggleRotasiVideo = function() {
   var player = document.getElementById('player-video-modal');
   var btnRotate = document.getElementById('btn-rotate-video');
@@ -1677,7 +1524,6 @@ window.tutupModalVideo = function() {
   if (modalInfo) modalInfo.style.display = 'flex';
 };
 
-// Pengontrol Modal Info Warga
 function tutupModalInfo() {  
   document.getElementById('modal-info').style.display = 'none';  
 }
@@ -1685,7 +1531,6 @@ function tutupModalInfo() {
 function bukaTutupLuar(e) {  
   if (e.target.id === 'modal-info') tutupModalInfo();  
 }
-
     
 function switchTabWarga(tab) {
   const panelInfo = document.getElementById('panel-tab-info');
@@ -1711,7 +1556,6 @@ function muatProgkerWarga() {
   const tbody = document.getElementById('tabel-progker-warga');
   if (!tbody) return;
 
-  // Fungsi internal untuk merender data ke tabel & menghitung total RAB
   function renderData(dataArray) {
     if (!dataArray || dataArray.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
@@ -1760,7 +1604,6 @@ function muatProgkerWarga() {
 
       var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${labelStatus}</span>`;
 
-      // TABEL (Diperbarui dengan tambahan informasi Detail)
       html += `
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 8px;">
@@ -1791,14 +1634,17 @@ function muatProgkerWarga() {
     }
   }
 
-  // Gunakan Firebase RTDB onValue untuk mendengarkan perubahan data secara real-time
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatProgkerWarga, 50);
+    return;
+  }
+
   const progkerRef = window.firebaseRef(window.db, "progker_rab");
   window.firebaseOnValue(progkerRef, (snapshot) => {
     const dataObj = snapshot.val();
     let dataArray = [];
 
     if (dataObj) {
-      // Ubah objek Firebase menjadi array agar kompatibel dengan perenderan tabel
       Object.keys(dataObj).forEach(key => {
         dataArray.push(dataObj[key]);
       });
@@ -1903,20 +1749,14 @@ function cariLokasi() {
   }
 }
 
-// ==========================================
-// 3. MUAT DATA KEUANGAN (REAL-TIME FIREBASE)
-// ==========================================
 function muatDataKeuangan() {
-  // 🛡️ PENGAMAN UTAMA: Cek apakah Firebase sudah siap sepenuhnya
   if (typeof window.firebaseRef !== 'function' || !window.db) {
-    console.warn("Firebase belum siap, menunda pemuatan keuangan...");
-    setTimeout(muatDataKeuangan, 100);
+    setTimeout(muatDataKeuangan, 50);
     return;
   }
 
   const keuanganRef = window.firebaseRef(window.db, "keuangan");
 
-  // Menggunakan onValue agar laporan keuangan otomatis sinkron real-time
   window.firebaseOnValue(keuanganRef, (snapshot) => {
     const dataObj = snapshot.val();
     dataKeuangan = [];
@@ -2050,17 +1890,16 @@ let isDenahOpen = false;
     const mainBtn = document.getElementById('btn-toggle-denah');
 
     if (isDenahOpen) {
-      popup.style.display = 'grid'; // Tampilkan dengan grid 2 kolom
-      mainBtn.style.background = '#111827'; // Tombol utama berubah gelap saat aktif
+      popup.style.display = 'grid'; 
+      mainBtn.style.background = '#111827'; 
       mainBtn.style.borderColor = '#111827';
     } else {
-      popup.style.display = 'none'; // Sembunyikan
-      mainBtn.style.background = '#10b981'; // Tombol kembali Hijau Emerald
+      popup.style.display = 'none'; 
+      mainBtn.style.background = '#10b981'; 
       mainBtn.style.borderColor = '#059669';
     }
   }
 
-  // Menutup menu otomatis jika diklik di luar area
   document.addEventListener('click', function(event) {
     const container = document.getElementById('btn-toggle-denah');
     const popup = document.getElementById('denah-filter-popup');
@@ -2071,39 +1910,32 @@ let isDenahOpen = false;
     }
   });
 
-let denahTimer = null; // Variabel untuk menyimpan timer
+let denahTimer = null; 
 
   function pilihFilterDenah(kategori, element) {
-    // 1. Panggil fungsi filter asli Anda
     filterKategori(kategori, element);
 
-    // 2. Hapus kelas 'active' dari semua tombol di dalam popup denah
     const popup = document.getElementById('denah-filter-popup');
     if (popup) {
       const buttons = popup.querySelectorAll('.btn-filter');
       buttons.forEach(btn => btn.classList.remove('active'));
     }
 
-    // 3. Tambahkan kelas 'active' HANYA ke tombol yang sedang diklik
     if (element) {
       element.classList.add('active');
     }
 
-    // 4. BATALKAN timer sebelumnya jika user mengeklik tombol lain sebelum 3 detik habis
     if (denahTimer) {
       clearTimeout(denahTimer);
     }
 
-    // 5. ATUR TIMER BARU: Tutup otomatis popup setelah 2 detik (2000 ms)
     denahTimer = setTimeout(() => {
-      // Periksa apakah popup sedang terbuka, lalu tutup menggunakan fungsi toggle
       const popupEl = document.getElementById('denah-filter-popup');
       if (popupEl && popupEl.style.display === 'grid') {
         toggleDenahMenu();
       }
     }, 2000);
   }
-    
     
     function bukaModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'flex';
@@ -2114,17 +1946,15 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
- // --- FITUR MALAM RONDA / JIMPITAN RONDA (PUBLIK) ---
     function getInfoMalamRonda(dateObj = new Date()) {
       let d = new Date(dateObj);
       let hour = d.getHours();
       
-      // Jam 00.00 - 08.59 masuk shift malam hari sebelumnya (grace window)
       if (hour < 9) {
         d.setDate(d.getDate() - 1);
       }
       
-      let effectiveDay = d.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
+      let effectiveDay = d.getDay(); 
       const mapMalam = {
         6: 'Malam Minggu',
         0: 'Malam Senin',
@@ -2137,11 +1967,10 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       
       return {
         kelompokMalam: mapMalam[effectiveDay],
-        masukTabel: effectiveDay !== 6 // false khusus Malam Minggu
+        masukTabel: effectiveDay !== 6 
       };
     }
 
-   // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
     let audioCtx = null;
     let html5QrcodeScanner = null;
     let sedangScanning = false;
@@ -2186,15 +2015,11 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
     }
 
-    // 🔥 1. PINTU UTAMA (LAZY LOAD): Pustaka diunduh HANYA saat tombol ditekan
     function mulaiScanJimpitan() {
       if (typeof Html5Qrcode === 'undefined' && typeof Html5QrcodeScanner === 'undefined') {
-        console.log("Memuat pustaka QR Scanner...");
-        
         let script = document.createElement('script');
         script.src = 'html5-qrcode.min.js';
         script.onload = () => {
-          console.log("Pustaka QR Scanner berhasil dimuat.");
           eksekusiMulaiScanJimpitan(); 
         };
         script.onerror = () => {
@@ -2206,7 +2031,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
     }
 
-    // 🔥 2. FUNGSI EKSEKUSI KAMERA
     function eksekusiMulaiScanJimpitan() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2238,8 +2062,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
           ).then(() => {
             sedangScanning = true;
           }).catch(err => {
-            console.warn("facingMode gagal, mencoba fallback ke daftar kamera...", err);
-
             Html5Qrcode.getCameras().then(devices => {
               if (devices && devices.length > 0) {
                 let selectedId = devices[devices.length - 1].id;
@@ -2302,7 +2124,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
         html5QrcodeScanner.stop().then(() => {
           bersihkanScanner();
         }).catch(err => {
-          console.warn("Gagal menghentikan scanner secara normal:", err);
           bersihkanScanner();
         });
       } else {
@@ -2322,7 +2143,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       if (qrElement) qrElement.innerHTML = '';
     }
 
-    // --- SINKRONISASI OFFLINE & FIREBASE RTDB ---
     function perbaruiIndikatorSync() {
       let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
       let badge = document.getElementById('status-sync');
@@ -2366,7 +2186,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
     }
     
-    // 🔥 PENGIRIMAN LANGSUNG KE FIREBASE RTDB
     async function kirimDataPendingJimpitan() {
       if (sedangMengirim) return;
 
@@ -2383,7 +2202,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
 
       for (let item of antrean) {
         try {
-          // Menyimpan ke node Firebase RTDB (jimpitan / catatan_ronda)
           const dbRef = window.firebaseRef(window.db, item.targetNode);
           await window.firebasePush(dbRef, {
             tanggal: item.tanggal,
@@ -2393,7 +2211,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
             timestamp: Date.now()
           });
         } catch (err) {
-          console.warn("Gagal terhubung ke Firebase, menyimpan kembali ke antrean:", err);
           sisaAntrean.push(item);
         }
       }
@@ -2454,7 +2271,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
     }
 
     window.addEventListener('online', () => {
-      console.log("Koneksi kembali terhubung. Mengirim data pending ke Firebase...");
       perbaruiIndikatorSync();
       kirimDataPendingJimpitan();
     });
@@ -2463,12 +2279,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       perbaruiIndikatorSync();
     });
 
-   
-    
-// ==========================================
-// MODUL REKAP & RIWAYAT JIMPITAN (FIREBASE READY)
-// ==========================================
-
 var cacheDataHarian = {};
 var cacheDataBulanan = {};
 var arrayTanggal = [];
@@ -2476,19 +2286,22 @@ var arrayBulan = [];
 let isJimpitanLoaded = false;
 let modeJimpitan = 'harian'; 
 
-// Helper anti-error untuk merapikan teks
 function teksAman(str) {
   return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
 }
 
 function muatDataJimpitan() {
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatDataJimpitan, 50);
+    return;
+  }
+
   var gridContainer = document.getElementById('grid-jimpitan');
   
   if (gridContainer) {
     gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data jimpitan terbaru...</div>';
   }
 
-  // Mengambil data secara real-time dari node 'jimpitan' di Firebase RTDB
   const jimpitanRef = window.firebaseRef(window.db, 'jimpitan');
   
   window.firebaseOnValue(jimpitanRef, (snapshot) => {
@@ -2500,7 +2313,6 @@ function muatDataJimpitan() {
     arrayBulan = [];
 
     if (dataObj) {
-      // Looping data objek dari Firebase
       Object.keys(dataObj).forEach(key => {
         var kolom = dataObj[key];
         if (kolom) {
@@ -2509,7 +2321,6 @@ function muatDataJimpitan() {
           var warga = String(kolom.warga || '-');
           var nominal = parseInt(kolom.nominal, 10) || 0;
 
-          // Parsing tanggal untuk pengelompokan harian & bulanan
           var angkaTanggal = tglStr.match(/\d+/g); 
           if (angkaTanggal && angkaTanggal.length >= 3) {
             var tgl = parseInt(angkaTanggal[0], 10);
@@ -2524,7 +2335,6 @@ function muatDataJimpitan() {
             
             var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
 
-            // --- DATA HARIAN ---
             var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
             var isoTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
             
@@ -2542,7 +2352,6 @@ function muatDataJimpitan() {
             cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
             cacheDataHarian[keyTanggal].subtotal += nominal;
 
-            // --- DATA BULANAN ---
             var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
             var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
 
@@ -2600,10 +2409,8 @@ function setupToggleJimpitan() {
   if (!container) {
     container = document.createElement('div');
     container.id = containerId;
-    // PERBAIKAN TATA LETAK: Membentang penuh (100%) dan tidak nyempil di sebelah dropdown
     container.style.cssText = 'display:flex; background:#f1f5f9; border-radius:8px; padding:4px; margin-bottom:12px; width:100%;';
     
-    // Disisipkan TEPAT DI ATAS wadah "Pilih Periode", bukan di dalamnya
     var parentBaris = select.parentNode; 
     if (parentBaris) {
       parentBaris.parentNode.insertBefore(container, parentBaris);
@@ -2647,7 +2454,6 @@ function renderDropdownTanggal() {
     renderCardHarian(limitData[0]);
 
   } else {
-    // Mode Laporan Bulanan
     if (arrayBulan.length === 0) {
       select.innerHTML = '<option>Belum ada laporan bulanan</option>';
       renderCardBulanan(null);
@@ -2667,9 +2473,8 @@ function renderDropdownTanggal() {
 function renderCardHarian(keyTanggal) {
   var gridContainer = document.getElementById('grid-jimpitan');
   var totalElem = document.getElementById('total-jimpitan');
-  var labelTotalElem = document.getElementById('label-total-jimpitan'); // Penambahan elemen label
+  var labelTotalElem = document.getElementById('label-total-jimpitan');
 
-  // Ubah judul kartu hijau secara dinamis ke mode harian
   if (labelTotalElem) labelTotalElem.innerText = 'TOTAL';
 
   if (!gridContainer) return;
@@ -2712,7 +2517,6 @@ function renderCardBulanan(keyBulan) {
 
   var dataBulan = cacheDataBulanan[keyBulan];
   
-  // Urutkan jadwal malam ronda agar tampil rapi dari Senin s/d Minggu
   var urutanMalam = ['Malam Senin', 'Malam Selasa', 'Malam Rabu', 'Malam Kamis', 'Malam Jumat', 'Malam Sabtu', 'Malam Minggu'];
   var daftarMalam = Object.keys(dataBulan.rekapMalam).sort((a, b) => {
     var idxA = urutanMalam.indexOf(a);
@@ -2720,7 +2524,6 @@ function renderCardBulanan(keyBulan) {
     return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
   });
   
-  // Cetak daftar regu malam beserta total setorannya selama sebulan
   var itemListHTML = daftarMalam.map(malam => {
     var subtotalMalam = dataBulan.rekapMalam[malam].subtotal;
 
@@ -2732,7 +2535,6 @@ function renderCardBulanan(keyBulan) {
     `;
   }).join('');
 
-  // Tampilkan dalam 1 kartu rekapitulasi saja
   buatDanTampilkanKartu(gridContainer, "📅 Rekap " + dataBulan.label, dataBulan.total, itemListHTML);
 
   if (totalElem) totalElem.innerText = 'Rp ' + dataBulan.total.toLocaleString('id-ID');
@@ -2770,25 +2572,6 @@ window.refreshDataJimpitan = function() {
   muatDataJimpitan(); 
 };
 
-  
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-
-  const app = initializeApp(RT05_CONFIG.FIREBASE);
-  const db = getDatabase(app);
-
-  // EKSPOS KE GLOBAL WINDOW DI ATAS SEBELUM APA PUN
-  window.db = db;
-  window.firebaseRef = ref;
-  window.firebaseOnValue = onValue;
-  window.firebaseUpdate = update;
-  window.firebaseRemove = remove;
-  window.firebasePush = push;
-  window.firebaseSet = set;
-  window.firebaseGet = get;
-</script>
-    
-    // --- CHANGELOG ---
     const dataChangelog = [
        {
         versi: "v1.5.8",
@@ -3052,7 +2835,6 @@ async function simpanWargaBaru() {
     btn.innerText = '⏳ Menyimpan ke Firebase...';
 
     try {
-      // Menggunakan window.firebaseRef dan window.firebasePush sesuai ekspor di utils.js
       const dbRef = window.firebaseRef(window.db, 'warga_baru');
       await window.firebasePush(dbRef, {
         nama: nama,
@@ -3075,7 +2857,6 @@ async function simpanWargaBaru() {
       alert('❌ Gagal menyimpan ke Firebase: ' + err);
     }
   }
-    
   </script>
   <script src="setting.js"></script>
 </body>
