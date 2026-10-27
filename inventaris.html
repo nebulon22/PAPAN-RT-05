@@ -59,15 +59,13 @@
   </a>
 
 <script>
-    const CACHE_KEY = 'cache_inventaris_rt05';
-
     document.addEventListener("DOMContentLoaded", () => {
       cekStatusJaringan();
-      muatStokInventaris();
+      muatStokInventarisFirebase();
 
       window.addEventListener('online', () => {
         cekStatusJaringan();
-        muatStokInventaris();
+        muatStokInventarisFirebase();
       });
 
       window.addEventListener('offline', () => {
@@ -84,39 +82,63 @@
       }
     }
 
-    async function muatStokInventaris() {
+    // Mengambil data perkakas secara real-time dari Firebase RTDB
+    function muatStokInventarisFirebase() {
       const container = document.getElementById("daftar-inventaris");  
       if (!container) return;
 
-      // Panggil URL Polos agar backend mengembalikan objek { perkakas: [...], peminjaman: [...] }
-      const urlInventaris = RT05_CONFIG.GAS_WEB_APP_URL;
+      container.innerHTML = `<div style="text-align:center; padding: 20px; color: #666;"><i class="fa-solid fa-spinner fa-spin"></i> Memuat inventaris dari Firebase...</div>`;
 
-      ambilDataSheets(CACHE_KEY, urlInventaris, (data, fromCache) => {
-        if (data && data.perkakas) {
-          renderHTML(data);
-        } else if (!fromCache && (!data || !data.perkakas)) {
-          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris.</div>`;
+      try {
+        const database = window.db || (typeof db !== 'undefined' ? db : null);
+        
+        if (!database) {
+          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Koneksi database belum siap.</div>`;
+          return;
         }
-      });
+
+        // Menggunakan window.ref dan window.firebaseOnValue sesuai pola aplikasi utama
+        const inventarisRef = window.ref(database, 'inventaris');
+        
+        window.firebaseOnValue(inventarisRef, (snapshot) => {
+          const dataObj = snapshot.val();
+          let daftarPerkakas = [];
+
+          if (dataObj) {
+            Object.keys(dataObj).forEach(key => {
+              daftarPerkakas.push(dataObj[key]);
+            });
+          }
+
+          renderHTML({ perkakas: daftarPerkakas, peminjaman: [] });
+        }, (error) => {
+          console.error("Gagal memuat inventaris dari Firebase:", error);
+          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris.</div>`;
+        });
+
+      } catch (err) {
+        console.error("Error inisialisasi inventaris:", err);
+        container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Terjadi kesalahan sistem.</div>`;
+      }
     }
 
-    // Fungsi Render Tampilan
+    // Fungsi Render Tampilan Kartu Barang
     function renderHTML(data) {
       const container = document.getElementById("daftar-inventaris");
       const daftarPerkakas = data.perkakas || [];
       const dataPinjaman = data.peminjaman || [];
 
       if (daftarPerkakas.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Belum ada data barang di tab 'Perkakas'.</div>`;
+        container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Belum ada data perkakas di database.</div>`;
         return;
       }
 
-      // Buat pemetaan peminjaman aktif secara efisien
-      const dipinjamAktif = dataPinjaman.filter(row => row && String(row[5] || '').trim().toLowerCase() === "dipinjam");
+      // Buat pemetaan peminjaman aktif
+      const dipinjamAktif = dataPinjaman.filter(row => row && String(row.status || '').trim().toLowerCase() === "dipinjam");
       const rekapDipinjam = {};
       dipinjamAktif.forEach(row => {
-        const namaBarang = String(row[2] || '').trim();
-        const jumlah = parseInt(row[3], 10) || 0;
+        const namaBarang = String(row.namaBarang || row[2] || '').trim();
+        const jumlah = parseInt(row.jumlah || row[3], 10) || 0;
         if (namaBarang) {
           rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
         }
@@ -124,8 +146,10 @@
 
       // Render Kartu Barang
       container.innerHTML = daftarPerkakas.map(item => {
-        const terpakai = rekapDipinjam[item.nama] || 0;
-        const sisaStok = parseInt(item.total) || 0;
+        const namaItem = item.nama || item.name || 'Perkakas RT';
+        const fotoItem = item.foto || item.image || '';
+        const terpakai = rekapDipinjam[namaItem] || 0;
+        const sisaStok = parseInt(item.stok !== undefined ? item.stok : item.total) || 0;
         const totalAwal = sisaStok + terpakai;  
         
         const statusBadge = sisaStok > 0 
@@ -134,10 +158,10 @@
 
         return `
           <div class="card-barang">
-            ${item.foto ? `<img src="${item.foto}" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:10px;" loading="lazy" onError="this.style.display='none'">` : ''}
+            ${fotoItem ? `<img src="${fotoItem}" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:10px;" loading="lazy" onError="this.style.display='none'">` : ''}
             
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <h3 style="margin: 0; font-size: 15px; color: #111827;">${item.nama}</h3>
+              <h3 style="margin: 0; font-size: 15px; color: #111827;">${namaItem}</h3>
               ${statusBadge}
             </div>
 
@@ -159,6 +183,6 @@
         `;
       }).join('');
     }
-  </script>
+</script>
 </body>
 </html>
