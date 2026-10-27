@@ -920,82 +920,35 @@ function formatRupiahInput(el) {
 
 function cekLogin() {
   const input = document.getElementById('adminPin').value.trim();
-
-  if (!/^\d{6}$/.test(input)) {
-    alert("PIN harus berisi 6 digit angka!");
-    return;
-  }
-
+  if (!/^\d{6}$/.test(input)) { alert("PIN harus berisi 6 digit angka!"); return; }
   const btnLogin = document.querySelector('.login-box button');
+  btnLogin.innerText = "⏳ Memeriksa..."; btnLogin.disabled = true;
 
-  btnLogin.innerText = "⏳ Memeriksa...";
-  btnLogin.disabled = true;
-
-  // LOGIN BARU WAJIB ONLINE
   if (!navigator.onLine) {
-    btnLogin.innerText = "Buka Kunci";
-    btnLogin.disabled = false;
-
+    btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
     alert("❌ Tidak dapat memverifikasi PIN karena tidak ada koneksi internet.");
     return;
   }
 
-  // Khusus untuk LOGIN
-  const payloadTes = {
-    action: 'cek_pin',
-    pin: input
-  };
-
-  fetch(GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
-    body: JSON.stringify(payloadTes)
-  })
-  .then(res => res.text()) // <--- AMBIL SEBAGAI TEKS DULU AGAR AMAN DARI ERROR FORMAT
-  .then(text => {
-    btnLogin.innerText = "Buka Kunci";
-    btnLogin.disabled = false;
-
-    let data;
-    try {
-      data = JSON.parse(text); // Coba parsing teks ke JSON
-    } catch (e) {
-      // Jika server mengembalikan pesan error (misal: "ERROR: Server sibuk...")
-      alert("❌ " + text);
-      document.getElementById('adminPin').value = "";
-      return;
-    }
-
-    if (data.status === "SUCCESS" && data.token) {
-
-      // 1. Simpan status login
+  // Cek ke Firebase RTDB
+  window.fbGet(window.fbRef(window.db, 'admin_config/pin')).then((snapshot) => {
+    btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
+    const validPin = snapshot.val();
+    
+    if (input === String(validPin)) {
       localStorage.setItem('authAdmin', 'true');
-
-      // 2. Simpan TOKEN
-      localStorage.setItem('adminToken', data.token);
-
-      // 3. Catat Waktu Login Sekarang (Timestamp)
+      localStorage.setItem('adminToken', 'rt05-admin-' + Date.now()); // Token lokal
       localStorage.setItem('admin_login_time', Date.now().toString());
-
-      // Bersihkan PIN dari input
       document.getElementById('adminPin').value = "";
-
       bukaAkses();
-
     } else {
       alert("❌ PIN salah! Akses ditolak.");
       document.getElementById('adminPin').value = "";
     }
-  })
-  .catch(err => {
-    console.error("❌ Gagal memverifikasi PIN:", err);
-
-    btnLogin.innerText = "Buka Kunci";
-    btnLogin.disabled = false;
-
-    alert("❌ Gagal menghubungi server. PIN belum dapat diverifikasi.");
+  }).catch(err => {
+    console.error("Gagal terhubung ke DB:", err);
+    btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
+    alert("❌ Gagal menghubungi database. Pastikan koneksi stabil.");
   });
 }
     
@@ -1760,50 +1713,36 @@ function tutupModalLaporan() {
     let globalDataWarga = [];
     let listSemuaRumahAdmin = [];
 
-async function muatSemuaDataAdmin() {
-  try {
-    const tokenAdmin = localStorage.getItem('adminToken') || '';
-    const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
-    const urlWarga = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getWarga&token=${encodeURIComponent(tokenAdmin)}`;
+function muatSemuaDataAdmin() {
+  // 1. Dengarkan Data Peta (Real-time)
+  window.fbOnValue(window.fbRef(window.db, 'peta'), (snapshot) => {
+    globalDataRumah = [];
+    listSemuaRumahAdmin = [];
+    snapshot.forEach(child => {
+       const val = child.val();
+       // Pertahankan format array lama agar filter peta lama tetap bekerja
+       globalDataRumah.push([val.nama, val.lat, val.lng, val.hidden, val.kategori, val.foto]);
+       listSemuaRumahAdmin.push(val.nama);
+    });
+  });
 
-    // 1. Tampilkan instan dari Cache Lokal dulu (0 Detik)
-    const cacheWarga = localStorage.getItem('cache_data_warga');
-    if (cacheWarga) {
-      try {
-        const dataCached = JSON.parse(cacheWarga);
-        prosesDanTampilkanStatistik(dataCached);
-      } catch(e) {}
-    }
-
-    // 2. Fetch Data Menggunakan Promise.all (Aman JSON & CSV)
-    const [resRumah, resWarga] = await Promise.all([
-      fetch(urlPeta).then(async r => {
-        const txt = await r.text();
-        return txt.trim().startsWith('[') ? JSON.parse(txt) : parseCSV(txt);
-      }).catch(() => null),
-      
-      fetch(urlWarga).then(async r => {
-        const txt = await r.text();
-        return txt.trim().startsWith('[') ? JSON.parse(txt) : parseCSV(txt);
-      }).catch(() => null)
-    ]);
+  // 2. Dengarkan Data Sensus Warga (Real-time)
+  window.fbOnValue(window.fbRef(window.db, 'warga_keluarga'), (snapshot) => {
+    globalDataWarga = [];
+    const dummyHeader = ["Kepala", "Anggota", "Rumah", "Total"]; // Mock untuk prosesDanTampilkanStatistik
+    const resWarga = [dummyHeader]; 
     
-    // Olah Data Peta / Rumah
-    if (Array.isArray(resRumah)) {
-      globalDataRumah = resRumah.slice(1);
-      listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
-    }
-
-    // Olah Data Sensus Warga
-    if (Array.isArray(resWarga) && resWarga.length > 1) {
-      globalDataWarga = resWarga.slice(1);
-      localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
-      prosesDanTampilkanStatistik(resWarga);
-    }
-
-  } catch (e) {
-    console.error("Gagal memuat data admin:", e);
-  }
+    snapshot.forEach(child => {
+       const val = child.val();
+       const hitungAnggota = val.anggotaKeluarga ? val.anggotaKeluarga.split(',').length : 0;
+       const totalJiwa = 1 + hitungAnggota; 
+       
+       globalDataWarga.push([val.kepalaKeluarga, val.anggotaKeluarga, val.namaRumah]);
+       resWarga.push([val.kepalaKeluarga, val.anggotaKeluarga, val.namaRumah, totalJiwa]);
+    });
+    
+    prosesDanTampilkanStatistik(resWarga);
+  });
 }
    
 function prosesDanTampilkanStatistik(resWarga) {
@@ -1944,51 +1883,40 @@ function prosesDanTampilkanStatistik(resWarga) {
       `;
     }
 
- async function simpanKeluargaAdmin() {
-    const kepala = document.getElementById("addKepalaKeluarga").value.trim();
-    const rumah = document.getElementById("inputCariRumahPeta").value.trim();
-    const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
-    const tokenAdmin = localStorage.getItem('adminToken') || '';
+async function simpanKeluargaAdmin() {
+  const kepala = document.getElementById("addKepalaKeluarga").value.trim();
+  const rumah = document.getElementById("inputCariRumahPeta").value.trim();
+  const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
 
-    if (!kepala || !rumah || !anggota) {
-      alert("Mohon lengkapi semua isian form!");
-      return;
-    }
+  if (!kepala || !rumah || !anggota) {
+    alert("Mohon lengkapi semua isian form!");
+    return;
+  }
 
-    const btn = document.getElementById("btnSimpanKeluarga");
-    btn.disabled = true;
-    btn.innerText = "⏳ Menyimpan ke Sheet...";
+  const btn = document.getElementById("btnSimpanKeluarga");
+  btn.disabled = true; btn.innerText = "⏳ Menyimpan ke Database...";
 
-    const payload = {
-      token: tokenAdmin, // PERBAIKAN: Sertakan token agar lolos verifikasi backend
-      action: "tambahKeluargaWarga",
+  try {
+    const wargaRef = window.fbRef(window.db, 'warga_keluarga');
+    await window.fbPush(wargaRef, {
       kepalaKeluarga: kepala,
       namaRumah: rumah,
-      anggotaKeluarga: anggota
-    };
+      anggotaKeluarga: anggota,
+      timestamp: Date.now()
+    });
 
-    try {
-      await fetch(RT05_CONFIG.GAS_WEB_APP_URL, { // PERBAIKAN: Gunakan GAS_WEB_APP_URL langsung
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      });
-
-      alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
-      
-      document.getElementById("formTambahKeluargaAdmin").reset();
-      document.getElementById("inputCariRumahPeta").value = ""; 
-
-      btn.disabled = false;
-      btn.innerText = "💾 Simpan ke Google Sheets";
-      switchTabAdminWarga('cari');
-      muatSemuaDataAdmin();
-    } catch (err) {
-      alert("❌ Gagal menyimpan data: " + err);
-      btn.disabled = false;
-      btn.innerText = "💾 Simpan ke Google Sheets";
-    }
+    alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
+    document.getElementById("formTambahKeluargaAdmin").reset();
+    document.getElementById("inputCariRumahPeta").value = ""; 
+    switchTabAdminWarga('cari');
+    
+  } catch (err) {
+    alert("❌ Gagal menyimpan data: " + err);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "💾 Simpan ke Database";
   }
+}
 
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -2507,14 +2435,25 @@ function bukaTabAdmin(tabName) {
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
- <!-- MODULE FIREBASE -->
+<!-- MODULE FIREBASE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const app = initializeApp(RT05_CONFIG.FIREBASE);
   const db = getDatabase(app);
 
+ // 1. EKSPOS KE GLOBAL AGAR BISA DIPAKAI OLEH SCRIPT LAMA DI ATAS
+  window.db = db;
+  window.fbRef = ref;
+  window.fbOnValue = onValue;
+  window.fbUpdate = update;
+  window.fbRemove = remove;
+  window.fbPush = push;
+  window.fbSet = set;
+  window.fbGet = get;
+
+  // 2. KODE KELOLA USERS / CHAT (Asli milik Anda, tidak diubah)
   const usersRef = ref(db, 'users');
   onValue(usersRef, (snapshot) => {
     const pendingTable = document.getElementById('pending-users-list');
@@ -2595,19 +2534,18 @@ function bukaTabAdmin(tabName) {
     if (pBadge) pBadge.innerText = `${pendingCount} Pending`;
     if (tWarga) tWarga.innerText = totalCount;
 
-    // 🛠️ LOGIKA OTOMATISASI BUKA/TUTUP & UBAH WARNA BADGE
     if (detailsElem) {
       if (pendingCount > 0) {
-        detailsElem.open = true; // Otomatis mengembang jika ada pendaftar baru
+        detailsElem.open = true;
         if (pBadge) {
-          pBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.2)'; // Merah menyala
+          pBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
           pBadge.style.color = '#f87171';
           pBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
         }
       } else {
-        detailsElem.open = false; // Otomatis menutup menjadi 1 baris jika 0 Pending
+        detailsElem.open = false;
         if (pBadge) {
-          pBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.2)'; // Kuning biasa
+          pBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.2)';
           pBadge.style.color = '#fbbf24';
           pBadge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
         }
