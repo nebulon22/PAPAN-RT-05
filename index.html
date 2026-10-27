@@ -1181,12 +1181,25 @@ var dataKeuangan = [];
 var pinRumahAktif = null;
 
 window.addEventListener('utilsSiap', () => {
+  // Cek apakah peta sudah pernah diinisialisasi sebelumnya
+  if (typeof map !== 'undefined' && map !== null) {
+    return; // Jika sudah ada, hentikan agar tidak inisialisasi ulang
+  }
+
+  // Pastikan kontainer bersih dari status inisialisasi lama jika ada
+  let container = L.DomUtil.get('map');
+  if (container != null && container._leaflet_id != null) {
+    container._leaflet_id = null;
+  }
+
   map = L.map('map').setView([-7.7423, 110.3842], 17);
+  
   L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
       maxZoom: 20,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
       attribution: '&copy; Google Maps'
   }).addTo(map);
+  
   L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
   muatDataPetaWarga();
