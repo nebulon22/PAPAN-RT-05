@@ -1907,6 +1907,13 @@ function cariLokasi() {
 // 3. MUAT DATA KEUANGAN (REAL-TIME FIREBASE)
 // ==========================================
 function muatDataKeuangan() {
+  // 🛡️ PENGAMAN UTAMA: Cek apakah Firebase sudah siap sepenuhnya
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    console.warn("Firebase belum siap, menunda pemuatan keuangan...");
+    setTimeout(muatDataKeuangan, 100);
+    return;
+  }
+
   const keuanganRef = window.firebaseRef(window.db, "keuangan");
 
   // Menggunakan onValue agar laporan keuangan otomatis sinkron real-time
@@ -1917,7 +1924,6 @@ function muatDataKeuangan() {
     var divisiMap = new Map();
 
     if (dataObj) {
-      // Ubah objek Firebase menjadi array berdasarkan key node-nya
       Object.keys(dataObj).forEach(key => {
         var item = dataObj[key];
         if (item) {
@@ -1932,7 +1938,6 @@ function muatDataKeuangan() {
             ? nominalRaw 
             : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
 
-          // 🛠️ PERBAIKAN FORMAT TANGGAL ISO
           var tgl = String(tglRaw);
           if (tgl.includes('T')) {
             var parts = tgl.split('T')[0].split('-');
@@ -1941,7 +1946,6 @@ function muatDataKeuangan() {
             }
           }
 
-          // 🛠️ DEDUPLIKASI DROPDOWN DIVISI
           if (divisi) {
             var kunciLower = divisi.toLowerCase();
             if (!divisiMap.has(kunciLower) || divisi !== kunciLower) {
@@ -1960,7 +1964,6 @@ function muatDataKeuangan() {
     var divisiSebelumnya = selectDivisi.value;
     selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
     
-    // Urutkan dan masukkan nama divisi rapi tanpa duplikat
     Array.from(divisiMap.values()).sort().forEach(div => {
       var divFormatRapi = div.replace(/\w\S*/g, function(teks) {
         return teks.charAt(0).toUpperCase() + teks.substr(1).toLowerCase();
@@ -2767,7 +2770,7 @@ window.refreshDataJimpitan = function() {
   muatDataJimpitan(); 
 };
 
-    <script type="module">
+  
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
   import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
