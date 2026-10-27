@@ -139,3 +139,17 @@ window.toggleSenterRonda = async function() {
     if (status) status.innerText = 'OFF';
   }
 };
+
+// (Bagian paling bawah dari utils.js)
+
+window.RT05_CONFIG = RT05_CONFIG;
+window.db = db;
+window.firebaseRef = ref;
+window.firebaseGet = get;
+window.firebaseChild = child;
+window.firebasePush = push;
+window.firebaseSet = set;
+window.firebaseOnValue = onValue;
+
+// 🔥 Beri sinyal ke index.html bahwa Firebase dan Utils sudah siap dieksekusi!
+window.dispatchEvent(new Event('utilsSiap'));
