@@ -23,8 +23,8 @@
 // ==========================================
 // INISIALISASI FIREBASE SDK (CENTRALIZED)
 // ==========================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.x.x/firebase-app.js";
-import { getDatabase, ref, get, child, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.x.x/firebase-database.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, get, child, push, set, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
 const app = initializeApp(RT05_CONFIG.FIREBASE);
 const db = getDatabase(app);
