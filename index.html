@@ -1779,13 +1779,13 @@ function muatDataKeuangan() {
       Object.keys(dataObj).forEach(key => {
         var item = dataObj[key];
         if (item) {
-          var tglRaw = item.tanggal || item.tgl || '-';
-          var divisi = item.divisi ? String(item.divisi).trim() : 'Umum';
-          var ket = item.keterangan || item.ket || '-';
-          var tipeRaw = item.tipe ? String(item.tipe).trim().toUpperCase() : 'MASUK';
+          var tglRaw = item.tanggal || item.tgl || item["Tanggal Input"] || '-';
+          var divisi = item.divisi || item.Divisi ? String(item.divisi || item.Divisi).trim() : 'Umum';
+          var ket = item.keterangan || item.ket || item["Keterangan/Keperluan"] || '-';
+          var tipeRaw = item.tipe || item["Jenis Transaksi"] ? String(item.tipe || item["Jenis Transaksi"]).trim().toUpperCase() : 'MASUK';
           var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
           
-          var nominalRaw = item.nominal !== undefined ? item.nominal : 0;
+          var nominalRaw = item.nominal !== undefined ? item.nominal : (item["Jumlah/Nominal"] !== undefined ? item["Jumlah/Nominal"] : 0);
           var nominal = typeof nominalRaw === 'number' 
             ? nominalRaw 
             : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
