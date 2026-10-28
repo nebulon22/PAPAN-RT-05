@@ -1377,28 +1377,65 @@ function bukaTutupLuarForm(e) {
     let cachePerkakas = [];
     let cachePeminjaman = [];
 
-  async function muatPeminjamanAdmin() {
+async function muatPeminjamanAdmin() {
   const container = document.getElementById("tabel-peminjaman-admin");
   if (!container) return;
 
-  if (!localStorage.getItem('cache_inventaris_admin')) {
-    container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
-  }
+  container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data perkakas...</td></tr>`;
 
-  // UBAH BARIS INI: Panggil URL polosan tanpa action=getPeta agar Apps Script merespon payload Perkakas & Peminjaman
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-  const targetUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(tokenAdmin)}`;
+  // Ambil data dari node 'inventaris' dan 'peminjaman' di Firebase RTDB
+  const inventarisRef = window.firebaseRef(window.db, 'inventaris');
+  const peminjamanRef = window.firebaseRef(window.db, 'peminjaman');
 
-  ambilDataSheets('cache_inventaris_admin', targetUrl, (data, fromCache) => {
-    if (data && (data.perkakas || data.peminjaman)) {
-      cachePeminjaman = Array.isArray(data) ? data : (data.peminjaman || []);
-      cachePerkakas = data.perkakas || [];
-      renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
-    } else if (!fromCache && (!data || data.length === 0)) {
-      container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Mode Offline: Gagal memuat data.</td></tr>`;
+  // Gunakan Promise.all untuk mengambil data perkakas dan peminjaman sekaligus
+  Promise.all([
+    window.firebaseGet(inventarisRef),
+    window.firebaseGet(peminjamanRef)
+  ]).then(([snapInv, snapPem]) => {
+    let perkakas = [];
+    let peminjaman = [];
+
+    if (snapInv.exists()) {
+      snapInv.forEach(child => {
+        const val = child.val();
+        if (val) {
+          perkakas.push({
+            id: child.key,
+            nama: val.namaBarang || val.nama || '',
+            total: val.totalStok !== undefined ? val.totalStok : (val.total || 0),
+            foto: val.fotoUrl || val.foto || ''
+          });
+        }
+      });
     }
+
+    if (snapPem.exists()) {
+      snapPem.forEach(child => {
+        const val = child.val();
+        if (val) {
+          peminjaman.push([
+            child.key,                    // ID [0]
+            val.peminjam || '',           // Peminjam [1]
+            val.barang || '',             // Barang [2]
+            val.jumlah || 1,              // Jumlah [3]
+            val.tgl || '',                // Tanggal [4]
+            val.status || 'Dipinjam'      // Status [5]
+          ]);
+        }
+      });
+    }
+
+    cachePerkakas = perkakas;
+    cachePeminjaman = peminjaman;
+    renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
+
+  }).catch(err => {
+    console.error("Gagal memuat data inventaris dari Firebase:", err);
+    container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Gagal memuat data dari database.</td></tr>`;
   });
 }
+
+    
     function renderTabelDanDropdown(perkakas, peminjaman) {
       const container = document.getElementById("tabel-peminjaman-admin");
       const selectBarang = document.getElementById("pinjamPilihBarang");
