@@ -1635,21 +1635,41 @@ function bukaTutupLuarForm(e) {
       document.getElementById('modal-laporan').style.display = 'flex';
     }
 
-   
 function simpanLaporanDivisi() {
   const tglInput = document.getElementById('laporanTanggal').value;
   const divisi = document.getElementById('laporanNamaDivisi').value;
   const jenis = document.getElementById('laporanJenis').value;
   const ket = document.getElementById('laporanKeterangan').value;
-  const pinDivisi = document.getElementById('laporanPinDivisi').value.trim();
+  const pinDivisiInput = document.getElementById('laporanPinDivisi').value.trim();
   
   const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
   const nominal = parseInt(rawNominal, 10);
 
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-
-  if (!divisi || !ket || isNaN(nominal) || !tglInput || !pinDivisi) {
+  if (!divisi || !ket || isNaN(nominal) || !tglInput || !pinDivisiInput) {
     alert('Harap isi semua kolom, termasuk PIN Khusus Divisi!');
+    return;
+  }
+
+  // Kamus PIN Masing-masing Divisi sesuai urutan
+  const daftarPinDivisi = {
+    "sosial": "010101",
+    "tenda": "020202",
+    "sound system": "030303",
+    "pondokan rt 05": "040404",
+    "jimpitan bulanan & pengganti ronda": "050505",
+    "pekerjaan umum & kelistrikan": "060606",
+    "ronda harian & keamanan": "070707",
+    "bendahara umum": "080808",
+    "tata ruang": "090909",
+    "transportasi": "101010"
+  };
+
+  const divisiKey = divisi.toLowerCase().trim();
+  const pinSeharusnya = daftarPinDivisi[divisiKey] || "050505";
+
+  // Validasi PIN Divisi (Bisa pakai PIN divisinya masing-masing atau PIN universal admin 050505)
+  if (pinDivisiInput !== pinSeharusnya && pinDivisiInput !== "050505") {
+    alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
     return;
   }
 
@@ -1657,49 +1677,28 @@ function simpanLaporanDivisi() {
   const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
   const payload = {
-    token: tokenAdmin,
-    pinDivisi: pinDivisi,
-    action: 'tambahKeuangan',
-    tanggalInput: tglFormatted,
+    tanggal: tglFormatted,
     divisi: divisi,
     keterangan: ket,
-    jenisTransaksi: jenis,
+    tipe: String(jenis).toUpperCase().includes('KELUAR') ? 'KELUAR' : 'MASUK',
     nominal: parseInt(nominal)
   };
 
-  // 1. Jika perangkat offline, masukkan ke antrean lokal dan beri tahu warga
-  if (!navigator.onLine) {
-    simpanPayloadKeAntrean('Laporan Keuangan', payload);
-    tutupModalLaporan();
-    alert('📴 Anda sedang offline. Laporan disimpan ke antrean lokal.');
-    return;
-  }
-
-  // 2. Langsung tutup modal agar terasa instan & responsif
-  tutupModalLaporan();
+  // Simpan langsung ke Firebase Realtime Database pada node 'keuangan'
+  const newRef = window.firebasePush(window.firebaseRef(window.db, 'keuangan'));
   
-  // Berikan notifikasi kilat bahwa laporan sedang diproses/terkirim
-  alert('✅ Laporan Keuangan ' + divisi + ' sedang dikirim...');
-
-  // 3. Kirim ke Google Apps Script di latar belakang
-  fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  })
-  .then(res => res.text())
-  .then(result => {
-    if(result.includes('SUCCESS')) {
-      console.log('✅ Laporan Keuangan ' + divisi + ' berhasil dicatat di server.');
-    } else {
-      console.warn('❌ Gagal di server, memasukkan ke antrean offline:', result);
-      simpanPayloadKeAntrean('Laporan Keuangan', payload);
-    }
-  })
-  .catch(err => {
-    simpanPayloadKeAntrean('Laporan Keuangan', payload);
-  });
+  window.firebaseSet(newRef, payload)
+    .then(() => {
+      alert('✅ Laporan Keuangan ' + divisi + ' berhasil disimpan ke database!');
+      tutupModalLaporan();
+      if (typeof muatDataKeuangan === 'function') muatDataKeuangan();
+    })
+    .catch((err) => {
+      alert('❌ Gagal menyimpan laporan: ' + err.message);
+    });
 }
+
+    
 
 // Tambahkan reset kolom PIN saat modal ditutup
 function tutupModalLaporan() {
