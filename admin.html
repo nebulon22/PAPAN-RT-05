@@ -1103,7 +1103,7 @@ function initMap() {
     document.getElementById('modal-form').style.display = 'flex';
   });
 
-  // 🚀 AMBIL DATA PETA LANGSUNG DARI FIREBASE RTDB
+// 🚀 AMBIL DATA PETA LANGSUNG DARI FIREBASE RTDB (Dukung Format Sheets & Firebase)
   const petaRef = firebaseRef(db, 'peta_warga');
   firebaseOnValue(petaRef, (snapshot) => {
     markerGroup.clearLayers();
@@ -1115,14 +1115,24 @@ function initMap() {
       const val = childSnap.val();
       if (!val) return;
 
-      var latClean = perbaikiKoordinat(val.lat);
-      var lngClean = perbaikiKoordinat(val.lng);
+      // 1. Ambil data dengan dukungan huruf kapital (Sheets) maupun huruf kecil (Firebase)
+      var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || '');
+      var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || '');
+      var rawNama = val.Nama || val.nama || val.name || '';
+      var rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
+      var rawType = val.Type || val.type || val.Kategori || val.kategori || '';
+      var rawFoto = val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '';
+
+      var latClean = perbaikiKoordinat(rawLat);
+      var lngClean = perbaikiKoordinat(rawLng);
       
-      // Menyesuaikan format boolean atau string 'TRUE'/'FALSE' dari database
-      var statusHidden = typeof val.hidden === 'boolean' ? val.hidden : (val.hidden ? String(val.hidden).trim().toUpperCase() === 'TRUE' : false);
-      var kategoriManual = val.kategori ? String(val.kategori).trim().toLowerCase() : (val.type ? String(val.type).trim().toLowerCase() : '');
-      var urlFoto = val.foto ? String(val.foto).trim() : '';
-      var namaAsli = val.nama ? String(val.nama).trim() : '';
+      var statusHidden = typeof rawHidden === 'boolean' 
+        ? rawHidden 
+        : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+        
+      var kategoriManual = String(rawType).trim().toLowerCase();
+      var urlFoto = String(rawFoto).trim();
+      var namaAsli = String(rawNama).trim();
 
       var item = {
         name: namaAsli,
@@ -1165,7 +1175,6 @@ function initMap() {
     // Terapkan filter pertama kali setelah seluruh data siap
     filterKategori('semua');
   });
-}
     
 // 🛠️ FUNGSI FILTER BERSIH MENGGUNAKAN LAYERGROUP
   function filterKategori(kat) {
