@@ -2197,35 +2197,38 @@ var dataProgkerGlobal = [];
 // 1. Memuat Data dari Google Sheets (Dilengkapi Cache Lokal agar Instan)
 function muatDataProgker() {
   var tbody = document.getElementById('list-tabel-progker');
-  
-  // A. TAMPILKAN DARI CACHE LOKAL SECARA INSTAN JIKA ADA
-  var cachedProgker = localStorage.getItem('cache_progker_admin_rt05');
-  if (cachedProgker) {
-    try {
-      dataProgkerGlobal = JSON.parse(cachedProgker);
-      renderTabelProgker(dataProgkerGlobal);
-    } catch (e) {
-      console.error("Gagal membaca cache progker admin:", e);
-    }
-  } else if (tbody) {
+  if (tbody) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
   }
 
-  // B. AMBIL DATA TERBARU DARI SERVER DI LATAR BELAKANG
-  fetch(GAS_WEB_APP_URL + '?action=get_progker')
-    .then(res => res.json())
-    .then(data => {
-      dataProgkerGlobal = data || [];
-      // Simpan ke localStorage untuk kunjungan/pemuatan berikutnya
-      localStorage.setItem('cache_progker_admin_rt05', JSON.stringify(dataProgkerGlobal));
-      renderTabelProgker(dataProgkerGlobal);
-    })
-    .catch(err => {
-      console.error("Gagal menyinkronkan data progker dari server, menggunakan cache lokal.", err);
-      if (!cachedProgker && tbody) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data.</td></tr>';
-      }
-    });
+  // Ambil data real-time dari node 'progker_rab' di Firebase RTDB
+  const progkerRef = window.firebaseRef(window.db, 'progker_rab');
+  window.firebaseOnValue(progkerRef, (snapshot) => {
+    dataProgkerGlobal = [];
+    if (snapshot.exists()) {
+      snapshot.forEach((childSnap) => {
+        const item = childSnap.val();
+        if (item) {
+          // Pastikan id tersimpan (menggunakan key Firebase jika id kosong)
+          dataProgkerGlobal.push({
+            id: item.id || childSnap.key,
+            kegiatan: item.kegiatan || '',
+            divisi: item.divisi || '',
+            anggaran: item.anggaran || 0,
+            realisasi: item.realisasi || 0,
+            status: item.status || 'Perencanaan',
+            detail: item.detail || ''
+          });
+        }
+      });
+    }
+    renderTabelProgker(dataProgkerGlobal);
+  }, (error) => {
+    console.error("Gagal memuat progker dari Firebase:", error);
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data dari database.</td></tr>';
+    }
+  });
 }
 
 // 2. Render Data ke Tabel
@@ -2292,7 +2295,6 @@ function renderTabelProgker(list) {
 // 3. Simpan / Edit Data Progker + Format Angka Ribuan & Otomatis Terbit Pengumuman
 function simpanDataProgker(e) {
   e.preventDefault();
-  var token = localStorage.getItem('adminToken') || '';
   var btn = document.getElementById('btnSimpanProgker');
   btn.disabled = true;
   btn.innerText = 'Menyimpan...';
@@ -2301,70 +2303,39 @@ function simpanDataProgker(e) {
   var kegiatan = document.getElementById('progkerKegiatan').value;
   var divisi = document.getElementById('progkerDivisi').value;
   
-  // Clean titik ribuan sebelum dikirim ke Google Sheets
   var rawAnggaran = document.getElementById('progkerAnggaran').value.replace(/\./g, '');
   var rawRealisasi = document.getElementById('progkerRealisasi').value.replace(/\./g, '');
-  
-  var anggaranFormatted = Number(rawAnggaran || 0).toLocaleString('id-ID');
   var detail = document.getElementById('progkerDetail').value;
+  var existingId = document.getElementById('progkerId').value;
+
+  // Tentukan ID unik (gunakan yang lama jika edit, atau buat baru jika tambah)
+  var progkerId = existingId ? existingId : 'progker_' + Date.now();
 
   var payload = {
-    action: 'simpan_progker',
-    token: token,
-    id: document.getElementById('progkerId').value,
+    id: progkerId,
     kegiatan: kegiatan,
     divisi: divisi,
-    anggaran: rawAnggaran || 0,
-    realisasi: rawRealisasi || 0,
+    anggaran: Number(rawAnggaran) || 0,
+    realisasi: Number(rawRealisasi) || 0,
     status: status,
     detail: detail,
     tanggal: new Date().toLocaleDateString('id-ID')
   };
 
-  fetch(GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  })
-  .then(res => res.json())
-  .then(res => {
-    btn.disabled = false;
-    btn.innerText = '💾 Simpan Program Kerja';
-    
-    if (res.status === 'success') {
-      
-      // JIKA STATUS DISETUJUI / BERJALAN -> OTOMATIS TERBITKAN KE PENGUMUMAN WARGA
-      if (status === 'Disetujui' || status === 'Berjalan') {
-        const payloadPengumuman = {
-          token: token,
-          action: 'kelolaPengumuman',
-          subAksi: 'tambah',
-          tanggal: new Date().toLocaleDateString('id-ID'),
-          judul: `[RAB APPROVED] ${kegiatan}`,
-          detail: `Divisi: ${divisi}\nEstimasi RAB: Rp ${anggaranFormatted}\n\nCatatan: ${detail}`,
-          lokasi: 'RT 05',
-          foto: ''
-        };
-
-        fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payloadPengumuman)
-        });
-      }
-
+  // Simpan ke node 'progker_rab/{progkerId}' di Firebase RTDB
+  const targetRef = window.firebaseRef(window.db, 'progker_rab/' + progkerId);
+  window.firebaseSet(targetRef, payload)
+    .then(() => {
+      btn.disabled = false;
+      btn.innerText = '💾 Simpan Program Kerja';
       tutupModalFormProgker();
-      muatDataProgker();
-      alert('✅ Program Kerja berhasil disimpan' + (status === 'Disetujui' || status === 'Berjalan' ? ' & otomatis diterbitkan ke Papan Pengumuman Warga!' : '!'));
-    } else {
-      alert('Gagal menyimpan program kerja.');
-    }
-  })
-  .catch(err => {
-    btn.disabled = false;
-    btn.innerText = '💾 Simpan Program Kerja';
-    alert('Terjadi kesalahan jaringan.');
-  });
+      alert('✅ Program Kerja berhasil disimpan ke Firebase!');
+    })
+    .catch((err) => {
+      btn.disabled = false;
+      btn.innerText = '💾 Simpan Program Kerja';
+      alert('❌ Gagal menyimpan program kerja: ' + err.message);
+    });
 }
     
 // 4. Modal Handler
@@ -2398,16 +2369,15 @@ function editProgker(id) {
 // 5. Hapus Progker
 function hapusProgker(id) {
   if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
-  var token = localStorage.getItem('adminToken') || '';
 
-  fetch(GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'hapus_progker', id: id, token: token })
-  })
-  .then(res => res.json())
-  .then(() => muatDataProgker())
-  .catch(() => alert('Gagal menghapus program kerja.'));
+  const targetRef = window.firebaseRef(window.db, 'progker_rab/' + id);
+  window.firebaseRemove(targetRef)
+    .then(() => {
+      alert('🗑️ Program kerja berhasil dihapus.');
+    })
+    .catch((err) => {
+      alert('❌ Gagal menghapus: ' + err.message);
+    });
 }
 
 function tutupTabProgker() {
