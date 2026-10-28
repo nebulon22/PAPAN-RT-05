@@ -1541,110 +1541,100 @@ async function muatPeminjamanAdmin() {
       }
     }
 
-   async function simpanBarangStokAdmin() {
-      const pilihPilihan = document.getElementById('stokPilihBarang').value;
-      const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
-      const jenisAksi = document.getElementById('stokJenisAksi').value;
-      const jumlahUnit = document.getElementById('stokJumlahTotal').value;
-      
-      // Ambil TOKEN (Bukan PIN hardcode!)
-      const tokenAdmin = localStorage.getItem('adminToken') || '';
-      
-      let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
+async function simpanBarangStokAdmin() {
+  const pilihPilihan = document.getElementById('stokPilihBarang').value;
+  const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
+  const jenisAksi = document.getElementById('stokJenisAksi').value; // 'Tambah (Beli Baru)' atau 'Kurangi'
+  const jumlahUnit = parseInt(document.getElementById('stokJumlahTotal').value, 10);
+  
+  let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
 
-      if (!namaBarang || !jumlahUnit || parseInt(jumlahUnit) <= 0) {
-        alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
-        return;
-      }
+  if (!namaBarang || isNaN(jumlahUnit) || jumlahUnit <= 0) {
+    alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
+    return;
+  }
 
-      const btn = document.querySelector('#formStokBarang button');
-      if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
+  const btn = document.querySelector('#formStokBarang button');
+  if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
 
-      // Payload bersih berbasis token
-      const payload = {
-        token: tokenAdmin,
-        action: 'tambahBarangPerkakas',
-        namaBarang: namaBarang,
-        jenisAksi: jenisAksi,
-        jumlahUnit: parseInt(jumlahUnit)
-      };
-     
-      if (!navigator.onLine) {
-        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-        simpanPayloadKeAntrean('Perubahan Stok Inventaris', payload);
-        document.getElementById('stokPilihBarang').value = '';
-        document.getElementById('stokNamaBarangBaru').value = '';
-        document.getElementById('stokNamaBarangBaru').style.display = 'none';
-        document.getElementById('stokJumlahTotal').value = '';
-        toggleFormStok();
-        return;
-      }
+  try {
+    const inventarisRef = window.ref(window.db, 'inventaris');
+    const snapshot = await window.firebaseGet(inventarisRef);
+    
+    let targetKey = null;
+    let dataBarangLama = null;
 
-      try {
-        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-        const text = await res.text();
-
-        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-
-        if (text.includes('SUCCESS')) {
-          alert('✅ Data stok barang berhasil diperbarui!');
-          document.getElementById('stokPilihBarang').value = '';
-          document.getElementById('stokNamaBarangBaru').value = '';
-          document.getElementById('stokNamaBarangBaru').style.display = 'none';
-          document.getElementById('stokJumlahTotal').value = '';
-          toggleFormStok();
-          muatPeminjamanAdmin();
-        } else {
-          alert('❌ Gagal menyimpan: ' + text);
+    if (snapshot.exists()) {
+      snapshot.forEach(child => {
+        const val = child.val();
+        const namaDb = val.namaBarang || val.nama || '';
+        if (namaDb.toLowerCase() === namaBarang.toLowerCase()) {
+          targetKey = child.key;
+          dataBarangLama = val;
         }
-      } catch (err) {
-        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-        simpanPayloadKeAntrean('Perubahan Stok Inventaris', payload);
-        document.getElementById('stokPilihBarang').value = '';
-        document.getElementById('stokNamaBarangBaru').value = '';
-        document.getElementById('stokNamaBarangBaru').style.display = 'none';
-        document.getElementById('stokJumlahTotal').value = '';
-        toggleFormStok();
-      }
-    }
-
-    async function prosesPengembalian(id) {
-  if (confirm("Apakah barang ini sudah dikembalikan?")) {
-    // PERBAIKAN: Gunakan tokenAdmin, bukan verifiedPin!
-    const tokenAdmin = localStorage.getItem('adminToken') || '';
-    const payload = {
-      token: tokenAdmin,
-      action: "kembali",
-      id: id
-    };
-
-    if (!navigator.onLine) {
-      simpanPayloadKeAntrean('Pengembalian Barang', payload);
-      muatPeminjamanAdmin();
-      return;
-    }
-
-    try {
-      const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-        method: "POST",
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
       });
-      const text = await res.text();
+    }
 
-      if (text.includes("SUCCESS")) {
-        alert("✅ Status barang berhasil diperbarui!");
-        muatPeminjamanAdmin();
+    let stokAkhir = jumlahUnit;
+    if (targetKey && dataBarangLama) {
+      const stokLama = parseInt(dataBarangLama.totalStok !== undefined ? dataBarangLama.totalStok : (dataBarangLama.total || 0), 10);
+      if (jenisAksi.toLowerCase().includes('kurangi') || jenisAksi.toLowerCase().includes('kurang')) {
+        stokAkhir = Math.max(0, stokLama - jumlahUnit);
       } else {
-        alert("❌ Gagal memperbarui: " + text);
+        stokAkhir = stokLama + jumlahUnit; // Default tambah / beli baru
       }
-    } catch (err) {
-      simpanPayloadKeAntrean('Pengembalian Barang', payload);
+
+      // Update data yang sudah ada
+      const updateRef = window.ref(window.db, 'inventaris/' + targetKey);
+      await window.firebaseSet(updateRef, {
+        ...dataBarangLama,
+        namaBarang: namaBarang,
+        totalStok: stokAkhir
+      });
+    } else {
+      // Buat item baru jika belum ada
+      targetKey = 'item_' + Date.now();
+      const newRef = window.ref(window.db, 'inventaris/' + targetKey);
+      await window.firebaseSet(newRef, {
+        id: targetKey,
+        namaBarang: namaBarang,
+        totalStok: jumlahUnit,
+        kategori: 'Umum',
+        kondisi: 'Baik',
+        peminjam: ''
+      });
+    }
+
+    if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+    alert('✅ Data stok barang berhasil diperbarui ke database!');
+    
+    // Reset form
+    document.getElementById('stokPilihBarang').value = '';
+    document.getElementById('stokNamaBarangBaru').value = '';
+    document.getElementById('stokNamaBarangBaru').style.display = 'none';
+    document.getElementById('stokJumlahTotal').value = '';
+    if (typeof toggleFormStok === 'function') toggleFormStok();
+    muatPeminjamanAdmin();
+
+  } catch (err) {
+    if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+    alert('❌ Gagal menyimpan ke database: ' + err.message);
+  }
+}
+
+  async function prosesPengembalian(id) {
+  if (confirm("Apakah barang ini sudah dikembalikan?")) {
+    try {
+      // Hapus atau ubah status peminjaman di node 'peminjaman' pada RTDB
+      const peminjamanRef = window.ref(window.db, 'peminjaman/' + id);
+      
+      // Anda bisa menghapus datanya atau mengubah statusnya menjadi 'Dikembalikan'
+      await window.firebaseRemove(peminjamanRef);
+
+      alert("✅ Status barang berhasil diperbarui (dikembalikan)!");
       muatPeminjamanAdmin();
+    } catch (err) {
+      alert("❌ Gagal memperbarui status pengembalian: " + err.message);
     }
   }
 }
