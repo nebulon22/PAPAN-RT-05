@@ -1475,71 +1475,53 @@ async function muatPeminjamanAdmin() {
       `).join('');
     }
     
-   async function simpanPeminjamanAdmin() {
-      const peminjam = document.getElementById("pinjamNamaWarga").value;
-      const barang = document.getElementById("pinjamPilihBarang").value;
-      const jumlah = document.getElementById("pinjamJumlah").value;
-      
-      // Ambil TOKEN (Bukan PIN hardcode!)
-      const tokenAdmin = localStorage.getItem('adminToken') || '';
+  async function simpanPeminjamanAdmin() {
+  const peminjam = document.getElementById("pinjamNamaWarga").value.trim();
+  const barang = document.getElementById("pinjamPilihBarang").value;
+  const jumlah = document.getElementById("pinjamJumlah").value;
+  
+  if (!peminjam || !barang || !jumlah) {
+    alert("Mohon lengkapi semua data!");
+    return;
+  }
 
-      if (!peminjam || !barang || !jumlah) {
-        alert("Mohon lengkapi semua data!");
-        return;
-      }
+  const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
+  if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
 
-      const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
-      if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
+  const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+  const pinjamId = "pinjam_" + Date.now();
+  
+  const payload = {
+    id: pinjamId,
+    peminjam: peminjam,
+    barang: barang,
+    namaBarang: barang,
+    jumlah: parseInt(jumlah, 10),
+    tgl: hariIni,
+    status: "Dipinjam"
+  };
 
-      const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-      
-      // Gunakan token di dalam payload
-      const payload = {
-        token: tokenAdmin,
-        action: "pinjam",
-        id: "ID-" + Date.now(),
-        peminjam: peminjam,
-        barang: barang,
-        jumlah: parseInt(jumlah),
-        tgl: hariIni
-      };
+  try {
+    // Simpan langsung ke node 'peminjaman' di Firebase RTDB
+    const targetRef = window.firebaseRef(window.db, 'peminjaman/' + pinjamId);
+    await window.firebaseSet(targetRef, payload);
 
-      if (!navigator.onLine) {
-        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-        simpanPayloadKeAntrean('Peminjaman Inventaris', payload);
-        document.getElementById("pinjamNamaWarga").value = "";
-        document.getElementById("pinjamPilihBarang").value = "";
-        document.getElementById("pinjamJumlah").value = "";
-        return;
-      }
-
-      try {
-        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-          method: "POST",
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-        const text = await res.text();
-
-        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-
-        if (text.includes("SUCCESS")) {
-          alert("✅ Peminjaman berhasil dicatat!");
-          document.getElementById("pinjamNamaWarga").value = "";
-          document.getElementById("pinjamPilihBarang").value = "";
-          document.getElementById("pinjamJumlah").value = "";
-          muatPeminjamanAdmin();
-        } else {
-          alert("❌ Gagal menyimpan: " + text);
-        }
-      } catch (err) {
-        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-        simpanPayloadKeAntrean('Peminjaman Inventaris', payload);
-        document.getElementById("pinjamNamaWarga").value = "";
-        document.getElementById("pinjamPilihBarang").value = "";
-        document.getElementById("pinjamJumlah").value = "";
-      }
+    if(btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+    alert("✅ Peminjaman berhasil dicatat ke database!");
+    
+    // Reset form
+    document.getElementById("pinjamNamaWarga").value = "";
+    document.getElementById("pinjamPilihBarang").value = "";
+    document.getElementById("pinjamJumlah").value = "";
+    
+    if (typeof muatPeminjamanAdmin === 'function') {
+      muatPeminjamanAdmin();
     }
+  } catch (err) {
+    if(btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+    alert("❌ Gagal menyimpan ke database: " + err.message);
+  }
+}
 
 async function simpanBarangStokAdmin() {
   const pilihPilihan = document.getElementById('stokPilihBarang').value;
