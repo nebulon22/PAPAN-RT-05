@@ -1544,7 +1544,7 @@ async function muatPeminjamanAdmin() {
 async function simpanBarangStokAdmin() {
   const pilihPilihan = document.getElementById('stokPilihBarang').value;
   const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
-  const jenisAksi = document.getElementById('stokJenisAksi').value; // 'Tambah (Beli Baru)' atau 'Kurangi'
+  const jenisAksi = document.getElementById('stokJenisAksi').value;
   const jumlahUnit = parseInt(document.getElementById('stokJumlahTotal').value, 10);
   
   let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
@@ -1558,7 +1558,7 @@ async function simpanBarangStokAdmin() {
   if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
 
   try {
-    const inventarisRef = window.ref(window.db, 'inventaris');
+    const inventarisRef = window.firebaseRef(window.db, 'inventaris');
     const snapshot = await window.firebaseGet(inventarisRef);
     
     let targetKey = null;
@@ -1581,20 +1581,18 @@ async function simpanBarangStokAdmin() {
       if (jenisAksi.toLowerCase().includes('kurangi') || jenisAksi.toLowerCase().includes('kurang')) {
         stokAkhir = Math.max(0, stokLama - jumlahUnit);
       } else {
-        stokAkhir = stokLama + jumlahUnit; // Default tambah / beli baru
+        stokAkhir = stokLama + jumlahUnit;
       }
 
-      // Update data yang sudah ada
-      const updateRef = window.ref(window.db, 'inventaris/' + targetKey);
+      const updateRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
       await window.firebaseSet(updateRef, {
         ...dataBarangLama,
         namaBarang: namaBarang,
         totalStok: stokAkhir
       });
     } else {
-      // Buat item baru jika belum ada
       targetKey = 'item_' + Date.now();
-      const newRef = window.ref(window.db, 'inventaris/' + targetKey);
+      const newRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
       await window.firebaseSet(newRef, {
         id: targetKey,
         namaBarang: namaBarang,
@@ -1608,13 +1606,12 @@ async function simpanBarangStokAdmin() {
     if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
     alert('✅ Data stok barang berhasil diperbarui ke database!');
     
-    // Reset form
     document.getElementById('stokPilihBarang').value = '';
     document.getElementById('stokNamaBarangBaru').value = '';
     document.getElementById('stokNamaBarangBaru').style.display = 'none';
     document.getElementById('stokJumlahTotal').value = '';
     if (typeof toggleFormStok === 'function') toggleFormStok();
-    muatPeminjamanAdmin();
+    if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
 
   } catch (err) {
     if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
