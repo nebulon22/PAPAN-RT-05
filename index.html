@@ -1222,7 +1222,12 @@ function muatDataPetaWarga() {
   window.firebaseOnValue(petaRef, (snapshot) => {
     const dataObj = snapshot.val();
     
-    daftarPin.forEach(pin => map.removeLayer(pin.marker));
+    // Bersihkan penanda lama di peta
+    if (typeof markerGroup !== 'undefined') {
+      markerGroup.clearLayers();
+    } else {
+      daftarPin.forEach(pin => map.removeLayer(pin.marker));
+    }
     daftarPin = [];
 
     if (!dataObj) return;
@@ -1230,7 +1235,7 @@ function muatDataPetaWarga() {
     var baris = [];
     Object.keys(dataObj).forEach(key => {
       var item = dataObj[key];
-      if (item && (item.nama || item.name)) {
+      if (item && (item.nama || item.name || item.Nama)) {
         baris.push(item);
       }
     });
@@ -1243,15 +1248,23 @@ function muatDataPetaWarga() {
       
       for (let i = index; i < batas; i++) {
         var kolom = baris[i];
-        var namaAsli = String(kolom.nama || kolom.name || '').trim();
+
+        // 1. Dukung nama kolom huruf kapital (Sheets) maupun huruf kecil (Firebase)
+        var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
 
         if (namaAsli !== '') {
-          var latClean = perbaikiKoordinat(kolom.lat || kolom.latitude || '');
-          var lngClean = perbaikiKoordinat(kolom.lng || kolom.longitude || '');
+          var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
+          var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
+          var latClean = perbaikiKoordinat(rawLat);
+          var lngClean = perbaikiKoordinat(rawLng);
           
-          var statusHidden = kolom.hidden ? String(kolom.hidden).trim().toUpperCase() === 'TRUE' : false;
-          var kategoriManual = kolom.kategori ? String(kolom.kategori).trim().toLowerCase() : '';
-          var urlFoto = kolom.foto ? String(kolom.foto).trim() : '';
+          var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
+          var statusHidden = typeof rawHidden === 'boolean' 
+            ? rawHidden 
+            : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+
+          var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
+          var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
 
           var item = {
             name: namaAsli,
@@ -1278,8 +1291,13 @@ function muatDataPetaWarga() {
           
           var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
           
-          if (!item.hidden && dataIkon.kategori === 'fasum') {
-            marker.addTo(map);
+          // 2. Tampilkan semua titik publik yang TIDAK di-hidden (FASUM, Minimarket, Kuliner, Usaha, RT/RW)
+          if (!item.hidden) {
+            if (typeof markerGroup !== 'undefined') {
+              markerGroup.addLayer(marker);
+            } else {
+              marker.addTo(map);
+            }
           }
 
           daftarPin.push({ 
@@ -1289,7 +1307,7 @@ function muatDataPetaWarga() {
             lat: item.lat, 
             lng: item.lng,
             hidden: item.hidden,
-            kategori: dataIkon.kategori 
+            kategori: kategoriManual || dataIkon.kategori 
           });
         }
       }
