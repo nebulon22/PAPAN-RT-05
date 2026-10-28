@@ -1217,17 +1217,19 @@ function muatDataPetaWarga() {
     return;
   }
 
+  // Pastikan markerGroup terpasang di peta
+  if (typeof markerGroup === 'undefined' || !markerGroup) {
+    window.markerGroup = L.layerGroup().addTo(map);
+  } else if (!map.hasLayer(markerGroup)) {
+    markerGroup.addTo(map);
+  }
+
   const petaRef = window.firebaseRef(window.db, 'peta_warga');
 
   window.firebaseOnValue(petaRef, (snapshot) => {
     const dataObj = snapshot.val();
     
-    // Bersihkan penanda lama di peta
-    if (typeof markerGroup !== 'undefined') {
-      markerGroup.clearLayers();
-    } else {
-      daftarPin.forEach(pin => map.removeLayer(pin.marker));
-    }
+    markerGroup.clearLayers();
     daftarPin = [];
 
     if (!dataObj) return;
@@ -1249,7 +1251,6 @@ function muatDataPetaWarga() {
       for (let i = index; i < batas; i++) {
         var kolom = baris[i];
 
-        // 1. Dukung nama kolom huruf kapital (Sheets) maupun huruf kecil (Firebase)
         var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
 
         if (namaAsli !== '') {
@@ -1290,16 +1291,8 @@ function muatDataPetaWarga() {
           });
           
           var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-          
-          // 2. Tampilkan semua titik publik yang TIDAK di-hidden (FASUM, Minimarket, Kuliner, Usaha, RT/RW)
-          if (!item.hidden) {
-            if (typeof markerGroup !== 'undefined') {
-              markerGroup.addLayer(marker);
-            } else {
-              marker.addTo(map);
-            }
-          }
 
+          // Cukup simpan penanda ke array daftarPin (penampilan ke peta diserahkan ke filterKategori)
           daftarPin.push({ 
             namaRaw: item.nameAsli,
             nama: item.nameAsli.toLowerCase(), 
@@ -1319,6 +1312,12 @@ function muatDataPetaWarga() {
           requestIdleCallback(prosesChunk, { timeout: 50 });
         } else {
           setTimeout(prosesChunk, 4);
+        }
+      } else {
+        // SETELAH SELURUH DATA SELESAI DIMUAT:
+        // Panggil filter 'awal' agar HANYA FASUM, Rumah Pak RT, dan Rumah Pak RW yang tampil di awal.
+        if (typeof filterKategori === 'function') {
+          filterKategori('awal');
         }
       }
     }
@@ -1753,17 +1752,78 @@ function cariLokasi() {
   }
 }
 
-    function filterKategori(kat, btnElement) {
-      document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
-      btnElement.classList.add('active');
+   // 🛠️ FUNGSI FILTER PETA LENGKAP UNTUK INDEX.HTML (MODE WARGA)
+function filterKategori(kat, btnElement) {
+  // 1. Atur warna/status aktif tombol UI (Aman jika dipanggil tanpa btnElement)
+  if (btnElement && btnElement.classList) {
+    document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
+  }
 
-      daftarPin.forEach(pin => {
-        map.removeLayer(pin.marker);
-        if (!pin.hidden && (kat === 'semua' || pin.kategori === kat)) {
-          pin.marker.addTo(map);
-        }
-      });
+  var kategoriPilihan = String(kat || 'awal').trim().toLowerCase();
+
+  // 2. Bersihkan layer penanda lama
+  if (typeof markerGroup !== 'undefined' && markerGroup) {
+    markerGroup.clearLayers();
+  } else {
+    daftarPin.forEach(pin => map.removeLayer(pin.marker));
+  }
+
+  daftarPin.forEach(function(pin) {
+    // KUNCI UTAMA: Sembunyikan rumah warga yang sengaja di-hidden (hanya muncul jika DICARI)
+    if (pin.hidden) return;
+
+    var teksKategori = String(pin.kategori || '').toLowerCase();
+    var teksNama = String(pin.nama || '').toLowerCase();
+    var isMatch = false;
+
+    // Deteksi Kategori Fasum & Rumah Pengurus (Pak RT & Pak RW)
+    var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || 
+                  teksKategori.includes('pos') || teksNama.includes('fasum') || 
+                  teksNama.includes('pos') || teksNama.includes('musholla') || 
+                  teksNama.includes('masjid') || teksNama.includes('balai') || teksNama.includes('sd');
+
+    var isPengurus = teksNama.includes('ketua rt') || teksNama.includes('ketua rw') || 
+                     teksNama.includes('pak rt') || teksNama.includes('pak rw') ||
+                     teksNama.includes('rumah rt') || teksNama.includes('rumah rw');
+
+    // Deteksi Kategori Usaha & Publik Lainnya
+    var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
+                 teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+
+    var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || 
+                    teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan') || teksNama.includes('coffee');
+
+    var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
+                       teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+
+    // 3. LOGIKA ATURAN TAMPILAN
+    if (kategoriPilihan === 'awal' || kategoriPilihan === 'default') {
+      // 🟢 PERTAMA KALI DIBUKA: Hanya FASUM, Rumah Pak RT, dan Rumah Pak RW
+      isMatch = isFasum || isPengurus;
+    } else if (kategoriPilihan === 'semua') {
+      // 🔵 KLIK FILTER SEMUA: Tampilkan SEMUA titik publik (Fasum, Minimarket, Kuliner, Kost, dll yang NOT HIDDEN)
+      isMatch = true;
+    } else if (kategoriPilihan === 'kost') {
+      isMatch = isKost;
+    } else if (kategoriPilihan === 'fasum') {
+      isMatch = isFasum || isPengurus;
+    } else if (kategoriPilihan === 'kuliner') {
+      isMatch = isKuliner;
+    } else if (kategoriPilihan === 'minimarket') {
+      isMatch = isMinimarket;
     }
+
+    // 4. Tempelkan penanda yang sesuai kriteria ke peta
+    if (isMatch) {
+      if (typeof markerGroup !== 'undefined' && markerGroup) {
+        markerGroup.addLayer(pin.marker);
+      } else {
+        pin.marker.addTo(map);
+      }
+    }
+  });
+}
 
     function bukaFotoBesar(src, e) {
       if (e) e.stopPropagation();
