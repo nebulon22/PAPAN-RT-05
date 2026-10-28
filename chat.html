@@ -2072,6 +2072,7 @@ let isLoadingMore = false;
 // Variable penanda sederhana untuk memaksa turun ke bawah
 let shouldForceScrollDown = false;
 
+// === PEMUAT CHAT PUBLIK (Diperbaiki untuk Animasi Unread & Badge) ===
 function loadChatStream(onLoaded) {
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
@@ -2080,12 +2081,10 @@ function loadChatStream(onLoaded) {
         if (activeChatType !== 'public') return;
         if (!chatStream) return;
 
-        // 🌟 1. SIMPAN POSISI SCROLL SEBELUM DOM DI-RESET
         const oldScrollTop = chatStream.scrollTop;
         const oldScrollHeight = chatStream.scrollHeight;
         const isAtBottom = (oldScrollHeight - oldScrollTop - chatStream.clientHeight) <= 30;
 
-        // 🌟 CACHE OFFLINE
         if (snapshot.exists()) {
             let cacheData = {};
             snapshot.forEach(child => {
@@ -2095,27 +2094,53 @@ function loadChatStream(onLoaded) {
         }
 
         if (!snapshot.exists()) {
-            // ... (kode fallback offline tetap sama) ...
             return;
         }
 
-        // 🌟 KOSONGKAN DOM
         chatStream.innerHTML = '';
 
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
         const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
 
+        // 🛠️ PERBAIKAN: Jika belum ada key terbaca, jangan langsung anggap semuanya unread 
+        // agar tidak memicu animasi beruntun yang memenuhi layar.
         let isUnreadSection = false;
-        if (!lastReadPublicMapKey) isUnreadSection = true;
+        let foundKey = false;
+
+        snapshot.forEach((childSnap) => {
+            const msgKey = childSnap.key;
+            if (msgKey === lastReadPublicMapKey) {
+                foundKey = true;
+            }
+        });
+
+        // Jika key tersimpan tidak ditemukan di 50 pesan terakhir, set ke pesan paling akhir
+        if (!foundKey && snapshot.exists()) {
+            let keys = [];
+            snapshot.forEach(c => keys.push(c.key));
+            if (keys.length > 0) {
+                lastReadPublicMap[currentUser?.uid] = keys[keys.length - 1];
+                localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+            }
+        }
+
+        const activeReadKey = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key'))?.[currentUser?.uid];
+        let countAfterKey = false;
 
         snapshot.forEach((childSnap) => {
             const msgKey = childSnap.key;
             const msgData = childSnap.val();
 
+            if (msgKey === 'pinned_poll') return;
+
             let isUnreadMsg = false;
-            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
+
+            if (msgKey === activeReadKey) {
+                countAfterKey = true;
+            } else if (countAfterKey && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
                 isUnreadMsg = true;
 
+                // Picu suara/notifikasi media jika pesan baru dari warga lain
                 const notifKey = 'notified_' + msgKey;
                 if (!sessionStorage.getItem(notifKey)) {
                     sessionStorage.setItem(notifKey, 'true');
@@ -2127,30 +2152,21 @@ function loadChatStream(onLoaded) {
                 }
             }
 
-            if (msgKey === lastReadPublicMapKey) {
-                isUnreadSection = true;
-            }
-
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
         isInitialPublicChatLoaded = true;
 
-        // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS (Mencegah lari ke atas)
         if (shouldForceScrollDown) {
-            // Jika dipaksa turun (misal tombol kirim ditekan)
             scrollToBottom(false);
             shouldForceScrollDown = false;
         } else if (isAtBottom) {
-            // Jika sebelumnya memang berada di bawah, ikuti pertambahan tinggi chat baru
             scrollToBottom(false);
         } else {
-            // 🌟 JIKA SEDANG DI ATAS (BACA RIWAYAT), KEMBALIKAN KE POSISI SEMULA AGAR TIDAK LARI KE ATAS
             const newScrollHeight = chatStream.scrollHeight;
             chatStream.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
         }
 
-        // Tampilkan tombol panah bawah jika posisi di atas
         const distanceFromBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight;
         const btnScrollBottom = document.getElementById('btn-scroll-bottom');
         if (btnScrollBottom) {
