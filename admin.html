@@ -930,12 +930,17 @@ function cekLogin() {
     return;
   }
 
-  // Cek ke Firebase RTDB (Mencocokkan dari node users/user_admin)
-  window.firebaseGet(window.firebaseRef(window.db, 'users/user_admin')).then((snapshot) => {
+  // Cek langsung ke konfigurasi PIN admin umum di database
+  window.firebaseGet(window.firebaseRef(window.db, 'admin_config/pin')).then((snapshot) => {
     btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
-    const adminData = snapshot.val();
+    let validPin = snapshot.val();
     
-    if (adminData && adminData.pin && String(input).trim() === String(adminData.pin).trim()) {
+    // Jika path 'admin_config/pin' belum ada di database, gunakan default "050505"
+    if (!validPin) {
+      validPin = "050505";
+    }
+    
+    if (String(input).trim() === String(validPin).trim()) {
       localStorage.setItem('authAdmin', 'true');
       localStorage.setItem('adminToken', 'rt05-admin-' + Date.now());
       localStorage.setItem('admin_login_time', Date.now().toString());
@@ -947,6 +952,15 @@ function cekLogin() {
     }
   }).catch(err => {
     console.error("Gagal terhubung ke DB:", err);
+    // Fallback darurat jika database offline/gagal dibaca tetapi PIN diketik benar
+    if (input === "050505") {
+      localStorage.setItem('authAdmin', 'true');
+      localStorage.setItem('adminToken', 'rt05-admin-' + Date.now());
+      localStorage.setItem('admin_login_time', Date.now().toString());
+      document.getElementById('adminPin').value = "";
+      bukaAkses();
+      return;
+    }
     btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
     alert("❌ Gagal menghubungi database. Pastikan koneksi stabil.");
   });
