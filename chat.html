@@ -1222,11 +1222,10 @@ document.addEventListener('visibilitychange', () => {
 
 
 
-// 5. Pemantau Pesan Private Universal
+// 5. Pemantau Pesan Private Universal (Diperbarui & Dioptimalkan)
     let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
-      // Simpan referensi lokal user saat ini
       const activeUser = currentUser;
       if (!activeUser || !activeUser.uid) return;
 
@@ -1239,7 +1238,6 @@ document.addEventListener('visibilitychange', () => {
       let isFirstLoad = true;
 
       globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
-        // Cek ulang dengan activeUser
         if (!activeUser || !activeUser.uid) return;
 
         if (!snapshot.exists()) {
@@ -1261,8 +1259,20 @@ document.addEventListener('visibilitychange', () => {
             let lastMsg = null;
             const lastReadKey = lastReadKeyMap[targetUID];
 
-            let countAfterKey = false;
-            if (!lastReadKey) countAfterKey = true;
+            // 🛠️ PERBAIKAN 1: Jika belum ada key tersimpan, anggap kunci mulai dari pesan terakhir 
+            // agar pesan-pesan lama masa lalu tidak ikut terhitung unread.
+            let countAfterKey = !lastReadKey ? false : false;
+            if (!lastReadKey) {
+              // Jika belum ada riwayat baca, kita set true HANYA untuk pesan baru setelah listener aktif,
+              // atau ambil key pesan terakhir sebagai titik awal.
+              let allKeys = [];
+              roomSnap.forEach(m => allKeys.push(m.key));
+              if (allKeys.length > 0) {
+                lastReadKeyMap[targetUID] = allKeys[allKeys.length - 1];
+                localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
+              }
+              countAfterKey = false; 
+            }
 
             roomSnap.forEach((msgSnap) => {
               const msgKey = msgSnap.key;
@@ -1272,13 +1282,23 @@ document.addEventListener('visibilitychange', () => {
               if (msgKey === lastReadKey) {
                 countAfterKey = true;
                 unreadTotalCount = 0;
-              } else if (countAfterKey && msgData.uid !== activeUser.uid) {
-                unreadTotalCount++;
+              } else if (countAfterKey) {
+                // Jangan hitung pesan yang dikirim oleh diri sendiri
+                if (msgData.uid !== activeUser.uid) {
+                  unreadTotalCount++;
+                }
               }
             });
 
             if (lastMsg && lastMsg.uid === activeUser.uid) {
               unreadTotalCount = 0;
+            }
+
+            // 🛠️ PERBAIKAN 2: Jika tab privat ini sedang aktif di layar dan terlihat, 
+            // paksa unread jadi 0 secara mutlak.
+            if (activeChatType === 'private' && activePrivateUID === targetUID && isChatVisible) {
+              unreadTotalCount = 0;
+              markRoomAsRead(targetUID);
             }
 
             if (unreadTotalCount > 0) {
@@ -1292,19 +1312,18 @@ document.addEventListener('visibilitychange', () => {
                 localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
               }
 
-            if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
-            unreadCounts[targetUID] = unreadTotalCount;
-            if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
-            // Panggil fungsi kontrol notifikasi (suara/getar/sunyi) dari induk/setting.js
-            try {
-            if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-                window.parent.picuNotifikasiMedia();
-            }
-        } catch (e) {
-            console.log("Error picu notif:", e);
+              if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
+                unreadCounts[targetUID] = unreadTotalCount;
+                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
+                  try {
+                    if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                      window.parent.picuNotifikasiMedia();
                     }
-          }
-        }
+                  } catch (e) {
+                    console.log("Error picu notif:", e);
+                  }
+                }
+              }
             } else {
               unreadCounts[targetUID] = 0;
             }
@@ -1316,7 +1335,6 @@ document.addEventListener('visibilitychange', () => {
         isFirstLoad = false;
       });
     }
-    
 
 // 6. Pengiriman Pesan (Sederhana & Langsung Paksa Turun)
     function executeSendMessage(e) {
