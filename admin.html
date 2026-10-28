@@ -853,41 +853,42 @@ function formatRupiahInput(el) {
       }
     }
 
-    async function kirimDataPendingAdmin() {
-      if (sedangMengirimAdmin) return;
-      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-      if (antrean.length === 0) {
-        perbaruiIndikatorSyncAdmin();
-        return;
-      }
+   async function kirimDataPendingAdmin() {
+  if (sedangMengirimAdmin) return;
+  
+  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+  if (antrean.length === 0) {
+    perbaruiIndikatorSyncAdmin();
+    return;
+  }
 
-      sedangMengirimAdmin = true;
-      perbaruiIndikatorSyncAdmin();
+  sedangMengirimAdmin = true;
+  perbaruiIndikatorSyncAdmin();
 
-      let sisaAntrean = [];
+  let sisaAntrean = [];
 
-      for (let item of antrean) {
-        try {
-          const res = await fetch(GAS_WEB_APP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(item.payload)
-          });
-          const text = await res.text();
-          if (!text.includes("SUCCESS")) {
-            sisaAntrean.push(item);
-          }
-        } catch (err) {
-          console.warn("Gagal terhubung ke jaringan:", err);
-          sisaAntrean.push(item);
-        }
-      }
-
-      localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
-      sedangMengirimAdmin = false;
-      perbaruiIndikatorSyncAdmin();
+  for (let item of antrean) {
+    try {
+      // Pastikan item.targetNode atau node tujuan Firebase terdefinisi (misal: 'peta_warga', 'keuangan', dll.)
+      const nodeTujuan = item.targetNode || 'peta_warga'; 
+      const dbRef = window.firebaseRef(window.db, nodeTujuan);
+      
+      await window.firebasePush(dbRef, {
+        ...item.payload,
+        timestamp: Date.now()
+      });
+    } catch (err) {
+      console.warn("Gagal menyinkronkan ke Firebase:", err);
+      sisaAntrean.push(item);
     }
+  }
 
+  localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
+  sedangMengirimAdmin = false;
+  perbaruiIndikatorSyncAdmin();
+}
+
+    
     function simpanPayloadKeAntrean(label, payload) {
   let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
   payload.token = payload.token || localStorage.getItem('adminToken') || '';
@@ -1948,8 +1949,10 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
-
-    function bukaModalPengumumanAdmin() {
+// ==========================================
+// PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
+// ==========================================
+function bukaModalPengumumanAdmin() {
   document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
   document.getElementById('modal-admin-pengumuman').style.display = 'flex';
   muatDaftarPengumumanAdmin();
@@ -1960,63 +1963,71 @@ function tutupModalPengumumanAdmin() {
   document.getElementById('formInputPengumuman').reset();
 }
 
-// Muat data dari Google Sheets (GID Pengumuman)
 function muatDaftarPengumumanAdmin() {
   const container = document.getElementById('tabel-pengumuman-admin');
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-  
-  // Memakai fungsi ambilDataSheets / fetch ke backend
-  const urlPengumuman = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getSheetByGid&gid=1885853390&token=${encodeURIComponent(tokenAdmin)}`;
+  if (!container) return;
 
-  ambilDataSheets('cache_pengumuman_admin', urlPengumuman, (data) => {
-    if (!data || data.length <= 1) {
+  container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat pengumuman...</td></tr>`;
+
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatDaftarPengumumanAdmin, 50);
+    return;
+  }
+
+  const pengumumanRef = window.firebaseRef(window.db, 'pengumuman');
+  window.firebaseOnValue(pengumumanRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    if (!dataObj) {
       container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
       return;
     }
 
-    const baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-    
-    container.innerHTML = baris.map((row, index) => {
-      const rowIndex = index + 2; // Indeks baris asli di Google Sheets
-      const judul = row[1] || '-';
-      const status = String(row[4] || 'AKTIF').toUpperCase().trim();
-      const isAktif = status === 'AKTIF';
+    let html = '';
+    Object.keys(dataObj).forEach(key => {
+      const item = dataObj[key];
+      if (item) {
+        const judul = item.judul || '-';
+        const tanggal = item.tanggal || '';
+        const status = String(item.status || 'AKTIF').toUpperCase().trim();
+        const isAktif = status === 'AKTIF';
 
-      return `
-        <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
-          <td style="padding: 6px;">
-            <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
-            <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(row[0] || '')}</div>
-          </td>
-          <td style="padding: 6px; text-align: center;">
-            <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
-              ${isAktif ? 'AKTIF' : 'ARSIP'}
-            </span>
-          </td>
-          <td style="padding: 6px; text-align: center;">
-            <button onclick="toggleStatusPengumuman(${rowIndex}, '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
-              ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
+        html += `
+          <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
+            <td style="padding: 6px;">
+              <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
+              <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(tanggal)}</div>
+            </td>
+            <td style="padding: 6px; text-align: center;">
+              <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
+                ${isAktif ? 'AKTIF' : 'ARSIP'}
+              </span>
+            </td>
+            <td style="padding: 6px; text-align: center;">
+              <button onclick="toggleStatusPengumuman('${key}', '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
+                ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
+              </button>
+            </td>
+          </tr>
+        `;
+      }
+    });
+
+    container.innerHTML = html || `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
+  }, (error) => {
+    console.error("Gagal memuat pengumuman admin:", error);
+    container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: red;">Gagal memuat data.</td></tr>`;
   });
 }
 
-// Simpan Pengumuman Baru (Dengan Integrasi Koordinat Presisi)
 async function simpanPengumumanAdmin() {
   const tglInput = document.getElementById('pengumumanTanggal').value;
   const judul = document.getElementById('pengumumanJudul').value.trim();
   const detail = document.getElementById('pengumumanDetail').value.trim();
   const lokasi = document.getElementById('pengumumanLokasi').value.trim();
   
-  // 1. AMBIL NILAI KOORDINAT DARI INPUT TERSEMBUNYI
   const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
   const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
-  
   const foto = document.getElementById('pengumumanFoto').value.trim();
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
 
   if (!judul || !tglInput) {
     alert("Mohon isi tanggal dan judul pengumuman!");
@@ -2028,83 +2039,55 @@ async function simpanPengumumanAdmin() {
 
   const btn = document.getElementById('btnSimpanPengumuman');
   btn.disabled = true;
-  btn.innerText = "⏳ Menyimpan...";
+  btn.innerText = "⏳ Menyimpan ke Firebase...";
 
-  // 2. SERTAKAN LAT & LNG KE DALAM PAYLOAD
+  const pengumumanId = 'info_' + Date.now();
   const payload = {
-    token: tokenAdmin,
-    action: 'kelolaPengumuman',
-    subAksi: 'tambah',
+    id: pengumumanId,
     tanggal: tglRapi,
     judul: judul,
     detail: detail,
     lokasi: lokasi,
-    lat: lat, // Kirim koordinat lintang
-    lng: lng, // Kirim koordinat bujur
-    foto: foto
+    lat: lat,
+    lng: lng,
+    foto: foto,
+    status: 'AKTIF',
+    timestamp: Date.now()
   };
 
   try {
-    const res = await fetch(GAS_WEB_APP_URL, {
-      method: "POST",
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
+    const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
+    await window.firebaseSet(targetRef, payload);
 
     btn.disabled = false;
     btn.innerText = "💾 Terbitkan Pengumuman";
 
-    if (text.includes("SUCCESS")) {
-      alert("✅ Pengumuman berhasil diterbitkan dengan titik lokasi presisi!");
-      document.getElementById('formInputPengumuman').reset();
-      
-      // Reset juga input tersembunyi koordinat
-      if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
-      if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
-      
-      muatDaftarPengumumanAdmin();
-    } else {
-      alert("❌ Gagal menyimpan: " + text);
-    }
+    alert("✅ Pengumuman berhasil diterbitkan ke Firebase!");
+    document.getElementById('formInputPengumuman').reset();
+    
+    if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
+    if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
+    
+    tutupModalPengumumanAdmin();
   } catch (err) {
     btn.disabled = false;
     btn.innerText = "💾 Terbitkan Pengumuman";
-    alert("❌ Error koneksi: " + err);
+    alert("❌ Gagal menyimpan ke Firebase: " + err.message);
   }
 }
 
-// Ubah Status Pengumuman (Aktif / Arsip)
-async function toggleStatusPengumuman(rowIndex, statusBaru) {
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-
-  const payload = {
-    token: tokenAdmin,
-    action: 'kelolaPengumuman',
-    subAksi: 'ubahStatus',
-    rowIndex: rowIndex,
-    statusBaru: statusBaru
-  };
-
+async function toggleStatusPengumuman(idUnik, statusBaru) {
   try {
-    const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-      method: "POST",
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
-
-    if (text.includes("SUCCESS")) {
-      muatDaftarPengumumanAdmin();
-    } else {
-      alert("❌ Gagal mengubah status: " + text);
-    }
+    const targetRef = window.firebaseRef(window.db, 'pengumuman/' + idUnik);
+    await window.firebaseUpdate(targetRef, { status: statusBaru });
   } catch (err) {
-    alert("❌ Error koneksi: " + err);
+    alert("❌ Gagal mengubah status: " + err.message);
   }
 }
 
-// 1. Fungsi Pencarian Otomatis (Autocomplete) untuk Lokasi Pengumuman
+// ==========================================
+// PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN
+// ==========================================
 function cariLokasiPengumuman(keyword) {
   var container = document.getElementById('hasilPencarianLokasi');
   if (!keyword || keyword.trim() === '') {
@@ -2115,39 +2098,24 @@ function cariLokasiPengumuman(keyword) {
   var query = keyword.toLowerCase();
   var sumberData = [];
 
-  // A. Ambil langsung dari variabel global rumah/peta yang aktif di halaman admin
   if (typeof globalDataRumah !== 'undefined' && Array.isArray(globalDataRumah) && globalDataRumah.length > 0) {
-    // Format globalDataRumah dari Google Sheets: [nama, lat, lng, hidden, kategori, foto]
     sumberData = globalDataRumah.map(function(row) {
-      return {
-        nama: row[0] || '',
-        lat: row[1] || '',
-        lng: row[2] || ''
-      };
+      return { nama: row[0] || '', lat: row[1] || '', lng: row[2] || '' };
     });
-  } 
-  // B. Jika kosong, fallback ke cache localStorage
-  else {
+  } else {
     try {
       var raw = localStorage.getItem('cache_peta_admin') || localStorage.getItem('cache_data_warga');
       if (raw) {
         var parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) {
           sumberData = parsed.slice(1).map(function(row) {
-            return {
-              nama: row[0] || '',
-              lat: row[1] || '',
-              lng: row[2] || ''
-            };
+            return { nama: row[0] || '', lat: row[1] || '', lng: row[2] || '' };
           });
         }
       }
-    } catch (e) {
-      console.error(e);
-    }
+    } catch (e) {}
   }
 
-  // Filter data berdasarkan ketikan (nama rumah / warga)
   var hasil = sumberData.filter(function(item) {
     return String(item.nama).toLowerCase().includes(query);
   });
@@ -2159,17 +2127,10 @@ function cariLokasiPengumuman(keyword) {
   }
 
   var html = '';
-  // Batasi maksimal 6 hasil teratas agar rapi
   hasil.slice(0, 6).forEach(function(item) {
-    var namaTempat = item.nama;
-    var lat = item.lat;
-    var lng = item.lng;
-    
-    var safeNama = typeof escapeHTML === 'function' ? escapeHTML(namaTempat) : namaTempat;
-
-    // Saat diklik, nama masuk ke input teks dan koordinat lat/lng tersimpan di input tersembunyi
+    var safeNama = typeof escapeHTML === 'function' ? escapeHTML(item.nama) : item.nama;
     html += `
-      <div onclick="pilihLokasiPengumuman('${safeNama}', '${lat}', '${lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+      <div onclick="pilihLokasiPengumuman('${safeNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
         <strong>🏠 ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
       </div>
     `;
@@ -2179,7 +2140,6 @@ function cariLokasiPengumuman(keyword) {
   container.style.display = 'block';
 }
 
-// 2. Fungsi saat salah satu rekomendasi diklik
 function pilihLokasiPengumuman(teksLokasi, lat, lng) {
   document.getElementById('pengumumanLokasi').value = teksLokasi;
   document.getElementById('pengumumanLat').value = lat;
@@ -2187,7 +2147,6 @@ function pilihLokasiPengumuman(teksLokasi, lat, lng) {
   document.getElementById('hasilPencarianLokasi').style.display = 'none';
 }
 
-// 3. Menutup dropdown jika mengklik area luar
 document.addEventListener('click', function(e) {
   var container = document.getElementById('hasilPencarianLokasi');
   var input = document.getElementById('pengumumanLokasi');
@@ -2195,18 +2154,18 @@ document.addEventListener('click', function(e) {
     container.style.display = 'none';
   }
 });
-    
 
+// ==========================================
+// PENGELOLAAN PROGRAM KERJA & RAB (FIREBASE)
+// ==========================================
 var dataProgkerGlobal = [];
 
-// 1. Memuat Data dari Google Sheets (Dilengkapi Cache Lokal agar Instan)
 function muatDataProgker() {
   var tbody = document.getElementById('list-tabel-progker');
   if (tbody) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
   }
 
-  // Ambil data real-time dari node 'progker_rab' di Firebase RTDB
   const progkerRef = window.firebaseRef(window.db, 'progker_rab');
   window.firebaseOnValue(progkerRef, (snapshot) => {
     dataProgkerGlobal = [];
@@ -2214,15 +2173,14 @@ function muatDataProgker() {
       snapshot.forEach((childSnap) => {
         const item = childSnap.val();
         if (item) {
-          // Pastikan id tersimpan (menggunakan key Firebase jika id kosong)
           dataProgkerGlobal.push({
             id: item.id || childSnap.key,
-            kegiatan: item.kegiatan || '',
-            divisi: item.divisi || '',
-            anggaran: item.anggaran || 0,
-            realisasi: item.realisasi || 0,
-            status: item.status || 'Perencanaan',
-            detail: item.detail || ''
+            kegiatan: item.Nama_Kegiatan || item.kegiatan || '',
+            divisi: item.Divisi || item.divisi || '',
+            anggaran: item.Anggaran !== undefined ? item.Anggaran : (item.anggaran || 0),
+            realisasi: item.Realisasi !== undefined ? item.Realisasi : (item.realisasi || 0),
+            status: item.Status || item.status || 'Perencanaan',
+            detail: item.Detail || item.detail || ''
           });
         }
       });
@@ -2236,7 +2194,6 @@ function muatDataProgker() {
   });
 }
 
-// 2. Render Data ke Tabel
 function renderTabelProgker(list) {
   var tbody = document.getElementById('list-tabel-progker');
   if (!tbody) return;
@@ -2249,26 +2206,25 @@ function renderTabelProgker(list) {
     return;
   }
 
-  var totalRabPerencanaan = 0; // Total Keseluruhan Estimasi
-  var totalRealisasiSelesai = 0; // Total Realisasi Selesai
+  var totalRabPerencanaan = 0; 
+  var totalRealisasiSelesai = 0; 
 
   list.forEach(item => {
     var nominal = Number(item.anggaran) || 0;
     var realisasi = Number(item.realisasi) || 0;
     var statusRaw = String(item.status || 'Perencanaan').trim();
 
-    // 1. Akumulasi SEMUA Rencana Anggaran (Sama seperti di index.html)
     totalRabPerencanaan += nominal;
 
-    // 2. Akumulasi Realisasi untuk program yang Selesai
-    if (statusRaw === 'Selesai') {
+    if (statusRaw.toLowerCase() === 'selesai') {
       totalRealisasiSelesai += (realisasi > 0 ? realisasi : nominal);
     }
-    // Badge Warna Status
+
     var badgeColor = '#94a3b8';
-    if (item.status === 'Perencanaan') badgeColor = '#eab308';
-    if (item.status === 'Disetujui') badgeColor = '#3b82f6';
-    if (item.status === 'Berjalan') badgeColor = '#10b981';
+    if (statusRaw === 'Perencanaan') badgeColor = '#eab308';
+    if (statusRaw === 'Disetujui') badgeColor = '#3b82f6';
+    if (statusRaw === 'Berjalan') badgeColor = '#10b981';
+    if (statusRaw === 'Selesai') badgeColor = '#6b7280';
 
     var tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid #f1f5f9';
@@ -2297,7 +2253,6 @@ function renderTabelProgker(list) {
   document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
 }
 
-// 3. Simpan / Edit Data Progker + Format Angka Ribuan & Otomatis Terbit Pengumuman
 function simpanDataProgker(e) {
   e.preventDefault();
   var btn = document.getElementById('btnSimpanProgker');
@@ -2313,21 +2268,28 @@ function simpanDataProgker(e) {
   var detail = document.getElementById('progkerDetail').value;
   var existingId = document.getElementById('progkerId').value;
 
-  // Tentukan ID unik (gunakan yang lama jika edit, atau buat baru jika tambah)
   var progkerId = existingId ? existingId : 'progker_' + Date.now();
 
+  // Simpan menggunakan kunci format Sheets agar seragam dengan data lama
   var payload = {
+    ID: progkerId,
     id: progkerId,
+    Nama_Kegiatan: kegiatan,
     kegiatan: kegiatan,
+    Divisi: divisi,
     divisi: divisi,
+    Anggaran: Number(rawAnggaran) || 0,
     anggaran: Number(rawAnggaran) || 0,
+    Realisasi: Number(rawRealisasi) || 0,
     realisasi: Number(rawRealisasi) || 0,
+    Status: status,
     status: status,
+    Detail: detail,
     detail: detail,
+    Tanggal: new Date().toLocaleDateString('id-ID'),
     tanggal: new Date().toLocaleDateString('id-ID')
   };
 
-  // Simpan ke node 'progker_rab/{progkerId}' di Firebase RTDB
   const targetRef = window.firebaseRef(window.db, 'progker_rab/' + progkerId);
   window.firebaseSet(targetRef, payload)
     .then(() => {
@@ -2342,8 +2304,7 @@ function simpanDataProgker(e) {
       alert('❌ Gagal menyimpan program kerja: ' + err.message);
     });
 }
-    
-// 4. Modal Handler
+
 function bukaModalFormProgker() {
   document.getElementById('formProgker').reset();
   document.getElementById('progkerId').value = '';
@@ -2371,7 +2332,6 @@ function editProgker(id) {
   document.getElementById('modal-form-progker').style.display = 'flex';
 }
 
-// 5. Hapus Progker
 function hapusProgker(id) {
   if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
 
@@ -2397,12 +2357,14 @@ function bukaTabAdmin(tabName) {
   if (tabName === 'progker') {
     var tabProgker = document.getElementById('tab-progker');
     if (tabProgker) {
-      tabProgker.style.display = 'flex'; // Diubah ke 'flex' agar modal tampil rapi di tengah
+      tabProgker.style.display = 'flex';
       muatDataProgker();
     }
   }
 }
 
+
+    
   function ambilDataSheets() {
   console.log("Fungsi ambilDataSheets dipanggil.");
   // Tambahkan logika sinkronisasi jika diperlukan, atau biarkan kosong agar tidak error
