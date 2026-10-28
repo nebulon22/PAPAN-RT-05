@@ -95,47 +95,50 @@
       }
     }
 
-    // Mengambil data perkakas secara real-time dari Firebase RTDB
-    function muatStokInventarisFirebase() {
-      const container = document.getElementById("daftar-inventaris");  
-      if (!container) return;
+  function muatStokInventarisFirebase() {
+    const container = document.getElementById("daftar-inventaris");  
+    if (!container) return;
 
-      container.innerHTML = `<div style="text-align:center; padding: 20px; color: #666;"><i class="fa-solid fa-spinner fa-spin"></i> Memuat inventaris dari Firebase...</div>`;
+    container.innerHTML = `<div style="text-align:center; padding: 20px; color: #666;">⏳ Memuat inventaris dari Firebase...</div>`;
 
-      // Beri sedikit jeda agar modul Firebase sempat terhubung ke window
-      setTimeout(() => {
-        try {
-          const database = window.db;
-          
-          if (!database) {
-            container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Koneksi database belum siap.</div>`;
-            return;
+    setTimeout(() => {
+      try {
+        const database = window.db;
+        if (!database) {
+          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Koneksi database belum siap.</div>`;
+          return;
+        }
+
+        const inventarisRef = window.ref(database, 'inventaris');
+        const peminjamanRef = window.ref(database, 'peminjaman');
+
+        // Ambil data inventaris dan peminjaman secara bersamaan
+        Promise.all([
+          window.firebaseGet(inventarisRef),
+          window.firebaseGet(peminjamanRef)
+        ]).then(([snapInv, snapPem]) => {
+          let daftarPerkakas = [];
+          let daftarPinjaman = [];
+
+          if (snapInv.exists()) {
+            snapInv.forEach(child => { daftarPerkakas.push(child.val()); });
+          }
+          if (snapPem.exists()) {
+            snapPem.forEach(child => { daftarPinjaman.push(child.val()); });
           }
 
-          const inventarisRef = window.ref(database, 'inventaris');
-          
-          window.firebaseOnValue(inventarisRef, (snapshot) => {
-            const dataObj = snapshot.val();
-            let daftarPerkakas = [];
+          renderHTML({ perkakas: daftarPerkakas, peminjaman: daftarPinjaman });
+        }).catch(error => {
+          console.error("Gagal memuat data:", error);
+          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris.</div>`;
+        });
 
-            if (dataObj) {
-              Object.keys(dataObj).forEach(key => {
-                daftarPerkakas.push(dataObj[key]);
-              });
-            }
-
-            renderHTML({ perkakas: daftarPerkakas, peminjaman: [] });
-          }, (error) => {
-            console.error("Gagal memuat inventaris dari Firebase:", error);
-            container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris.</div>`;
-          });
-
-        } catch (err) {
-          console.error("Error inisialisasi inventaris:", err);
-          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Terjadi kesalahan sistem.</div>`;
-        }
-      }, 300);
-    }
+      } catch (err) {
+        console.error("Error inisialisasi inventaris:", err);
+        container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Terjadi kesalahan sistem.</div>`;
+      }
+    }, 300);
+  }
 
    // Fungsi Render Tampilan Kartu Barang
     function renderHTML(data) {
