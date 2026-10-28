@@ -681,26 +681,26 @@ function formatWaktuPesan(timestamp) {
 }
     
 // === REGISTRASI DENGAN FIREBASE AUTH (PSEUDO EMAIL) ===
-    window.handleRegistration = async (e) => {
-      e.preventDefault();
-      const nama = document.getElementById('reg-nama').value.trim();
-      const hunian = document.getElementById('reg-hunian').value.trim();
-      const pin = document.getElementById('reg-pin').value.trim();
-      const pinConfirm = document.getElementById('reg-pin-confirm').value.trim();
-      
-      if (!nama || !hunian || !pin || !pinConfirm) return;
+window.handleRegistration = async (e) => {
+    e.preventDefault();
+    const nama = document.getElementById('reg-nama').value.trim();
+    const hunian = document.getElementById('reg-hunian').value.trim();
+    const pin = document.getElementById('reg-pin').value.trim();
+    const pinConfirm = document.getElementById('reg-pin-confirm').value.trim();
+    
+    if (!nama || !hunian || !pin || !pinConfirm) return;
 
-      if (pin !== pinConfirm) {
+    if (pin !== pinConfirm) {
         alert("❌ PIN konfirmasi tidak cocok! Periksa kembali angka yang Anda ketik.");
         return;
-      }
+    }
 
-      if (pin.length < 4) {
+    if (pin.length < 4) {
         alert("PIN minimal 4 angka!");
         return;
-      }
+    }
 
-      try {
+    try {
         const uid = 'USR-' + Date.now().toString(36) + Math.random().toString(36).substr(2, 4);
         const pseudoEmail = `${uid.toLowerCase()}@rt05kayen.internal`;
         const securePassword = pin + "RT05Key";
@@ -709,19 +709,20 @@ function formatWaktuPesan(timestamp) {
         const authUid = userCredential.user.uid;
 
         const userData = {
-          uid: authUid,
-          authEmail: pseudoEmail,
-          nama: nama,
-          username: nama,
-          hunian: hunian,
-          pin: pin,
-          role: 'warga',
-          status: 'pending',
-          state: 'offline',
-          registeredAt: serverTimestamp()
+            uid: authUid,
+            authEmail: pseudoEmail,
+            nama: nama,
+            username: nama,
+            hunian: hunian,
+            pin: String(pin), // 👈 PASANG DI SINI AGAR SELALU TERSIMPAN SEBAGAI TEKS (STRING)
+            role: 'warga',
+            status: 'pending',
+            state: 'offline',
+            registeredAt: serverTimestamp()
         };
 
         await set(ref(db, `users/${authUid}`), userData);
+        
         
         localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
         currentUser = userData;
