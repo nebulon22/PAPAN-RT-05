@@ -588,7 +588,7 @@
     </div>
   </div>
 
-  <!-- Firebase SDK Modular & Logika Aplikasi -->
+<!-- Firebase SDK Modular & Logika Aplikasi -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
@@ -610,23 +610,20 @@
     const messaging = getMessaging(app);
     const auth = getAuth(app);
 
-  // 🌟 Ekspos ke window agar bisa diakses secara global dan tidak kena ReferenceError
-    window.currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
-    let currentUser = window.currentUser; // Pertahankan agar fungsi internal tetap lancar
-
-    window.allUsersCache = {};
-    let allUsersCache = window.allUsersCache;
-
+    // 🌟 DEKLARASI UTAMA (Variabel lokal yang aman untuk seluruh fungsi di bawahnya)
+    let currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
+    let allUsersCache = {};
     let activeTab = 'aktif';
     let activeChatType = 'public';
     let activePrivateUID = null;
     let currentChatUnsubscribe = null;
+    let openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
+    let unreadCounts = {};
 
-    window.openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
-    let openPrivateRooms = window.openPrivateRooms;
-
-    window.unreadCounts = {};
-    let unreadCounts = window.unreadCounts;
+    // 🌟 Jembatan Global khusus untuk diakses dari Console (F12)
+    window.getDebugUser = () => currentUser;
+    window.getDebugRooms = () => openPrivateRooms;
+    window.getDebugUnread = () => unreadCounts;
 
     function getGasUrl() {
       return (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.GAS_WEB_APP_URL) 
@@ -634,6 +631,7 @@
         : '';
     }
 
+    
 // Fungsi pemformat waktu pesan (Terbaru & Sesuai Konfirmasi)
 function formatWaktuPesan(timestamp) {
     if (!timestamp) return 'Baru saja';
