@@ -1280,29 +1280,42 @@ let globalPrivateListener = null;
         let needsStorageUpdate = false;
 
         snapshot.forEach((roomSnap) => {
-          const roomID = roomSnap.key;
-          
-          // Pastikan room ini melibatkan UID user yang sedang login
-          if (roomID && roomID.includes(activeUser.uid)) {
-            const parts = roomID.split('_');
-            if (parts.length < 2) return;
-            const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
+          let unreadTotalCount = 0;
+          let lastMsg = null;
+          let foundTargetUID = null;
+          let hasUserInRoom = false;
 
-            let unreadTotalCount = 0;
-            let lastMsg = null;
+          // 1. Scan semua pesan di dalam room untuk mencari tahu siapa lawan chat Anda
+          roomSnap.forEach((msgSnap) => {
+            const msgKey = msgSnap.key;
+            const msgData = msgSnap.val();
+            
+            if (msgData && typeof msgData === 'object' && msgData.text && msgData.uid) {
+              lastMsg = msgData;
+
+              // Cek apakah user yang login ikut terlibat dalam percakapan di room ini
+              if (msgData.uid === activeUser.uid) {
+                hasUserInRoom = true;
+              } else {
+                // Jika pesan dari orang lain, catat UID-nya sebagai target/lawan chat
+                foundTargetUID = msgData.uid;
+              }
+            }
+          });
+
+          // Jika room ini melibatkan user yang sedang login dan memiliki lawan chat
+          if (foundTargetUID && (hasUserInRoom || roomSnap.key.includes(activeUser.uid))) {
+            const targetUID = foundTargetUID;
             const lastReadKey = lastReadKeyMap[targetUID];
 
             let countAfterKey = false;
             if (!lastReadKey) countAfterKey = true;
 
-            // Loop untuk membaca seluruh pesan di dalam room tersebut
+            // Hitung jumlah pesan belum dibaca (unread)
             roomSnap.forEach((msgSnap) => {
               const msgKey = msgSnap.key;
               const msgData = msgSnap.val();
-              
               if (msgData && typeof msgData === 'object' && msgData.text) {
-                lastMsg = msgData; // Ambil pesan terakhir
-
                 if (msgKey === lastReadKey) {
                   countAfterKey = true;
                   unreadTotalCount = 0;
@@ -1316,19 +1329,13 @@ let globalPrivateListener = null;
               unreadTotalCount = 0;
             }
 
-            // 🌟 OTOMATIS MUNCULKAN TAB PRIVATE KETIKA ADA PESAN MASUK
+            // 🌟 2. OTOMATIS DAFTARKAN ROOM KE TAB PRIVATE ATAS
             if (lastMsg) {
-              // Ambil nama pengirim dari cache warga atau dari data pesan langsung
-              const senderName = (targetUID === lastMsg.uid ? (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama || lastMsg.sender) : null) 
-                                 || allUsersCache[targetUID]?.username 
-                                 || allUsersCache[targetUID]?.nama 
-                                 || lastMsg.sender 
-                                 || "Warga";
+              const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
 
-              // Jika room belum ada di daftar tab terbuka, masukkan secara otomatis!
               if (!openPrivateRooms[targetUID]) {
                 const keys = Object.keys(openPrivateRooms);
-                if (keys.length >= 5) delete openPrivateRooms[keys[0]]; // Batasi maksimal 5 tab aktif agar rapi
+                if (keys.length >= 5) delete openPrivateRooms[keys[0]]; // Batasi maksimal 5 tab
 
                 openPrivateRooms[targetUID] = senderName;
                 needsStorageUpdate = true;
