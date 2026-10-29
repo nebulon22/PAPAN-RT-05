@@ -1393,11 +1393,12 @@ function listenAllPrivateChats() {
           sender: currentUser.username || currentUser.nama,
           role: currentUser.role || 'warga',
           text: text,
-          timestamp: Date.now() // 👈 Ubah dari serverTimestamp() agar angka langsung terbentuk di atas
+          timestamp: Date.now() // 👈 1. Gunakan Date.now() agar angka tersusun rapi di atas
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
-        const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
+        // 🌟 2. SERAGAMKAN: Gunakan .sort().join('_') murni tanpa parameter pembanding
+        const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
         const newMsgRef = push(ref(db, `private_chats/${roomID}`));
         const newKey = newMsgRef.key;
 
@@ -1406,7 +1407,7 @@ function listenAllPrivateChats() {
           sender: currentUser.username || currentUser.nama,
           role: currentUser.role || 'warga',
           text: text,
-          timestamp: serverTimestamp()
+          timestamp: Date.now() // 👈 3. Ubah juga ke Date.now() agar urutan di Firebase konsisten
         }).then(() => { 
           const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
           lastReadKeyMap[activePrivateUID] = newKey;
@@ -1430,8 +1431,9 @@ function listenAllPrivateChats() {
         });
       }
     }
-// 🌟 TAMBAHKAN BARIS INI AGAR FORM HTML BISA MENEMUKAN FUNSINYA
     window.sendChatMessage = executeSendMessage;
+
+
     
 // Pemantau Pesan Unread Grup Chat Publik
     let publicGroupListener = null;
