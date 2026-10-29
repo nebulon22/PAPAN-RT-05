@@ -1477,15 +1477,69 @@ function listenAllPrivateChats() {
           const msgKey = msgSnap.key;
           const msgData = msgSnap.val();
 
-          // 🛠️ PENGAMAN MUTLAK: Abaikan node polling dari perhitungan unread!
-          if (msgKey === 'pinned_poll') return;
-
-          if (msgKey === lastReadPublicMapKey) {
+if (msgKey === lastReadPublicMapKey) {
             countAfterKey = true;
             unreadPublicCount = 0;
           } else if (countAfterKey) {
             if (msgData.uid !== currentUser.uid) {
               unreadPublicCount++;
+              
+              // --- DEBUGGING NOTIFIKASI SATU PER SATU ---
+              console.log("1. Pesan grup baru terdeteksi dari:", msgData.sender);
+              
+              const notifId = 'notif_pub_' + msgKey;
+              if (!sessionStorage.getItem(notifId)) {
+                  sessionStorage.setItem(notifId, 'true');
+                  console.log("2. Pesan ini lolos filter (belum pernah dinotifikasi).");
+                  
+                  const isHidden = document.hidden;
+                  const isModalOpen = typeof window.isChatModalOpen === 'function' ? window.isChatModalOpen() : true;
+                  
+                  console.log("3. Status - document.hidden:", isHidden, "| Modal Terbuka:", isModalOpen);
+                  
+                  if (isHidden || !isModalOpen) {
+                      console.log("4. Syarat minimize terpenuhi! Mengecek API Notifikasi browser...");
+                      
+                      if ('Notification' in window) {
+                          console.log("5. Status Izin Notif saat ini:", Notification.permission);
+                          
+                          if (Notification.permission === 'granted') {
+                              console.log("6. Mengeksekusi notifikasi melayang...");
+                              
+                              try {
+                                  // Cara 1: Standar Desktop
+                                  new Notification("Grup RT 05 - " + msgData.sender, {
+                                      body: msgData.text,
+                                      icon: '/logo.png'
+                                  });
+                                  console.log("7. Pemanggil notifikasi Desktop tereksekusi!");
+                                  
+                                  // Cara 2: Khusus PWA HP Android (Wajib pakai Service Worker)
+                                  if ('serviceWorker' in navigator) {
+                                      navigator.serviceWorker.ready.then(function(registration) {
+                                          registration.showNotification("Grup RT 05 - " + msgData.sender, {
+                                              body: msgData.text,
+                                              icon: '/logo.png',
+                                              badge: '/logo.png'
+                                          });
+                                          console.log("8. Pemanggil notifikasi PWA Android tereksekusi!");
+                                      });
+                                  }
+                              } catch(e) {
+                                  console.error("GAGAL memanggil notifikasi:", e);
+                              }
+                          } else {
+                              console.log("X. Batal: Izin notifikasi browser belum 'granted'.");
+                          }
+                      } else {
+                          console.log("X. Batal: Browser tidak mendukung Notifikasi API.");
+                      }
+                  } else {
+                      console.log("X. Batal: Aplikasi sedang dibuka (tidak minimize).");
+                  }
+              }
+              // ---------------------------------------------------------------
+
             }
           }
         });
