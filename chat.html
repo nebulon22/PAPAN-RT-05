@@ -1277,45 +1277,28 @@ let globalPrivateListener = null;
         }
 
         const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
-        let needsStorageUpdate = false;
+        let updated = false;
 
         snapshot.forEach((roomSnap) => {
-          let unreadTotalCount = 0;
-          let lastMsg = null;
-          let foundTargetUID = null;
-          let hasUserInRoom = false;
+          const roomID = roomSnap.key;
+          
+          if (roomID && roomID.includes(activeUser.uid)) {
+            const parts = roomID.split('_');
+            if (parts.length < 2) return;
+            const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
 
-          // 1. Scan semua pesan di dalam room untuk mencari tahu siapa lawan chat Anda
-          roomSnap.forEach((msgSnap) => {
-            const msgKey = msgSnap.key;
-            const msgData = msgSnap.val();
-            
-            if (msgData && typeof msgData === 'object' && msgData.text && msgData.uid) {
-              lastMsg = msgData;
-
-              // Cek apakah user yang login ikut terlibat dalam percakapan di room ini
-              if (msgData.uid === activeUser.uid) {
-                hasUserInRoom = true;
-              } else {
-                // Jika pesan dari orang lain, catat UID-nya sebagai target/lawan chat
-                foundTargetUID = msgData.uid;
-              }
-            }
-          });
-
-          // Jika room ini melibatkan user yang sedang login dan memiliki lawan chat
-          if (foundTargetUID && (hasUserInRoom || roomSnap.key.includes(activeUser.uid))) {
-            const targetUID = foundTargetUID;
+            let unreadTotalCount = 0;
+            let lastMsg = null;
             const lastReadKey = lastReadKeyMap[targetUID];
 
-            let countAfterKey = false;
-            if (!lastReadKey) countAfterKey = true;
+            let countAfterKey = !lastReadKey;
 
-            // Hitung jumlah pesan belum dibaca (unread)
             roomSnap.forEach((msgSnap) => {
               const msgKey = msgSnap.key;
               const msgData = msgSnap.val();
               if (msgData && typeof msgData === 'object' && msgData.text) {
+                lastMsg = msgData;
+
                 if (msgKey === lastReadKey) {
                   countAfterKey = true;
                   unreadTotalCount = 0;
@@ -1329,16 +1312,13 @@ let globalPrivateListener = null;
               unreadTotalCount = 0;
             }
 
-            // 🌟 2. OTOMATIS DAFTARKAN ROOM KE TAB PRIVATE ATAS
+            // 🌟 OTOMATIS MUNCULKAN TAB JIKA ADA PESAN MASUK DARI ORANG LAIN
             if (lastMsg) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
 
               if (!openPrivateRooms[targetUID]) {
-                const keys = Object.keys(openPrivateRooms);
-                if (keys.length >= 5) delete openPrivateRooms[keys[0]]; // Batasi maksimal 5 tab
-
                 openPrivateRooms[targetUID] = senderName;
-                needsStorageUpdate = true;
+                updated = true;
               }
             }
 
@@ -1355,7 +1335,7 @@ let globalPrivateListener = null;
           }
         });
 
-        if (needsStorageUpdate) {
+        if (updated) {
           localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
         }
 
@@ -1366,8 +1346,7 @@ let globalPrivateListener = null;
     }
     
 
-// 6. Pengiriman Pesan (Sederhana & Langsung Paksa Turun)
-    function executeSendMessage(e) {
+function executeSendMessage(e) {
       if (e) {
         e.preventDefault();
         e.stopPropagation();
@@ -1380,11 +1359,9 @@ let globalPrivateListener = null;
       if (!text || currentUser?.status !== 'aktif') return;
 
       shouldForceScrollDown = false;
-
       input.value = '';
       input.focus();
 
-      
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
@@ -1398,46 +1375,35 @@ let globalPrivateListener = null;
           sender: currentUser.username || currentUser.nama,
           role: currentUser.role || 'warga',
           text: text,
-          timestamp: Date.now() // 👈 1. Gunakan Date.now() agar angka tersusun rapi di atas
+          timestamp: Date.now()
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
-        // 🌟 2. SERAGAMKAN: Gunakan .sort().join('_') murni tanpa parameter pembanding
-        const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+        // Gunakan format room ID standar konsisten
+        const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
         const newMsgRef = push(ref(db, `private_chats/${roomID}`));
         const newKey = newMsgRef.key;
+
+        // 🌟 PASTIKAN TAB LANGSUNG TERSIMPAN KE STORAGE SAAT PENGIRIMAN
+        const targetName = allUsersCache[activePrivateUID]?.username || allUsersCache[activePrivateUID]?.nama || "Warga";
+        openPrivateRooms[activePrivateUID] = targetName;
+        localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+        renderPrivateTabsUI();
 
         set(newMsgRef, {
           uid: currentUser.uid,
           sender: currentUser.username || currentUser.nama,
           role: currentUser.role || 'warga',
           text: text,
-          timestamp: Date.now() // 👈 3. Ubah juga ke Date.now() agar urutan di Firebase konsisten
+          timestamp: Date.now()
         }).then(() => { 
           const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
           lastReadKeyMap[activePrivateUID] = newKey;
           localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
-
-          const targetUser = allUsersCache[activePrivateUID];
-          const gasUrl = getGasUrl();
-          if (targetUser && targetUser.state !== 'online' && gasUrl) {
-            fetch(gasUrl, {
-              method: 'POST',
-              mode: 'no-cors',
-              headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-              body: JSON.stringify({
-                action: 'notifChatPrivate',
-                targetUid: activePrivateUID,
-                senderName: currentUser.username || currentUser.nama,
-                messageText: text
-              })
-            }).catch(err => console.log(err));
-          }
         });
       }
     }
     window.sendChatMessage = executeSendMessage;
-
 
     
 // Pemantau Pesan Unread Grup Chat Publik
