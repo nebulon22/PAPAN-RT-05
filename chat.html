@@ -1460,7 +1460,6 @@ function listenAllPrivateChats() {
         if (!lastReadPublicMapKey) {
           let latestKey = null;
           snapshot.forEach((msgSnap) => {
-            // 🛠️ PENGAMAN: Jangan jadikan polling sebagai acuan kunci
             if (msgSnap.key !== 'pinned_poll') {
               latestKey = msgSnap.key; 
             }
@@ -1479,7 +1478,6 @@ function listenAllPrivateChats() {
           const msgKey = msgSnap.key;
           const msgData = msgSnap.val();
 
-          // 🛠️ PENGAMAN MUTLAK: Abaikan node polling dari perhitungan unread!
           if (msgKey === 'pinned_poll') return;
 
           if (msgKey === lastReadPublicMapKey) {
@@ -1489,19 +1487,17 @@ function listenAllPrivateChats() {
             if (msgData.uid !== currentUser.uid) {
               unreadPublicCount++;
               
-              // 🛠️ PENGAMAN UTAMA: Mencegah undefined sepenuhnya
+              // 🛠️ Mengambil nama pengirim agar tidak undefined
               const senderName = msgData.sender || (allUsersCache[msgData.uid]?.username || allUsersCache[msgData.uid]?.nama) || "Warga";
-
-              // 🌟 Notifikasi Melayang saat di-minimize (Abaikan load pertama agar tidak spam)
+              
+              // 🌟 Notifikasi melayang saat aplikasi di-minimize (memakai isChatVisible yang sudah ada)
               if (!isFirstPublicLoad) {
                 const notifId = 'notif_pub_' + msgKey;
                 if (!sessionStorage.getItem(notifId)) {
                     sessionStorage.setItem(notifId, 'true');
                     
-                    const isHidden = document.hidden;
-                    const isModalOpen = typeof window.isChatModalOpen === 'function' ? window.isChatModalOpen() : true;
-                    
-                    if (isHidden || !isModalOpen) {
+                    // Jika isChatVisible bernilai false (artinya aplikasi di-minimize atau tertutup)
+                    if (!isChatVisible || document.hidden) {
                         if ('Notification' in window && Notification.permission === 'granted') {
                             try {
                                 new Notification("Grup RT 05 - " + senderName, {
@@ -1532,8 +1528,8 @@ function listenAllPrivateChats() {
 
         isFirstPublicLoad = false;
 
-        // Paksa unread 0 HANYA JIKA aktif di tab publik DAN layar HP sedang menyala/terbuka
-        if (activeChatType === 'public' && isChatVisible && window.isChatModalOpen()) {
+        // Paksa unread 0 HANYA JIKA aktif di tab publik DAN layar menyala serta terlihat
+        if (activeChatType === 'public' && isChatVisible) {
           unreadPublicCount = 0;
         }
 
