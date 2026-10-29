@@ -1253,8 +1253,7 @@ document.addEventListener('visibilitychange', () => {
 
 
 
-// 5. Pemantau Pesan Private Universal
-    let globalPrivateListener = null;
+let globalPrivateListener = null;
 
     function listenAllPrivateChats() {
       const activeUser = currentUser;
@@ -1278,10 +1277,12 @@ document.addEventListener('visibilitychange', () => {
         }
 
         const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+        let needsStorageUpdate = false;
 
         snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key;
           
+          // Pastikan room ini melibatkan UID user yang sedang login
           if (roomID && roomID.includes(activeUser.uid)) {
             const parts = roomID.split('_');
             if (parts.length < 2) return;
@@ -1294,11 +1295,13 @@ document.addEventListener('visibilitychange', () => {
             let countAfterKey = false;
             if (!lastReadKey) countAfterKey = true;
 
+            // Loop untuk membaca seluruh pesan di dalam room tersebut
             roomSnap.forEach((msgSnap) => {
               const msgKey = msgSnap.key;
               const msgData = msgSnap.val();
+              
               if (msgData && typeof msgData === 'object' && msgData.text) {
-                lastMsg = msgData;
+                lastMsg = msgData; // Ambil pesan terakhir
 
                 if (msgKey === lastReadKey) {
                   countAfterKey = true;
@@ -1313,16 +1316,22 @@ document.addEventListener('visibilitychange', () => {
               unreadTotalCount = 0;
             }
 
-            // 🌟 LOGIKA FILE LAMA: Otomatis daftarkan room ke openPrivateRooms jika ada pesan
+            // 🌟 OTOMATIS MUNCULKAN TAB PRIVATE KETIKA ADA PESAN MASUK
             if (lastMsg) {
-              const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
+              // Ambil nama pengirim dari cache warga atau dari data pesan langsung
+              const senderName = (targetUID === lastMsg.uid ? (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama || lastMsg.sender) : null) 
+                                 || allUsersCache[targetUID]?.username 
+                                 || allUsersCache[targetUID]?.nama 
+                                 || lastMsg.sender 
+                                 || "Warga";
 
+              // Jika room belum ada di daftar tab terbuka, masukkan secara otomatis!
               if (!openPrivateRooms[targetUID]) {
                 const keys = Object.keys(openPrivateRooms);
-                if (keys.length >= 5) delete openPrivateRooms[keys[0]];
+                if (keys.length >= 5) delete openPrivateRooms[keys[0]]; // Batasi maksimal 5 tab aktif agar rapi
 
                 openPrivateRooms[targetUID] = senderName;
-                localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+                needsStorageUpdate = true;
               }
             }
 
@@ -1338,6 +1347,10 @@ document.addEventListener('visibilitychange', () => {
             }
           }
         });
+
+        if (needsStorageUpdate) {
+          localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+        }
 
         renderPrivateTabsUI();
         sendTotalUnreadToParent(); 
