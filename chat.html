@@ -610,15 +610,30 @@
     const messaging = getMessaging(app);
     const auth = getAuth(app);
 
-    // 🌟 DEKLARASI UTAMA (Variabel lokal yang aman untuk seluruh fungsi di bawahnya)
-    let currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
-    let allUsersCache = {};
-    let activeTab = 'aktif';
-    let activeChatType = 'public';
-    let activePrivateUID = null;
-    let currentChatUnsubscribe = null;
-    let openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
-    let unreadCounts = {};
+    // 🌟 DEKLARASI UTAMA (Variabel lokal yang aman & disinkronkan ke global agar tidak error undefined di console)
+    window.currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
+    let currentUser = window.currentUser;
+
+    window.allUsersCache = {};
+    let allUsersCache = window.allUsersCache;
+    
+    window.activeTab = 'aktif';
+    let activeTab = window.activeTab;
+    
+    window.activeChatType = 'public';
+    let activeChatType = window.activeChatType;
+    
+    window.activePrivateUID = null;
+    let activePrivateUID = window.activePrivateUID;
+    
+    window.currentChatUnsubscribe = null;
+    let currentChatUnsubscribe = window.currentChatUnsubscribe;
+    
+    window.openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
+    let openPrivateRooms = window.openPrivateRooms;
+    
+    window.unreadCounts = {};
+    let unreadCounts = window.unreadCounts;
 
     // 🌟 Jembatan Global khusus untuk diakses dari Console (F12)
     window.getDebugUser = () => currentUser;
@@ -732,6 +747,7 @@ function formatWaktuPesan(timestamp) {
         
         localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
         currentUser = userData;
+        window.currentUser = currentUser;
 
         const gasUrl = getGasUrl();
         if (gasUrl) {
@@ -796,6 +812,7 @@ function formatWaktuPesan(timestamp) {
           role: val.role || 'warga',
           status: val.status
         };
+        window.currentUser = currentUser;
         
         localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
         checkUserStatus();
@@ -831,6 +848,7 @@ function formatWaktuPesan(timestamp) {
         localStorage.removeItem('rt05_chat_last_read_public_key');
 
         currentUser = null;
+        window.currentUser = null;
         location.reload();
       }
     };
@@ -1156,7 +1174,11 @@ document.addEventListener('visibilitychange', () => {
  // 3. Pindah Tab (Public <-> Private) dengan Perbedaan Warna Latar
   window.switchChatRoom = (type, targetUID = null) => {
     activeChatType = type;
+    window.activeChatType = activeChatType;
+
     activePrivateUID = targetUID;
+    window.activePrivateUID = activePrivateUID;
+
     isChatVisible = true; // <-- AGAR KLIK TAB LANGSUNG DIANGGAP AKTIF/TERBUKA
 
     // 🎨 EFEK PERBEDAAN WARNA BACKGROUND:
@@ -1182,6 +1204,7 @@ document.addEventListener('visibilitychange', () => {
     if (currentChatUnsubscribe) {
       currentChatUnsubscribe();
       currentChatUnsubscribe = null;
+      window.currentChatUnsubscribe = currentChatUnsubscribe;
     }
 
     const btnPublic = document.getElementById('tab-room-public');
@@ -1355,7 +1378,7 @@ function listenAllPrivateChats() {
       input.value = '';
       input.focus();
 
-     
+      
       if (activeChatType === 'public') {
         const newMsgRef = push(ref(db, 'chats'));
         const newKey = newMsgRef.key;
@@ -1372,7 +1395,7 @@ function listenAllPrivateChats() {
           timestamp: serverTimestamp()
         });
 
-     } else if (activeChatType === 'private' && activePrivateUID) {
+      } else if (activeChatType === 'private' && activePrivateUID) {
         const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
         const newMsgRef = push(ref(db, `private_chats/${roomID}`));
         const newKey = newMsgRef.key;
@@ -1546,10 +1569,12 @@ function listenAllPrivateChats() {
       }
 
       // 4. Kirim total gabungan ini ke index.html agar badge tombol ikut akurat
-      window.parent.postMessage({
-        type: 'RT05_CHAT_UNREAD_UPDATE',
-        unreadPublicCount: grandTotalUnread 
-      }, '*');
+      if (window.parent && window.parent.postMessage) {
+        window.parent.postMessage({
+          type: 'RT05_CHAT_UNREAD_UPDATE',
+          unreadPublicCount: grandTotalUnread 
+        }, '*');
+      }
     }
 
     
@@ -1761,6 +1786,8 @@ function listenAllPrivateChats() {
       if (!snapshot.exists()) return;
       
       allUsersCache = snapshot.val();
+      window.allUsersCache = allUsersCache; // Teruskan update ke Window
+
       const currentOnlineUsers = new Set();
 
       Object.values(allUsersCache).forEach(u => {
@@ -1852,6 +1879,8 @@ function listenAllPrivateChats() {
             currentUser.status = val.status;
             currentUser.role = val.role || 'warga';
             currentUser.username = val.username || val.nama;
+            window.currentUser = currentUser; // Update window global
+
             localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
 
             if (val.status === 'pending') {
@@ -1924,6 +1953,8 @@ function listenAllPrivateChats() {
                     listenPinnedPoll();
 
                     activeChatType = 'public';
+                    window.activeChatType = 'public';
+
                     loadChatStream();
                 }
             }
@@ -2560,6 +2591,8 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
 
     window.switchTab = (tab) => {
       activeTab = tab;
+      window.activeTab = activeTab; // Update window map
+
       const tabAktif = document.getElementById('tab-aktif-btn');
       const tabSemua = document.getElementById('tab-semua-btn');
       const searchBox = document.getElementById('search-box-container');
@@ -2602,6 +2635,7 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
 
   set(ref(db, `users/${currentUser.uid}/username`), newName).then(() => {
     currentUser.username = newName;
+    window.currentUser = currentUser; // Update window map
     localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
     
     // Perbarui label nama di sebelah input ketik secara instan
