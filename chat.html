@@ -1282,12 +1282,10 @@ let globalPrivateListener = null;
         snapshot.forEach((roomSnap) => {
           const roomID = roomSnap.key; // Contoh: UID_A__UID_B
           
-          // Pastikan roomID ini mengandung UID user yang sedang login
           if (roomID && roomID.includes(activeUser.uid)) {
             const parts = roomID.split('_');
             if (parts.length < 2) return;
             
-            // Ekstraksi UID lawan chat dari string roomID secara aman
             const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
             if (!targetUID) return;
 
@@ -1316,7 +1314,7 @@ let globalPrivateListener = null;
               unreadTotalCount = 0;
             }
 
-            // 🌟 1. SELALU DAFTARKAN TAB PRIVATE KETIKA ADA PESAN
+            // 1. Selalu daftarkan tab private di atas agar muncul jika ada pesan masuk
             if (lastMsg) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
 
@@ -1326,23 +1324,24 @@ let globalPrivateListener = null;
               }
             }
 
-            // 🌟 2. PENGECEKAN PESAN MASUK DARI ORANG LAIN (Bukan pesan kita sendiri)
-            if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
-              // Cek apakah pesan ini benar-benar baru masuk (timestamp kurang dari 10 detik yang lalu atau unread)
-              const isRecentMessage = (Date.now() - Number(lastMsg.timestamp)) < 15000; // 15 detik terakhir
-
-              if (isRecentMessage || unreadTotalCount > 0) {
-                unreadCounts[targetUID] = Math.max(unreadTotalCount, 1);
-                playKlingSound();
-
-                // 🚀 EKSEKUSI UTAMA: Jika kita sedang tidak membuka chat dengan orang ini, pindah tab otomatis!
-                if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
-                  console.log("📥 Pesan private baru diterima dari:", targetUID, "-> Membuka tab otomatis.");
-                  switchChatRoom('private', targetUID);
+            // 2. Kelola unread count & suara notifikasi
+            if (unreadTotalCount > 0) {
+              // Jika kita sedang tidak membuka chat private dengan orang ini
+              if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
+                unreadCounts[targetUID] = unreadTotalCount;
+                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
+                  playKlingSound();
+                  
+                  // 🛑 UBAH ATURAN PINDAH OTOMATIS:
+                  // Sistem HANYA akan memindahkan layar secara otomatis JIKA Anda sedang 
+                  // berada di dalam tab private orang yang sama (misal sedang baca-baca riwayat atas).
+                  // Jika Anda sedang di tab Publik, layar TIDAK AKAN dipaksa pindah, 
+                  // melainkan hanya memunculkan badge angka merah dan suara saja.
+                  if (activeChatType === 'private' && activePrivateUID === targetUID) {
+                    switchChatRoom('private', targetUID);
+                  }
                 }
               }
-            } else if (unreadTotalCount > 0) {
-              unreadCounts[targetUID] = unreadTotalCount;
             } else {
               unreadCounts[targetUID] = 0;
             }
