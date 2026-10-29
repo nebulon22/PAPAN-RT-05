@@ -2411,8 +2411,10 @@ function triggerLoadMorePrivate(roomID, targetUID) {
     const oldScrollHeight = chatStreamEl.scrollHeight;
     const oldScrollTop = chatStreamEl.scrollTop;
 
-    currentPrivateLimit[roomID] = Math.min(currentLimit + 50, MAX_PRIVATE_LIMIT);
-    console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[roomID]);
+    // 🌟 SERAGAMKAN: Gunakan .sort((a, b) => a.localeCompare(b)) agar jalur database konsisten mutlak
+    const fixedRoomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
+    currentPrivateLimit[fixedRoomID] = Math.min(currentLimit + 50, MAX_PRIVATE_LIMIT);
+    console.log("Memuat riwayat private lebih banyak, batas:", currentPrivateLimit[fixedRoomID]);
 
     loadPrivateChatStream(targetUID, () => {
         requestAnimationFrame(() => {
@@ -2423,8 +2425,8 @@ function triggerLoadMorePrivate(roomID, targetUID) {
                 isLoadingMore = false;
                 if (indicator) indicator.style.display = 'none';
 
-                if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPrivateLimit[roomID] < MAX_PRIVATE_LIMIT) {
-                    triggerLoadMorePrivate(roomID, targetUID);
+                if (chatStreamEl.scrollHeight <= chatStreamEl.clientHeight && currentPrivateLimit[fixedRoomID] < MAX_PRIVATE_LIMIT) {
+                    triggerLoadMorePrivate(fixedRoomID, targetUID);
                 }
             }, 150);
         });
