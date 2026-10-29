@@ -1253,112 +1253,97 @@ document.addEventListener('visibilitychange', () => {
 
 
 
-// 5. Pemantau Pesan Private Universal (Diperbarui & Diperkuat)
-let globalPrivateListener = null;
+// 5. Pemantau Pesan Private Universal
+    let globalPrivateListener = null;
 
-function listenAllPrivateChats() {
-  const activeUser = currentUser;
-  if (!activeUser || !activeUser.uid) return;
+    function listenAllPrivateChats() {
+      const activeUser = currentUser;
+      if (!activeUser || !activeUser.uid) return;
 
-  if (globalPrivateListener) {
-    globalPrivateListener();
-    globalPrivateListener = null;
-  }
+      if (globalPrivateListener) {
+        globalPrivateListener();
+        globalPrivateListener = null;
+      }
 
-  const allPrivateRef = ref(db, 'private_chats');
-  let isFirstLoad = true;
+      const allPrivateRef = ref(db, 'private_chats');
+      let isFirstLoad = true;
 
-  globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
-    if (!activeUser || !activeUser.uid) return;
+      globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
+        if (!activeUser || !activeUser.uid) return;
 
-    if (!snapshot.exists()) {
-      isFirstLoad = false;
-      sendTotalUnreadToParent(); 
-      return;
-    }
+        if (!snapshot.exists()) {
+          isFirstLoad = false;
+          sendTotalUnreadToParent(); 
+          return;
+        }
 
-    const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
 
-    snapshot.forEach((roomSnap) => {
-      const roomID = roomSnap.key;
-      
-      // Pastikan room ID valid dan melibatkan UID user yang sedang login
-      if (roomID && roomID.includes(activeUser.uid)) {
-        const parts = roomID.split('_');
-        if (parts.length < 2) return;
-        
-        const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
-
-        let unreadTotalCount = 0;
-        let lastMsg = null;
-        const lastReadKey = lastReadKeyMap[targetUID];
-
-        let countAfterKey = false;
-        if (!lastReadKey) countAfterKey = true;
-
-        roomSnap.forEach((msgSnap) => {
-          const msgKey = msgSnap.key;
-          const msgData = msgSnap.val();
+        snapshot.forEach((roomSnap) => {
+          const roomID = roomSnap.key;
           
-          // Pastikan msgData adalah objek pesan yang valid
-          if (msgData && typeof msgData === 'object' && msgData.text) {
-            lastMsg = msgData;
+          if (roomID && roomID.includes(activeUser.uid)) {
+            const parts = roomID.split('_');
+            if (parts.length < 2) return;
+            const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
 
-            if (msgKey === lastReadKey) {
-              countAfterKey = true;
+            let unreadTotalCount = 0;
+            let lastMsg = null;
+            const lastReadKey = lastReadKeyMap[targetUID];
+
+            let countAfterKey = false;
+            if (!lastReadKey) countAfterKey = true;
+
+            roomSnap.forEach((msgSnap) => {
+              const msgKey = msgSnap.key;
+              const msgData = msgSnap.val();
+              if (msgData && typeof msgData === 'object' && msgData.text) {
+                lastMsg = msgData;
+
+                if (msgKey === lastReadKey) {
+                  countAfterKey = true;
+                  unreadTotalCount = 0;
+                } else if (countAfterKey && msgData.uid !== activeUser.uid) {
+                  unreadTotalCount++;
+                }
+              }
+            });
+
+            if (lastMsg && lastMsg.uid === activeUser.uid) {
               unreadTotalCount = 0;
-            } else if (countAfterKey && msgData.uid !== activeUser.uid) {
-              unreadTotalCount++;
+            }
+
+            // 🌟 LOGIKA FILE LAMA: Otomatis daftarkan room ke openPrivateRooms jika ada pesan
+            if (lastMsg) {
+              const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
+
+              if (!openPrivateRooms[targetUID]) {
+                const keys = Object.keys(openPrivateRooms);
+                if (keys.length >= 5) delete openPrivateRooms[keys[0]];
+
+                openPrivateRooms[targetUID] = senderName;
+                localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+              }
+            }
+
+            if (unreadTotalCount > 0) {
+              if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
+                unreadCounts[targetUID] = unreadTotalCount;
+                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
+                  playKlingSound();
+                }
+              }
+            } else {
+              unreadCounts[targetUID] = 0;
             }
           }
         });
 
-        // Jika pesan terakhir dikirim oleh diri sendiri, reset unread jadi 0
-        if (lastMsg && lastMsg.uid === activeUser.uid) {
-          unreadTotalCount = 0;
-        }
-
-        // 🌟 1. JAMINAN OTOMATIS: Tab privat SELALU dibuat jika ada riwayat pesan di room ini
-        if (lastMsg) {
-          const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
-
-          if (!openPrivateRooms[targetUID]) {
-            const keys = Object.keys(openPrivateRooms);
-            if (keys.length >= 5) delete openPrivateRooms[keys[0]]; // Batasi maksimal 5 tab aktif
-
-            openPrivateRooms[targetUID] = senderName;
-            localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
-          }
-        }
-
-        // 🌟 2. PENGELOLAAN UNREAD & NOTIFIKASI
-        if (unreadTotalCount > 0) {
-          if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
-            unreadCounts[targetUID] = unreadTotalCount;
-
-            // Picu notifikasi suara/getar jika bukan saat awal load
-            if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
-              try {
-                if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-                  window.parent.picuNotifikasiMedia();
-                }
-              } catch (e) {
-                console.log("Error picu notif private:", e);
-              }
-            }
-          }
-        } else {
-          unreadCounts[targetUID] = 0;
-        }
-      }
-    });
-
-    // Render ulang tab privat agar badge dan tombolnya muncul dinamis
-    renderPrivateTabsUI();
-    sendTotalUnreadToParent(); 
-    isFirstLoad = false;
-  });
-}
+        renderPrivateTabsUI();
+        sendTotalUnreadToParent(); 
+        isFirstLoad = false;
+      });
+    }
     
 
 // 6. Pengiriman Pesan (Sederhana & Langsung Paksa Turun)
@@ -2483,12 +2468,24 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   div.className = "msg-row";
   if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
+  // 🌟 LOGIKA FILE LAMA: Efek animasi unread persis seperti file lama Anda
+  if (isUnread) {
+      div.style.transition = "background-color 2s ease, border-color 2s ease";
+      div.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+      div.style.borderLeft = "3px solid #38bdf8";
+      div.style.paddingLeft = "8px";
+
+      setTimeout(() => {
+          div.style.backgroundColor = "transparent";
+          div.style.borderLeftColor = "transparent"; 
+      }, 2000);
+  }
+
   let nameClass = "role-user";
   let textClass = "msg-text";
   let customStyleName = "";
-  let customStyleText = ""; // Untuk warna teks pesan khusus jika ada
+  let customStyleText = "";
 
-  // Ubah pengecekan agar mencakup nama 'Admin1' atau role 'admin'
   if (msg.role === 'admin' || msg.sender === 'Admin1') {
       nameClass = "role-admin";
       textClass = "msg-text msg-text-admin";
@@ -2505,7 +2502,6 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   else if (msg.uid === currentUser?.uid) {
       nameClass = "role-self";
   } else {
-      // 👇 2. WARNA WARNI NAMA WARGA DI GRUP CHAT
       const uniqueColor = getUniqueColorFromName(msg.sender);
       customStyleName = `style="color: ${uniqueColor}; font-weight: bold;"`;
   }
@@ -2516,44 +2512,24 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
 
   let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" ? msg.text : escapeHTML(msg.text);
 
-  // 👇 3. PENGELOLAAN TIMESTAMP AGAR TIDAK KEMBAR / ERROR SAAT BARU DIKIRIM
   let waktuFormatted = "";
   if (msg.timestamp) {
       waktuFormatted = formatWaktuPesan(msg.timestamp);
   } else {
-      waktuFormatted = "Baru saja"; // Penanganan aman jika serverTimestamp masih proses
+      waktuFormatted = "Baru saja";
   }
 
   const timeHTML = waktuFormatted 
       ? `<span style="font-size: 10px; color: rgba(251, 191, 36, 0.55); margin-left: 6px; font-weight: normal; text-shadow: none;">[${waktuFormatted}]</span>` 
       : '';
 
-  // 👇 4. ISI KONTEN HTML KE DALAM DIV TERLEBIH DAHULU (Wajib sebelum append)
   div.innerHTML = `
       <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
       <span class="${textClass}" ${customStyleText}>${displayMsgText}</span>
       ${timeHTML}
   `;
 
-  // 👇 5. ATUR EFEK ANIMASI UNREAD JIKA PESAN TERSEBUT BARU
-  if (isUnread) {
-      div.style.transition = "background-color 2s ease, border-color 2s ease";
-      div.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
-      div.style.borderLeft = "3px solid #38bdf8";
-      div.style.paddingLeft = "8px";
-
-      // Masukkan ke DOM
-      chatStream.appendChild(div);
-
-      // Beri jeda sedikit agar browser mencatat state awal, lalu pudar-kan
-      setTimeout(() => {
-          div.style.backgroundColor = "transparent";
-          div.style.borderLeftColor = "transparent"; 
-      }, 50);
-  } else {
-      // Jika bukan pesan unread (termasuk pesan lama hasil pagination), langsung append biasa
-      chatStream.appendChild(div);
-  }
+  chatStream.appendChild(div);
 }
       
 
