@@ -1221,7 +1221,7 @@ document.addEventListener('visibilitychange', () => {
 
 
 
-// 5. Pemantau Pesan Private Universal (Pastikan bagian ini aktif)
+// 5. Pemantau Pesan Private Universal (Versi Aman & Stabil)
 let globalPrivateListener = null;
 
 function listenAllPrivateChats() {
@@ -1250,8 +1250,11 @@ function listenAllPrivateChats() {
     snapshot.forEach((roomSnap) => {
       const roomID = roomSnap.key;
       
-      if (roomID.includes(activeUser.uid)) {
+      // Pastikan room ID ini melibatkan UID user yang sedang login
+      if (roomID && roomID.includes(activeUser.uid)) {
         const parts = roomID.split('_');
+        if (parts.length < 2) return;
+        
         const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
 
         let unreadTotalCount = 0;
@@ -1264,12 +1267,12 @@ function listenAllPrivateChats() {
         roomSnap.forEach((msgSnap) => {
           const msgKey = msgSnap.key;
           const msgData = msgSnap.val();
-          lastMsg = msgData;
+          if (msgData) lastMsg = msgData;
 
           if (msgKey === lastReadKey) {
             countAfterKey = true;
             unreadTotalCount = 0;
-          } else if (countAfterKey && msgData.uid !== activeUser.uid) {
+          } else if (countAfterKey && msgData && msgData.uid !== activeUser.uid) {
             unreadTotalCount++;
           }
         });
