@@ -1287,7 +1287,7 @@ let globalPrivateListener = null;
             const parts = roomID.split('_');
             if (parts.length < 2) return;
             
-            // Ekstraksi UID lawan chat dari string roomID
+            // Ekstraksi UID lawan chat dari string roomID secara aman
             const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
             if (!targetUID) return;
 
@@ -1316,7 +1316,7 @@ let globalPrivateListener = null;
               unreadTotalCount = 0;
             }
 
-            // 🌟 OTOMATIS MUNCULKAN TAB PRIVATE KETIKA ADA PESAN MASUK
+            // 🌟 1. SELALU DAFTARKAN TAB PRIVATE KETIKA ADA PESAN
             if (lastMsg) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
 
@@ -1326,17 +1326,23 @@ let globalPrivateListener = null;
               }
             }
 
-            if (unreadTotalCount > 0) {
-              if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
-                unreadCounts[targetUID] = unreadTotalCount;
-                if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
-                  playKlingSound();
-                  
-                  // 🚀 TAMBAHAN UTAMA: Pindah/buka otomatis ke ruang private chat ini 
-                  // jika ada pesan baru yang masuk dari lawan jenis/warga lain
+            // 🌟 2. PENGECEKAN PESAN MASUK DARI ORANG LAIN (Bukan pesan kita sendiri)
+            if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
+              // Cek apakah pesan ini benar-benar baru masuk (timestamp kurang dari 10 detik yang lalu atau unread)
+              const isRecentMessage = (Date.now() - Number(lastMsg.timestamp)) < 15000; // 15 detik terakhir
+
+              if (isRecentMessage || unreadTotalCount > 0) {
+                unreadCounts[targetUID] = Math.max(unreadTotalCount, 1);
+                playKlingSound();
+
+                // 🚀 EKSEKUSI UTAMA: Jika kita sedang tidak membuka chat dengan orang ini, pindah tab otomatis!
+                if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
+                  console.log("📥 Pesan private baru diterima dari:", targetUID, "-> Membuka tab otomatis.");
                   switchChatRoom('private', targetUID);
                 }
               }
+            } else if (unreadTotalCount > 0) {
+              unreadCounts[targetUID] = unreadTotalCount;
             } else {
               unreadCounts[targetUID] = 0;
             }
