@@ -1280,12 +1280,16 @@ let globalPrivateListener = null;
         let updated = false;
 
         snapshot.forEach((roomSnap) => {
-          const roomID = roomSnap.key;
+          const roomID = roomSnap.key; // Contoh: UID_A__UID_B
           
+          // Pastikan roomID ini mengandung UID user yang sedang login
           if (roomID && roomID.includes(activeUser.uid)) {
             const parts = roomID.split('_');
             if (parts.length < 2) return;
+            
+            // Ekstraksi UID lawan chat dari string roomID
             const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
+            if (!targetUID) return;
 
             let unreadTotalCount = 0;
             let lastMsg = null;
@@ -1312,7 +1316,7 @@ let globalPrivateListener = null;
               unreadTotalCount = 0;
             }
 
-            // 🌟 OTOMATIS MUNCULKAN TAB JIKA ADA PESAN MASUK DARI ORANG LAIN
+            // 🌟 OTOMATIS MUNCULKAN TAB PRIVATE KETIKA ADA PESAN MASUK
             if (lastMsg) {
               const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
 
@@ -1358,7 +1362,7 @@ function executeSendMessage(e) {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
-      shouldForceScrollDown = false;
+      shouldForceScrollDown = true; // 🌟 Ubah jadi true agar layar langsung turun ke bawah saat kirim pesan
       input.value = '';
       input.focus();
 
@@ -1379,12 +1383,12 @@ function executeSendMessage(e) {
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
-        // Gunakan format room ID standar konsisten
+        // Room ID disortir seragam menggunakan localeCompare
         const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
         const newMsgRef = push(ref(db, `private_chats/${roomID}`));
         const newKey = newMsgRef.key;
 
-        // 🌟 PASTIKAN TAB LANGSUNG TERSIMPAN KE STORAGE SAAT PENGIRIMAN
+        // Simpan ke local tab terbuka secara instan
         const targetName = allUsersCache[activePrivateUID]?.username || allUsersCache[activePrivateUID]?.nama || "Warga";
         openPrivateRooms[activePrivateUID] = targetName;
         localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
