@@ -1847,7 +1847,20 @@ function listenAllPrivateChats() {
 
 // 2. Tangkap pesan saat aplikasi SEDANG DIBUKA (Foreground)
     onMessage(messaging, (payload) => {
-        console.log('Pesan diterima saat aplikasi aktif:', payload);
+        console.log('Pesan FCM diterima:', payload);
+        
+        if (!window.isChatModalOpen || !window.isChatModalOpen() || document.hidden) {
+            if (Notification.permission === 'granted') {
+                new Notification(
+                    payload.notification?.title || "Pesan Baru RT 05", 
+                    {
+                        body: payload.notification?.body || "Anda menerima pesan baru.",
+                        icon: '/kentongan-slit-drum.png',
+                        badge: '/kentongan-slit-drum.png'
+                    }
+                );
+            }
+        }
     });
 
     async function checkUserStatus() {
