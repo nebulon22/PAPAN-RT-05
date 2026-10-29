@@ -1,4 +1,40 @@
-const CACHE_NAME = 'rt-kayen-v1.5.8'; 
+const CACHE_NAME = 'rt-kayen-v1.5.9'; 
+
+// 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker agar background push FCM tidak macet
+importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
+importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
+
+// Inisialisasi Firebase di dalam Service Worker
+firebase.initializeApp({
+  apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
+  authDomain: "papan05-21a56.firebaseapp.com",
+  databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "papan05-21a56",
+  storageBucket: "papan05-21a56.firebasestorage.app",
+  messagingSenderId: "1068108426437",
+  appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
+});
+
+const messaging = firebase.messaging();
+
+// 🌟 PENTING: Tangkap pesan latar belakang secara langsung di Service Worker
+messaging.onBackgroundMessage((payload) => {
+  console.log('[sw.js] Menerima pesan background FCM:', payload);
+  
+  const title = payload.notification?.title || payload.data?.title || 'RT 05 Kayen';
+  const options = {
+    body: payload.notification?.body || payload.data?.body || 'Anda menerima pesan baru.',
+    icon: './kentongan-slit-drum.png',
+    badge: './kentongan-slit-drum.png',
+    vibrate: [100, 50, 100],
+    data: {
+      url: payload.notification?.click_action || payload.data?.url || './index.html'
+    }
+  };
+
+  self.registration.showNotification(title, options);
+});
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -74,7 +110,6 @@ self.addEventListener('message', (event) => {
   }
 });
 
-
 self.addEventListener('push', (event) => {
   let data = { title: 'Pesan Baru', body: 'Anda menerima pesan baru.', mode: 'normal' };
   
@@ -87,8 +122,6 @@ self.addEventListener('push', (event) => {
   }
 
   const title = data.title || 'RT 05 Kayen';
-  
-  // Tentukan perilaku berdasarkan mode dari pengaturan user (normal, sound_only, vibrate_only, silent)
   const notifMode = data.mode || 'normal'; 
   
   const options = {
@@ -102,18 +135,14 @@ self.addEventListener('push', (event) => {
     }
   };
 
-  // Konfigurasi dinamis berdasarkan pilihan di UI Pengaturan Notifikasi:
   if (notifMode === 'silent') {
     options.silent = true;
-    // Tidak ada vibrate karena silent
   } else if (notifMode === 'sound_only') {
     options.silent = false;
-    // Tidak pakai vibrate, hanya suara bawaan / default
   } else if (notifMode === 'vibrate_only') {
-    options.silent = true; // Agar tidak bentrok, set silent true tapi jalankan getar manual lewat setelan lain jika didukung, atau:
+    options.silent = true;
     options.vibrate = [100, 50, 100];
   } else {
-    // Mode Normal (Suara & Getar)
     options.silent = false;
     options.vibrate = [100, 50, 100];
   }
