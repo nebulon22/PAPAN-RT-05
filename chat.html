@@ -1126,9 +1126,11 @@ document.addEventListener('visibilitychange', () => {
 
     
     // Helper: Tandai Pesan Terakhir di Room ini Sudah Dibaca
-    function markRoomAsRead(targetUID) {
-      const roomID = [currentUser.uid, targetUID].sort().join('_');
-      const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
+   function markRoomAsRead(targetUID) {
+  // 🌟 Ganti .sort() dengan localeCompare agar urutan UID konsisten mutlak
+  const roomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
+  const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
+
 
       get(roomRef).then((snapshot) => {
         if (snapshot.exists()) {
@@ -1221,7 +1223,7 @@ document.addEventListener('visibilitychange', () => {
 
 
 
-// 5. Pemantau Pesan Private Universal (Versi Aman & Stabil)
+// 5. Pemantau Pesan Private Universal (Diperbarui & Diperkuat)
 let globalPrivateListener = null;
 
 function listenAllPrivateChats() {
@@ -1250,7 +1252,7 @@ function listenAllPrivateChats() {
     snapshot.forEach((roomSnap) => {
       const roomID = roomSnap.key;
       
-      // Pastikan room ID ini melibatkan UID user yang sedang login
+      // Pastikan room ID valid dan melibatkan UID user yang sedang login
       if (roomID && roomID.includes(activeUser.uid)) {
         const parts = roomID.split('_');
         if (parts.length < 2) return;
@@ -1267,41 +1269,50 @@ function listenAllPrivateChats() {
         roomSnap.forEach((msgSnap) => {
           const msgKey = msgSnap.key;
           const msgData = msgSnap.val();
-          if (msgData) lastMsg = msgData;
+          
+          // Pastikan msgData adalah objek pesan yang valid
+          if (msgData && typeof msgData === 'object' && msgData.text) {
+            lastMsg = msgData;
 
-          if (msgKey === lastReadKey) {
-            countAfterKey = true;
-            unreadTotalCount = 0;
-          } else if (countAfterKey && msgData && msgData.uid !== activeUser.uid) {
-            unreadTotalCount++;
+            if (msgKey === lastReadKey) {
+              countAfterKey = true;
+              unreadTotalCount = 0;
+            } else if (countAfterKey && msgData.uid !== activeUser.uid) {
+              unreadTotalCount++;
+            }
           }
         });
 
+        // Jika pesan terakhir dikirim oleh diri sendiri, reset unread jadi 0
         if (lastMsg && lastMsg.uid === activeUser.uid) {
           unreadTotalCount = 0;
         }
 
+        // Jika ada pesan masuk baru dari lawan jenis/warga lain
         if (unreadTotalCount > 0) {
           const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
 
-          // 🌟 Otomatis buat tab privat jika belum ada di daftar
+          // 🌟 JAMINAN OTOMATIS: Buat tab privat jika belum ada di daftar openPrivateRooms
           if (!openPrivateRooms[targetUID]) {
             const keys = Object.keys(openPrivateRooms);
-            if (keys.length >= 5) delete openPrivateRooms[keys[0]];
+            if (keys.length >= 5) delete openPrivateRooms[keys[0]]; // Batasi maksimal 5 tab aktif
 
             openPrivateRooms[targetUID] = senderName;
             localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
           }
 
+          // Simpan jumlah unread untuk targetUID ini
           if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
             unreadCounts[targetUID] = unreadTotalCount;
+
+            // Picu notifikasi suara/getar jika bukan saat awal load
             if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
               try {
                 if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
                   window.parent.picuNotifikasiMedia();
                 }
               } catch (e) {
-                console.log("Error picu notif:", e);
+                console.log("Error picu notif private:", e);
               }
             }
           }
@@ -1311,6 +1322,7 @@ function listenAllPrivateChats() {
       }
     });
 
+    // Render ulang tab privat agar badge dan tombolnya muncul dinamis
     renderPrivateTabsUI();
     sendTotalUnreadToParent(); 
     isFirstLoad = false;
@@ -1353,8 +1365,8 @@ function listenAllPrivateChats() {
           timestamp: serverTimestamp()
         });
 
-      } else if (activeChatType === 'private' && activePrivateUID) {
-        const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+     } else if (activeChatType === 'private' && activePrivateUID) {
+        const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
         const newMsgRef = push(ref(db, `private_chats/${roomID}`));
         const newKey = newMsgRef.key;
 
@@ -2172,7 +2184,8 @@ function renderCachedPublicMessages(cachedJson, chatStream, forceScroll) {
     
 // === 2. PEMUAT CHAT PRIVAT DENGAN SCROLL FIX & CALLBACK ===
 function loadPrivateChatStream(targetUID, onLoaded) {
-    const roomID = [currentUser.uid, targetUID].sort().join('_');
+    // 🌟 Diperbaiki menggunakan localeCompare agar urutan UID konsisten mutlak
+    const roomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
     
     const currentLimit = currentPrivateLimit[roomID] || 50; 
     const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(currentLimit));
@@ -2352,9 +2365,10 @@ if (chatStreamEl) {
                 triggerLoadMorePublic();
             }
         }
-        // B. Chat Pribadi
+     // B. Chat Pribadi
         else if (activeChatType === 'private' && activePrivateUID) {
-            const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
+            // 🌟 Diperbaiki menggunakan localeCompare agar konsisten mutlak
+            const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
             const currentLimit = currentPrivateLimit[roomID] || 50;
 
             if (currentLimit < MAX_PRIVATE_LIMIT) {
