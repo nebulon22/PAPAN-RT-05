@@ -610,14 +610,23 @@
     const messaging = getMessaging(app);
     const auth = getAuth(app);
 
-    let currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
-    let allUsersCache = {};
+  // 🌟 Ekspos ke window agar bisa diakses secara global dan tidak kena ReferenceError
+    window.currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
+    let currentUser = window.currentUser; // Pertahankan agar fungsi internal tetap lancar
+
+    window.allUsersCache = {};
+    let allUsersCache = window.allUsersCache;
+
     let activeTab = 'aktif';
     let activeChatType = 'public';
     let activePrivateUID = null;
     let currentChatUnsubscribe = null;
-    let openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
-    let unreadCounts = {};
+
+    window.openPrivateRooms = JSON.parse(localStorage.getItem('rt05_open_private_rooms')) || {};
+    let openPrivateRooms = window.openPrivateRooms;
+
+    window.unreadCounts = {};
+    let unreadCounts = window.unreadCounts;
 
     function getGasUrl() {
       return (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.GAS_WEB_APP_URL) 
