@@ -1419,7 +1419,7 @@ function executeSendMessage(e) {
     window.sendChatMessage = executeSendMessage;
 
     
-// Pemantau Pesan Unread Grup Chat Publik
+// Pemantau Pesan Unread Grup Chat Publik yang Lebih Stabil
     let publicGroupListener = null;
     let isFirstPublicLoad = true;
 
@@ -1444,6 +1444,7 @@ function executeSendMessage(e) {
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
         let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
 
+        // Jika belum ada key baca tersimpan, inisialisasi ke pesan terakhir agar tidak meledak jadi unread palsu
         if (!lastReadPublicMapKey) {
           let latestKey = null;
           snapshot.forEach((msgSnap) => {
@@ -1459,7 +1460,7 @@ function executeSendMessage(e) {
         }
 
         let unreadPublicCount = 0;
-        let countAfterKey = !lastReadPublicMapKey;
+        let countAfterKey = false; 
 
         snapshot.forEach((msgSnap) => {
           const msgKey = msgSnap.key;
@@ -1467,23 +1468,27 @@ function executeSendMessage(e) {
 
           if (msgKey === 'pinned_poll') return;
 
+          // Jika kita menemukan posisi pesan terakhir yang dibaca
           if (msgKey === lastReadPublicMapKey) {
             countAfterKey = true;
-            unreadPublicCount = 0;
-          } else if (countAfterKey) {
-            if (msgData.uid !== currentUser.uid) {
+            unreadPublicCount = 0; 
+            return;
+          }
+
+          // Jika pesan berada setelah key terakhir yang dibaca
+          if (countAfterKey) {
+            if (msgData && msgData.uid !== currentUser.uid) {
               unreadPublicCount++;
               
               // 🛠️ Mengambil nama pengirim agar tidak undefined
               const senderName = msgData.sender || (allUsersCache[msgData.uid]?.username || allUsersCache[msgData.uid]?.nama) || "Warga";
               
-              // 🌟 Notifikasi melayang saat aplikasi di-minimize (memakai isChatVisible yang sudah ada)
+              // 🌟 Notifikasi melayang saat aplikasi di-minimize
               if (!isFirstPublicLoad) {
                 const notifId = 'notif_pub_' + msgKey;
                 if (!sessionStorage.getItem(notifId)) {
                     sessionStorage.setItem(notifId, 'true');
                     
-                    // Jika isChatVisible bernilai false (artinya aplikasi di-minimize atau tertutup)
                     if (!isChatVisible || document.hidden) {
                         if ('Notification' in window && Notification.permission === 'granted') {
                             try {
@@ -1508,16 +1513,26 @@ function executeSendMessage(e) {
                     }
                 }
               }
-
             }
           }
         });
 
+        // Pengaman jika key baca terakhir tertimbun lebih dari 50 pesan ke bawah
+        if (!countAfterKey && lastReadPublicMapKey) {
+          snapshot.forEach((msgSnap) => {
+            const msgData = msgSnap.val();
+            if (msgSnap.key !== 'pinned_poll' && msgData && msgData.uid !== currentUser.uid) {
+              unreadPublicCount++;
+            }
+          });
+        }
+
         isFirstPublicLoad = false;
 
-        // Paksa unread 0 HANYA JIKA aktif di tab publik DAN layar menyala serta terlihat
+        // Badge merah HANYA akan dibersihkan jika sedang di tab publik DAN layar terlihat aktif
         if (activeChatType === 'public' && isChatVisible) {
           unreadPublicCount = 0;
+          markPublicGroupAsRead(); 
         }
 
         updatePublicTabBadge(unreadPublicCount);
@@ -1525,6 +1540,7 @@ function executeSendMessage(e) {
       }); 
     }
 
+    
     
     function updatePublicTabBadge(count) {
       const tabBadge = document.getElementById('badge-public-tab');
