@@ -1318,11 +1318,10 @@ function listenAllPrivateChats() {
           unreadTotalCount = 0;
         }
 
-        // Jika ada pesan masuk baru dari lawan jenis/warga lain
-        if (unreadTotalCount > 0) {
+        // 🌟 1. JAMINAN OTOMATIS: Tab privat SELALU dibuat jika ada riwayat pesan di room ini
+        if (lastMsg) {
           const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
 
-          // 🌟 JAMINAN OTOMATIS: Buat tab privat jika belum ada di daftar openPrivateRooms
           if (!openPrivateRooms[targetUID]) {
             const keys = Object.keys(openPrivateRooms);
             if (keys.length >= 5) delete openPrivateRooms[keys[0]]; // Batasi maksimal 5 tab aktif
@@ -1330,8 +1329,10 @@ function listenAllPrivateChats() {
             openPrivateRooms[targetUID] = senderName;
             localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
           }
+        }
 
-          // Simpan jumlah unread untuk targetUID ini
+        // 🌟 2. PENGELOLAAN UNREAD & NOTIFIKASI
+        if (unreadTotalCount > 0) {
           if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
             unreadCounts[targetUID] = unreadTotalCount;
 
