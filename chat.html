@@ -1221,100 +1221,98 @@ document.addEventListener('visibilitychange', () => {
 
 
 
-// 5. Pemantau Pesan Private Universal
-    let globalPrivateListener = null;
+// 5. Pemantau Pesan Private Universal (Pastikan bagian ini aktif)
+let globalPrivateListener = null;
 
-    function listenAllPrivateChats() {
-      // Simpan referensi lokal user saat ini
-      const activeUser = currentUser;
-      if (!activeUser || !activeUser.uid) return;
+function listenAllPrivateChats() {
+  const activeUser = currentUser;
+  if (!activeUser || !activeUser.uid) return;
 
-      if (globalPrivateListener) {
-        globalPrivateListener();
-        globalPrivateListener = null;
-      }
+  if (globalPrivateListener) {
+    globalPrivateListener();
+    globalPrivateListener = null;
+  }
 
-      const allPrivateRef = ref(db, 'private_chats');
-      let isFirstLoad = true;
+  const allPrivateRef = ref(db, 'private_chats');
+  let isFirstLoad = true;
 
-      globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
-        // Cek ulang dengan activeUser
-        if (!activeUser || !activeUser.uid) return;
+  globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
+    if (!activeUser || !activeUser.uid) return;
 
-        if (!snapshot.exists()) {
-          isFirstLoad = false;
-          sendTotalUnreadToParent(); 
-          return;
-        }
+    if (!snapshot.exists()) {
+      isFirstLoad = false;
+      sendTotalUnreadToParent(); 
+      return;
+    }
 
-        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+    const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
 
-        snapshot.forEach((roomSnap) => {
-          const roomID = roomSnap.key;
-          
-          if (roomID.includes(activeUser.uid)) {
-            const parts = roomID.split('_');
-            const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
+    snapshot.forEach((roomSnap) => {
+      const roomID = roomSnap.key;
+      
+      if (roomID.includes(activeUser.uid)) {
+        const parts = roomID.split('_');
+        const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
 
-            let unreadTotalCount = 0;
-            let lastMsg = null;
-            const lastReadKey = lastReadKeyMap[targetUID];
+        let unreadTotalCount = 0;
+        let lastMsg = null;
+        const lastReadKey = lastReadKeyMap[targetUID];
 
-            let countAfterKey = false;
-            if (!lastReadKey) countAfterKey = true;
+        let countAfterKey = false;
+        if (!lastReadKey) countAfterKey = true;
 
-            roomSnap.forEach((msgSnap) => {
-              const msgKey = msgSnap.key;
-              const msgData = msgSnap.val();
-              lastMsg = msgData;
+        roomSnap.forEach((msgSnap) => {
+          const msgKey = msgSnap.key;
+          const msgData = msgSnap.val();
+          lastMsg = msgData;
 
-              if (msgKey === lastReadKey) {
-                countAfterKey = true;
-                unreadTotalCount = 0;
-              } else if (countAfterKey && msgData.uid !== activeUser.uid) {
-                unreadTotalCount++;
-              }
-            });
-
-            if (lastMsg && lastMsg.uid === activeUser.uid) {
-              unreadTotalCount = 0;
-            }
-
-            if (unreadTotalCount > 0) {
-              const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
-
-              if (!openPrivateRooms[targetUID]) {
-                const keys = Object.keys(openPrivateRooms);
-                if (keys.length >= 5) delete openPrivateRooms[keys[0]];
-
-                openPrivateRooms[targetUID] = senderName;
-                localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
-              }
-
-            if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
-            unreadCounts[targetUID] = unreadTotalCount;
-            if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
-            // Panggil fungsi kontrol notifikasi (suara/getar/sunyi) dari induk/setting.js
-            try {
-            if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-                window.parent.picuNotifikasiMedia();
-            }
-        } catch (e) {
-            console.log("Error picu notif:", e);
-                    }
-          }
-        }
-            } else {
-              unreadCounts[targetUID] = 0;
-            }
+          if (msgKey === lastReadKey) {
+            countAfterKey = true;
+            unreadTotalCount = 0;
+          } else if (countAfterKey && msgData.uid !== activeUser.uid) {
+            unreadTotalCount++;
           }
         });
 
-        renderPrivateTabsUI();
-        sendTotalUnreadToParent(); 
-        isFirstLoad = false;
-      });
-    }
+        if (lastMsg && lastMsg.uid === activeUser.uid) {
+          unreadTotalCount = 0;
+        }
+
+        if (unreadTotalCount > 0) {
+          const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg?.sender || "Warga";
+
+          // 🌟 Otomatis buat tab privat jika belum ada di daftar
+          if (!openPrivateRooms[targetUID]) {
+            const keys = Object.keys(openPrivateRooms);
+            if (keys.length >= 5) delete openPrivateRooms[keys[0]];
+
+            openPrivateRooms[targetUID] = senderName;
+            localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+          }
+
+          if (activeChatType !== 'private' || activePrivateUID !== targetUID || !isChatVisible) {
+            unreadCounts[targetUID] = unreadTotalCount;
+            if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
+              try {
+                if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                  window.parent.picuNotifikasiMedia();
+                }
+              } catch (e) {
+                console.log("Error picu notif:", e);
+              }
+            }
+          }
+        } else {
+          unreadCounts[targetUID] = 0;
+        }
+      }
+    });
+
+    renderPrivateTabsUI();
+    sendTotalUnreadToParent(); 
+    isFirstLoad = false;
+  });
+}
     
 
 // 6. Pengiriman Pesan (Sederhana & Langsung Paksa Turun)
@@ -2078,7 +2076,6 @@ function loadChatStream(onLoaded) {
         }
 
         if (!snapshot.exists()) {
-            // ... (kode fallback offline tetap sama) ...
             return;
         }
 
@@ -2096,7 +2093,9 @@ function loadChatStream(onLoaded) {
             const msgData = childSnap.val();
 
             let isUnreadMsg = false;
-            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPublicChatLoaded) {
+            
+            // 🌟 PENYEMPURNAAN DI SINI: Pastikan pesan baru dari orang lain memicu suara/notifikasi
+            if (isUnreadSection && msgData.uid !== currentUser?.uid) {
                 isUnreadMsg = true;
 
                 const notifKey = 'notified_' + msgKey;
@@ -2106,7 +2105,9 @@ function loadChatStream(onLoaded) {
                         if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
                             window.parent.picuNotifikasiMedia();
                         }
-                    } catch (e) {}
+                    } catch (e) {
+                        console.log("Gagal memicu notifikasi media:", e);
+                    }
                 }
             }
 
@@ -2121,14 +2122,11 @@ function loadChatStream(onLoaded) {
 
         // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS (Mencegah lari ke atas)
         if (shouldForceScrollDown) {
-            // Jika dipaksa turun (misal tombol kirim ditekan)
             scrollToBottom(false);
             shouldForceScrollDown = false;
         } else if (isAtBottom) {
-            // Jika sebelumnya memang berada di bawah, ikuti pertambahan tinggi chat baru
             scrollToBottom(false);
         } else {
-            // 🌟 JIKA SEDANG DI ATAS (BACA RIWAYAT), KEMBALIKAN KE POSISI SEMULA AGAR TIDAK LARI KE ATAS
             const newScrollHeight = chatStream.scrollHeight;
             chatStream.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
         }
