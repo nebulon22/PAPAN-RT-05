@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.5.9'; 
+const CACHE_NAME = 'rt-kayen-v1.5.9';  
 
 // 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker agar background push FCM tidak macet
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
@@ -18,22 +18,48 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// 🌟 PENTING: Tangkap pesan latar belakang secara langsung di Service Worker
+// 🌟 MENANGANI PESAN LATAR BELAKANG FCM & APP BADGE SEKALIGUS
 messaging.onBackgroundMessage((payload) => {
   console.log('[sw.js] Menerima pesan background FCM:', payload);
   
   const title = payload.notification?.title || payload.data?.title || 'RT 05 Kayen';
+  const body = payload.notification?.body || payload.data?.body || 'Anda menerima pesan baru.';
+  const url = payload.notification?.click_action || payload.data?.url || './index.html';
+  const count = payload.data?.unreadCount ? parseInt(payload.data.unreadCount, 10) : 1;
+  const notifMode = payload.data?.mode || 'normal';
+
   const options = {
-    body: payload.notification?.body || payload.data?.body || 'Anda menerima pesan baru.',
+    body: body,
     icon: './kentongan-slit-drum.png',
     badge: './kentongan-slit-drum.png',
-    vibrate: [100, 50, 100],
-    data: {
-      url: payload.notification?.click_action || payload.data?.url || './index.html'
-    }
+    data: { url: url }
   };
 
-  self.registration.showNotification(title, options);
+  // Pengaturan Mode Suara / Getar Notifikasi
+  if (notifMode === 'silent') {
+    options.silent = true;
+  } else if (notifMode === 'vibrate_only') {
+    options.silent = true;
+    options.vibrate = [100, 50, 100];
+  } else {
+    options.silent = false;
+    options.vibrate = [100, 50, 100];
+  }
+
+  self.registration.waitUntil(
+    Promise.all([
+      self.registration.showNotification(title, options),
+      (async () => {
+        if ('setAppBadge' in navigator) {
+          try {
+            await navigator.setAppBadge(count);
+          } catch (err) {
+            console.log('Gagal memperbarui app badge:', err);
+          }
+        }
+      })()
+    ])
+  );
 });
 
 self.addEventListener('install', (e) => {
@@ -109,62 +135,6 @@ self.addEventListener('message', (event) => {
   if (event.data && event.data.action === 'skipWaiting') {
     self.skipWaiting();
   }
-});
-
-self.addEventListener('push', (event) => {
-  let data = { title: 'Pesan Baru', body: 'Anda menerima pesan baru.', mode: 'normal' };
-  
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data.body = event.data.text();
-    }
-  }
-
-  const title = data.title || 'RT 05 Kayen';
-  const notifMode = data.mode || 'normal'; 
-  
-  const options = {
-    body: data.body || 'Anda menerima pesan baru.',
-    icon: './kentongan-slit-drum.png',
-    badge: './kentongan-slit-drum.png',
-    data: {
-      url: data.url || './index.html',
-      dateOfArrival: Date.now(),
-      primaryKey: '1'
-    }
-  };
-
-  if (notifMode === 'silent') {
-    options.silent = true;
-  } else if (notifMode === 'sound_only') {
-    options.silent = false;
-  } else if (notifMode === 'vibrate_only') {
-    options.silent = true;
-    options.vibrate = [100, 50, 100];
-  } else {
-    options.silent = false;
-    options.vibrate = [100, 50, 100];
-  }
-
-  const count = data.unreadCount ? parseInt(data.unreadCount, 10) : 1;
-
-  event.waitUntil(
-    Promise.all([
-      self.registration.showNotification(title, options),
-      
-      (async () => {
-        if ('setAppBadge' in navigator) {
-          try {
-            await navigator.setAppBadge(count);
-          } catch (err) {
-            console.log('Gagal memperbarui app badge:', err);
-          }
-        }
-      })()
-    ])
-  );
 });
 
 // Klik pada notifikasi akan membuka/fokus kembali ke aplikasi
