@@ -1468,8 +1468,8 @@ function executeSendMessage(e) {
               // 🛠️ Mengambil nama pengirim agar tidak undefined
               const senderName = msgData.sender || (allUsersCache[msgData.uid]?.username || allUsersCache[msgData.uid]?.nama) || "Warga";
               
-              // 🌟 Notifikasi melayang saat aplikasi di-minimize
-              if (!isFirstPublicLoad) {
+           // 🌟 Notifikasi melayang hanya jika chat sudah siap (lewat 3 detik) & bukan load awal
+              if (!isFirstPublicLoad && isChatReady) {
                 const notifId = 'notif_pub_' + msgKey;
                 if (!sessionStorage.getItem(notifId)) {
                     sessionStorage.setItem(notifId, 'true');
@@ -1477,9 +1477,11 @@ function executeSendMessage(e) {
                     if (!isChatVisible || document.hidden) {
                         if ('Notification' in window && Notification.permission === 'granted') {
                             try {
+                                // Tambahkan silent: true agar tidak membunyikan bell bawaan sistem
                                 new Notification("Grup RT 05 - " + senderName, {
                                     body: msgData.text || '',
-                                    icon: '/logo.png'
+                                    icon: '/logo.png',
+                                    silent: true 
                                 });
                                 
                                 if ('serviceWorker' in navigator) {
@@ -1487,7 +1489,8 @@ function executeSendMessage(e) {
                                         registration.showNotification("Grup RT 05 - " + senderName, {
                                             body: msgData.text || '',
                                             icon: '/logo.png',
-                                            badge: '/logo.png'
+                                            badge: '/logo.png',
+                                            silent: true 
                                         });
                                     });
                                 }
@@ -1885,14 +1888,16 @@ function executeSendMessage(e) {
     onMessage(messaging, (payload) => {
         console.log('Pesan FCM diterima:', payload);
         
-        if (!window.isChatModalOpen || !window.isChatModalOpen() || document.hidden) {
+        // 🛑 Tambahkan pengaman isChatReady agar tidak membunyikan notifikasi saat awal buka chat
+        if (isChatReady && (!window.isChatModalOpen || !window.isChatModalOpen() || document.hidden)) {
             if (Notification.permission === 'granted') {
                 new Notification(
                     payload.notification?.title || "Pesan Baru RT 05", 
                     {
                         body: payload.notification?.body || "Anda menerima pesan baru.",
                         icon: '/kentongan-slit-drum.png',
-                        badge: '/kentongan-slit-drum.png'
+                        badge: '/kentongan-slit-drum.png',
+                        silent: true // 🛑 Mencegah suara bell bawaan sistem
                     }
                 );
             }
