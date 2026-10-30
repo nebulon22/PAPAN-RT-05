@@ -1,6 +1,7 @@
 // utils.js - Kumpulan Konfigurasi, Firebase Global, & Fungsi Pendukung RT 05 (Versi Klasik / Tanpa Module)
 
 const RT05_CONFIG = {
+    GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbz5RqSEYxjwq_wr3ItVkLRexeGWjKLUtxmhVdqbm7kIFdngulFWdBCLU0xqBOichmMQuw/exec",
     FIREBASE: {
         apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
         authDomain: "papan05-21a56.firebaseapp.com",
