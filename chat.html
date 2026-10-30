@@ -1743,9 +1743,15 @@ function executeSendMessage(e) {
       }
     }
         
-    // Audio Kling Notifikasi
+   // Audio Kling Notifikasi
     let audioCtx = null;
     let lastKlingTime = 0;
+    let isChatReady = false; // 🌟 1. Status penanda apakah modal chat sudah siap sepenuhnya
+
+    // Berikan jeda 1.5 detik setelah skrip dimuat (saat modal terbuka) untuk mengaktifkan suara
+    setTimeout(() => {
+      isChatReady = true;
+    }, 1500);
 
     function unlockAudio() {
       if (!audioCtx) {
@@ -1760,6 +1766,9 @@ function executeSendMessage(e) {
 
     function playKlingSound() {
       try {
+        // 🛑 2. Cegah bunyi mutlak jika chat belum siap / baru saja modal dibuka
+        if (!isChatReady) return;
+
         if (!audioCtx || audioCtx.state !== 'running') return;
 
         const now = Date.now();
@@ -1786,7 +1795,6 @@ function executeSendMessage(e) {
         // Abaikan error
       }
     }
-
 
     
  // Logika Pemantau Warga Online
