@@ -2818,33 +2818,62 @@ function exportJimpitanToCSV() {
         return;
     }
 
-    // Menggunakan BOM (\uFEFF) agar karakter khusus/Rupiah terbaca sempurna di Excel
-    let csvContent = "\uFEFF";
-    csvContent += `"LAPORAN REKAP JIMPITAN RT 05 KAYEN"\n`;
-    csvContent += `"Periode: ${namaPeriode}"\n`;
-    csvContent += `"Total Keseluruhan: ${totalNominal}"\n\n`;
-    
-    // Header Kolom (Menggunakan titik koma ';' sebagai pemisah kolom agar otomatis rapi di Excel Indonesia)
-    csvContent += `"Nama Warga / Keterangan";"Nominal Jimpitan"\n`;
+    // Menggunakan format HTML Spreadsheet agar Excel membaca garis border-nya secara otomatis
+    let excelHTML = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="utf-8">
+            <style>
+                table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }
+                th, td { border: 1px solid #000000; padding: 6px 12px; font-size: 11pt; }
+                th { background-color: #10b981; color: #ffffff; font-weight: bold; text-align: left; }
+                .title { font-size: 13pt; font-weight: bold; text-align: center; border: none; }
+                .subtitle { font-size: 11pt; text-align: center; border: none; font-style: italic; }
+                .total { font-size: 11pt; font-weight: bold; background-color: #f3f4f6; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <tr><td colspan="2" class="title">LAPORAN REKAP JIMPITAN RT 05 KAYEN</td></tr>
+                <tr><td colspan="2" class="subtitle">Periode: ${namaPeriode}</td></tr>
+                <tr><td colspan="2" class="subtitle">&nbsp;</td></tr>
+                <tr>
+                    <th>Nama Warga / Keterangan / Malam</th>
+                    <th>Nominal Jimpitan</th>
+                </tr>
+    `;
 
-    // Masukkan data baris per baris
+    // Masukkan data baris per baris ke dalam tabel bergaris
     for (let i = 0; i < rawTextLines.length; i += 2) {
-        let col1 = rawTextLines[i] ? rawTextLines[i].replace(/"/g, '""') : '';
-        let col2 = rawTextLines[i+1] ? rawTextLines[i+1].replace(/"/g, '""') : '';
+        let col1 = rawTextLines[i] ? rawTextLines[i] : '';
+        let col2 = rawTextLines[i+1] ? rawTextLines[i+1] : '';
         if (col1) {
-            csvContent += `"${col1}";"${col2}"\n`;
+            excelHTML += `
+                <tr>
+                    <td>${col1}</td>
+                    <td>${col2}</td>
+                </tr>
+            `;
         }
     }
 
-    // Tambahkan baris total di bagian bawah
-    csvContent += `"TOTAL KESELURUHAN";"${totalNominal}"\n`;
+    // Baris Total di bagian bawah
+    excelHTML += `
+                <tr class="total">
+                    <td>TOTAL KESELURUHAN</td>
+                    <td>${totalNominal}</td>
+                </tr>
+            </table>
+        </body>
+        </html>
+    `;
 
-    // Unduh sebagai file .csv
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Menggunakan ekstensi .xls agar border/garis tabel otomatis dirender oleh Excel
+    const blob = new Blob([excelHTML], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.xls`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
