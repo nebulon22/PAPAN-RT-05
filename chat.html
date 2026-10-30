@@ -1359,7 +1359,7 @@ function executeSendMessage(e) {
 
       if (!text || currentUser?.status !== 'aktif') return;
 
-      shouldForceScrollDown = true; // 🌟 Ubah jadi true agar layar langsung turun ke bawah saat kirim pesan
+      shouldForceScrollDown = true; 
       input.value = '';
       input.focus();
 
@@ -1377,15 +1377,16 @@ function executeSendMessage(e) {
           role: currentUser.role || 'warga',
           text: text,
           timestamp: Date.now()
+        }).then(() => {
+          // 🌟 PICU NOTIFIKASI GAS UNTUK CHAT PUBLIK
+          triggerGasNotification(`RT 05 Kayen - ${currentUser.username || currentUser.nama}`, text);
         });
 
       } else if (activeChatType === 'private' && activePrivateUID) {
-        // Room ID disortir seragam menggunakan localeCompare
         const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
         const newMsgRef = push(ref(db, `private_chats/${roomID}`));
         const newKey = newMsgRef.key;
 
-        // Simpan ke local tab terbuka secara instan
         const targetName = allUsersCache[activePrivateUID]?.username || allUsersCache[activePrivateUID]?.nama || "Warga";
         openPrivateRooms[activePrivateUID] = targetName;
         localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
@@ -1401,10 +1402,55 @@ function executeSendMessage(e) {
           const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
           lastReadKeyMap[activePrivateUID] = newKey;
           localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
+
+          // 🌟 PICU NOTIFIKASI GAS UNTUK CHAT PRIBADI (Kirim ke targetUID)
+          triggerGasNotification(`Pesan Pribadi - ${currentUser.username || currentUser.nama}`, text, activePrivateUID);
         });
       }
     }
     window.sendChatMessage = executeSendMessage;
+
+// Fungsi pendukung untuk menembak data ke Web App Google Apps Script
+function triggerGasNotification(title, bodyText, specificTargetUID = null) {
+    const gasUrl = getGasUrl();
+    if (!gasUrl) return;
+
+    get(ref(db, 'users')).then((userSnap) => {
+        if (!userSnap.exists()) return;
+
+        let tokensList = [];
+        userSnap.forEach((child) => {
+            let uData = child.val();
+            let targetKey = child.key;
+
+            if (specificTargetUID) {
+                // Jika ini chat pribadi, pastikan token yang diambil HANYA milik lawan chat (specificTargetUID)
+                if (targetKey === specificTargetUID && uData.fcmToken) {
+                    tokensList.push(uData.fcmToken);
+                }
+            } else {
+                // Jika ini chat publik, kirim ke semua warga kecuali pengirim pesan sendiri
+                if (targetKey !== currentUser.uid && uData.fcmToken) {
+                    tokensList.push(uData.fcmToken);
+                }
+            }
+        });
+
+        if (tokensList.length > 0) {
+            fetch(gasUrl, {
+                method: 'POST',
+                mode: 'no-cors',
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({
+                    action: 'kirimFCM',
+                    title: title,
+                    body: bodyText,
+                    tokens: tokensList
+                })
+            }).catch(err => console.log("Gagal menembak notifikasi GAS:", err));
+        }
+    });
+}
 
     
 // Pemantau Pesan Unread Grup Chat Publik yang Lebih Stabil
