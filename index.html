@@ -2811,7 +2811,6 @@ function exportJimpitanToCSV() {
         return;
     }
 
-    // Ambil baris teks dari grid
     let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
 
     if (rawTextLines.length === 0) {
@@ -2819,58 +2818,92 @@ function exportJimpitanToCSV() {
         return;
     }
 
-    // Buat struktur tabel HTML berformat Excel Worksheet
-    let htmlTable = `
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
-            <meta charset="utf-8">
-            <style>
-                table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }
-                th, td { border: 1px solid #000000; padding: 6px 10px; font-size: 11pt; mso-number-format:"\\@"; }
-                th { background-color: #10b981; color: #ffffff; text-align: left; }
-                .title { font-size: 14pt; font-weight: bold; text-align: center; border: none; }
-                .subtitle { font-size: 11pt; text-align: center; border: none; font-style: italic; }
-                .total { font-size: 12pt; font-weight: bold; background-color: #f3f4f6; }
-            </style>
-        </head>
-        <body>
-            <table>
-                <tr><td colspan="2" class="title">LAPORAN REKAP JIMPITAN RT 05 KAYEN</td></tr>
-                <tr><td colspan="2" class="subtitle">Periode: ${namaPeriode}</td></tr>
-                <tr><td colspan="2" class="subtitle" style="margin-bottom: 10px;">&nbsp;</td></tr>
-                <tr>
-                    <th>Nama Warga / Keterangan / Malam</th>
-                    <th>Nominal Jimpitan</th>
-                </tr>
+    // Menggunakan format XML Spreadsheet Excel agar bersih tanpa warning
+    let excelXML = `
+        <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+          xmlns:o="urn:schemas-microsoft-com:office:office"
+          xmlns:x="urn:schemas-microsoft-com:office:excel"
+          xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
+          xmlns:html="http://www.w3.org/TR/REC-html40">
+         <Styles>
+          <Style ss:ID="Title">
+           <Font ss:Bold="1" ss:Size="14"/>
+           <Alignment ss:Horizontal="Center"/>
+          </Style>
+          <Style ss:ID="Subtitle">
+           <Font ss:Italic="1" ss:Size="11"/>
+           <Alignment ss:Horizontal="Center"/>
+          </Style>
+          <Style ss:ID="Header">
+           <Font ss:Bold="1" ss:Color="#FFFFFF"/>
+           <Interior ss:Color="#10B981" ss:Pattern="Solid"/>
+           <Alignment ss:Horizontal="Center"/>
+           <Borders>
+            <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+            <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+            <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+            <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+           </Borders>
+          </Style>
+          <Style ss:ID="CellData">
+           <Borders>
+            <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+            <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+            <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+            <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+           </Borders>
+          </Style>
+          <Style ss:ID="TotalCell">
+           <Font ss:Bold="1"/>
+           <Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/>
+           <Borders>
+            <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
+            <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
+            <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
+            <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
+           </Borders>
+          </Style>
+         </Styles>
+         <Worksheet ss:Name="Rekap Jimpitan">
+          <Table>
+           <Column ss:AutoFitWidth="1" ss:Width="250"/>
+           <Column ss:AutoFitWidth="1" ss:Width="150"/>
+           <Row><Cell ss:MergeAcross="1" ss:StyleID="Title"><Data ss:Type="String">LAPORAN REKAP JIMPITAN RT 05 KAYEN</Data></Cell></Row>
+           <Row><Cell ss:MergeAcross="1" ss:StyleID="Subtitle"><Data ss:Type="String">Periode: ${namaPeriode}</Data></Cell></Row>
+           <Row><Cell><Data ss:Type="String"></Data></Cell></Row>
+           <Row>
+            <Cell ss:StyleID="Header"><Data ss:Type="String">Nama Warga / Keterangan / Malam</Data></Cell>
+            <Cell ss:StyleID="Header"><Data ss:Type="String">Nominal Jimpitan</Data></Cell>
+           </Row>
     `;
 
-    // Masukkan data baris per baris ke dalam sel tabel
+    // Masukkan data baris per baris
     for (let i = 0; i < rawTextLines.length; i += 2) {
         let col1 = rawTextLines[i] ? rawTextLines[i] : '';
         let col2 = rawTextLines[i+1] ? rawTextLines[i+1] : '';
         if (col1) {
-            htmlTable += `
-                <tr>
-                    <td>${col1}</td>
-                    <td>${col2}</td>
-                </tr>
+            excelXML += `
+           <Row>
+            <Cell ss:StyleID="CellData"><Data ss:Type="String">${col1}</Data></Cell>
+            <Cell ss:StyleID="CellData"><Data ss:Type="String">${col2}</Data></Cell>
+           </Row>
             `;
         }
     }
 
-    // Baris Total di bagian bawah
-    htmlTable += `
-                <tr class="total">
-                    <td>TOTAL KESELURUHAN</td>
-                    <td>${totalNominal}</td>
-                </tr>
-            </table>
-        </body>
-        </html>
+    // Baris Total
+    excelXML += `
+           <Row>
+            <Cell ss:StyleID="TotalCell"><Data ss:Type="String">TOTAL KESELURUHAN</Data></Cell>
+            <Cell ss:StyleID="TotalCell"><Data ss:Type="String">${totalNominal}</Data></Cell>
+           </Row>
+          </Table>
+         </Worksheet>
+        </Workbook>
     `;
 
-    // 🌟 Gunakan tipe MIME standar application/vnd.ms-excel agar Excel membacanya sebagai dokumen native workbook
-    const blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel' });
+    // Unduh sebagai file .xls berbasis XML Spreadsheet resmi
+    const blob = new Blob([excelXML], { type: 'application/vnd.ms-excel;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
@@ -2879,7 +2912,6 @@ function exportJimpitanToCSV() {
     link.click();
     document.body.removeChild(link);
 }
-
    
 // 2. Fungsi Cetak / Simpan ke PDF via Print Dialog Browser
 function cetakLaporanJimpitan() {
