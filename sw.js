@@ -169,8 +169,8 @@ self.addEventListener('push', (event) => {
   const title = data.notification?.title || data.title || "Notifikasi RT 05";
   const options = {
     body: data.notification?.body || data.body || "Ada pesan atau info baru.",
-    icon: '/logo.png',
-    badge: '/logo.png',
+    icon: './kentongan-slit-drum.png',
+    badge: './kentongan-slit-drum.png',
     data: data.data || { url: './index.html' }
   };
 
