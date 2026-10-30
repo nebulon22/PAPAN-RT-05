@@ -1743,15 +1743,15 @@ function executeSendMessage(e) {
       }
     }
         
-   // Audio Kling Notifikasi
+  // Audio Kling Notifikasi
     let audioCtx = null;
     let lastKlingTime = 0;
-    let isChatReady = false; // 🌟 1. Status penanda apakah modal chat sudah siap sepenuhnya
+    let isChatReady = false; // 🌟 Status penanda apakah modal chat sudah siap sepenuhnya
 
-    // Berikan jeda 1.5 detik setelah skrip dimuat (saat modal terbuka) untuk mengaktifkan suara
+    // Berikan jeda 3 detik penuh agar semua data awal/snapshot selesai dimuat tanpa bunyi
     setTimeout(() => {
       isChatReady = true;
-    }, 1500);
+    }, 3000);
 
     function unlockAudio() {
       if (!audioCtx) {
@@ -1797,7 +1797,7 @@ function executeSendMessage(e) {
     }
 
     
- // Logika Pemantau Warga Online
+// Logika Pemantau Warga Online
   let previousOnlineUsers = new Set();
   let isInitialUsersLoaded = false;
   let usersListUnsubscribe = null; // 🛠️ Tambahkan variabel penampung unsubscribe
@@ -1828,7 +1828,8 @@ function executeSendMessage(e) {
         }
       });
 
-      if (isInitialUsersLoaded) {
+      // 🛑 PENGAMAN UTAMA: Pastikan chat sudah siap (lewat 3 detik) & bukan load awal
+      if (isInitialUsersLoaded && isChatReady) {
         currentOnlineUsers.forEach(uid => {
           const isSelf = (uid === currentUser?.uid);
           const wasNotOnline = !previousOnlineUsers.has(uid);
