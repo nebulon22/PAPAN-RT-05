@@ -3059,29 +3059,48 @@ async function simpanWargaBaru() {
   
   <script src="setting.js"></script>
   
-  <!-- 1. Muat skrip konfigurasi & utils terlebih dahulu -->
+<!-- 1. Muat skrip konfigurasi & utils terlebih dahulu -->
   <script src="utils.js"></script>
 
-  <!-- 2. Modul Firebase diinisialisasi dan diekspos ke window -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-    import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  <!-- 2. Modul Firebase diinisialisasi secara tertunda (Lazy Load) untuk HP Kentang -->
+  <script>
+    // Siapkan objek penampung global agar fungsi lain tidak error "undefined"
+    window.db = null;
+    window.firebaseRef = null;
+    window.firebaseOnValue = null;
+    window.firebaseUpdate = null;
+    window.firebaseRemove = null;
+    window.firebasePush = null;
+    window.firebaseSet = null;
+    window.firebaseGet = null;
 
-    const app = initializeApp(RT05_CONFIG.FIREBASE);
-    const db = getDatabase(app);
+    // Muat Firebase di latar belakang setelah halaman selesai dirender secara visual
+    window.addEventListener('load', () => {
+      setTimeout(async () => {
+        try {
+          const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+          const { getDatabase, ref, onValue, update, remove, push, set, get } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
 
-    // EKSPOS KE GLOBAL WINDOW AGAR TIDAK ERROR "is not a function"
-    window.db = db;
-    window.firebaseRef = ref;
-    window.firebaseOnValue = onValue;
-    window.firebaseUpdate = update;
-    window.firebaseRemove = remove;
-    window.firebasePush = push;
-    window.firebaseSet = set;
-    window.firebaseGet = get;
+          const app = initializeApp(RT05_CONFIG.FIREBASE);
+          const db = getDatabase(app);
 
-    // 3. Picu event agar peta tahu bahwa Firebase & Utils sudah siap
-    window.dispatchEvent(new Event('utilsSiap'));
+          // EKSPOS KE GLOBAL WINDOW AGAR TIDAK ERROR "is not a function"
+          window.db = db;
+          window.firebaseRef = ref;
+          window.firebaseOnValue = onValue;
+          window.firebaseUpdate = update;
+          window.firebaseRemove = remove;
+          window.firebasePush = push;
+          window.firebaseSet = set;
+          window.firebaseGet = get;
+
+          // 3. Picu event agar peta tahu bahwa Firebase & Utils sudah siap
+          window.dispatchEvent(new Event('utilsSiap'));
+        } catch (err) {
+          console.error("Gagal memuat modul Firebase secara background:", err);
+        }
+      }, 300); // Jeda 300ms agar peta dan UI utama muncul mulus tanpa hambatan
+    });
   </script>
 </body>
 </html>
