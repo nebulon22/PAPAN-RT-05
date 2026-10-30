@@ -30,6 +30,10 @@ function simpanPengaturanApp() {
 }
 
 function picuNotifikasiMedia() {
+  // 🛑 TAMBAHKAN PENGECEKAN INI: Jika centang chat dimatikan, langsung batalkan (return)
+  const isChatActive = localStorage.getItem('rt05_setting_chat') !== 'false';
+  if (!isChatActive) return;
+
   const mode = localStorage.getItem('rt05_setting_mode') || 'normal';
   if (mode === 'sunyi') return;
 
