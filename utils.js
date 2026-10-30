@@ -172,6 +172,22 @@ window.toggleSenterRonda = async function() {
 };
 
 // ==========================================
+// PENGELOLA MODAL INVENTARIS GLOBAL
+// ==========================================
+function bukaModalInventaris() {
+    const modal = document.getElementById('modal-inventaris');
+    if (modal) modal.style.display = 'flex';
+}
+
+function tutupModalInventaris() {
+    const modal = document.getElementById('modal-inventaris');
+    if (modal) modal.style.display = 'none';
+}
+
+
+
+
+// ==========================================
 // DAFTARKAN KE GLOBAL WINDOW
 // ==========================================
 window.RT05_CONFIG = RT05_CONFIG;
@@ -182,5 +198,7 @@ window.cariLokasi = cariLokasi;
 window.getIkonKategori = getIkonKategori;
 window.formatTanggalIndo = formatTanggalIndo;
 window.tampilkanToast = tampilkanToast;
+window.bukaModalInventaris = bukaModalInventaris;
+window.tutupModalInventaris = tutupModalInventaris;
 
 window.dispatchEvent(new Event('utilsSiap'));
