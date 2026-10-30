@@ -831,7 +831,7 @@ function perbaruiAplikasiSekarang() {
   </div>
 </div>
 
-  <div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
+<div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
     <div class="modal-content" style="max-width: 800px; width: 95%;">
       <div class="modal-header">
         <h3>🪙 Rekap Hasil Jimpitan Ronda</h3>
@@ -844,12 +844,22 @@ function perbaruiAplikasiSekarang() {
         </select>
       </div>
 
-      <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
+      <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:12px;">
         <span id="label-total-jimpitan" style="font-size:11px; text-transform:uppercase; opacity:0.9;">TOTAL JIMPITAN HARI INI</span>
         <div id="total-jimpitan" style="font-size:22px; font-weight:bold;">Rp 0</div>
       </div>
 
-      <div id="grid-jimpitan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; max-height: 55vh; overflow-y: auto; padding: 4px;">
+      <!-- 🌟 TOMBOL EXPORT / UNDUH LAPORAN -->
+      <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+        <button type="button" onclick="exportJimpitanToCSV()" style="flex: 1; padding: 8px; background: #059669; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+          <i class="fa-solid fa-file-excel"></i> Unduh Excel (CSV)
+        </button>
+        <button type="button" onclick="cetakLaporanJimpitan()" style="flex: 1; padding: 8px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+          <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+        </button>
+      </div>
+
+      <div id="grid-jimpitan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; max-height: 50vh; overflow-y: auto; padding: 4px;">
       </div>
     </div>
   </div>
@@ -2787,6 +2797,91 @@ function bukaModalCatatanRonda() {
         gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data dari Firebase.</div>';
       });
     }
+
+   // 1. Fungsi Unduh ke Excel (Format CSV)
+function exportJimpitanToCSV() {
+    const selectPeriode = document.getElementById('select-bulan-jimpitan');
+    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap_Jimpitan";
+    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
+    
+    let csvRows = [];
+    csvRows.push(`"Laporan Rekap Jimpitan RT 05 Kayen"`);
+    csvRows.push(`"Periode: ${namaPeriode}"`);
+    csvRows.push(`"Total: ${totalNominal}"`);
+    csvRows.push(""); // Baris kosong
+    csvRows.push(`"Nama Warga / Pos","Nominal Jimpitan"`);
+
+    // Ambil data dari elemen grid jimpitan yang sedang tampil
+    const gridJimpitan = document.getElementById('grid-jimpitan');
+    if (!gridJimpitan) {
+        alert("Data rekap tidak ditemukan!");
+        return;
+    }
+
+    // Ambil semua kartu atau baris item di dalam grid
+    const items = gridJimpitan.querySelectorAll('div'); 
+    // Anda bisa menyesuaikan selector inner text sesuai kartu/list di grid Anda
+    const textContent = gridJimpitan.innerText.trim();
+    
+    if (!textContent) {
+        alert("Belum ada data untuk diunduh pada periode ini.");
+        return;
+    }
+
+    // Buat file CSV mentah berdasarkan teks grid atau elemen
+    let csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(textContent);
+    
+    // Trigger download otomatis ke perangkat
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 2. Fungsi Cetak / Simpan ke PDF via Print Dialog Browser
+function cetakLaporanJimpitan() {
+    const selectPeriode = document.getElementById('select-bulan-jimpitan');
+    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap Jimpitan";
+    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
+    const gridContent = document.getElementById('grid-jimpitan')?.innerHTML;
+
+    if (!gridContent) {
+        alert("Data rekap tidak ditemukan!");
+        return;
+    }
+
+    const printWindow = window.open('', '_blank', 'height=650,width=800');
+    printWindow.document.write('<html><head><title>Laporan Rekap Jimpitan RT 05 Kayen</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: Arial, sans-serif; padding: 20px; color: #333; }');
+    printWindow.document.write('h2 { text-align: center; color: #0288d1; margin-bottom: 2px; }');
+    printWindow.document.write('.subtitle { text-align: center; font-size: 12px; color: #666; margin-bottom: 15px; }');
+    printWindow.document.write('.total-banner { background: #10b981; color: white; padding: 10px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 15px; font-size: 14px; }');
+    printWindow.document.write('#grid-jimpitan { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }');
+    printWindow.document.write('div { font-size: 12px; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    
+    printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN JIMPITAN RONDA</h2>');
+    printWindow.document.write(`<div class="subtitle">Periode: ${namaPeriode}</div>`);
+    printWindow.document.write(`<div class="total-banner">TOTAL KESELURUHAN: ${totalNominal}</div>`);
+    
+    printWindow.document.write('<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;">');
+    printWindow.document.write(gridContent);
+    printWindow.document.write('</div>');
+    
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 400);
+}
 
 window.refreshDataJimpitan = function() {
   isJimpitanLoaded = false; 
