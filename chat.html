@@ -1743,58 +1743,61 @@ function executeSendMessage(e) {
       }
     }
         
-  // Audio Kling Notifikasi
-    let audioCtx = null;
-    let lastKlingTime = 0;
-    let isChatReady = false; // 🌟 Status penanda apakah modal chat sudah siap sepenuhnya
+ // Audio Kling Notifikasi
+  let audioCtx = null;
+  let lastKlingTime = 0;
+  let isChatReady = false; // Status penanda apakah modal chat sudah siap sepenuhnya
 
-    // Berikan jeda 3 detik penuh agar semua data awal/snapshot selesai dimuat tanpa bunyi
-    setTimeout(() => {
-      isChatReady = true;
-    }, 3000);
+  // Berikan jeda 3 detik penuh agar semua data awal/snapshot selesai dimuat tanpa bunyi
+  setTimeout(() => {
+    isChatReady = true;
+  }, 3000);
 
-    function unlockAudio() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+  function unlockAudio() {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     }
-    window.addEventListener('click', unlockAudio, { once: true });
-    window.addEventListener('touchstart', unlockAudio, { once: true });
-
-    function playKlingSound() {
-      try {
-        // 🛑 2. Cegah bunyi mutlak jika chat belum siap / baru saja modal dibuka
-        if (!isChatReady) return;
-
-        if (!audioCtx || audioCtx.state !== 'running') return;
-
-        const now = Date.now();
-        if (now - lastKlingTime < 3000) return; 
-        
-        lastKlingTime = now;
-
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(659.25, audioCtx.currentTime);
-        osc.frequency.setValueAtTime(987.77, audioCtx.currentTime + 0.08);
-
-        gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
-
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.35);
-      } catch (e) {
-        // Abaikan error
-      }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
     }
+  }
+  window.addEventListener('click', unlockAudio, { once: true });
+  window.addEventListener('touchstart', unlockAudio, { once: true });
+
+  function playKlingSound() {
+    try {
+      // 🛑 PENGAMAN KETAT:
+      // 1. Pastikan chat sudah siap (lewat jeda 3 detik).
+      // 2. Pastikan user sudah benar-benar login (currentUser ada).
+      // 3. Pastikan modal chat sedang terbuka aktif di layar (isChatVisible).
+      if (!isChatReady || !currentUser || !currentUser.uid || !isChatVisible) return;
+
+      if (!audioCtx || audioCtx.state !== 'running') return;
+
+      const now = Date.now();
+      if (now - lastKlingTime < 3000) return;  
+      
+      lastKlingTime = now;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(659.25, audioCtx.currentTime);
+      osc.frequency.setValueAtTime(987.77, audioCtx.currentTime + 0.08);
+
+      gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.35);
+    } catch (e) {
+      // Abaikan error
+    }
+  }
 
     
 // Logika Pemantau Warga Online
