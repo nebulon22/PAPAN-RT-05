@@ -2804,8 +2804,8 @@ function exportJimpitanToCSV() {
     const selectPeriode = document.getElementById('select-bulan-jimpitan');
     const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap_Jimpitan";
     const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
-    
     const gridJimpitan = document.getElementById('grid-jimpitan');
+
     if (!gridJimpitan) {
         alert("Data rekap tidak ditemukan!");
         return;
@@ -2818,96 +2818,33 @@ function exportJimpitanToCSV() {
         return;
     }
 
-    // Menggunakan format XML Spreadsheet Excel agar bersih tanpa warning
-    let excelXML = `
-        <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
-          xmlns:o="urn:schemas-microsoft-com:office:office"
-          xmlns:x="urn:schemas-microsoft-com:office:excel"
-          xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet"
-          xmlns:html="http://www.w3.org/TR/REC-html40">
-         <Styles>
-          <Style ss:ID="Title">
-           <Font ss:Bold="1" ss:Size="14"/>
-           <Alignment ss:Horizontal="Center"/>
-          </Style>
-          <Style ss:ID="Subtitle">
-           <Font ss:Italic="1" ss:Size="11"/>
-           <Alignment ss:Horizontal="Center"/>
-          </Style>
-          <Style ss:ID="Header">
-           <Font ss:Bold="1" ss:Color="#FFFFFF"/>
-           <Interior ss:Color="#10B981" ss:Pattern="Solid"/>
-           <Alignment ss:Horizontal="Center"/>
-           <Borders>
-            <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
-            <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
-            <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
-            <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
-           </Borders>
-          </Style>
-          <Style ss:ID="CellData">
-           <Borders>
-            <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
-            <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
-            <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
-            <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
-           </Borders>
-          </Style>
-          <Style ss:ID="TotalCell">
-           <Font ss:Bold="1"/>
-           <Interior ss:Color="#F3F4F6" ss:Pattern="Solid"/>
-           <Borders>
-            <Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/>
-            <Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/>
-            <Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/>
-            <Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/>
-           </Borders>
-          </Style>
-         </Styles>
-         <Worksheet ss:Name="Rekap Jimpitan">
-          <Table>
-           <Column ss:AutoFitWidth="1" ss:Width="250"/>
-           <Column ss:AutoFitWidth="1" ss:Width="150"/>
-           <Row><Cell ss:MergeAcross="1" ss:StyleID="Title"><Data ss:Type="String">LAPORAN REKAP JIMPITAN RT 05 KAYEN</Data></Cell></Row>
-           <Row><Cell ss:MergeAcross="1" ss:StyleID="Subtitle"><Data ss:Type="String">Periode: ${namaPeriode}</Data></Cell></Row>
-           <Row><Cell><Data ss:Type="String"></Data></Cell></Row>
-           <Row>
-            <Cell ss:StyleID="Header"><Data ss:Type="String">Nama Warga / Keterangan / Malam</Data></Cell>
-            <Cell ss:StyleID="Header"><Data ss:Type="String">Nominal Jimpitan</Data></Cell>
-           </Row>
-    `;
+    // Menggunakan BOM (\uFEFF) agar karakter khusus/Rupiah terbaca sempurna di Excel
+    let csvContent = "\uFEFF";
+    csvContent += `"LAPORAN REKAP JIMPITAN RT 05 KAYEN"\n`;
+    csvContent += `"Periode: ${namaPeriode}"\n`;
+    csvContent += `"Total Keseluruhan: ${totalNominal}"\n\n`;
+    
+    // Header Kolom (Menggunakan titik koma ';' sebagai pemisah kolom agar otomatis rapi di Excel Indonesia)
+    csvContent += `"Nama Warga / Keterangan";"Nominal Jimpitan"\n`;
 
     // Masukkan data baris per baris
     for (let i = 0; i < rawTextLines.length; i += 2) {
-        let col1 = rawTextLines[i] ? rawTextLines[i] : '';
-        let col2 = rawTextLines[i+1] ? rawTextLines[i+1] : '';
+        let col1 = rawTextLines[i] ? rawTextLines[i].replace(/"/g, '""') : '';
+        let col2 = rawTextLines[i+1] ? rawTextLines[i+1].replace(/"/g, '""') : '';
         if (col1) {
-            excelXML += `
-           <Row>
-            <Cell ss:StyleID="CellData"><Data ss:Type="String">${col1}</Data></Cell>
-            <Cell ss:StyleID="CellData"><Data ss:Type="String">${col2}</Data></Cell>
-           </Row>
-            `;
+            csvContent += `"${col1}";"${col2}"\n`;
         }
     }
 
-    // Baris Total
-    excelXML += `
-           <Row>
-            <Cell ss:StyleID="TotalCell"><Data ss:Type="String">TOTAL KESELURUHAN</Data></Cell>
-            <Cell ss:StyleID="TotalCell"><Data ss:Type="String">${totalNominal}</Data></Cell>
-           </Row>
-          </Table>
-         </Worksheet>
-        </Workbook>
-    `;
+    // Tambahkan baris total di bagian bawah
+    csvContent += `"TOTAL KESELURUHAN";"${totalNominal}"\n`;
 
-    // Unduh sebagai file .xls berbasis XML Spreadsheet resmi
-    const blob = new Blob([excelXML], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    // Unduh sebagai file .csv
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);
-    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.xls`);
+    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
