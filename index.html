@@ -2805,38 +2805,76 @@ function exportJimpitanToCSV() {
     const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap_Jimpitan";
     const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
     
-    let csvRows = [];
-    csvRows.push(`"Laporan Rekap Jimpitan RT 05 Kayen"`);
-    csvRows.push(`"Periode: ${namaPeriode}"`);
-    csvRows.push(`"Total: ${totalNominal}"`);
-    csvRows.push(""); // Baris kosong
-    csvRows.push(`"Nama Warga / Pos","Nominal Jimpitan"`);
-
-    // Ambil data dari elemen grid jimpitan yang sedang tampil
     const gridJimpitan = document.getElementById('grid-jimpitan');
     if (!gridJimpitan) {
         alert("Data rekap tidak ditemukan!");
         return;
     }
 
-    // Ambil semua kartu atau baris item di dalam grid
-    const items = gridJimpitan.querySelectorAll('div'); 
-    // Anda bisa menyesuaikan selector inner text sesuai kartu/list di grid Anda
-    const textContent = gridJimpitan.innerText.trim();
-    
-    if (!textContent) {
-        alert("Belum ada data untuk diunduh pada periode ini.");
+    // Ambil baris teks dari grid
+    let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
+
+    if (rawTextLines.length === 0) {
+        alert("Tidak ada data untuk diunduh pada periode ini.");
         return;
     }
 
-    // Buat file CSV mentah berdasarkan teks grid atau elemen
-    let csvContent = "data:text/csv;charset=utf-8," + encodeURIComponent(textContent);
-    
-    // Trigger download otomatis ke perangkat
-    const encodedUri = encodeURI(csvContent);
+    // Buat struktur tabel HTML agar Excel membacanya sebagai kolom dan baris resmi
+    let htmlTable = `
+        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
+        <head>
+            <meta charset="utf-8">
+            <style>
+                table { border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; }
+                th, td { border: 1px solid #000000; padding: 6px 10px; font-size: 11pt; }
+                th { background-color: #10b981; color: #ffffff; text-align: left; }
+                .title { font-size: 14pt; font-weight: bold; text-align: center; border: none; }
+                .subtitle { font-size: 11pt; text-align: center; border: none; font-style: italic; }
+                .total { font-size: 12pt; font-weight: bold; background-color: #f3f4f6; }
+            </style>
+        </head>
+        <body>
+            <table>
+                <tr><td colspan="2" class="title">LAPORAN REKAP JIMPITAN RT 05 KAYEN</td></tr>
+                <tr><td colspan="2" class="subtitle">Periode: ${namaPeriode}</td></tr>
+                <tr><td colspan="2" class="subtitle" style="margin-bottom: 10px;">&nbsp;</td></tr>
+                <tr>
+                    <th>Nama Warga / Keterangan / Malam</th>
+                    <th>Nominal Jimpitan</th>
+                </tr>
+    `;
+
+    // Masukkan data baris per baris ke dalam sel tabel
+    for (let i = 0; i < rawTextLines.length; i += 2) {
+        let col1 = rawTextLines[i] ? rawTextLines[i] : '';
+        let col2 = rawTextLines[i+1] ? rawTextLines[i+1] : '';
+        if (col1) {
+            htmlTable += `
+                <tr>
+                    <td>${col1}</td>
+                    <td>${col2}</td>
+                </tr>
+            `;
+        }
+    }
+
+    // Baris Total di bagian bawah
+    htmlTable += `
+                <tr class="total">
+                    <td>TOTAL KESELURUHAN</td>
+                    <td>${totalNominal}</td>
+                </tr>
+            </table>
+        </body>
+        </html>
+    `;
+
+    // Unduh sebagai file berformat .xls (Excel Table Workbook)
+    const blob = new Blob([htmlTable], { type: 'application/vnd.ms-excel;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.xls`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
