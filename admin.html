@@ -1588,6 +1588,9 @@ function formatRupiahInput(el) {
       const modal = document.getElementById('modal-kelola-warga');
       if (modal) {
         modal.style.display = 'flex';
+        if (typeof muatSemuaDataAdmin === 'function') {
+          muatSemuaDataAdmin();
+        }
       }
     }
 
@@ -1671,11 +1674,12 @@ function formatRupiahInput(el) {
       if (inputPinDiv) inputPinDiv.value = '';
     }
 
-    let globalDataRumah = [];
+   let globalDataRumah = [];
     let globalDataWarga = [];
     let listSemuaRumahAdmin = [];
 
     function muatSemuaDataAdmin() {
+      // 1. Memuat data peta/rumah warga
       window.firebaseOnValue(window.firebaseRef(window.db, 'peta_warga'), (snapshot) => {
         globalDataRumah = [];
         listSemuaRumahAdmin = [];
@@ -1693,7 +1697,8 @@ function formatRupiahInput(el) {
         });
       });
 
-      window.firebaseOnValue(window.firebaseRef(window.db, 'warga_keluarga'), (snapshot) => {
+      // 2. Memuat data sensus seluruh keluarga dari node 'sensus_warga'
+      window.firebaseOnValue(window.firebaseRef(window.db, 'sensus_warga'), (snapshot) => {
         globalDataWarga = [];
         const dummyHeader = ["Kepala", "Anggota", "Rumah", "Total"];
         const resWarga = [dummyHeader]; 
@@ -1840,38 +1845,28 @@ function formatRupiahInput(el) {
       `;
     }
 
-    async function simpanKeluargaAdmin() {
+   async function simpanKeluargaAdmin() {
       const kepala = document.getElementById("addKepalaKeluarga").value.trim();
       const rumah = document.getElementById("inputCariRumahPeta").value.trim();
       const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
 
-      if (!kepala || !rumah || !anggota) {
-        alert("Mohon lengkapi semua isian form!");
-        return;
-      }
+      if (!kepala || !rumah || !anggota) return alert("Mohon lengkapi semua isian form!");
 
       const btn = document.getElementById("btnSimpanKeluarga");
-      btn.disabled = true; btn.innerText = "⏳ Menyimpan ke Database...";
+      btn.disabled = true; btn.innerText = "⏳ Menyimpan...";
 
       try {
-        const wargaRef = window.firebaseRef(window.db, 'warga_keluarga');
-        await window.firebasePush(wargaRef, {
-          kepalaKeluarga: kepala,
-          namaRumah: rumah,
-          anggotaKeluarga: anggota,
-          timestamp: Date.now()
+        await window.firebasePush(window.firebaseRef(window.db, 'sensus_warga'), {
+          kepalaKeluarga: kepala, namaRumah: rumah, anggotaKeluarga: anggota, timestamp: Date.now()
         });
-
         alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
         document.getElementById("formTambahKeluargaAdmin").reset();
         document.getElementById("inputCariRumahPeta").value = ""; 
         switchTabAdminWarga('cari');
-        
       } catch (err) {
-        alert("❌ Gagal menyimpan data: " + err);
+        alert("❌ Gagal menyimpan: " + err);
       } finally {
-        btn.disabled = false;
-        btn.innerText = "💾 Simpan ke Database";
+        btn.disabled = false; btn.innerText = "💾 Simpan ke Database";
       }
     }
 
@@ -1883,15 +1878,10 @@ function formatRupiahInput(el) {
         muatSemuaDataAdmin();
         muatDataProgker();
       } else {
-        setTimeout(() => {
-          const inputPin = document.getElementById('adminPin');
-          if (inputPin) inputPin.focus();
-        }, 300);
+        setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
       }
 
-      if (navigator.onLine) {
-        kirimDataPendingAdmin();
-      }
+      if (navigator.onLine) kirimDataPendingAdmin();
     });
 
     // ==========================================
