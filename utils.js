@@ -1,4 +1,4 @@
-// utils.js - Kumpulan Variabel dan Fungsi Global RT 05 (Versi Tanpa Module)
+// utils.js - Kumpulan Konfigurasi, Firebase Global, & Fungsi Pendukung RT 05 (Versi Klasik / Tanpa Module)
 
 const RT05_CONFIG = {
     FIREBASE: {
@@ -20,7 +20,18 @@ const RT05_CONFIG = {
 };
 
 // ==========================================
-// FUNGSI UTILITY PENDUKUNG
+// INISIALISASI FIREBASE KLASIK (GLOBAL)
+// ==========================================
+let dbRT05 = null;
+if (typeof firebase !== 'undefined') {
+    if (!firebase.apps.length) {
+        firebase.initializeApp(RT05_CONFIG.FIREBASE);
+    }
+    dbRT05 = firebase.database();
+}
+
+// ==========================================
+// FUNGSI UTILITY PENDUKUNG & PENCARIAN
 // ==========================================
 
 function perbaikiKoordinat(val) {
@@ -43,6 +54,22 @@ function perbaikiKoordinat(val) {
 function escapeHTML(str) {
     if (str === null || str === undefined) return '';
     return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
+}
+
+// Fungsi Pencarian Universal (bisa untuk warga, inventaris, dll)
+function cariLokasi(keyword, daftarData, callbackHasil) {
+    if (!keyword || !daftarData) {
+        if (callbackHasil) callbackHasil([]);
+        return [];
+    }
+    const query = keyword.toLowerCase().trim();
+    const hasil = daftarData.filter(item => {
+        const nama = (item.nama || item.namaWarga || item.namaBarang || '').toLowerCase();
+        const keterangan = (item.keterangan || item.kategori || '').toLowerCase();
+        return nama.includes(query) || keterangan.includes(query);
+    });
+    if (callbackHasil) callbackHasil(hasil);
+    return hasil;
 }
 
 function getIkonKategori(namaAsli, kategoriManual) {
@@ -76,6 +103,39 @@ function getIkonKategori(namaAsli, kategoriManual) {
     return { emoji, kategori, bgStyle };
 }
 
+// Format Tanggal Indonesia
+function formatTanggalIndo(tanggalInput) {
+    if (!tanggalInput) return "-";
+    const options = { day: 'numeric', month: 'long', year: 'numeric' };
+    const date = new Date(tanggalInput);
+    if (isNaN(date.getTime())) return tanggalInput;
+    return date.toLocaleDateString('id-ID', options);
+}
+
+// Toast Notification Melayang
+function tampilkanToast(pesan, tipe = 'sukses') {
+    let container = document.getElementById('toast-container-rt05');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container-rt05';
+        container.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;';
+        document.body.appendChild(container);
+    }
+
+    const toast = document.createElement('div');
+    const bg = tipe === 'error' ? '#ef4444' : (tipe === 'warning' ? '#f59e0b' : '#10b981');
+    toast.style.cssText = `background: ${bg}; color: white; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease; transform: translateY(10px); pointer-events: auto;`;
+    toast.innerText = pesan;
+
+    container.appendChild(toast);
+    setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; }, 10);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
 // Fitur Senter Ronda
 let mediaStreamSenter = null;
 let isSenterAktif = false;
@@ -91,33 +151,17 @@ window.toggleSenterRonda = async function() {
         video: { facingMode: 'environment', advanced: [{ torch: true }] }
       });
       isSenterAktif = true;
-
-      if (btn) {
-        btn.style.background = '#fbbf24';
-        btn.style.color = '#0f172a';
-        btn.style.borderColor = '#f59e0b';
-      }
-      if (icon) {
-        icon.style.color = '#0f172a';
-      }
+      if (btn) { btn.style.background = '#fbbf24'; btn.style.color = '#0f172a'; btn.style.borderColor = '#f59e0b'; }
+      if (icon) { icon.style.color = '#0f172a'; }
       if (status) status.innerText = 'ON';
-
     } else {
       if (mediaStreamSenter) {
         mediaStreamSenter.getTracks().forEach(track => track.stop());
         mediaStreamSenter = null;
       }
       isSenterAktif = false;
-
-      if (btn) {
-        btn.style.background = '#1e293b';
-        btn.style.color = '#fbbf24';
-        btn.style.borderColor = '#334155';
-      }
-      if (icon) {
-        icon.className = 'fa-solid fa-lightbulb';
-        icon.style.color = '#fbbf24';
-      }
+      if (btn) { btn.style.background = '#1e293b'; btn.style.color = '#fbbf24'; btn.style.borderColor = '#334155'; }
+      if (icon) { icon.className = 'fa-solid fa-lightbulb'; icon.style.color = '#fbbf24'; }
       if (status) status.innerText = 'OFF';
     }
   } catch (err) {
@@ -127,10 +171,16 @@ window.toggleSenterRonda = async function() {
   }
 };
 
-// Daftarkan variabel & fungsi ke window agar bisa diakses global
+// ==========================================
+// DAFTARKAN KE GLOBAL WINDOW
+// ==========================================
 window.RT05_CONFIG = RT05_CONFIG;
+window.dbRT05 = dbRT05;
 window.perbaikiKoordinat = perbaikiKoordinat;
 window.escapeHTML = escapeHTML;
+window.cariLokasi = cariLokasi;
 window.getIkonKategori = getIkonKategori;
+window.formatTanggalIndo = formatTanggalIndo;
+window.tampilkanToast = tampilkanToast;
 
 window.dispatchEvent(new Event('utilsSiap'));
