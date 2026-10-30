@@ -1314,19 +1314,28 @@ let globalPrivateListener = null;
               // Jika kita sedang tidak membuka chat private dengan orang ini
               if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
                 unreadCounts[targetUID] = unreadTotalCount;
-               if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
-                // 🛑 Pastikan chat sudah siap (lewat 3 detik) baru boleh bunyi
-                if (isChatReady) {
-                  playKlingSound();
+           if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
+        // 🛑 Pastikan chat sudah siap (lewat 3 detik) baru boleh bunyi
+        if (isChatReady) {
+            // 🌟 UBAH INI: Sambungkan ke pengaturan suara private di induk (setting.js)
+            try {
+                if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                    window.parent.picuNotifikasiMedia('private'); // 👈 Memanggil pengaturan khusus Private
+                } else {
+                    playKlingSound(); // Fallback jika parent tidak ada
                 }
-                  
-                  // 🛑 UBAH ATURAN PINDAH OTOMATIS:
-                  // Sistem HANYA akan memindahkan layar secara otomatis JIKA Anda sedang 
-                  // berada di dalam tab private orang yang sama (misal sedang baca-baca riwayat atas).
-                  // Jika Anda sedang di tab Publik, layar TIDAK AKAN dipaksa pindah, 
-                  // melainkan hanya memunculkan badge angka merah dan suara saja.
-                  if (activeChatType === 'private' && activePrivateUID === targetUID) {
-                    switchChatRoom('private', targetUID);
+            } catch (e) {
+                playKlingSound();
+            }
+        }
+        
+        // 🛑 UBAH ATURAN PINDAH OTOMATIS:
+        // Sistem HANYA akan memindahkan layar secara otomatis JIKA Anda sedang 
+        // berada di dalam tab private orang yang sama (misal sedang baca-baca riwayat atas).
+        // Jika Anda sedang di tab Publik, layar TIDAK AKAN dipaksa pindah, 
+        // melainkan hanya memunculkan badge angka merah dan suara saja.
+        if (activeChatType === 'private' && activePrivateUID === targetUID) {
+            switchChatRoom('private', targetUID);
                   }
                 }
               }
@@ -2254,7 +2263,7 @@ function loadChatStream(onLoaded) {
                     sessionStorage.setItem(notifKey, 'true');
                     try {
                         if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-                            window.parent.picuNotifikasiMedia();
+                            window.parent.picuNotifikasiMedia('grup');
                         }
                     } catch (e) {
                         console.log("Gagal memicu notifikasi media:", e);
