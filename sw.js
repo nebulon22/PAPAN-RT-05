@@ -154,3 +154,27 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// Tangkap pesan push dari Firebase Cloud Messaging saat aplikasi di latar belakang / ditutup
+self.addEventListener('push', (event) => {
+  let data = {};
+  if (event.data) {
+    try {
+      data = event.data.json();
+    } catch (e) {
+      data = { notification: { title: "RT 05 Kayen", body: event.data.text() } };
+    }
+  }
+
+  const title = data.notification?.title || data.title || "Notifikasi RT 05";
+  const options = {
+    body: data.notification?.body || data.body || "Ada pesan atau info baru.",
+    icon: '/logo.png',
+    badge: '/logo.png',
+    data: data.data || { url: './index.html' }
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(title, options)
+  );
+});
