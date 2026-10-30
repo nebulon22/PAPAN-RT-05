@@ -44,6 +44,7 @@ self.addEventListener('install', (e) => {
         './index.html',
         './admin.html',
         './inventaris.html',
+        './cetak-qr.html',
         './kentongan-slit-drum.png',
         './html5-qrcode.min.js'
       ]);
