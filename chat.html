@@ -1418,37 +1418,32 @@ function triggerGasNotification(title, bodyText, specificTargetUID = null) {
     get(ref(db, 'users')).then((userSnap) => {
         if (!userSnap.exists()) return;
 
-        let tokensList = [];
         userSnap.forEach((child) => {
+            let targetKey = child.key; // Ini adalah UID asli di database (cth: TDHnhP...)
             let uData = child.val();
-            let targetKey = child.key;
 
+            let shouldSend = false;
             if (specificTargetUID) {
-                // Jika ini chat pribadi, pastikan token yang diambil HANYA milik lawan chat (specificTargetUID)
-                if (targetKey === specificTargetUID && uData.fcmToken) {
-                    tokensList.push(uData.fcmToken);
-                }
+                if (targetKey === specificTargetUID) shouldSend = true;
             } else {
-                // Jika ini chat publik, kirim ke semua warga kecuali pengirim pesan sendiri
-                if (targetKey !== currentUser.uid && uData.fcmToken) {
-                    tokensList.push(uData.fcmToken);
-                }
+                if (targetKey !== currentUser.uid) shouldSend = true; // Kirim ke semua warga lain untuk chat publik
+            }
+
+            if (shouldSend && uData.fcmToken) {
+                fetch(gasUrl, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                    body: JSON.stringify({
+                        action: 'notifChatPrivate', // Harus sama persis dengan di GAS Anda
+                        targetUid: targetKey,        // UID asli penerima
+                        senderName: currentUser.username || currentUser.nama,
+                        messageText: bodyText,       // Isi pesan
+                        unreadCount: 1
+                    })
+                }).catch(err => console.log("Gagal menembak notifikasi GAS:", err));
             }
         });
-
-        if (tokensList.length > 0) {
-            fetch(gasUrl, {
-                method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    action: 'kirimFCM',
-                    title: title,
-                    body: bodyText,
-                    tokens: tokensList
-                })
-            }).catch(err => console.log("Gagal menembak notifikasi GAS:", err));
-        }
     });
 }
 
