@@ -646,20 +646,24 @@
           </button>
         </div>
 
-        <!-- PANEL 1: CARI & CONNECT KOORDINAT -->
-       <div id="panel-cari-warga">
+       <!-- PANEL 1: CARI & CONNECT KOORDINAT -->
+<div id="panel-cari-warga" style="position: relative;">
   <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-    <input type="text" id="inputCariWargaAdmin" aria-label="Cari Nama Warga" placeholder="Ketik Nama Kepala / Anggota / No Rumah..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none;">
-            <button type="button" onclick="cariDetailKeluargaAdmin()" style="padding: 8px 14px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
-              Cari
-            </button>
-          </div>
+    <!-- Tambahkan oninput untuk memicu autocomplete secara real-time -->
+    <input type="text" id="inputCariWargaAdmin" aria-label="Cari Nama Warga" placeholder="Ketik Nama Kepala / Anggota / No Rumah..." oninput="prosesAutocompleteAdmin(this.value)" style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none;">
+    <button type="button" onclick="cariDetailKeluargaAdmin()" style="padding: 8px 14px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+      Cari
+    </button>
+  </div>
 
-          <!-- WADAH HASIL PENCARIAN -->
-          <div id="hasil-cari-warga" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-            <!-- Isi dinamis via JS -->
-          </div>
-        </div>
+  <!-- KOTAK DROPDOWN AUTOCOMPLETE -->
+  <div id="dropdown-autocomplete-admin" style="display: none; position: absolute; top: 38px; left: 0; right: 55px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; max-height: 160px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.15);"></div>
+
+  <!-- WADAH HASIL PENCARIAN -->
+  <div id="hasil-cari-warga" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+    <!-- Isi dinamis via JS -->
+  </div>
+</div>
 
   <!-- PANEL 2: FORM TAMBAH DATA KELUARGA -->
         <div id="panel-tambah-warga" style="display: none;">
@@ -1996,19 +2000,86 @@ async function cetakLaporanSensus() {
       const lat = matchRumah ? matchRumah[1] : null;
       const lng = matchRumah ? matchRumah[2] : null;
 
-      let htmlKoor = (lat && lng) 
-        ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat (${lat}, ${lng})</a>`
-        : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
 
-      container.innerHTML = `
-        <div style="font-size: 12px; color: #334155; line-height: 1.6;">
-          <div style="font-weight: bold; font-size: 14px; color: #0288d1; margin-bottom: 4px;">🏠 ${kepala}</div>
-          <div><b>Anggota Keluarga:</b> ${anggota}</div>
-          <div style="margin-top: 4px;"><b>Titik Denah:</b> ${labelRumah}</div>
-          ${htmlKoor}
+    let htmlKoor = (lat && lng) 
+      ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat (${lat}, ${lng})</a>`
+      : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
+
+    // Bungkus data untuk dikirim ke modal edit
+    const itemDataEdit = { kepala, anggota, labelRumah, lat, lng };
+
+    container.innerHTML = `
+      <div style="font-size: 12px; color: #334155; line-height: 1.6;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+          <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
+          <!-- TOMBOL EDIT DATA -->
+          <button type="button" onclick='bukaModalEditWargaAdmin(${JSON.stringify(itemDataEdit)})' style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+            ✏️ Edit
+          </button>
         </div>
-      `;
+        <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
+        <div style="margin-top: 4px;"><b>Titik Denah:</b> ${escapeHTML(labelRumah)}</div>
+        ${htmlKoor}
+      </div>
+    `;
     }
+
+    // 1. Fitur Autocomplete saat admin mengetik (Menyesuaikan globalDataWarga)
+function prosesAutocompleteAdmin(keyword) {
+  const container = document.getElementById("listDropdownWargaAdmin");
+  const textCari = keyword.toLowerCase().trim();
+
+  if (!textCari || !globalDataWarga) {
+    if (container) container.style.display = "none";
+    return;
+  }
+
+  // globalDataWarga berisi array: [val.kepalaKeluarga, val.anggotaKeluarga, val.namaRumah]
+  const hasilFilter = globalDataWarga.filter(row => 
+    (row[0] && String(row[0]).toLowerCase().includes(textCari)) || 
+    (row[1] && String(row[1]).toLowerCase().includes(textCari)) ||
+    (row[2] && String(row[2]).toLowerCase().includes(textCari))
+  );
+
+  if (hasilFilter.length === 0) {
+    container.innerHTML = `<div style="padding: 8px; font-size: 11px; color: #94a3b8; text-align: center;">Tidak ditemukan</div>`;
+    container.style.display = "block";
+    return;
+  }
+
+  container.innerHTML = hasilFilter.map(row => {
+    const kepala = row[0] || 'Tanpa Nama';
+    const rumah = row[2] || 'RT 05';
+    const safeKepala = kepala.replace(/'/g, "\\'");
+    
+    return `
+      <div onclick="pilihWargaDropdownAdmin('${safeKepala}')" style="padding: 8px 10px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+        <span style="font-weight: bold; color: #1e293b;">🏠 ${escapeHTML(kepala)}</span>
+        <span style="color: #64748b; font-size: 11px;">${escapeHTML(rumah)}</span>
+      </div>
+    `;
+  }).join('');
+
+  container.style.display = "block";
+}
+
+// 2. Ketika item dropdown dipilih
+function pilihWargaDropdownAdmin(namaKepala) {
+  document.getElementById("inputCariWargaAdmin").value = namaKepala;
+  const container = document.getElementById("listDropdownWargaAdmin");
+  if (container) container.style.display = "none";
+  
+  cariDetailKeluargaAdmin(); // Jalankan fungsi pencarian detail yang sudah Anda miliki
+}
+
+// Tutup dropdown jika klik di luar area
+document.addEventListener("click", function(e) {
+  const inputCari = document.getElementById("inputCariWargaAdmin");
+  const container = document.getElementById("listDropdownWargaAdmin");
+  if (inputCari && container && !inputCari.contains(e.target) && !container.contains(e.target)) {
+    container.style.display = "none";
+  }
+});
 
    async function simpanKeluargaAdmin() {
       const kepala = document.getElementById("addKepalaKeluarga").value.trim();
