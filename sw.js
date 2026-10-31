@@ -71,7 +71,8 @@ self.addEventListener('install', (e) => {
         './admin.html',
         './inventaris.html',
         './cetak-qr.html',
-        './kentongan-slit-drum.png',
+        './kentongan192.png',           // 🌟 Tambahkan ikon 192
+        './kentongan-slit-drum.png',   // 🌟 Pertahankan ikon 512
         './html5-qrcode.min.js'
       ]);
     })
