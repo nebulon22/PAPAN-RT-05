@@ -626,6 +626,16 @@
   </div>
 </div>
 
+        <!-- 🌟 TOMBOL EXPORT & CETAK LAPORAN DATA WARGA -->
+<div style="display: flex; gap: 8px; margin-bottom: 14px;">
+  <button type="button" onclick="exportSensusToCSV()" style="flex: 1; padding: 8px; background: #059669; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+    <i class="fa-solid fa-file-excel"></i> Unduh Excel (CSV)
+  </button>
+  <button type="button" onclick="cetakLaporanSensus()" style="flex: 1; padding: 8px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+    <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+  </button>
+</div>
+
         <!-- TAB TOMBOL AKSI -->
         <div style="display: flex; gap: 8px; margin-bottom: 14px;">
           <button type="button" onclick="switchTabAdminWarga('cari')" id="btn-tab-cari" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; cursor: pointer; font-size: 12px;">
@@ -1616,6 +1626,98 @@ function formatRupiahInput(el) {
         modal.style.display = 'none';
       }
     }
+
+    // 1. Fungsi Unduh Data Sensus / Keluarga ke Excel (CSV)
+async function exportSensusToCSV() {
+    try {
+        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'peta_warga'));
+        if (!snapshot.exists()) {
+            alert("Tidak ada data warga di database.");
+            return;
+        }
+
+        let csvContent = "\uFEFF";
+        csvContent += `"LAPORAN DATA KELUARGA & SENSUS WARGA RT 05 KAYEN"\n\n`;
+        csvContent += `"No. Rumah / Lokasi";"Nama Kepala Keluarga";"Anggota Keluarga"\n`;
+
+        snapshot.forEach(child => {
+            const data = child.val();
+            const noRumah = (data.noRumah || data.rumah || child.key || '').replace(/"/g, '""');
+            const kepala = (data.kepalaKeluarga || data.nama || '-').replace(/"/g, '""');
+            const anggota = (data.anggota || data.keterangan || '-').replace(/\n/g, ', ').replace(/"/g, '""');
+
+            csvContent += `"${noRumah}";"${kepala}";"${anggota}"\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Sensus_Warga_RT05_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (err) {
+        alert("Gagal mengunduh data: " + err.message);
+    }
+}
+
+// 2. Fungsi Cetak / Simpan ke PDF untuk Data Sensus
+async function cetakLaporanSensus() {
+    try {
+        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'peta_warga'));
+        if (!snapshot.exists()) {
+            alert("Tidak ada data warga untuk dicetak.");
+            return;
+        }
+
+        const totalKK = document.getElementById('stat-total-kk')?.innerText || "0";
+        const totalJiwa = document.getElementById('stat-total-jiwa')?.innerText || "0";
+
+        const printWindow = window.open('', '_blank', 'height=700,width=900');
+        printWindow.document.write('<html><head><title>Laporan Data Keluarga & Sensus Warga RT 05 Kayen</title>');
+        printWindow.document.write('<style>');
+        printWindow.document.write('body { font-family: Arial, sans-serif; padding: 30px; color: #111; }');
+        printWindow.document.write('h2 { text-align: center; color: #0288d1; margin-bottom: 5px; font-size: 18px; }');
+        printWindow.document.write('.subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 15px; }');
+        printWindow.document.write('.info-box { display: flex; justify-content: space-around; background: #f1f5f9; padding: 10px; border-radius: 6px; font-weight: bold; margin-bottom: 20px; font-size: 13px; border: 1px solid #cbd5e1; }');
+        printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; }');
+        printWindow.document.write('th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: left; vertical-align: top; }');
+        printWindow.document.write('th { background-color: #0288d1; color: white; font-weight: bold; }');
+        printWindow.document.write('tr:nth-child(even) { background-color: #f8fafc; }');
+        printWindow.document.write('</style>');
+        printWindow.document.write('</head><body>');
+        
+        printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN REKAPITULASI KEPENDUDUKAN</h2>');
+        printWindow.document.write(`<div class="subtitle">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}</div>`);
+        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK}</div><div>Total Jiwa / Warga: ${totalJiwa}</div></div>`);
+        
+        printWindow.document.write('<table>');
+        printWindow.document.write('<thead><tr><th style="width: 20%;">No. Rumah / Lokasi</th><th style="width: 35%;">Kepala Keluarga</th><th style="width: 45%;">Anggota Keluarga</th></tr></thead>');
+        printWindow.document.write('<tbody>');
+
+        snapshot.forEach(child => {
+            const data = child.val();
+            const noRumah = data.noRumah || data.rumah || child.key || '-';
+            const kepala = data.kepalaKeluarga || data.nama || '-';
+            const anggota = data.anggota || data.keterangan || '-';
+
+            printWindow.document.write(`<tr><td><b>${noRumah}</b></td><td>${kepala}</td><td>${anggota}</td></tr>`);
+        });
+
+        printWindow.document.write('</tbody></table>');
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.focus();
+        
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 600);
+    } catch (err) {
+        alert("Gagal mencetak data: " + err.message);
+    }
+}
 
     function bukaModalLaporan() {
       const today = new Date().toISOString().split('T')[0];
