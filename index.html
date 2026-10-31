@@ -2767,14 +2767,15 @@ function bukaModalCatatanRonda() {
         let htmlList = '';
         let totalNominalMalamMinggu = 0;
 
-        // Ubah objek dari Firebase menjadi array dan balik urutannya agar yang terbaru di atas
         let items = Object.values(dataObj).reverse();
 
         items.forEach(item => {
-          let warga = item.nama_warga || '-';
+          // 🌟 Pengecekan ganda untuk membaca properti 'warga' atau 'nama_warga'
+          let warga = item.warga || item.nama_warga || item.nama || '-';
           let nominal = parseInt(item.nominal, 10) || 0;
-          let waktu = item.tanggal_waktu || '-';
-          let ket = item.keterangan || 'Catatan Malam Minggu';
+          // 🌟 Pengecekan ganda untuk membaca format tanggal lama & baru
+          let waktu = item.tanggal || item.tanggal_waktu || '-';
+          let ket = item.keterangan || item.kelompokMalam || 'Catatan Malam Minggu';
 
           totalNominalMalamMinggu += nominal;
 
