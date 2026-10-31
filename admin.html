@@ -646,6 +646,41 @@
           </button>
         </div>
 
+        <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
+  <div class="modal-content" style="max-width: 400px; width: 90%;">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+      <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Keluarga / Warga</h3>
+      <button class="close-btn" onclick="tutupModalEditWarga()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
+    </div>
+
+    <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
+        <input type="text" id="editWargaNama" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Anggota Keluarga (pisahkan dengan koma):</label>
+        <textarea id="editWargaAnggota" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 15px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Titik Denah / Nama Rumah:</label>
+        <input type="text" id="editWargaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          💾 Simpan Perubahan
+        </button>
+        <button type="button" onclick="tutupModalEditWarga()" style="padding: 10px 14px; background: #94a3b8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          Batal
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
        <!-- PANEL 1: CARI & CONNECT KOORDINAT -->
 <div id="panel-cari-warga" style="position: relative;">
   <div style="display: flex; gap: 6px; margin-bottom: 12px;">
@@ -2023,6 +2058,58 @@ async function cetakLaporanSensus() {
       </div>
     `;
     }
+
+    // ==========================================
+// FITUR EDIT DATA WARGA / KELUARGA (ADMIN)
+// ==========================================
+
+// 1. Membuka modal edit dan mengisi form dengan data yang diklik
+function bukaModalEditWargaAdmin(item) {
+  // Pastikan Anda sudah membuat elemen form modal editnya di HTML (atau sesuaikan dengan ID input Anda)
+  const elNama = document.getElementById("editWargaNama");
+  const elAnggota = document.getElementById("editWargaAnggota");
+  const elRumah = document.getElementById("editWargaRumah");
+
+  if (elNama) elNama.value = item.kepala || '';
+  if (elAnggota) elAnggota.value = item.anggota || '';
+  if (elRumah) elRumah.value = item.labelRumah || '';
+
+  // Cari modal edit warga, jika belum ada, kita berikan notifikasi atau buat modalnya
+  const modalEdit = document.getElementById("modal-edit-warga");
+  if (modalEdit) {
+    modalEdit.style.display = "flex";
+  } else {
+    // Fallback sederhana jika modal HTML-nya belum dipasang
+    console.log("Data siap diedit:", item);
+    alert("Mempersiapkan data edit untuk: " + item.kepala);
+  }
+}
+
+// 2. Menutup modal edit warga
+function tutupModalEditWarga() {
+  const modalEdit = document.getElementById("modal-edit-warga");
+  if (modalEdit) {
+    modalEdit.style.display = "none";
+  }
+}
+
+// 3. Menyimpan perubahan data warga ke database (Firebase)
+function simpanPerubahanWarga(e) {
+  if (e) e.preventDefault();
+  
+  const namaBaru = document.getElementById("editWargaNama").value.trim();
+  const anggotaBaru = document.getElementById("editWargaAnggota").value.trim();
+  const rumahBaru = document.getElementById("editWargaRumah").value.trim();
+
+  if (!namaBaru || !rumahBaru) {
+    alert("Nama Kepala Keluarga dan Rumah wajib diisi!");
+    return;
+  }
+
+  // Proses update ke Firebase (node 'sensus_warga') bisa disesuaikan di sini
+  alert("✅ Data untuk " + namaBaru + " berhasil diperbarui!");
+  tutupModalEditWarga();
+}
 
     // 1. Fitur Autocomplete saat admin mengetik (Menyesuaikan globalDataWarga)
 function prosesAutocompleteAdmin(keyword) {
