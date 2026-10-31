@@ -531,8 +531,8 @@ function perbaruiAplikasiSekarang() {
 
   <div id="top-panel">
     <div id="search-box">
-      <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
-      <button onclick="cariLokasi()">Cari</button>
+  <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); jalankanPencarianPeta(); }">
+  <button onclick="jalankanPencarianPeta()">Cari</button>
     </div>
     
     <div class="filter-container">
@@ -1408,7 +1408,43 @@ function muatDataPetaWarga() {
     console.error("Gagal memuat peta warga dari Firebase RTDB:", error);
   });
 }
-    
+
+function jalankanPencarianPeta() {
+  var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
+  if (!kataKunci) return;
+
+  // Memanggil fungsi cariLokasi universal yang ada di utils.js
+  // Kita passing daftarPin sebagai sumber datanya
+  cariLokasi(kataKunci, daftarPin, function(hasilPencarian) {
+    if (hasilPencarian && hasilPencarian.length > 0) {
+      // Ambil hasil pertama yang cocok dari pencarian universal
+      var hasil = hasilPencarian[0]; 
+      
+      if (hasil.marker) {
+        if (typeof pinRumahAktif !== 'undefined' && pinRumahAktif) { 
+          map.removeLayer(pinRumahAktif); 
+          pinRumahAktif = null; 
+        }
+        if (!map.hasLayer(hasil.marker)) {
+          hasil.marker.addTo(map);
+          pinRumahAktif = hasil.marker;
+        }
+
+        var pointM = map.project([hasil.lat, hasil.lng], 19);
+        var pointC = L.point(pointM.x, pointM.y - 200);
+        map.flyTo(map.unproject(pointC, 19), 19);
+
+        map.once('moveend', function() {
+          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+          hasil.marker.openPopup();
+        });
+      }
+    } else {
+      alert("Nomor atau nama tempat tidak ditemukan.");
+    }
+  });
+}
+   
 function muatPengumumanFirebase() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
     setTimeout(muatPengumumanFirebase, 50);
@@ -1794,40 +1830,7 @@ function sorotLokasi(lokasiEncoded) {
   }
 }
 
-function cariLokasi() {
-  var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
-  if (!kataKunci) return;
 
-  var hasil = daftarPin.find(pin => String(pin.namaRaw || '').toLowerCase() === kataKunci);
-
-  if (!hasil && /^\d+$/.test(kataKunci)) {
-    var angkaCari = parseInt(kataKunci, 10);
-    hasil = daftarPin.find(pin => String(pin.nama || '').split(/[\s,().-]+/).some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari));
-  }
-
-  if (!hasil && !/^\d+$/.test(kataKunci)) {
-    hasil = daftarPin.find(pin => String(pin.nama || '').includes(kataKunci));
-  }
-  
-  if (hasil) {
-    if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
-    if (!map.hasLayer(hasil.marker)) {
-      hasil.marker.addTo(map);
-      pinRumahAktif = hasil.marker;
-    }
-
-    var pointM = map.project([hasil.lat, hasil.lng], 19);
-    var pointC = L.point(pointM.x, pointM.y - 200);
-    map.flyTo(map.unproject(pointC, 19), 19);
-
-    map.once('moveend', function() {
-      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-      hasil.marker.openPopup();
-    });
-  } else {
-    alert("Nomor atau nama tempat tidak ditemukan.");
-  }
-}
 
    // 🛠️ FUNGSI FILTER PETA LENGKAP UNTUK INDEX.HTML (MODE WARGA)
 function filterKategori(kat, btnElement) {
