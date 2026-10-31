@@ -1570,19 +1570,35 @@ function formatRupiahInput(el) {
       }
     }
 
-    async function prosesPengembalian(id) {
-      if (confirm("Apakah barang ini sudah dikembalikan?")) {
-        try {
-          const peminjamanRef = window.firebaseRef(window.db, 'peminjaman/' + id);
-          await window.firebaseRemove(peminjamanRef);
+   async function prosesPengembalian(id) {
+  if (confirm("Apakah barang ini sudah dikembalikan?")) {
+    try {
+      // 1. Ambil data peminjaman yang aktif saat ini
+      const peminjamanRef = window.firebaseRef(window.db, 'peminjaman/' + id);
+      const snapshot = await window.firebaseGet(peminjamanRef);
 
-          alert("✅ Status barang berhasil diperbarui (dikembalikan)!");
-          muatPeminjamanAdmin();
-        } catch (err) {
-          alert("❌ Gagal memperbarui status pengembalian: " + err.message);
-        }
+      if (snapshot.exists()) {
+        const dataPinjam = snapshot.val();
+        
+        // 2. Tambahkan informasi status dan tanggal pengembalian
+        dataPinjam.status = "Dikembalikan";
+        dataPinjam.tglKembali = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        // 3. Simpan ke node arsip baru di Firebase ('riwayat_peminjaman')
+        const riwayatRef = window.firebaseRef(window.db, 'riwayat_peminjaman/' + id);
+        await window.firebaseSet(riwayatRef, dataPinjam);
+
+        // 4. Setelah berhasil diarsip, baru hapus dari daftar peminjaman aktif
+        await window.firebaseRemove(peminjamanRef);
+
+        alert("✅ Status barang berhasil diperbarui dan masuk ke riwayat arsip!");
+        muatPeminjamanAdmin();
       }
+    } catch (err) {
+      alert("❌ Gagal memperbarui status pengembalian: " + err.message);
     }
+  }
+}
 
     function bukaModalKelolaWarga() {
       const modal = document.getElementById('modal-kelola-warga');
