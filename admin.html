@@ -1627,26 +1627,26 @@ function formatRupiahInput(el) {
       }
     }
 
-    // 1. Fungsi Unduh Data Sensus / Keluarga ke Excel (CSV)
+    // 1. Fungsi Unduh Data Sensus ke Excel (CSV) - Mengambil dari node 'sensus_warga'
 async function exportSensusToCSV() {
     try {
-        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'peta_warga'));
+        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'sensus_warga'));
         if (!snapshot.exists()) {
-            alert("Tidak ada data warga di database.");
+            alert("Tidak ada data sensus warga di database.");
             return;
         }
 
         let csvContent = "\uFEFF";
         csvContent += `"LAPORAN DATA KELUARGA & SENSUS WARGA RT 05 KAYEN"\n\n`;
-        csvContent += `"No. Rumah / Lokasi";"Nama Kepala Keluarga";"Anggota Keluarga"\n`;
+        csvContent += `"Nama Rumah / Lokasi";"Nama Kepala Keluarga";"Anggota Keluarga"\n`;
 
         snapshot.forEach(child => {
             const data = child.val();
-            const noRumah = (data.noRumah || data.rumah || child.key || '').replace(/"/g, '""');
-            const kepala = (data.kepalaKeluarga || data.nama || '-').replace(/"/g, '""');
-            const anggota = (data.anggota || data.keterangan || '-').replace(/\n/g, ', ').replace(/"/g, '""');
+            const namaRumah = (data.namaRumah || '-').replace(/"/g, '""');
+            const kepala = (data.kepalaKeluarga || '-').replace(/"/g, '""');
+            const anggota = (data.anggotaKeluarga || '-').replace(/\n/g, ', ').replace(/"/g, '""');
 
-            csvContent += `"${noRumah}";"${kepala}";"${anggota}"\n`;
+            csvContent += `"${namaRumah}";"${kepala}";"${anggota}"\n`;
         });
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -1662,10 +1662,10 @@ async function exportSensusToCSV() {
     }
 }
 
-// 2. Fungsi Cetak / Simpan ke PDF untuk Data Sensus
+// 2. Fungsi Cetak / Simpan ke PDF untuk Data Sensus - Mengambil dari node 'sensus_warga'
 async function cetakLaporanSensus() {
     try {
-        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'peta_warga'));
+        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'sensus_warga'));
         if (!snapshot.exists()) {
             alert("Tidak ada data warga untuk dicetak.");
             return;
@@ -1693,16 +1693,16 @@ async function cetakLaporanSensus() {
         printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK}</div><div>Total Jiwa / Warga: ${totalJiwa}</div></div>`);
         
         printWindow.document.write('<table>');
-        printWindow.document.write('<thead><tr><th style="width: 20%;">No. Rumah / Lokasi</th><th style="width: 35%;">Kepala Keluarga</th><th style="width: 45%;">Anggota Keluarga</th></tr></thead>');
+        printWindow.document.write('<thead><tr><th style="width: 25%;">Nama Rumah / Lokasi</th><th style="width: 35%;">Kepala Keluarga</th><th style="width: 40%;">Anggota Keluarga</th></tr></thead>');
         printWindow.document.write('<tbody>');
 
         snapshot.forEach(child => {
             const data = child.val();
-            const noRumah = data.noRumah || data.rumah || child.key || '-';
-            const kepala = data.kepalaKeluarga || data.nama || '-';
-            const anggota = data.anggota || data.keterangan || '-';
+            const namaRumah = data.namaRumah || '-';
+            const kepala = data.kepalaKeluarga || '-';
+            const anggota = data.anggotaKeluarga || '-';
 
-            printWindow.document.write(`<tr><td><b>${noRumah}</b></td><td>${kepala}</td><td>${anggota}</td></tr>`);
+            printWindow.document.write(`<tr><td><b>${namaRumah}</b></td><td>${kepala}</td><td>${anggota}</td></tr>`);
         });
 
         printWindow.document.write('</tbody></table>');
