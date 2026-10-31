@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.5.9';  
+const CACHE_NAME = 'rt-kayen-v1.6.0';  
 
 // 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker agar background push FCM tidak macet
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
