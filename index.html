@@ -2390,7 +2390,8 @@ let denahTimer = null;
       let rawNominal = 0;
 
       if (dataInput && typeof dataInput === 'object') {
-        rawWarga = dataInput.warga || dataInput.nama || '';
+        // Mendukung berbagai variasi properti nama dari objek input/scan QR
+        rawWarga = dataInput.warga || dataInput.nama || dataInput.nama_warga || '';
         rawNominal = parseInt(dataInput.nominal, 10) || 0;
       } else {
         let elNama = document.getElementById('jimpitanNamaWarga');
@@ -2398,21 +2399,24 @@ let denahTimer = null;
 
         rawWarga = elNama ? elNama.value.trim() : '';
         rawNominal = parseInt(elNominal ? elNominal.value : 0, 10);
+      }
 
-        if (!rawWarga) {
-          alert("Nama warga / rumah belum terisi!");
-          return;
-        }
+      // Validasi dipindah ke luar agar berlaku untuk objek maupun input manual
+      if (!rawWarga) {
+        alert("Nama warga / rumah belum terisi!");
+        return;
       }
 
       let infoMalam = getInfoMalamRonda(new Date());
       let targetNode = infoMalam.masukTabel ? 'jimpitan' : 'catatan_ronda';
 
+      // Sertakan properti ganda (warga & nama_warga) agar aman dan kompatibel dengan semua modul tampilan
       let dataBaru = {
         targetNode: targetNode,
         kelompokMalam: infoMalam.kelompokMalam,
         tanggal: new Date().toLocaleString('id-ID'),
         warga: rawWarga,
+        nama_warga: rawWarga, // Kompatibilitas dengan catatan lama
         nominal: rawNominal
       };
 
