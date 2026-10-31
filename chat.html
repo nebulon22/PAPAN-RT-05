@@ -2601,8 +2601,7 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
 }
       
 
-    // Fungsi pembuat warna unik otomatis dari 360° roda warna (menghasilkan jutaan variasi)
-// Fungsi pembuat warna unik (Eksklusif: Menghindari rentang warna kuning agar tidak sama dengan self)
+// Fungsi pembuat warna unik (Eksklusif: Menghindari rentang kuning & biru admin)
   function getUniqueColorFromName(name) {
     if (!name) return '#ffffff';
     let hash = 0;
@@ -2611,9 +2610,18 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
     }
     
     let hue = Math.abs(hash) % 360;
+
+    // 1. Pengecualian untuk rentang warna kuning (agar tidak sama dengan 'self')
     if (hue >= 35 && hue <= 75) {
       hue = (hue + 50) % 360;
     }
+
+    // 2. Pengecualian untuk rentang warna biru muda (agar tidak sama dengan 'admin')
+    // Rentang 180° sampai 220° adalah area biru muda/cyan
+    if (hue >= 180 && hue <= 220) {
+      hue = (hue + 60) % 360;
+    }
+
     return `hsl(${hue}, 80%, 65%)`;
   }
     
