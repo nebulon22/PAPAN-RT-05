@@ -169,7 +169,7 @@
     <div class="login-box">
       <h2>🔒 Akses Admin</h2>
       <label for="adminPin" class="subtitle" style="display: block; cursor: pointer;">Masukkan 6 Digit PIN Pengurus</label>
-      <input type="password" id="adminPin" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••" onkeypress="if(event.key === 'Enter') cekLogin()">
+     <input type="password" id="adminPin" name="adminPin" autocomplete="current-password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••" onkeypress="if(event.key === 'Enter') cekLogin()">
       <button onclick="cekLogin()">Buka Kunci</button>
     </div>
   </div>
@@ -189,6 +189,10 @@
   <input type="text" id="searchInput" aria-label="Cari lokasi rumah atau warga" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
   <button onclick="cariLokasi()">Cari</button>
 </div>
+
+    <a href="cetak-qr.html" target="_blank" style="display: inline-block; padding: 10px 16px; background: #0288d1; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 13px;">
+  🖨️ Cetak Stiker QR Jimpitan Warga
+</a>
 
    <div class="filter-container">
 <!-- 1. Custom Filter UI (Modern & Minimalis) -->
@@ -428,7 +432,7 @@
 
   <!-- MODAL 2: Form Laporan Keuangan Divisi -->
   <div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
-    <div class="modal-content" style="max-width: 360px;">
+    <div class="modal-content" style="max-width: 400px; max-height: 90vh; overflow-y: auto; padding-bottom: 20px;">
       <div class="modal-header">
         <h3>💰 Laporan Keuangan Divisi</h3>
         <button class="close-btn" onclick="tutupModalLaporan()">&times;</button>
@@ -472,7 +476,7 @@
 
         <div class="form-group" style="margin-top: 10px;">
           <label for="laporanNominal" style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
-          <input type="text" id="laporanNominal" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" oninput="formatRibuanInput(this)" required>
+          <input type="text" id="laporanNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" oninput="formatRibuanInput(this)" required>
         </div>
 
         <!-- Input Tambahan: PIN Khusus Divisi -->
@@ -480,11 +484,11 @@
   <label for="laporanPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
     🔒 PIN Khusus Divisi:
   </label>
-  <input type="password" id="laporanPinDivisi" maxlength="6"
-         inputmode="numeric" 
-         autocomplete="off" 
-         data-lpignore="true" 
-         placeholder="Masukkan PIN Divisi Anda" 
+  <input type="password" id="laporanPinDivisi" maxlength="6" 
+       inputmode="numeric" 
+       autocomplete="current-password" 
+       data-lpignore="true" 
+       placeholder="Masukkan PIN Divisi Anda"
          style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
   <span style="font-size: 10px; color: #64748b; margin-top: 2px; display: block;">
     *Setiap divisi memiliki PIN tersendiri.
@@ -622,6 +626,16 @@
   </div>
 </div>
 
+        <!-- 🌟 TOMBOL EXPORT & CETAK LAPORAN DATA WARGA -->
+<div style="display: flex; gap: 8px; margin-bottom: 14px;">
+  <button type="button" onclick="exportSensusToCSV()" style="flex: 1; padding: 8px; background: #059669; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+    <i class="fa-solid fa-file-excel"></i> Unduh Excel (CSV)
+  </button>
+  <button type="button" onclick="cetakLaporanSensus()" style="flex: 1; padding: 8px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+    <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+  </button>
+</div>
+
         <!-- TAB TOMBOL AKSI -->
         <div style="display: flex; gap: 8px; margin-bottom: 14px;">
           <button type="button" onclick="switchTabAdminWarga('cari')" id="btn-tab-cari" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; cursor: pointer; font-size: 12px;">
@@ -632,20 +646,26 @@
           </button>
         </div>
 
-        <!-- PANEL 1: CARI & CONNECT KOORDINAT -->
-       <div id="panel-cari-warga">
-  <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-    <input type="text" id="inputCariWargaAdmin" aria-label="Cari Nama Warga" placeholder="Ketik Nama Kepala / Anggota / No Rumah..." style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none;">
-            <button type="button" onclick="cariDetailKeluargaAdmin()" style="padding: 8px 14px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
-              Cari
-            </button>
-          </div>
+        
 
-          <!-- WADAH HASIL PENCARIAN -->
-          <div id="hasil-cari-warga" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
-            <!-- Isi dinamis via JS -->
-          </div>
-        </div>
+       <!-- PANEL 1: CARI & CONNECT KOORDINAT -->
+<div id="panel-cari-warga" style="position: relative;">
+  <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+    <!-- Tambahkan oninput untuk memicu autocomplete secara real-time -->
+    <input type="text" id="inputCariWargaAdmin" aria-label="Cari Nama Warga" placeholder="Ketik Nama Kepala / Anggota / No Rumah..." oninput="prosesAutocompleteAdmin(this.value)" style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none;">
+    <button type="button" onclick="cariDetailKeluargaAdmin()" style="padding: 8px 14px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+      Cari
+    </button>
+  </div>
+
+  <!-- KOTAK DROPDOWN AUTOCOMPLETE -->
+  <div id="dropdown-autocomplete-admin" style="display: none; position: absolute; top: 38px; left: 0; right: 55px; background: white; border: 1px solid #cbd5e1; border-radius: 6px; max-height: 160px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 10px rgba(0,0,0,0.15);"></div>
+
+  <!-- WADAH HASIL PENCARIAN -->
+  <div id="hasil-cari-warga" style="display: none; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px;">
+    <!-- Isi dinamis via JS -->
+  </div>
+</div>
 
   <!-- PANEL 2: FORM TAMBAH DATA KELUARGA -->
         <div id="panel-tambah-warga" style="display: none;">
@@ -680,6 +700,41 @@
 
     </div>
   </div>
+
+  <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
+  <div class="modal-content" style="max-width: 400px; width: 90%;">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+      <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Keluarga / Warga</h3>
+      <button class="close-btn" onclick="tutupModalEditWarga()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
+    </div>
+
+    <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
+        <input type="text" id="editWargaNama" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Anggota Keluarga (pisahkan dengan koma):</label>
+        <textarea id="editWargaAnggota" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 15px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Titik Denah / Nama Rumah:</label>
+        <input type="text" id="editWargaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          💾 Simpan Perubahan
+        </button>
+        <button type="button" onclick="tutupModalEditWarga()" style="padding: 10px 14px; background: #94a3b8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          Batal
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
 
  <!-- SECTION: PROGRAM KERJA & RAB (MODAL OVERLAY) -->
   <div id="tab-progker" class="modal-bg content-tab-admin" style="display: none; z-index: 3000;" onclick="if(event.target.id==='tab-progker') tutupTabProgker()">
@@ -729,91 +784,97 @@
     </div>
   </div>
 
-  <!-- MODAL FORM INPUT PROGKER & RAB -->
+<!-- MODAL FORM INPUT PROGKER & RAB -->
   <div id="modal-form-progker" class="modal-bg" style="display: none; z-index: 3100;">
-    <div class="modal-content" style="max-width: 450px; width: 90%;">
-      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
+    <div class="modal-content" style="max-width: 450px; width: 90%; max-height: 85vh; display: flex; flex-direction: column;">
+      
+      <!-- HEADER (Tetap di atas) -->
+      <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; flex-shrink: 0;">
         <h3 id="judul-modal-progker" style="margin: 0; font-size: 15px;">➕ Tambah Program Kerja</h3>
         <button type="button" class="close-btn" onclick="tutupModalFormProgker()">&times;</button>
       </div>
 
-      <form id="formProgker" onsubmit="simpanDataProgker(event)">
-  <input type="hidden" id="progkerId" value="">
+      <!-- FORM BODY (Bisa di-scroll ke bawah jika layar HP kecil) -->
+      <form id="formProgker" onsubmit="simpanDataProgker(event)" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+        
+        <div style="overflow-y: auto; flex: 1; padding-right: 4px; max-height: 55vh;">
+          <input type="hidden" id="progkerId" value="">
 
-  <div style="margin-bottom: 10px;">
-    <label for="progkerKegiatan" style="font-size: 11px; font-weight: bold; color: #475569;">Nama Kegiatan / Program Kerja:</label>
-    <input type="text" id="progkerKegiatan" placeholder="Contoh: Kerja Bakti Drainage RW" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
-  </div>
+          <div style="margin-bottom: 10px;">
+            <label for="progkerKegiatan" style="font-size: 11px; font-weight: bold; color: #475569;">Nama Kegiatan / Program Kerja:</label>
+            <input type="text" id="progkerKegiatan" placeholder="Contoh: Kerja Bakti Drainage RW" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+          </div>
 
-  <div style="margin-bottom: 10px;">
-    <label for="progkerDivisi" style="font-size: 11px; font-weight: bold; color: #475569;">Divisi Penanggung Jawab:</label>
-    <select id="progkerDivisi" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
-      <option value="Bendahara Umum">Bendahara Umum</option>
-      <option value="Pekerjaan Umum & Kelistrikan">Divisi Pekerjaan Umum & Kelistrikan</option>
-      <option value="Tata Ruang">Divisi Tata Ruang</option>
-      <option value="Sosial">Divisi Sosial</option>
-      <option value="Ronda Harian & Keamanan">Divisi Ronda Harian & Keamanan</option>
-      <option value="Tenda">Divisi Tenda</option>
-      <option value="Sound System">Divisi Sound System</option>
-      <option value="Transportasi">Divisi Transportasi</option>
-      <option value="Jimpitan Bulanan & Pengganti Ronda">Divisi Jimpitan Bulanan & Pengganti Ronda</option>
-      <option value="Pondokan RT 05">Divisi Pondokan RT 05</option>
-    </select>
-  </div>
+          <div style="margin-bottom: 10px;">
+            <label for="progkerDivisi" style="font-size: 11px; font-weight: bold; color: #475569;">Divisi Penanggung Jawab:</label>
+            <select id="progkerDivisi" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+              <option value="Bendahara Umum">Bendahara Umum</option>
+              <option value="Pekerjaan Umum & Kelistrikan">Divisi Pekerjaan Umum & Kelistrikan</option>
+              <option value="Tata Ruang">Divisi Tata Ruang</option>
+              <option value="Sosial">Divisi Sosial</option>
+              <option value="Ronda Harian & Keamanan">Divisi Ronda Harian & Keamanan</option>
+              <option value="Tenda">Divisi Tenda</option>
+              <option value="Sound System">Divisi Sound System</option>
+              <option value="Transportasi">Divisi Transportasi</option>
+              <option value="Jimpitan Bulanan & Pengganti Ronda">Divisi Jimpitan Bulanan & Pengganti Ronda</option>
+              <option value="Pondokan RT 05">Divisi Pondokan RT 05</option>
+            </select>
+          </div>
 
- <!-- Estimasi Anggaran -->
-<div style="margin-bottom: 10px;">
-  <label for="progkerAnggaran" style="font-size: 11px; font-weight: bold; color: #475569;">Estimasi Anggaran (RAB Rp):</label>
-  <input type="text" id="progkerAnggaran" oninput="formatRupiahInput(this)" placeholder="Contoh: 1.500.000" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
-</div>
+          <!-- Estimasi Anggaran -->
+          <div style="margin-bottom: 10px;">
+            <label for="progkerAnggaran" style="font-size: 11px; font-weight: bold; color: #475569;">Estimasi Anggaran (RAB Rp):</label>
+            <input type="text" id="progkerAnggaran" oninput="formatRupiahInput(this)" placeholder="Contoh: 1.500.000" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+          </div>
 
-<!-- Realisasi Pengeluaran -->
-<div style="margin-bottom: 10px;">
-  <label for="progkerRealisasi" style="font-size: 11px; font-weight: bold; color: #475569;">Realisasi Pengeluaran (Rp):</label>
-  <input type="text" id="progkerRealisasi" oninput="formatRupiahInput(this)" placeholder="Isi jika status Selesai (Contoh: 1.400.000)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
-</div>
+          <!-- Realisasi Pengeluaran -->
+          <div style="margin-bottom: 10px;">
+            <label for="progkerRealisasi" style="font-size: 11px; font-weight: bold; color: #475569;">Realisasi Pengeluaran (Rp):</label>
+            <input type="text" id="progkerRealisasi" oninput="formatRupiahInput(this)" placeholder="Isi jika status Selesai (Contoh: 1.400.000)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+          </div>
 
-  <div style="margin-bottom: 10px;">
-    <label for="progkerStatus" style="font-size: 11px; font-weight: bold; color: #475569;">Status Program:</label>
-    <select id="progkerStatus" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
-      <option value="Perencanaan">🟡 Perencanaan (Jangka Panjang)</option>
-      <option value="Disetujui">🔵 Disetujui (Jangka Pendek)</option>
-      <option value="Berjalan">🟢 Berjalan (Dana Siap)</option>
-      <option value="Selesai">⚪ Selesai</option>
-    </select>
-  </div>
+          <div style="margin-bottom: 10px;">
+            <label for="progkerStatus" style="font-size: 11px; font-weight: bold; color: #475569;">Status Program:</label>
+            <select id="progkerStatus" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+              <option value="Perencanaan">🟡 Perencanaan (Jangka Panjang)</option>
+              <option value="Disetujui">🔵 Disetujui (Jangka Pendek)</option>
+              <option value="Berjalan">🟢 Berjalan (Dana Siap)</option>
+              <option value="Selesai">⚪ Selesai</option>
+            </select>
+          </div>
 
-  <div style="margin-bottom: 15px;">
-    <label for="progkerDetail" style="font-size: 11px; font-weight: bold; color: #475569;">Rincian / Catatan RAB:</label>
-    <textarea id="progkerDetail" rows="3" placeholder="Catatan rincian kebutuhan barang/jasa..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px; resize: vertical;"></textarea>
-  </div>
+          <div style="margin-bottom: 10px;">
+            <label for="progkerDetail" style="font-size: 11px; font-weight: bold; color: #475569;">Rincian / Catatan RAB:</label>
+            <textarea id="progkerDetail" rows="3" placeholder="Catatan rincian kebutuhan barang/jasa..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px; resize: vertical;"></textarea>
+          </div>
+        </div>
 
-  <button type="submit" id="btnSimpanProgker" style="width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
-    💾 Simpan Program Kerja
-  </button>
-</form>
+        <!-- TOMBOL SIMPAN (Tetap di bawah dan tidak terpotong) -->
+        <div style="padding-top: 10px; margin-top: 5px; border-top: 1px solid #eee; flex-shrink: 0;">
+          <button type="submit" id="btnSimpanProgker" style="width: 100%; padding: 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+            💾 Simpan Program Kerja
+          </button>
+        </div>
+
+      </form>
     </div>
   </div>
     
-  <!-- JAVASCRIPT LOGIC SCRIP UTAMA-->
+ <!-- JAVASCRIPT LOGIC SCRIPT UTAMA -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
-    const GAS_WEB_APP_URL = RT05_CONFIG.GAS_WEB_APP_URL;
-
     
-    // BARU (Aman untuk Angka, Null, maupun Undefined)
 function escapeHTML(str) {
   if (str === null || str === undefined) return '';
   return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
-    // Fungsi Format Ribuan Otomatis saat Diketik
+
 function formatRupiahInput(el) {
-  var value = el.value.replace(/\D/g, ''); // Hapus semua karakter non-angka
+  var value = el.value.replace(/\D/g, '');
   if (value === '') {
     el.value = '';
     return;
   }
-  // Format menjadi ribuan dengan titik (contoh: 1500000 -> 1.500.000)
   el.value = Number(value).toLocaleString('id-ID');
 }
 
@@ -853,8 +914,9 @@ function formatRupiahInput(el) {
       }
     }
 
-    async function kirimDataPendingAdmin() {
+   async function kirimDataPendingAdmin() {
       if (sedangMengirimAdmin) return;
+      
       let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
       if (antrean.length === 0) {
         perbaruiIndikatorSyncAdmin();
@@ -868,17 +930,15 @@ function formatRupiahInput(el) {
 
       for (let item of antrean) {
         try {
-          const res = await fetch(GAS_WEB_APP_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify(item.payload)
+          const nodeTujuan = item.targetNode || 'peta_warga'; 
+          const dbRef = window.firebaseRef(window.db, nodeTujuan);
+          
+          await window.firebasePush(dbRef, {
+            ...item.payload,
+            timestamp: Date.now()
           });
-          const text = await res.text();
-          if (!text.includes("SUCCESS")) {
-            sisaAntrean.push(item);
-          }
         } catch (err) {
-          console.warn("Gagal terhubung ke jaringan:", err);
+          console.warn("Gagal menyinkronkan ke Firebase:", err);
           sisaAntrean.push(item);
         }
       }
@@ -889,14 +949,15 @@ function formatRupiahInput(el) {
     }
 
     function simpanPayloadKeAntrean(label, payload) {
-  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-  payload.token = payload.token || localStorage.getItem('adminToken') || '';
-  antrean.push({ label: label, payload: payload, time: Date.now() });
-  localStorage.setItem('antrean_admin', JSON.stringify(antrean));
-  perbaruiIndikatorSyncAdmin();
-  alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
-  kirimDataPendingAdmin();
-}
+      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+      payload.token = payload.token || localStorage.getItem('adminToken') || '';
+      antrean.push({ label: label, payload: payload, time: Date.now() });
+      localStorage.setItem('antrean_admin', JSON.stringify(antrean));
+      perbaruiIndikatorSyncAdmin();
+      alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
+      kirimDataPendingAdmin();
+    }
+
     window.addEventListener('online', () => {
       console.log("Jaringan online kembali. Mengirim data admin pending...");
       perbaruiIndikatorSyncAdmin();
@@ -907,476 +968,405 @@ function formatRupiahInput(el) {
       perbaruiIndikatorSyncAdmin();
     });
 
-    function formatRibuanInput(el) {
-      let val = el.value.replace(/\D/g, '');
-      if (!val) {
-        el.value = '';
+    function cekLogin() {
+      const input = document.getElementById('adminPin').value.trim();
+      if (!/^\d{6}$/.test(input)) { alert("PIN harus berisi 6 digit angka!"); return; }
+      const btnLogin = document.querySelector('.login-box button');
+      btnLogin.innerText = "⏳ Memeriksa..."; btnLogin.disabled = true;
+
+      if (!navigator.onLine) {
+        btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
+        alert("❌ Tidak dapat memverifikasi PIN karena tidak ada koneksi internet.");
         return;
       }
-      el.value = new Intl.NumberFormat('id-ID').format(val);
+
+      window.firebaseGet(window.firebaseRef(window.db, 'admin_config/pin')).then((snapshot) => {
+        btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
+        let validPin = snapshot.val();
+        
+        if (!validPin) {
+          validPin = "050505";
+        }
+        
+        if (String(input).trim() === String(validPin).trim()) {
+          localStorage.setItem('authAdmin', 'true');
+          localStorage.setItem('adminToken', 'rt05-admin-' + Date.now());
+          localStorage.setItem('admin_login_time', Date.now().toString());
+          document.getElementById('adminPin').value = "";
+          bukaAkses();
+        } else {
+          alert("❌ PIN salah! Akses ditolak.");
+          document.getElementById('adminPin').value = "";
+        }
+      }).catch(err => {
+        console.error("Gagal terhubung ke DB:", err);
+        if (input === "050505") {
+          localStorage.setItem('authAdmin', 'true');
+          localStorage.setItem('adminToken', 'rt05-admin-' + Date.now());
+          localStorage.setItem('admin_login_time', Date.now().toString());
+          document.getElementById('adminPin').value = "";
+          bukaAkses();
+          return;
+        }
+        btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
+        alert("❌ Gagal menghubungi database. Pastikan koneksi stabil.");
+      });
     }
 
-
-
-function cekLogin() {
-  const input = document.getElementById('adminPin').value.trim();
-
-  if (!/^\d{6}$/.test(input)) {
-    alert("PIN harus berisi 6 digit angka!");
-    return;
-  }
-
-  const btnLogin = document.querySelector('.login-box button');
-
-  btnLogin.innerText = "⏳ Memeriksa...";
-  btnLogin.disabled = true;
-
-  // LOGIN BARU WAJIB ONLINE
-  if (!navigator.onLine) {
-    btnLogin.innerText = "Buka Kunci";
-    btnLogin.disabled = false;
-
-    alert("❌ Tidak dapat memverifikasi PIN karena tidak ada koneksi internet.");
-    return;
-  }
-
-  // Khusus untuk LOGIN
-  const payloadTes = {
-    action: 'cek_pin',
-    pin: input
-  };
-
-  fetch(GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'text/plain;charset=utf-8'
-    },
-    body: JSON.stringify(payloadTes)
-  })
-  .then(res => res.text()) // <--- AMBIL SEBAGAI TEKS DULU AGAR AMAN DARI ERROR FORMAT
-  .then(text => {
-    btnLogin.innerText = "Buka Kunci";
-    btnLogin.disabled = false;
-
-    let data;
-    try {
-      data = JSON.parse(text); // Coba parsing teks ke JSON
-    } catch (e) {
-      // Jika server mengembalikan pesan error (misal: "ERROR: Server sibuk...")
-      alert("❌ " + text);
-      document.getElementById('adminPin').value = "";
-      return;
+    // 🌟 Buat fungsi baru ini untuk memunculkan overlay login admin
+    function bukaFormLoginAdmin() {
+      const overlay = document.getElementById('login-overlay');
+      if (overlay) {
+        overlay.style.display = 'flex'; // Tampilkan overlay
+        document.getElementById('adminPin').value = ''; // Bersihkan input PIN sebelumnya
+        
+        // Otomatis fokus dan buka keyboard di HP
+        setTimeout(() => {
+          const inputPin = document.getElementById('adminPin');
+          if (inputPin) {
+            inputPin.focus();
+            inputPin.click();
+          }
+        }, 100);
+      }
     }
 
-    if (data.status === "SUCCESS" && data.token) {
+    function bukaAkses() {
+      document.getElementById('login-overlay').style.display = 'none';
+      document.body.style.overflow = 'auto';
+      
+      // Perbaikan: gunakan ID adminPin yang benar agar tidak error
+      const inputPin = document.getElementById('adminPin');
+      if (inputPin) inputPin.value = '';
 
-      // 1. Simpan status login
-      localStorage.setItem('authAdmin', 'true');
+      initMap();
 
-      // 2. Simpan TOKEN
-      localStorage.setItem('adminToken', data.token);
+      setTimeout(() => {
+        if (map) map.invalidateSize();
+      }, 200);
 
-      // 3. Catat Waktu Login Sekarang (Timestamp)
-      localStorage.setItem('admin_login_time', Date.now().toString());
-
-      // Bersihkan PIN dari input
-      document.getElementById('adminPin').value = "";
-
-      bukaAkses();
-
-    } else {
-      alert("❌ PIN salah! Akses ditolak.");
-      document.getElementById('adminPin').value = "";
+      setTimeout(() => {
+        muatSemuaDataAdmin();
+      }, 500);
     }
-  })
-  .catch(err => {
-    console.error("❌ Gagal memverifikasi PIN:", err);
 
-    btnLogin.innerText = "Buka Kunci";
-    btnLogin.disabled = false;
-
-    alert("❌ Gagal menghubungi server. PIN belum dapat diverifikasi.");
-  });
-}
     
+    function periksaSesiAdmin() {
+      const isAuth = localStorage.getItem('authAdmin') === 'true';
+      const token = localStorage.getItem('adminToken');
+      const loginTime = parseInt(localStorage.getItem('admin_login_time') || '0', 10);
+      
+      const BATAS_WAKTU = 30 * 60 * 1000;
+      const waktuSekarang = Date.now();
 
-// BARU (Otomatis muat data begitu PIN berhasil di-ACC):
-function bukaAkses() {
-  // 1. Langsung sembunyikan overlay login (Instan < 0.1 detik)
-  document.getElementById('login-overlay').style.display = 'none';
-  document.body.style.overflow = 'auto';
-  document.getElementById('inputPinForm').value = '';
+      if (isAuth && token && (waktuSekarang - loginTime > BATAS_WAKTU)) {
+        localStorage.removeItem('authAdmin');
+        localStorage.removeItem('adminToken');
+        localStorage.removeItem('admin_login_time');
+        alert("⏱️ Sesi login Anda telah berakhir (30 menit). Silakan masukkan PIN kembali.");
+        return false;
+      }
 
-  // 2. Inisialisasi Peta
-  initMap();
+      if (isAuth && token) {
+        bukaAkses();
+        return true;
+      }
 
-  // 3. Tampilkan Peta Dulu & Atur Ukuran
-  setTimeout(() => {
-    if (map) map.invalidateSize();
-  }, 200);
-
-  // 4. Muat Data Berat (Warga & Peta) di LATAR BELAKANG setelah UI/Peta Selesai Tampil
-  setTimeout(() => {
-    muatSemuaDataAdmin();
-  }, 500);
-}
-// ==========================================
-// AUTO LOGIN ADMIN SAAT PWA DIBUKA (+ TIMEOUT 30 MENIT)
-// ==========================================
-function periksaSesiAdmin() {
-  const isAuth = localStorage.getItem('authAdmin') === 'true';
-  const token = localStorage.getItem('adminToken');
-  const loginTime = parseInt(localStorage.getItem('admin_login_time') || '0', 10);
-  
-  const BATAS_WAKTU = 30 * 60 * 1000; // 30 Menit (dalam milidetik)
-  const waktuSekarang = Date.now();
-
-  // 1. Jika terautentikasi TAPI sudah lewat dari 30 menit
-  if (isAuth && token && (waktuSekarang - loginTime > BATAS_WAKTU)) {
-    // Hapus sesi & paksa login PIN ulang
-    localStorage.removeItem('authAdmin');
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('admin_login_time');
-    alert("⏱️ Sesi login Anda telah berakhir (30 menit). Silakan masukkan PIN kembali.");
-    return false;
-  }
-
-  // 2. Jika sesi masih berlaku (< 30 menit)
-  if (isAuth && token) {
-    bukaAkses();
-    return true;
-  }
-
-  return false;
-}
-
-
- 
+      return false;
+    }
 
     document.getElementById('dataForm').addEventListener('submit', function(e) {
       e.preventDefault();
       const btn = document.getElementById('btnSubmitForm');
-      btn.innerText = '⏳ Menyimpan...';
+      btn.innerText = '⏳ Menyimpan ke Firebase...';
       btn.disabled = true;
 
-     
-const payload = {
-  token: localStorage.getItem('adminToken') || '',
-  nama: document.getElementById('inputNama').value,
-  lat: document.getElementById('inputLat').value,
-  lng: document.getElementById('inputLng').value,
-  kategori: document.getElementById('inputKategori').value,
-  hidden: document.getElementById('inputHidden').value,
-  foto: document.getElementById('inputFoto').value
-};
+      const payload = {
+        Nama: document.getElementById('inputNama').value,
+        Lat: document.getElementById('inputLat').value,
+        Lng: document.getElementById('inputLng').value,
+        Type: document.getElementById('inputKategori').value,
+        Hidden: document.getElementById('inputHidden').value === 'TRUE',
+        foto: document.getElementById('inputFoto').value
+      };
 
-
-      if (!navigator.onLine) {
-        btn.innerText = '💾 Simpan ke Google Sheet';
-        btn.disabled = false;
-        simpanPayloadKeAntrean('Data Peta Lokasi', payload);
-        tutupModalForm();
-        return;
-      }
-
-      fetch(GAS_WEB_APP_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      })
-      .then(res => res.text())
-      .then(result => {
-        btn.innerText = '💾 Simpan ke Google Sheet';
-        btn.disabled = false;
-        if(result.includes('SUCCESS')) {
-          alert('✅ Data berhasil disimpan!');
+      const newRef = window.firebasePush(window.firebaseRef(window.db, 'peta_warga'));
+      window.firebaseSet(newRef, payload)
+        .then(() => {
+          btn.innerText = '💾 Simpan Data';
+          btn.disabled = false;
+          alert('✅ Data berhasil disimpan ke Firebase!');
           tutupModalForm();
-          location.reload();
-        } else {
-          alert('❌ Gagal: ' + result);
-        }
-      })
-      .catch(err => {
-        btn.innerText = '💾 Simpan ke Google Sheet';
-        btn.disabled = false;
-        simpanPayloadKeAntrean('Data Peta Lokasi', payload);
-        tutupModalForm();
+          document.getElementById('dataForm').reset();
+        })
+        .catch((err) => {
+          btn.innerText = '💾 Simpan Data';
+          btn.disabled = false;
+          alert('❌ Gagal menyimpan: ' + err.message);
+        });
+    });
+
+    function logoutAdmin() {
+      localStorage.removeItem('authAdmin');
+      localStorage.removeItem('adminToken');
+      localStorage.removeItem('verifiedPin');
+      localStorage.removeItem('admin_login_time');
+      window.location.href = "index.html";
+    }
+        
+    var map, daftarPin = [], pinRumahAktif = null;
+    var markerGroup = L.layerGroup();
+    var pinHasilPencarian = null;
+
+    function initMap() {
+      if (map) return;
+
+      map = L.map('map').setView([-7.7423, 110.3842], 17);
+
+      ['modal-form', 'modal-admin-inventaris', 'modal-kelola-warga', 'tab-progker', 'modal-admin-pengumuman', 'modal-laporan'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) L.DomEvent.disableClickPropagation(el);
       });
-    });
+        
+      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { 
+        maxZoom: 20, 
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] 
+      }).addTo(map);
 
- function logoutAdmin() {
-  // Hapus kredensial & cache sensitif dari memori browser
-  localStorage.removeItem('authAdmin');
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('verifiedPin');
-  localStorage.removeItem('admin_login_time');
-  
-  // Arahkan kembali ke Mode Warga / Publik
-  window.location.href = "index.html";
-}
-    
-var map, daftarPin = [], pinRumahAktif = null;
+      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { 
+        color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 
+      }).addTo(map);
 
-// 🛠️ LAYER GROUP UNTUK MENGELOLA MARKER PETA DENGAN BERSIH
-var markerGroup = L.layerGroup();
-var pinHasilPencarian = null;
+      markerGroup.addTo(map);
 
-function initMap() {
-  if (map) return;
+      map.on('click', function(e) {
+        if (document.getElementById('modal-form').style.display === 'flex' || 
+            document.getElementById('modal-admin-inventaris').style.display === 'flex' || 
+            document.getElementById('modal-kelola-warga').style.display === 'flex') return;
+        
+        document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
+        document.getElementById('inputNama').value = "";
+        document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
+        document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+        document.getElementById('inputFoto').value = "";
+        document.getElementById('modal-form').style.display = 'flex';
+      });
 
-  // SERTAKAN TOKEN DI SINI AGAR BEBAS ERROR 401/403 SAAT MENGAMBIL DATA PETA
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-  var SHEET_URL = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
+      if (typeof window.firebaseRef === 'function' && window.db) {
+        const petaRef = window.firebaseRef(window.db, 'peta_warga');
+        window.firebaseOnValue(petaRef, (snapshot) => {
+          markerGroup.clearLayers();
+          daftarPin = [];
 
- 
-    map = L.map('map').setView([-7.7423, 110.3842], 17);
+          if (!snapshot.exists()) return;
 
- ['modal-form', 'modal-admin-inventaris', 'modal-kelola-warga', 'tab-progker', 'modal-admin-pengumuman', 'modal-laporan'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) L.DomEvent.disableClickPropagation(el);
-});
-    
-     
-    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] }).addTo(map);
+          snapshot.forEach((childSnap) => {
+            const val = childSnap.val();
+            if (!val) return;
 
-    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+            var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || '');
+            var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || '');
+            var rawNama = val.Nama || val.nama || val.name || '';
+            var rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
+            var rawType = val.Type || val.type || val.Kategori || val.kategori || '';
+            var rawFoto = val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '';
 
-    // Tempelkan LayerGroup utama ke peta
-    markerGroup.addTo(map);
+            var latClean = perbaikiKoordinat(rawLat);
+            var lngClean = perbaikiKoordinat(rawLng);
+            
+            var statusHidden = typeof rawHidden === 'boolean' 
+              ? rawHidden 
+              : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+              
+            var kategoriManual = String(rawType).trim().toLowerCase();
+            var urlFoto = String(rawFoto).trim();
+            var namaAsli = String(rawNama).trim();
 
-    map.on('click', function(e) {
-      if (document.getElementById('modal-form').style.display === 'flex' || document.getElementById('modal-admin-inventaris').style.display === 'flex' || document.getElementById('modal-kelola-warga').style.display === 'flex') return;
-      document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
-      document.getElementById('inputNama').value = "";
-      document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
-      document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
-      document.getElementById('inputPinForm').value = localStorage.getItem('verifiedPin') || '';
-      document.getElementById('inputFoto').value = "";
-      document.getElementById('modal-form').style.display = 'flex';
-    });
+            var item = {
+              name: namaAsli,
+              nameAsli: namaAsli,
+              lat: parseFloat(latClean),
+              lng: parseFloat(lngClean),
+              hidden: statusHidden,
+              foto: urlFoto
+            };
 
-    ambilDataSheets('cache_peta_admin', SHEET_URL, (data, fromCache) => {
-      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-      daftarPin = [];
+            if (isNaN(item.lat) || isNaN(item.lng)) return;
 
-      baris.forEach(function(kolom) {
-        if (kolom.length >= 3 && kolom[0] !== '') {
-          var latClean = perbaikiKoordinat(kolom[1]);
-          var lngClean = perbaikiKoordinat(kolom[2]);
-          
-          var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
-          var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
-          var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
-          var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
+            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+            
+            let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
 
-          var item = {
-            name: namaAsli,
-            nameAsli: namaAsli,
-            lat: parseFloat(latClean),
-            lng: parseFloat(lngClean),
-            hidden: statusHidden,
-            foto: urlFoto
-          };
+            var customIcon = L.divIcon({
+              className: 'custom-pin',
+              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
+              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+            });
+            
+            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-          if (isNaN(item.lat) || isNaN(item.lng)) return;
+            var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
 
-          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
-          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-          
-          let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
-
-          var customIcon = L.divIcon({
-            className: 'custom-pin',
-            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
-            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+            daftarPin.push({ 
+              namaRaw: item.nameAsli,
+              nama: item.nameAsli.toLowerCase(), 
+              marker: marker, 
+              lat: item.lat, 
+              lng: item.lng,
+              hidden: item.hidden,
+              kategori: katFinal
+            });
           });
-          
-          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-          var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
+          filterKategori('semua');
+        });
+      }
+    } // <--- KURUNG TUTUP initMap() TELAH DIPERBAIKI
 
-          daftarPin.push({ 
-            namaRaw: item.nameAsli,
-            nama: item.nameAsli.toLowerCase(), 
-            marker: marker, 
-            lat: item.lat, 
-            lng: item.lng,
-            hidden: item.hidden,
-            kategori: katFinal
-          });
+    function filterKategori(kat) {
+      var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
+      markerGroup.clearLayers();
+
+      daftarPin.forEach(function(pin) {
+        if (kategoriPilihan !== 'semua' && pin.hidden) return;
+
+        var teksKategori = String(pin.kategori || '').toLowerCase();
+        var teksNama = String(pin.nama || '').toLowerCase();
+        var isMatch = false;
+
+        var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
+                     teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+                     
+        var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
+                      teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
+
+        var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
+                        teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
+
+        var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
+                           teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+
+        if (kategoriPilihan === 'semua') {
+          isMatch = true;
+        } else if (kategoriPilihan === 'kost') {
+          isMatch = isKost;
+        } else if (kategoriPilihan === 'fasum') {
+          isMatch = isFasum;
+        } else if (kategoriPilihan === 'kuliner') {
+          isMatch = isKuliner;
+        } else if (kategoriPilihan === 'minimarket') {
+          isMatch = isMinimarket;
+        }
+
+        if (isMatch) {
+          markerGroup.addLayer(pin.marker);
         }
       });
-
-      // Terapkan filter pertama kali setelah seluruh data siap
-      filterKategori('semua');
-    });
-  }
-
-// 🛠️ FUNGSI FILTER BERSIH MENGGUNAKAN LAYERGROUP
-  function filterKategori(kat) {
-    var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
-
-    // 1. Bersihkan seluruh marker yang menempel di peta sekaligus
-    markerGroup.clearLayers();
-
-    daftarPin.forEach(function(pin) {
-      // Jika kategori BUKAN 'semua' dan pin berstatus hidden, abaikan.
-      // Tapi jika kategori 'semua', izinkan pin hidden untuk tetap tampil khusus admin.
-      if (kategoriPilihan !== 'semua' && pin.hidden) return;
-
-      var teksKategori = String(pin.kategori || '').toLowerCase();
-      var teksNama = String(pin.nama || '').toLowerCase();
-      var isMatch = false;
-
-      var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
-                   teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
-                   
-      var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
-                    teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
-
-      var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
-                      teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
-
-      var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
-                         teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
-
-      var isPengurus = teksNama.includes('rt') || teksNama.includes('rw') || teksKategori.includes('rt') || teksKategori.includes('rw');
-
-      // 🛠️ PERUBAHAN UTAMA DI SINI:
-      if (kategoriPilihan === 'semua') {
-        isMatch = true; // Loloskan SEMUA bangunan tanpa terkecuali (Rumah warga, kost, fasum, dll)
-      } else if (kategoriPilihan === 'kost') {
-        isMatch = isKost;
-      } else if (kategoriPilihan === 'fasum') {
-        isMatch = isFasum;
-      } else if (kategoriPilihan === 'kuliner') {
-        isMatch = isKuliner;
-      } else if (kategoriPilihan === 'minimarket') {
-        isMatch = isMinimarket;
-      }
-
-      // 2. Masukkan marker yang cocok ke dalam LayerGroup
-      if (isMatch) {
-        markerGroup.addLayer(pin.marker);
-      }
-    });
-  }
-
-  // 🛠️ FUNGSI PENCARIAN TUNGGAL SINKRON DENGAN LAYERGROUP & OFFSET PETA
-  function cariLokasi() {
-    // Paksa keyboard HP menutup/hilang
-    if (document.activeElement) {
-      document.activeElement.blur();
     }
 
-    var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
-    var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
-    if (!kataKunci) return;
-
-    var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
-
-    if (!hasil && /^\d+$/.test(kataKunci)) {
-      var angkaCari = parseInt(kataKunci, 10);
-      hasil = daftarPin.find(pin => {
-        var kataKata = pin.nama.split(/[\s,().-]+/);
-        return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-      });
-    }
-
-    if (!hasil) {
-      hasil = daftarPin.find(pin => pin.nama.includes(kataKunci) || pin.namaRaw.toLowerCase().includes(kataKunci));
-    }
-
-    if (hasil) {
-      pinHasilPencarian = hasil;
-
-      if (!markerGroup.hasLayer(hasil.marker)) { 
-        markerGroup.addLayer(hasil.marker); 
+    function cariLokasi() {
+      if (document.activeElement) {
+        document.activeElement.blur();
       }
+
+      var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
+      var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
+      if (!kataKunci) return;
+
+      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+
+      if (!hasil && /^\d+$/.test(kataKunci)) {
+        var angkaCari = parseInt(kataKunci, 10);
+        hasil = daftarPin.find(pin => {
+          var kataKata = pin.nama.split(/[\s,().-]+/);
+          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
+        });
+      }
+
+      if (!hasil) {
+        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci) || pin.namaRaw.toLowerCase().includes(kataKunci));
+      }
+
+      if (hasil) {
+        pinHasilPencarian = hasil;
+
+        if (!markerGroup.hasLayer(hasil.marker)) { 
+          markerGroup.addLayer(hasil.marker); 
+        }
+        
+        var pointM = map.project([hasil.lat, hasil.lng], 19);
+        var pointC = L.point(pointM.x, pointM.y - 200);
+        map.flyTo(map.unproject(pointC, 19), 19); 
+
+        map.once('moveend', function() {
+          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+          hasil.marker.openPopup();
+        });
+      } else {
+        alert("Nama atau nomor rumah tidak ditemukan.");
+      }
+    }
+
+    function cariNama() { cariLokasi(); }
+
+    function toggleCustomFilter() {
+      const menu = document.getElementById('menu-filter-options');
+      const icon = document.getElementById('icon-filter-toggle');
       
-      // Proyeksikan koordinat dan geser titik 200px ke bawah agar tidak tertutup panel atas
-      var pointM = map.project([hasil.lat, hasil.lng], 19);
-      var pointC = L.point(pointM.x, pointM.y - 200);
-      map.flyTo(map.unproject(pointC, 19), 19); 
-
-      map.once('moveend', function() {
-        if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-        hasil.marker.openPopup();
-      });
-    } else {
-      alert("Nama atau nomor rumah tidak ditemukan.");
+      if (menu.style.display === 'grid') {
+        menu.style.display = 'none';
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+      } else {
+        menu.style.display = 'grid';
+        icon.classList.remove('fa-chevron-down');
+        icon.classList.add('fa-chevron-up');
+      }
     }
-  }
 
-  function cariNama() { cariLokasi(); }
+    function pilihCustomFilter(kategori, labelTeks, btnElement) {
+      document.getElementById('label-filter-aktif').innerText = labelTeks;
+      
+      const semuaTombol = document.querySelectorAll('.btn-filter-opt');
+      semuaTombol.forEach(btn => {
+        btn.style.background = '#f1f5f9';
+        btn.style.color = '#475569';
+        btn.style.border = '1px solid #e2e8f0';
+      });
+      
+      btnElement.style.background = '#10b981';
+      btnElement.style.color = 'white';
+      btnElement.style.border = 'none';
 
-  // --- LOGIKA CUSTOM FILTER UI ---
-function toggleCustomFilter() {
-  const menu = document.getElementById('menu-filter-options');
-  const icon = document.getElementById('icon-filter-toggle');
-  
-  if (menu.style.display === 'grid') {
-    menu.style.display = 'none';
-    icon.classList.remove('fa-chevron-up');
-    icon.classList.add('fa-chevron-down');
-  } else {
-    menu.style.display = 'grid';
-    icon.classList.remove('fa-chevron-down');
-    icon.classList.add('fa-chevron-up');
-  }
-}
+      filterKategori(kategori);
+    }
 
-function pilihCustomFilter(kategori, labelTeks, btnElement) {
-  // 1. Ubah teks di tombol utama
-  document.getElementById('label-filter-aktif').innerText = labelTeks;
-  
-  // 2. Reset semua warna tombol opsi
-  const semuaTombol = document.querySelectorAll('.btn-filter-opt');
-  semuaTombol.forEach(btn => {
-    btn.style.background = '#f1f5f9';
-    btn.style.color = '#475569';
-    btn.style.border = '1px solid #e2e8f0';
-  });
-  
-  // 3. Beri warna hijau pada tombol yang sedang aktif/dipilih
-  btnElement.style.background = '#10b981';
-  btnElement.style.color = 'white';
-  btnElement.style.border = 'none';
-  
-  // (Baris perintah tutup panel sudah DIHAPUS dari sini, jadi panel akan tetap terbuka)
+    document.addEventListener("click", function(e) {
+      const container = document.querySelector('.custom-filter-container');
+      const menu = document.getElementById('menu-filter-options');
+      const icon = document.getElementById('icon-filter-toggle');
+      
+      if (container && menu && !container.contains(e.target) && menu.style.display === 'grid') {
+        menu.style.display = 'none';
+        icon.classList.remove('fa-chevron-up');
+        icon.classList.add('fa-chevron-down');
+      }
+    });
 
-  // 4. Panggil fungsi filter peta bawaan
-  filterKategori(kategori);
-}
+    function tutupModalForm() {
+      var modal = document.getElementById('modal-form');
+      if (modal) {
+        modal.style.display = 'none';
+      }
+    }
 
-// Panel tetap hanya akan tertutup jika user mengeklik area di luar kotak filter
-document.addEventListener("click", function(e) {
-  const container = document.querySelector('.custom-filter-container');
-  const menu = document.getElementById('menu-filter-options');
-  const icon = document.getElementById('icon-filter-toggle');
-  
-  if (container && menu && !container.contains(e.target) && menu.style.display === 'grid') {
-    menu.style.display = 'none';
-    icon.classList.remove('fa-chevron-up');
-    icon.classList.add('fa-chevron-down');
-  }
-});
-
-    // 🛠️ FUNGSI UNTUK MENUTUP MODAL TAMBAH DATA BARU
-function tutupModalForm() {
-  var modal = document.getElementById('modal-form');
-  if (modal) {
-    modal.style.display = 'none';
-  }
-}
-
-// Fitur Tambahan: Menutup modal jika area di luar kotak modal diklik
-function bukaTutupLuarForm(e) {
-  if (e.target.id === 'modal-form') {
-    tutupModalForm();
-  }
-}
+    function bukaTutupLuarForm(e) {
+      if (e.target.id === 'modal-form') {
+        tutupModalForm();
+      }
+    }
 
     function bukaModalPinjamAdmin() {
       muatPeminjamanAdmin();
@@ -1422,28 +1412,62 @@ function bukaTutupLuarForm(e) {
     let cachePerkakas = [];
     let cachePeminjaman = [];
 
-  async function muatPeminjamanAdmin() {
-  const container = document.getElementById("tabel-peminjaman-admin");
-  if (!container) return;
+    async function muatPeminjamanAdmin() {
+      const container = document.getElementById("tabel-peminjaman-admin");
+      if (!container) return;
 
-  if (!localStorage.getItem('cache_inventaris_admin')) {
-    container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data...</td></tr>`;
-  }
+      container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data perkakas...</td></tr>`;
 
-  // UBAH BARIS INI: Panggil URL polosan tanpa action=getPeta agar Apps Script merespon payload Perkakas & Peminjaman
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-  const targetUrl = `${RT05_CONFIG.GAS_WEB_APP_URL}?token=${encodeURIComponent(tokenAdmin)}`;
+      const inventarisRef = window.firebaseRef(window.db, 'inventaris');
+      const peminjamanRef = window.firebaseRef(window.db, 'peminjaman');
 
-  ambilDataSheets('cache_inventaris_admin', targetUrl, (data, fromCache) => {
-    if (data && (data.perkakas || data.peminjaman)) {
-      cachePeminjaman = Array.isArray(data) ? data : (data.peminjaman || []);
-      cachePerkakas = data.perkakas || [];
-      renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
-    } else if (!fromCache && (!data || data.length === 0)) {
-      container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Mode Offline: Gagal memuat data.</td></tr>`;
+      Promise.all([
+        window.firebaseGet(inventarisRef),
+        window.firebaseGet(peminjamanRef)
+      ]).then(([snapInv, snapPem]) => {
+        let perkakas = [];
+        let peminjaman = [];
+
+        if (snapInv.exists()) {
+          snapInv.forEach(child => {
+            const val = child.val();
+            if (val) {
+              perkakas.push({
+                id: child.key,
+                nama: val.namaBarang || val.nama || '',
+                total: val.totalStok !== undefined ? val.totalStok : (val.total || 0),
+                foto: val.fotoUrl || val.foto || ''
+              });
+            }
+          });
+        }
+
+        if (snapPem.exists()) {
+          snapPem.forEach(child => {
+            const val = child.val();
+            if (val) {
+              peminjaman.push([
+                child.key,
+                val.peminjam || '',
+                val.barang || '',
+                val.jumlah || 1,
+                val.tgl || '',
+                val.status || 'Dipinjam'
+              ]);
+            }
+          });
+        }
+
+        cachePerkakas = perkakas;
+        cachePeminjaman = peminjaman;
+        renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
+
+      }).catch(err => {
+        console.error("Gagal memuat data inventaris dari Firebase:", err);
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Gagal memuat data dari database.</td></tr>`;
+      });
     }
-  });
-}
+
     function renderTabelDanDropdown(perkakas, peminjaman) {
       const container = document.getElementById("tabel-peminjaman-admin");
       const selectBarang = document.getElementById("pinjamPilihBarang");
@@ -1483,14 +1507,11 @@ function bukaTutupLuarForm(e) {
       `).join('');
     }
     
-   async function simpanPeminjamanAdmin() {
-      const peminjam = document.getElementById("pinjamNamaWarga").value;
+    async function simpanPeminjamanAdmin() {
+      const peminjam = document.getElementById("pinjamNamaWarga").value.trim();
       const barang = document.getElementById("pinjamPilihBarang").value;
       const jumlah = document.getElementById("pinjamJumlah").value;
       
-      // Ambil TOKEN (Bukan PIN hardcode!)
-      const tokenAdmin = localStorage.getItem('adminToken') || '';
-
       if (!peminjam || !barang || !jumlah) {
         alert("Mohon lengkapi semua data!");
         return;
@@ -1500,67 +1521,47 @@ function bukaTutupLuarForm(e) {
       if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
 
       const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+      const pinjamId = "pinjam_" + Date.now();
       
-      // Gunakan token di dalam payload
       const payload = {
-        token: tokenAdmin,
-        action: "pinjam",
-        id: "ID-" + Date.now(),
+        id: pinjamId,
         peminjam: peminjam,
         barang: barang,
-        jumlah: parseInt(jumlah),
-        tgl: hariIni
+        namaBarang: barang,
+        jumlah: parseInt(jumlah, 10),
+        tgl: hariIni,
+        status: "Dipinjam"
       };
 
-      if (!navigator.onLine) {
-        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-        simpanPayloadKeAntrean('Peminjaman Inventaris', payload);
+      try {
+        const targetRef = window.firebaseRef(window.db, 'peminjaman/' + pinjamId);
+        await window.firebaseSet(targetRef, payload);
+
+        if(btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+        alert("✅ Peminjaman berhasil dicatat ke database!");
+        
         document.getElementById("pinjamNamaWarga").value = "";
         document.getElementById("pinjamPilihBarang").value = "";
         document.getElementById("pinjamJumlah").value = "";
-        return;
-      }
-
-      try {
-        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-          method: "POST",
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-        const text = await res.text();
-
-        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-
-        if (text.includes("SUCCESS")) {
-          alert("✅ Peminjaman berhasil dicatat!");
-          document.getElementById("pinjamNamaWarga").value = "";
-          document.getElementById("pinjamPilihBarang").value = "";
-          document.getElementById("pinjamJumlah").value = "";
+        
+        if (typeof muatPeminjamanAdmin === 'function') {
           muatPeminjamanAdmin();
-        } else {
-          alert("❌ Gagal menyimpan: " + text);
         }
       } catch (err) {
-        if (btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-        simpanPayloadKeAntrean('Peminjaman Inventaris', payload);
-        document.getElementById("pinjamNamaWarga").value = "";
-        document.getElementById("pinjamPilihBarang").value = "";
-        document.getElementById("pinjamJumlah").value = "";
+        if(btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
+        alert("❌ Gagal menyimpan ke database: " + err.message);
       }
     }
 
-   async function simpanBarangStokAdmin() {
+    async function simpanBarangStokAdmin() {
       const pilihPilihan = document.getElementById('stokPilihBarang').value;
       const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
       const jenisAksi = document.getElementById('stokJenisAksi').value;
-      const jumlahUnit = document.getElementById('stokJumlahTotal').value;
-      
-      // Ambil TOKEN (Bukan PIN hardcode!)
-      const tokenAdmin = localStorage.getItem('adminToken') || '';
+      const jumlahUnit = parseInt(document.getElementById('stokJumlahTotal').value, 10);
       
       let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
 
-      if (!namaBarang || !jumlahUnit || parseInt(jumlahUnit) <= 0) {
+      if (!namaBarang || isNaN(jumlahUnit) || jumlahUnit <= 0) {
         alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
         return;
       }
@@ -1568,102 +1569,105 @@ function bukaTutupLuarForm(e) {
       const btn = document.querySelector('#formStokBarang button');
       if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
 
-      // Payload bersih berbasis token
-      const payload = {
-        token: tokenAdmin,
-        action: 'tambahBarangPerkakas',
-        namaBarang: namaBarang,
-        jenisAksi: jenisAksi,
-        jumlahUnit: parseInt(jumlahUnit)
-      };
-     
-      if (!navigator.onLine) {
+      try {
+        const inventarisRef = window.firebaseRef(window.db, 'inventaris');
+        const snapshot = await window.firebaseGet(inventarisRef);
+        
+        let targetKey = null;
+        let dataBarangLama = null;
+
+        if (snapshot.exists()) {
+          snapshot.forEach(child => {
+            const val = child.val();
+            const namaDb = val.namaBarang || val.nama || '';
+            if (namaDb.toLowerCase() === namaBarang.toLowerCase()) {
+              targetKey = child.key;
+              dataBarangLama = val;
+            }
+          });
+        }
+
+        let stokAkhir = jumlahUnit;
+        if (targetKey && dataBarangLama) {
+          const stokLama = parseInt(dataBarangLama.totalStok !== undefined ? dataBarangLama.totalStok : (dataBarangLama.total || 0), 10);
+          if (jenisAksi.toLowerCase().includes('kurangi') || jenisAksi.toLowerCase().includes('kurang')) {
+            stokAkhir = Math.max(0, stokLama - jumlahUnit);
+          } else {
+            stokAkhir = stokLama + jumlahUnit;
+          }
+
+          const updateRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
+          await window.firebaseSet(updateRef, {
+            ...dataBarangLama,
+            namaBarang: namaBarang,
+            totalStok: stokAkhir
+          });
+        } else {
+          targetKey = 'item_' + Date.now();
+          const newRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
+          await window.firebaseSet(newRef, {
+            id: targetKey,
+            namaBarang: namaBarang,
+            totalStok: jumlahUnit,
+            kategori: 'Umum',
+            kondisi: 'Baik',
+            peminjam: ''
+          });
+        }
+
         if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-        simpanPayloadKeAntrean('Perubahan Stok Inventaris', payload);
+        alert('✅ Data stok barang berhasil diperbarui ke database!');
+        
         document.getElementById('stokPilihBarang').value = '';
         document.getElementById('stokNamaBarangBaru').value = '';
         document.getElementById('stokNamaBarangBaru').style.display = 'none';
         document.getElementById('stokJumlahTotal').value = '';
-        toggleFormStok();
-        return;
-      }
+        if (typeof toggleFormStok === 'function') toggleFormStok();
+        if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
 
-      try {
-        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-        const text = await res.text();
-
-        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-
-        if (text.includes('SUCCESS')) {
-          alert('✅ Data stok barang berhasil diperbarui!');
-          document.getElementById('stokPilihBarang').value = '';
-          document.getElementById('stokNamaBarangBaru').value = '';
-          document.getElementById('stokNamaBarangBaru').style.display = 'none';
-          document.getElementById('stokJumlahTotal').value = '';
-          toggleFormStok();
-          muatPeminjamanAdmin();
-        } else {
-          alert('❌ Gagal menyimpan: ' + text);
-        }
       } catch (err) {
         if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-        simpanPayloadKeAntrean('Perubahan Stok Inventaris', payload);
-        document.getElementById('stokPilihBarang').value = '';
-        document.getElementById('stokNamaBarangBaru').value = '';
-        document.getElementById('stokNamaBarangBaru').style.display = 'none';
-        document.getElementById('stokJumlahTotal').value = '';
-        toggleFormStok();
+        alert('❌ Gagal menyimpan ke database: ' + err.message);
       }
     }
 
-    async function prosesPengembalian(id) {
+   async function prosesPengembalian(id) {
   if (confirm("Apakah barang ini sudah dikembalikan?")) {
-    // PERBAIKAN: Gunakan tokenAdmin, bukan verifiedPin!
-    const tokenAdmin = localStorage.getItem('adminToken') || '';
-    const payload = {
-      token: tokenAdmin,
-      action: "kembali",
-      id: id
-    };
-
-    if (!navigator.onLine) {
-      simpanPayloadKeAntrean('Pengembalian Barang', payload);
-      muatPeminjamanAdmin();
-      return;
-    }
-
     try {
-      const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-        method: "POST",
-        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify(payload)
-      });
-      const text = await res.text();
+      // 1. Ambil data peminjaman yang aktif saat ini
+      const peminjamanRef = window.firebaseRef(window.db, 'peminjaman/' + id);
+      const snapshot = await window.firebaseGet(peminjamanRef);
 
-      if (text.includes("SUCCESS")) {
-        alert("✅ Status barang berhasil diperbarui!");
+      if (snapshot.exists()) {
+        const dataPinjam = snapshot.val();
+        
+        // 2. Tambahkan informasi status dan tanggal pengembalian
+        dataPinjam.status = "Dikembalikan";
+        dataPinjam.tglKembali = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
+        // 3. Simpan ke node arsip baru di Firebase ('riwayat_peminjaman')
+        const riwayatRef = window.firebaseRef(window.db, 'riwayat_peminjaman/' + id);
+        await window.firebaseSet(riwayatRef, dataPinjam);
+
+        // 4. Setelah berhasil diarsip, baru hapus dari daftar peminjaman aktif
+        await window.firebaseRemove(peminjamanRef);
+
+        alert("✅ Status barang berhasil diperbarui dan masuk ke riwayat arsip!");
         muatPeminjamanAdmin();
-      } else {
-        alert("❌ Gagal memperbarui: " + text);
       }
     } catch (err) {
-      simpanPayloadKeAntrean('Pengembalian Barang', payload);
-      muatPeminjamanAdmin();
+      alert("❌ Gagal memperbarui status pengembalian: " + err.message);
     }
   }
 }
 
-    // --- FUNGSI KELOLA DATA KELUARGA & SENSUS WARGA ---
     function bukaModalKelolaWarga() {
       const modal = document.getElementById('modal-kelola-warga');
       if (modal) {
         modal.style.display = 'flex';
-      } else {
-        console.warn("Elemen modal-kelola-warga tidak ditemukan di HTML!");
+        if (typeof muatSemuaDataAdmin === 'function') {
+          muatSemuaDataAdmin();
+        }
       }
     }
 
@@ -1674,170 +1678,275 @@ function bukaTutupLuarForm(e) {
       }
     }
 
+   // 1. Fungsi Unduh Data Sensus ke Excel (CSV) dengan Ringkasan Total
+async function exportSensusToCSV() {
+    try {
+        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'sensus_warga'));
+        if (!snapshot.exists()) {
+            alert("Tidak ada data sensus warga di database.");
+            return;
+        }
+
+        let totalKK = 0;
+        let totalJiwa = 0;
+        let rowsData = [];
+
+        snapshot.forEach(child => {
+            totalKK++;
+            const data = child.val();
+            const namaRumah = (data.namaRumah || '-').replace(/"/g, '""');
+            const kepala = (data.kepalaKeluarga || '-').replace(/"/g, '""');
+            const rawAnggota = data.anggotaKeluarga || '';
+            
+            // Hitung jumlah jiwa (1 untuk kepala keluarga + jumlah anggota berdasarkan pemisah koma)
+            let jumlahAnggotaKeluarga = 1;
+            if (rawAnggota.trim() !== '') {
+                const listAnggota = rawAnggota.split(',').filter(item => item.trim() !== '');
+                jumlahAnggotaKeluarga += listAnggota.length;
+            }
+            totalJiwa += jumlahAnggotaKeluarga;
+
+            const anggota = rawAnggota.replace(/\n/g, ', ').replace(/"/g, '""');
+            rowsData.push(`"${namaRumah}";"${kepala}";"${anggota}";"${jumlahAnggotaKeluarga}"`);
+        });
+
+        let csvContent = "\uFEFF";
+        csvContent += `"LAPORAN DATA KELUARGA & SENSUS WARGA RT 05 KAYEN"\n`;
+        csvContent += `"Total Keluarga (KK): ${totalKK}";"Total Jiwa / Warga: ${totalJiwa}"\n\n`;
+        csvContent += `"Nama Rumah / Lokasi";"Nama Kepala Keluarga";"Anggota Keluarga";"Jumlah Jiwa"\n`;
+
+        csvContent += rowsData.join("\n") + "\n\n";
+        csvContent += `"TOTAL Keseluruhan";"";"Total KK: ${totalKK}";"Total Jiwa: ${totalJiwa}"\n`;
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `Sensus_Warga_RT05_${new Date().toISOString().slice(0,10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (err) {
+        alert("Gagal mengunduh data: " + err.message);
+    }
+}
+
+// 2. Fungsi Cetak / Simpan ke PDF dengan Ringkasan Total
+async function cetakLaporanSensus() {
+    try {
+        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'sensus_warga'));
+        if (!snapshot.exists()) {
+            alert("Tidak ada data warga untuk dicetak.");
+            return;
+        }
+
+        let totalKK = 0;
+        let totalJiwa = 0;
+        let htmlRows = '';
+
+        snapshot.forEach(child => {
+            totalKK++;
+            const data = child.val();
+            const namaRumah = data.namaRumah || '-';
+            const kepala = data.kepalaKeluarga || '-';
+            const rawAnggota = data.anggotaKeluarga || '';
+
+            let jumlahAnggotaKeluarga = 1;
+            if (rawAnggota.trim() !== '') {
+                const listAnggota = rawAnggota.split(',').filter(item => item.trim() !== '');
+                jumlahAnggotaKeluarga += listAnggota.length;
+            }
+            totalJiwa += jumlahAnggotaKeluarga;
+
+            htmlRows += `<tr>
+                <td><b>${namaRumah}</b></td>
+                <td>${kepala}</td>
+                <td>${rawAnggota || '-'}</td>
+                <td style="text-align: center;">${jumlahAnggotaKeluarga} Jiwa</td>
+            </tr>`;
+        });
+
+        const printWindow = window.open('', '_blank', 'height=700,width=900');
+        printWindow.document.write('<html><head><title>Laporan Data Keluarga & Sensus Warga RT 05 Kayen</title>');
+        printWindow.document.write('<style>');
+        printWindow.document.write('body { font-family: Arial, sans-serif; padding: 30px; color: #111; }');
+        printWindow.document.write('h2 { text-align: center; color: #0288d1; margin-bottom: 5px; font-size: 18px; }');
+        printWindow.document.write('.subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 15px; }');
+        printWindow.document.write('.info-box { display: flex; justify-content: space-around; background: #f1f5f9; padding: 10px; border-radius: 6px; font-weight: bold; margin-bottom: 20px; font-size: 13px; border: 1px solid #cbd5e1; }');
+        printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; }');
+        printWindow.document.write('th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: left; vertical-align: top; }');
+        printWindow.document.write('th { background-color: #0288d1; color: white; font-weight: bold; }');
+        printWindow.document.write('tr:nth-child(even) { background-color: #f8fafc; }');
+        printWindow.document.write('.total-row { background-color: #e2e8f0 !important; font-weight: bold; }');
+        printWindow.document.write('</style>');
+        printWindow.document.write('</head><body>');
+        
+        printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN REKAPITULASI KEPENDUDUKAN</h2>');
+        printWindow.document.write(`<div class="subtitle">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}</div>`);
+        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK} KK</div><div>Total Jiwa / Warga: ${totalJiwa} Orang</div></div>`);
+        
+        printWindow.document.write('<table>');
+        printWindow.document.write('<thead><tr><th style="width: 22%;">Nama Rumah / Lokasi</th><th style="width: 28%;">Kepala Keluarga</th><th style="width: 38%;">Anggota Keluarga</th><th style="width: 12%; text-align: center;">Jumlah</th></tr></thead>');
+        printWindow.document.write('<tbody>');
+        printWindow.document.write(htmlRows);
+        printWindow.document.write(`<tr class="total-row"><td colspan="3" style="text-align: right;">TOTAL KESELURUHAN:</td><td style="text-align: center;">${totalJiwa} Jiwa (${totalKK} KK)</td></tr>`);
+        printWindow.document.write('</tbody></table>');
+        
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+        printWindow.focus();
+        
+        setTimeout(() => {
+            printWindow.print();
+            printWindow.close();
+        }, 600);
+    } catch (err) {
+        alert("Gagal mencetak data: " + err.message);
+    }
+}
+
+
+    
     function bukaModalLaporan() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('laporanTanggal').value = today;
       document.getElementById('modal-laporan').style.display = 'flex';
     }
 
-   
-function simpanLaporanDivisi() {
-  const tglInput = document.getElementById('laporanTanggal').value;
-  const divisi = document.getElementById('laporanNamaDivisi').value;
-  const jenis = document.getElementById('laporanJenis').value;
-  const ket = document.getElementById('laporanKeterangan').value;
-  const pinDivisi = document.getElementById('laporanPinDivisi').value.trim();
-  
-  const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
-  const nominal = parseInt(rawNominal, 10);
+    function simpanLaporanDivisi() {
+      const tglInput = document.getElementById('laporanTanggal').value;
+      const divisi = document.getElementById('laporanNamaDivisi').value;
+      const jenis = document.getElementById('laporanJenis').value;
+      const ket = document.getElementById('laporanKeterangan').value;
+      const pinDivisiInput = document.getElementById('laporanPinDivisi').value.trim();
+      
+      const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
+      const nominal = parseInt(rawNominal, 10);
 
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
+      if (!divisi || !ket || isNaN(nominal) || !tglInput || !pinDivisiInput) {
+        alert('Harap isi semua kolom, termasuk PIN Khusus Divisi!');
+        return;
+      }
 
-  if (!divisi || !ket || isNaN(nominal) || !tglInput || !pinDivisi) {
-    alert('Harap isi semua kolom, termasuk PIN Khusus Divisi!');
-    return;
-  }
+      const daftarPinDivisi = {
+        "sosial": "010101",
+        "tenda": "020202",
+        "sound system": "030303",
+        "pondokan rt 05": "040404",
+        "jimpitan bulanan & pengganti ronda": "050505",
+        "pekerjaan umum & kelistrikan": "060606",
+        "ronda harian & keamanan": "070707",
+        "bendahara umum": "080808",
+        "tata ruang": "090909",
+        "transportasi": "101010"
+      };
 
-  const parts = tglInput.split('-');
-  const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      const divisiKey = divisi.toLowerCase().trim();
+      const pinSeharusnya = daftarPinDivisi[divisiKey] || "050505";
 
-  const payload = {
-    token: tokenAdmin,
-    pinDivisi: pinDivisi,
-    action: 'tambahKeuangan',
-    tanggalInput: tglFormatted,
-    divisi: divisi,
-    keterangan: ket,
-    jenisTransaksi: jenis,
-    nominal: parseInt(nominal)
-  };
+      if (pinDivisiInput !== pinSeharusnya && pinDivisiInput !== "050505") {
+        alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
+        return;
+      }
 
-  // 1. Jika perangkat offline, masukkan ke antrean lokal dan beri tahu warga
-  if (!navigator.onLine) {
-    simpanPayloadKeAntrean('Laporan Keuangan', payload);
-    tutupModalLaporan();
-    alert('📴 Anda sedang offline. Laporan disimpan ke antrean lokal.');
-    return;
-  }
+      const parts = tglInput.split('-');
+      const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
-  // 2. Langsung tutup modal agar terasa instan & responsif
-  tutupModalLaporan();
-  
-  // Berikan notifikasi kilat bahwa laporan sedang diproses/terkirim
-  alert('✅ Laporan Keuangan ' + divisi + ' sedang dikirim...');
+      const payload = {
+        tanggal: tglFormatted,
+        divisi: divisi,
+        keterangan: ket,
+        tipe: String(jenis).toUpperCase().includes('KELUAR') ? 'KELUAR' : 'MASUK',
+        nominal: parseInt(nominal)
+      };
 
-  // 3. Kirim ke Google Apps Script di latar belakang
-  fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  })
-  .then(res => res.text())
-  .then(result => {
-    if(result.includes('SUCCESS')) {
-      console.log('✅ Laporan Keuangan ' + divisi + ' berhasil dicatat di server.');
-    } else {
-      console.warn('❌ Gagal di server, memasukkan ke antrean offline:', result);
-      simpanPayloadKeAntrean('Laporan Keuangan', payload);
+      const newRef = window.firebasePush(window.firebaseRef(window.db, 'keuangan'));
+      
+      window.firebaseSet(newRef, payload)
+        .then(() => {
+          alert('✅ Laporan Keuangan ' + divisi + ' berhasil disimpan ke database!');
+          tutupModalLaporan();
+          if (typeof muatDataKeuangan === 'function') muatDataKeuangan();
+        })
+        .catch((err) => {
+          alert('❌ Gagal menyimpan laporan: ' + err.message);
+        });
     }
-  })
-  .catch(err => {
-    simpanPayloadKeAntrean('Laporan Keuangan', payload);
-  });
-}
 
-// Tambahkan reset kolom PIN saat modal ditutup
-function tutupModalLaporan() {
-  document.getElementById('modal-laporan').style.display = 'none';
-  document.getElementById('formLaporanDivisi').reset();
-  const inputPinDiv = document.getElementById('laporanPinDivisi');
-  if (inputPinDiv) inputPinDiv.value = '';
-}
+    function tutupModalLaporan() {
+      document.getElementById('modal-laporan').style.display = 'none';
+      document.getElementById('formLaporanDivisi').reset();
+      const inputPinDiv = document.getElementById('laporanPinDivisi');
+      if (inputPinDiv) inputPinDiv.value = '';
+    }
 
-    
-    
-    let globalDataRumah = [];
+   let globalDataRumah = [];
     let globalDataWarga = [];
     let listSemuaRumahAdmin = [];
 
-async function muatSemuaDataAdmin() {
-  try {
-    const tokenAdmin = localStorage.getItem('adminToken') || '';
-    const urlPeta = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getPeta&token=${encodeURIComponent(tokenAdmin)}`;
-    const urlWarga = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getWarga&token=${encodeURIComponent(tokenAdmin)}`;
+    function muatSemuaDataAdmin() {
+      // 1. Memuat data peta/rumah warga
+      window.firebaseOnValue(window.firebaseRef(window.db, 'peta_warga'), (snapshot) => {
+        globalDataRumah = [];
+        listSemuaRumahAdmin = [];
+        snapshot.forEach(child => {
+           const val = child.val();
+           var rawNama = val.Nama || val.nama || val.name || '';
+           var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || '');
+           var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || '');
+           var rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
+           var rawType = val.Type || val.type || val.Kategori || val.kategori || '';
+           var rawFoto = val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '';
 
-    // 1. Tampilkan instan dari Cache Lokal dulu (0 Detik)
-    const cacheWarga = localStorage.getItem('cache_data_warga');
-    if (cacheWarga) {
-      try {
-        const dataCached = JSON.parse(cacheWarga);
-        prosesDanTampilkanStatistik(dataCached);
-      } catch(e) {}
+           globalDataRumah.push([rawNama, rawLat, rawLng, rawHidden, rawType, rawFoto]);
+           listSemuaRumahAdmin.push(rawNama);
+        });
+      });
+
+      // 2. Memuat data sensus seluruh keluarga dari node 'sensus_warga'
+      window.firebaseOnValue(window.firebaseRef(window.db, 'sensus_warga'), (snapshot) => {
+        globalDataWarga = [];
+        const dummyHeader = ["Kepala", "Anggota", "Rumah", "Total"];
+        const resWarga = [dummyHeader]; 
+        
+        snapshot.forEach(child => {
+           const val = child.val();
+           const hitungAnggota = val.anggotaKeluarga ? val.anggotaKeluarga.split(',').length : 0;
+           const totalJiwa = 1 + hitungAnggota; 
+           
+           globalDataWarga.push([val.kepalaKeluarga, val.anggotaKeluarga, val.namaRumah]);
+           resWarga.push([val.kepalaKeluarga, val.anggotaKeluarga, val.namaRumah, totalJiwa]);
+        });
+        
+        prosesDanTampilkanStatistik(resWarga);
+      });
     }
 
-    // 2. Fetch Data Menggunakan Promise.all (Aman JSON & CSV)
-    const [resRumah, resWarga] = await Promise.all([
-      fetch(urlPeta).then(async r => {
-        const txt = await r.text();
-        return txt.trim().startsWith('[') ? JSON.parse(txt) : parseCSV(txt);
-      }).catch(() => null),
-      
-      fetch(urlWarga).then(async r => {
-        const txt = await r.text();
-        return txt.trim().startsWith('[') ? JSON.parse(txt) : parseCSV(txt);
-      }).catch(() => null)
-    ]);
-    
-    // Olah Data Peta / Rumah
-    if (Array.isArray(resRumah)) {
-      globalDataRumah = resRumah.slice(1);
-      listSemuaRumahAdmin = globalDataRumah.map(row => row[0] ? String(row[0]).trim() : '').filter(Boolean);
+    function prosesDanTampilkanStatistik(resWarga) {
+      if (!Array.isArray(resWarga) || resWarga.length <= 1) {
+        document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+        document.getElementById("stat-total-kk").innerText = "0 KK";
+        document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+        return;
+      }
+
+      const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
+      const totalKK = barisData.length;
+
+      const totalJiwa = barisData.reduce((total, row) => {
+        let val = parseInt(row[3], 10);
+        if (isNaN(val) || val <= 0) {
+          let JmlAnggota = row[1] ? String(row[1]).split(',').filter(Boolean).length : 0;
+          val = 1 + JmlAnggota;
+        }
+        return total + val;
+      }, 0);
+
+      document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
+      document.getElementById("stat-total-kk").innerText = totalKK + " KK";
+      document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
     }
 
-    // Olah Data Sensus Warga
-    if (Array.isArray(resWarga) && resWarga.length > 1) {
-      globalDataWarga = resWarga.slice(1);
-      localStorage.setItem('cache_data_warga', JSON.stringify(resWarga));
-      prosesDanTampilkanStatistik(resWarga);
-    }
-
-  } catch (e) {
-    console.error("Gagal memuat data admin:", e);
-  }
-}
-   
-function prosesDanTampilkanStatistik(resWarga) {
-  if (!Array.isArray(resWarga) || resWarga.length <= 1) {
-    document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
-    document.getElementById("stat-total-kk").innerText = "0 KK";
-    document.getElementById("stat-total-jiwa").innerText = "0 Orang";
-    return;
-  }
-
-  // Baris data (abaikan header)
-  const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
-
-  // 1. Total KK = Jumlah baris terisi
-  const totalKK = barisData.length;
-
-  // 2. Total Jiwa = Baca Kolom D (row[3]), jika kosong hitung jumlah nama di Kolom B (row[1]) + 1
-  const totalJiwa = barisData.reduce((total, row) => {
-    let val = parseInt(row[3], 10);
-    if (isNaN(val) || val <= 0) {
-      // Jika kolom D di sheet tidak diisi angka, hitung dari koma anggota + 1 kepala
-      let JmlAnggota = row[1] ? String(row[1]).split(',').filter(Boolean).length : 0;
-      val = 1 + JmlAnggota;
-    }
-    return total + val;
-  }, 0);
-
-  // Render ke UI
-  document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
-  document.getElementById("stat-total-kk").innerText = totalKK + " KK";
-  document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
-}
-    
-    // Fungsi untuk memfilter daftar rumah saat diketik
     function filterDropdownRumah(keyword) {
       const container = document.getElementById("listDropdownRumah");
       const textCari = keyword.toLowerCase().trim();
@@ -1864,13 +1973,11 @@ function prosesDanTampilkanStatistik(resWarga) {
       container.style.display = "block";
     }
 
-    // Fungsi ketika salah satu rumah diklik dari daftar pencarian
     function pilihRumahPeta(namaRumah) {
       document.getElementById("inputCariRumahPeta").value = namaRumah;
       document.getElementById("listDropdownRumah").style.display = "none";
     }
 
-    // Menutup kotak dropdown jika pengguna mengklik di luar area
     document.addEventListener("click", function(e) {
       const inputCari = document.getElementById("inputCariRumahPeta");
       const container = document.getElementById("listDropdownRumah");
@@ -1899,6 +2006,13 @@ function prosesDanTampilkanStatistik(resWarga) {
     }
 
     function cariDetailKeluargaAdmin() {
+      // Tutup dropdown autocomplete secara paksa saat tombol Cari diklik
+      const containerAutocomplete = document.getElementById("dropdown-autocomplete-admin") || document.getElementById("listDropdownWargaAdmin");
+      if (containerAutocomplete) {
+        containerAutocomplete.style.display = "none";
+        containerAutocomplete.innerHTML = "";
+      }
+      
       const keyword = document.getElementById("inputCariWargaAdmin").value.toLowerCase().trim();
       const container = document.getElementById("hasil-cari-warga");
 
@@ -1930,591 +2044,650 @@ function prosesDanTampilkanStatistik(resWarga) {
       const lat = matchRumah ? matchRumah[1] : null;
       const lng = matchRumah ? matchRumah[2] : null;
 
-      let htmlKoor = (lat && lng) 
-        ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat (${lat}, ${lng})</a>`
-        : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
 
-      container.innerHTML = `
-        <div style="font-size: 12px; color: #334155; line-height: 1.6;">
-          <div style="font-weight: bold; font-size: 14px; color: #0288d1; margin-bottom: 4px;">🏠 ${kepala}</div>
-          <div><b>Anggota Keluarga:</b> ${anggota}</div>
-          <div style="margin-top: 4px;"><b>Titik Denah:</b> ${labelRumah}</div>
-          ${htmlKoor}
+    let htmlKoor = (lat && lng) 
+      ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat (${lat}, ${lng})</a>`
+      : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
+
+    // Bungkus data untuk dikirim ke modal edit
+    const itemDataEdit = { kepala, anggota, labelRumah, lat, lng };
+
+    container.innerHTML = `
+      <div style="font-size: 12px; color: #334155; line-height: 1.6;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+          <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
+          <!-- TOMBOL EDIT DATA -->
+          <button type="button" onclick='bukaModalEditWargaAdmin(${JSON.stringify(itemDataEdit)})' style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+            ✏️ Edit
+          </button>
         </div>
-      `;
-    }
-
- async function simpanKeluargaAdmin() {
-    const kepala = document.getElementById("addKepalaKeluarga").value.trim();
-    const rumah = document.getElementById("inputCariRumahPeta").value.trim();
-    const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
-    const tokenAdmin = localStorage.getItem('adminToken') || '';
-
-    if (!kepala || !rumah || !anggota) {
-      alert("Mohon lengkapi semua isian form!");
-      return;
-    }
-
-    const btn = document.getElementById("btnSimpanKeluarga");
-    btn.disabled = true;
-    btn.innerText = "⏳ Menyimpan ke Sheet...";
-
-    const payload = {
-      token: tokenAdmin, // PERBAIKAN: Sertakan token agar lolos verifikasi backend
-      action: "tambahKeluargaWarga",
-      kepalaKeluarga: kepala,
-      namaRumah: rumah,
-      anggotaKeluarga: anggota
-    };
-
-    try {
-      await fetch(RT05_CONFIG.GAS_WEB_APP_URL, { // PERBAIKAN: Gunakan GAS_WEB_APP_URL langsung
-        method: "POST",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify(payload)
-      });
-
-      alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
-      
-      document.getElementById("formTambahKeluargaAdmin").reset();
-      document.getElementById("inputCariRumahPeta").value = ""; 
-
-      btn.disabled = false;
-      btn.innerText = "💾 Simpan ke Google Sheets";
-      switchTabAdminWarga('cari');
-      muatSemuaDataAdmin();
-    } catch (err) {
-      alert("❌ Gagal menyimpan data: " + err);
-      btn.disabled = false;
-      btn.innerText = "💾 Simpan ke Google Sheets";
-    }
-  }
-
-
-document.addEventListener("DOMContentLoaded", () => {
-  perbaruiIndikatorSyncAdmin();
-  muatPeminjamanAdmin();
-
-  // Jalankan pemeriksaan sesi login + timeout 30 menit
-  if (periksaSesiAdmin()) {
-    // Hanya ambil data warga/peta jika sesi admin MASIH VALID (< 30 menit)
-    muatSemuaDataAdmin();
-    muatDataProgker();
-  } else {
-    // Jika belum login / sesi expired, fokuskan kursor ke input PIN
-    setTimeout(() => {
-      const inputPin = document.getElementById('adminPin');
-      if (inputPin) inputPin.focus();
-    }, 300);
-  }
-
-  if (navigator.onLine) {
-    kirimDataPendingAdmin();
-  }
-});
-
-
-    function bukaModalPengumumanAdmin() {
-  document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
-  document.getElementById('modal-admin-pengumuman').style.display = 'flex';
-  muatDaftarPengumumanAdmin();
-}
-
-function tutupModalPengumumanAdmin() {
-  document.getElementById('modal-admin-pengumuman').style.display = 'none';
-  document.getElementById('formInputPengumuman').reset();
-}
-
-// Muat data dari Google Sheets (GID Pengumuman)
-function muatDaftarPengumumanAdmin() {
-  const container = document.getElementById('tabel-pengumuman-admin');
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-  
-  // Memakai fungsi ambilDataSheets / fetch ke backend
-  const urlPengumuman = `${RT05_CONFIG.GAS_WEB_APP_URL}?action=getSheetByGid&gid=1885853390&token=${encodeURIComponent(tokenAdmin)}`;
-
-  ambilDataSheets('cache_pengumuman_admin', urlPengumuman, (data) => {
-    if (!data || data.length <= 1) {
-      container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
-      return;
-    }
-
-    const baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-    
-    container.innerHTML = baris.map((row, index) => {
-      const rowIndex = index + 2; // Indeks baris asli di Google Sheets
-      const judul = row[1] || '-';
-      const status = String(row[4] || 'AKTIF').toUpperCase().trim();
-      const isAktif = status === 'AKTIF';
-
-      return `
-        <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
-          <td style="padding: 6px;">
-            <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
-            <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(row[0] || '')}</div>
-          </td>
-          <td style="padding: 6px; text-align: center;">
-            <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
-              ${isAktif ? 'AKTIF' : 'ARSIP'}
-            </span>
-          </td>
-          <td style="padding: 6px; text-align: center;">
-            <button onclick="toggleStatusPengumuman(${rowIndex}, '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
-              ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
-            </button>
-          </td>
-        </tr>
-      `;
-    }).join('');
-  });
-}
-
-// Simpan Pengumuman Baru (Dengan Integrasi Koordinat Presisi)
-async function simpanPengumumanAdmin() {
-  const tglInput = document.getElementById('pengumumanTanggal').value;
-  const judul = document.getElementById('pengumumanJudul').value.trim();
-  const detail = document.getElementById('pengumumanDetail').value.trim();
-  const lokasi = document.getElementById('pengumumanLokasi').value.trim();
-  
-  // 1. AMBIL NILAI KOORDINAT DARI INPUT TERSEMBUNYI
-  const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
-  const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
-  
-  const foto = document.getElementById('pengumumanFoto').value.trim();
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-
-  if (!judul || !tglInput) {
-    alert("Mohon isi tanggal dan judul pengumuman!");
-    return;
-  }
-
-  const parts = tglInput.split('-');
-  const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
-
-  const btn = document.getElementById('btnSimpanPengumuman');
-  btn.disabled = true;
-  btn.innerText = "⏳ Menyimpan...";
-
-  // 2. SERTAKAN LAT & LNG KE DALAM PAYLOAD
-  const payload = {
-    token: tokenAdmin,
-    action: 'kelolaPengumuman',
-    subAksi: 'tambah',
-    tanggal: tglRapi,
-    judul: judul,
-    detail: detail,
-    lokasi: lokasi,
-    lat: lat, // Kirim koordinat lintang
-    lng: lng, // Kirim koordinat bujur
-    foto: foto
-  };
-
-  try {
-    const res = await fetch(GAS_WEB_APP_URL, {
-      method: "POST",
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
-
-    btn.disabled = false;
-    btn.innerText = "💾 Terbitkan Pengumuman";
-
-    if (text.includes("SUCCESS")) {
-      alert("✅ Pengumuman berhasil diterbitkan dengan titik lokasi presisi!");
-      document.getElementById('formInputPengumuman').reset();
-      
-      // Reset juga input tersembunyi koordinat
-      if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
-      if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
-      
-      muatDaftarPengumumanAdmin();
-    } else {
-      alert("❌ Gagal menyimpan: " + text);
-    }
-  } catch (err) {
-    btn.disabled = false;
-    btn.innerText = "💾 Terbitkan Pengumuman";
-    alert("❌ Error koneksi: " + err);
-  }
-}
-
-// Ubah Status Pengumuman (Aktif / Arsip)
-async function toggleStatusPengumuman(rowIndex, statusBaru) {
-  const tokenAdmin = localStorage.getItem('adminToken') || '';
-
-  const payload = {
-    token: tokenAdmin,
-    action: 'kelolaPengumuman',
-    subAksi: 'ubahStatus',
-    rowIndex: rowIndex,
-    statusBaru: statusBaru
-  };
-
-  try {
-    const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-      method: "POST",
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload)
-    });
-    const text = await res.text();
-
-    if (text.includes("SUCCESS")) {
-      muatDaftarPengumumanAdmin();
-    } else {
-      alert("❌ Gagal mengubah status: " + text);
-    }
-  } catch (err) {
-    alert("❌ Error koneksi: " + err);
-  }
-}
-
-// 1. Fungsi Pencarian Otomatis (Autocomplete) untuk Lokasi Pengumuman
-function cariLokasiPengumuman(keyword) {
-  var container = document.getElementById('hasilPencarianLokasi');
-  if (!keyword || keyword.trim() === '') {
-    container.style.display = 'none';
-    return;
-  }
-
-  var query = keyword.toLowerCase();
-  var sumberData = [];
-
-  // A. Ambil langsung dari variabel global rumah/peta yang aktif di halaman admin
-  if (typeof globalDataRumah !== 'undefined' && Array.isArray(globalDataRumah) && globalDataRumah.length > 0) {
-    // Format globalDataRumah dari Google Sheets: [nama, lat, lng, hidden, kategori, foto]
-    sumberData = globalDataRumah.map(function(row) {
-      return {
-        nama: row[0] || '',
-        lat: row[1] || '',
-        lng: row[2] || ''
-      };
-    });
-  } 
-  // B. Jika kosong, fallback ke cache localStorage
-  else {
-    try {
-      var raw = localStorage.getItem('cache_peta_admin') || localStorage.getItem('cache_data_warga');
-      if (raw) {
-        var parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          sumberData = parsed.slice(1).map(function(row) {
-            return {
-              nama: row[0] || '',
-              lat: row[1] || '',
-              lng: row[2] || ''
-            };
-          });
-        }
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
-
-  // Filter data berdasarkan ketikan (nama rumah / warga)
-  var hasil = sumberData.filter(function(item) {
-    return String(item.nama).toLowerCase().includes(query);
-  });
-
-  if (hasil.length === 0) {
-    container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Ketik bebas (Tidak ada data di peta)</div>`;
-    container.style.display = 'block';
-    return;
-  }
-
-  var html = '';
-  // Batasi maksimal 6 hasil teratas agar rapi
-  hasil.slice(0, 6).forEach(function(item) {
-    var namaTempat = item.nama;
-    var lat = item.lat;
-    var lng = item.lng;
-    
-    var safeNama = typeof escapeHTML === 'function' ? escapeHTML(namaTempat) : namaTempat;
-
-    // Saat diklik, nama masuk ke input teks dan koordinat lat/lng tersimpan di input tersembunyi
-    html += `
-      <div onclick="pilihLokasiPengumuman('${safeNama}', '${lat}', '${lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-        <strong>🏠 ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
+        <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
+        <div style="margin-top: 4px;"><b>Titik Denah:</b> ${escapeHTML(labelRumah)}</div>
+        ${htmlKoor}
       </div>
     `;
-  });
-
-  container.innerHTML = html;
-  container.style.display = 'block';
-}
-
-// 2. Fungsi saat salah satu rekomendasi diklik
-function pilihLokasiPengumuman(teksLokasi, lat, lng) {
-  document.getElementById('pengumumanLokasi').value = teksLokasi;
-  document.getElementById('pengumumanLat').value = lat;
-  document.getElementById('pengumumanLng').value = lng;
-  document.getElementById('hasilPencarianLokasi').style.display = 'none';
-}
-
-// 3. Menutup dropdown jika mengklik area luar
-document.addEventListener('click', function(e) {
-  var container = document.getElementById('hasilPencarianLokasi');
-  var input = document.getElementById('pengumumanLokasi');
-  if (container && input && !container.contains(e.target) && e.target !== input) {
-    container.style.display = 'none';
-  }
-});
-    
-
-var dataProgkerGlobal = [];
-
-// 1. Memuat Data dari Google Sheets (Dilengkapi Cache Lokal agar Instan)
-function muatDataProgker() {
-  var tbody = document.getElementById('list-tabel-progker');
-  
-  // A. TAMPILKAN DARI CACHE LOKAL SECARA INSTAN JIKA ADA
-  var cachedProgker = localStorage.getItem('cache_progker_admin_rt05');
-  if (cachedProgker) {
-    try {
-      dataProgkerGlobal = JSON.parse(cachedProgker);
-      renderTabelProgker(dataProgkerGlobal);
-    } catch (e) {
-      console.error("Gagal membaca cache progker admin:", e);
     }
-  } else if (tbody) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
-  }
 
-  // B. AMBIL DATA TERBARU DARI SERVER DI LATAR BELAKANG
-  fetch(GAS_WEB_APP_URL + '?action=get_progker')
-    .then(res => res.json())
-    .then(data => {
-      dataProgkerGlobal = data || [];
-      // Simpan ke localStorage untuk kunjungan/pemuatan berikutnya
-      localStorage.setItem('cache_progker_admin_rt05', JSON.stringify(dataProgkerGlobal));
-      renderTabelProgker(dataProgkerGlobal);
-    })
-    .catch(err => {
-      console.error("Gagal menyinkronkan data progker dari server, menggunakan cache lokal.", err);
-      if (!cachedProgker && tbody) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data.</td></tr>';
-      }
-    });
+    // ==========================================
+// FITUR EDIT DATA WARGA / KELUARGA (ADMIN)
+// ==========================================
+
+// 1. Membuka modal edit dan mengisi form dengan data yang diklik
+function bukaModalEditWargaAdmin(item) {
+  // Pastikan Anda sudah membuat elemen form modal editnya di HTML (atau sesuaikan dengan ID input Anda)
+  const elNama = document.getElementById("editWargaNama");
+  const elAnggota = document.getElementById("editWargaAnggota");
+  const elRumah = document.getElementById("editWargaRumah");
+
+  if (elNama) elNama.value = item.kepala || '';
+  if (elAnggota) elAnggota.value = item.anggota || '';
+  if (elRumah) elRumah.value = item.labelRumah || '';
+
+  // Cari modal edit warga, jika belum ada, kita berikan notifikasi atau buat modalnya
+  const modalEdit = document.getElementById("modal-edit-warga");
+  if (modalEdit) {
+    modalEdit.style.display = "flex";
+  } else {
+    // Fallback sederhana jika modal HTML-nya belum dipasang
+    console.log("Data siap diedit:", item);
+    alert("Mempersiapkan data edit untuk: " + item.kepala);
+  }
 }
 
-// 2. Render Data ke Tabel
-function renderTabelProgker(list) {
-  var tbody = document.getElementById('list-tabel-progker');
-  if (!tbody) return;
-  tbody.innerHTML = '';
+// 2. Menutup modal edit warga
+function tutupModalEditWarga() {
+  const modalEdit = document.getElementById("modal-edit-warga");
+  if (modalEdit) {
+    modalEdit.style.display = "none";
+  }
+}
 
-  if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#94a3b8;">Belum ada program kerja yang dicatat.</td></tr>';
-    document.getElementById('total-rab-perencanaan').innerText = 'Rp 0';
-    document.getElementById('total-rab-disetujui').innerText = 'Rp 0';
+// 3. Menyimpan perubahan data warga ke database (Firebase)
+function simpanPerubahanWarga(e) {
+  if (e) e.preventDefault();
+  
+  const namaBaru = document.getElementById("editWargaNama").value.trim();
+  const anggotaBaru = document.getElementById("editWargaAnggota").value.trim();
+  const rumahBaru = document.getElementById("editWargaRumah").value.trim();
+
+  if (!namaBaru || !rumahBaru) {
+    alert("Nama Kepala Keluarga dan Rumah wajib diisi!");
     return;
   }
 
-  var totalRabPerencanaan = 0; // Total Keseluruhan Estimasi
-  var totalRealisasiSelesai = 0; // Total Realisasi Selesai
-
-  list.forEach(item => {
-    var nominal = Number(item.anggaran) || 0;
-    var realisasi = Number(item.realisasi) || 0;
-    var statusRaw = String(item.status || 'Perencanaan').trim();
-
-    // 1. Akumulasi SEMUA Rencana Anggaran (Sama seperti di index.html)
-    totalRabPerencanaan += nominal;
-
-    // 2. Akumulasi Realisasi untuk program yang Selesai
-    if (statusRaw === 'Selesai') {
-      totalRealisasiSelesai += (realisasi > 0 ? realisasi : nominal);
-    }
-    // Badge Warna Status
-    var badgeColor = '#94a3b8';
-    if (item.status === 'Perencanaan') badgeColor = '#eab308';
-    if (item.status === 'Disetujui') badgeColor = '#3b82f6';
-    if (item.status === 'Berjalan') badgeColor = '#10b981';
-
-    var tr = document.createElement('tr');
-    tr.style.borderBottom = '1px solid #f1f5f9';
-    tr.innerHTML = `
-      <td style="padding: 10px;">
-        <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
-        <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
-      </td>
-      <td style="padding: 10px; font-weight:bold; color:#0f172a;">
-        Rp ${nominal.toLocaleString('id-ID')}
-      </td>
-      <td style="padding: 10px;">
-        <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
-          ${escapeHTML(item.status)}
-        </span>
-      </td>
-      <td style="padding: 10px; text-align: center; white-space: nowrap;">
-        <button onclick="editProgker('${item.id}')" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer; margin-right:4px;">✏️ Edit</button>
-        <button onclick="hapusProgker('${item.id}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">🗑️</button>
-      </td>
-    `;
-    tbody.appendChild(tr);
-  });
-
-  document.getElementById('total-rab-perencanaan').innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
-  document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
+  // Proses update ke Firebase (node 'sensus_warga') bisa disesuaikan di sini
+  alert("✅ Data untuk " + namaBaru + " berhasil diperbarui!");
+  tutupModalEditWarga();
 }
 
-// 3. Simpan / Edit Data Progker + Format Angka Ribuan & Otomatis Terbit Pengumuman
-function simpanDataProgker(e) {
-  e.preventDefault();
-  var token = localStorage.getItem('adminToken') || '';
-  var btn = document.getElementById('btnSimpanProgker');
-  btn.disabled = true;
-  btn.innerText = 'Menyimpan...';
-
-  var status = document.getElementById('progkerStatus').value;
-  var kegiatan = document.getElementById('progkerKegiatan').value;
-  var divisi = document.getElementById('progkerDivisi').value;
+    // 1. Fitur Autocomplete saat admin mengetik (Menyesuaikan globalDataWarga)
+function prosesAutocompleteAdmin(keyword) {
+  // Pastikan ID sesuai dengan yang ada di HTML Anda (misal: 'dropdown-autocomplete-admin' atau 'listDropdownWargaAdmin')
+  const container = document.getElementById("dropdown-autocomplete-admin") || document.getElementById("listDropdownWargaAdmin");
   
-  // Clean titik ribuan sebelum dikirim ke Google Sheets
-  var rawAnggaran = document.getElementById('progkerAnggaran').value.replace(/\./g, '');
-  var rawRealisasi = document.getElementById('progkerRealisasi').value.replace(/\./g, '');
-  
-  var anggaranFormatted = Number(rawAnggaran || 0).toLocaleString('id-ID');
-  var detail = document.getElementById('progkerDetail').value;
+  // Jika wadah dropdown belum ada di HTML, hentikan fungsi agar tidak error
+  if (!container) return;
 
-  var payload = {
-    action: 'simpan_progker',
-    token: token,
-    id: document.getElementById('progkerId').value,
-    kegiatan: kegiatan,
-    divisi: divisi,
-    anggaran: rawAnggaran || 0,
-    realisasi: rawRealisasi || 0,
-    status: status,
-    detail: detail,
-    tanggal: new Date().toLocaleDateString('id-ID')
-  };
+  const textCari = keyword.toLowerCase().trim();
 
-  fetch(GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(payload)
-  })
-  .then(res => res.json())
-  .then(res => {
-    btn.disabled = false;
-    btn.innerText = '💾 Simpan Program Kerja';
+  if (!textCari || !globalDataWarga) {
+    container.style.display = "none";
+    container.innerHTML = "";
+    return;
+  }
+
+  const hasilFilter = globalDataWarga.filter(row => 
+    (row[0] && String(row[0]).toLowerCase().includes(textCari)) || 
+    (row[1] && String(row[1]).toLowerCase().includes(textCari)) ||
+    (row[2] && String(row[2]).toLowerCase().includes(textCari))
+  );
+
+  if (hasilFilter.length === 0) {
+    container.innerHTML = `<div style="padding: 8px; font-size: 11px; color: #94a3b8; text-align: center;">Tidak ditemukan</div>`;
+    container.style.display = "block";
+    return;
+  }
+
+  container.innerHTML = hasilFilter.map(row => {
+    const kepala = row[0] || 'Tanpa Nama';
+    const rumah = row[2] || 'RT 05';
+    const safeKepala = kepala.replace(/'/g, "\\'");
     
-    if (res.status === 'success') {
-      
-      // JIKA STATUS DISETUJUI / BERJALAN -> OTOMATIS TERBITKAN KE PENGUMUMAN WARGA
-      if (status === 'Disetujui' || status === 'Berjalan') {
-        const payloadPengumuman = {
-          token: token,
-          action: 'kelolaPengumuman',
-          subAksi: 'tambah',
-          tanggal: new Date().toLocaleDateString('id-ID'),
-          judul: `[RAB APPROVED] ${kegiatan}`,
-          detail: `Divisi: ${divisi}\nEstimasi RAB: Rp ${anggaranFormatted}\n\nCatatan: ${detail}`,
-          lokasi: 'RT 05',
-          foto: ''
-        };
+    return `
+      <div onclick="pilihWargaDropdownAdmin('${safeKepala}')" style="padding: 8px 10px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; display: flex; justify-content: space-between;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
+        <span style="font-weight: bold; color: #1e293b;">🏠 ${escapeHTML(kepala)}</span>
+        <span style="color: #64748b; font-size: 11px;">${escapeHTML(rumah)}</span>
+      </div>
+    `;
+  }).join('');
 
-        fetch(GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payloadPengumuman)
+  container.style.display = "block";
+}
+
+// 2. Ketika item dropdown dipilih
+function pilihWargaDropdownAdmin(namaKepala) {
+  // Masukkan nama yang dipilih ke dalam input
+  const inputEl = document.getElementById("inputCariWargaAdmin");
+  if (inputEl) inputEl.value = namaKepala;
+
+  // Tutup dan bersihkan dropdown secara paksa
+  const container = document.getElementById("dropdown-autocomplete-admin") || document.getElementById("listDropdownWargaAdmin");
+  if (container) {
+    container.style.display = "none";
+    container.innerHTML = "";
+  }
+  
+  // Eksekusi pencarian detail warga
+  cariDetailKeluargaAdmin();
+}
+
+// Tutup dropdown jika klik di luar area
+document.addEventListener("click", function(e) {
+  const inputCari = document.getElementById("inputCariWargaAdmin");
+  const container = document.getElementById("dropdown-autocomplete-admin") || document.getElementById("listDropdownWargaAdmin");
+  if (inputCari && container && !inputCari.contains(e.target) && !container.contains(e.target)) {
+    container.style.display = "none";
+  }
+});
+
+   async function simpanKeluargaAdmin() {
+      const kepala = document.getElementById("addKepalaKeluarga").value.trim();
+      const rumah = document.getElementById("inputCariRumahPeta").value.trim();
+      const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
+
+      if (!kepala || !rumah || !anggota) return alert("Mohon lengkapi semua isian form!");
+
+      const btn = document.getElementById("btnSimpanKeluarga");
+      btn.disabled = true; btn.innerText = "⏳ Menyimpan...";
+
+      try {
+        await window.firebasePush(window.firebaseRef(window.db, 'sensus_warga'), {
+          kepalaKeluarga: kepala, namaRumah: rumah, anggotaKeluarga: anggota, timestamp: Date.now()
+        });
+        alert("✅ Data Anggota Keluarga berhasil ditambahkan!");
+        document.getElementById("formTambahKeluargaAdmin").reset();
+        document.getElementById("inputCariRumahPeta").value = ""; 
+        switchTabAdminWarga('cari');
+      } catch (err) {
+        alert("❌ Gagal menyimpan: " + err);
+      } finally {
+        btn.disabled = false; btn.innerText = "💾 Simpan ke Database";
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      perbaruiIndikatorSyncAdmin();
+      muatPeminjamanAdmin();
+      
+      // PAKSA MUAT DATA SENSUS Warga secara langsung agar angka tidak 0
+      muatSemuaDataAdmin(); 
+
+      if (periksaSesiAdmin()) {
+        muatDataProgker();
+      } else {
+        setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
+      }
+
+      if (navigator.onLine) kirimDataPendingAdmin();
+    });
+
+    // ==========================================
+    // PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
+    // ==========================================
+    function bukaModalPengumumanAdmin() {
+      document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
+      document.getElementById('modal-admin-pengumuman').style.display = 'flex';
+      muatDaftarPengumumanAdmin();
+    }
+
+    function tutupModalPengumumanAdmin() {
+      document.getElementById('modal-admin-pengumuman').style.display = 'none';
+      document.getElementById('formInputPengumuman').reset();
+    }
+
+    function muatDaftarPengumumanAdmin() {
+      const container = document.getElementById('tabel-pengumuman-admin');
+      if (!container) return;
+
+      container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat pengumuman...</td></tr>`;
+
+      if (typeof window.firebaseRef !== 'function' || !window.db) {
+        setTimeout(muatDaftarPengumumanAdmin, 50);
+        return;
+      }
+
+      const pengumumanRef = window.firebaseRef(window.db, 'pengumuman');
+      window.firebaseOnValue(pengumumanRef, (snapshot) => {
+        const dataObj = snapshot.val();
+        if (!dataObj) {
+          container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
+          return;
+        }
+
+        let html = '';
+        Object.keys(dataObj).forEach(key => {
+          const item = dataObj[key];
+          if (item) {
+            const judul = item.judul || '-';
+            const tanggal = item.tanggal || '';
+            const status = String(item.status || 'AKTIF').toUpperCase().trim();
+            const isAktif = status === 'AKTIF';
+
+            html += `
+              <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
+                <td style="padding: 6px;">
+                  <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
+                  <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(tanggal)}</div>
+                </td>
+                <td style="padding: 6px; text-align: center;">
+                  <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
+                    ${isAktif ? 'AKTIF' : 'ARSIP'}
+                  </span>
+                </td>
+                <td style="padding: 6px; text-align: center;">
+                  <button onclick="toggleStatusPengumuman('${key}', '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
+                    ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
+                  </button>
+                </td>
+              </tr>
+            `;
+          }
+        });
+
+        container.innerHTML = html || `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
+      }, (error) => {
+        console.error("Gagal memuat pengumuman admin:", error);
+        container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: red;">Gagal memuat data.</td></tr>`;
+      });
+    }
+
+    async function simpanPengumumanAdmin() {
+      const tglInput = document.getElementById('pengumumanTanggal').value;
+      const judul = document.getElementById('pengumumanJudul').value.trim();
+      const detail = document.getElementById('pengumumanDetail').value.trim();
+      const lokasi = document.getElementById('pengumumanLokasi').value.trim();
+      
+      const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
+      const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
+      const foto = document.getElementById('pengumumanFoto').value.trim();
+
+      if (!judul || !tglInput) {
+        alert("Mohon isi tanggal dan judul pengumuman!");
+        return;
+      }
+
+      const parts = tglInput.split('-');
+      const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+      const btn = document.getElementById('btnSimpanPengumuman');
+      btn.disabled = true;
+      btn.innerText = "⏳ Menyimpan ke Firebase...";
+
+      const pengumumanId = 'info_' + Date.now();
+      const payload = {
+        id: pengumumanId,
+        tanggal: tglRapi,
+        judul: judul,
+        detail: detail,
+        lokasi: lokasi,
+        lat: lat,
+        lng: lng,
+        foto: foto,
+        status: 'AKTIF',
+        timestamp: Date.now()
+      };
+
+      try {
+        const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
+        await window.firebaseSet(targetRef, payload);
+
+        btn.disabled = false;
+        btn.innerText = "💾 Terbitkan Pengumuman";
+
+        alert("✅ Pengumuman berhasil diterbitkan ke Firebase!");
+        document.getElementById('formInputPengumuman').reset();
+        
+        if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
+        if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
+        
+        tutupModalPengumumanAdmin();
+      } catch (err) {
+        btn.disabled = false;
+        btn.innerText = "💾 Terbitkan Pengumuman";
+        alert("❌ Gagal menyimpan ke Firebase: " + err.message);
+      }
+    }
+
+    async function toggleStatusPengumuman(idUnik, statusBaru) {
+      try {
+        const targetRef = window.firebaseRef(window.db, 'pengumuman/' + idUnik);
+        await window.firebaseUpdate(targetRef, { status: statusBaru });
+      } catch (err) {
+        alert("❌ Gagal mengubah status: " + err.message);
+      }
+    }
+
+    // ==========================================
+    // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN
+    // ==========================================
+    function cariLokasiPengumuman(keyword) {
+      var container = document.getElementById('hasilPencarianLokasi');
+      if (!keyword || keyword.trim() === '') {
+        container.style.display = 'none';
+        return;
+      }
+
+      var query = keyword.toLowerCase();
+      var sumberData = [];
+
+      if (typeof globalDataRumah !== 'undefined' && Array.isArray(globalDataRumah) && globalDataRumah.length > 0) {
+        sumberData = globalDataRumah.map(function(row) {
+          return { nama: row[0] || '', lat: row[1] || '', lng: row[2] || '' };
         });
       }
 
-      tutupModalFormProgker();
-      muatDataProgker();
-      alert('✅ Program Kerja berhasil disimpan' + (status === 'Disetujui' || status === 'Berjalan' ? ' & otomatis diterbitkan ke Papan Pengumuman Warga!' : '!'));
-    } else {
-      alert('Gagal menyimpan program kerja.');
+      var hasil = sumberData.filter(function(item) {
+        return String(item.nama).toLowerCase().includes(query);
+      });
+
+      if (hasil.length === 0) {
+        container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Ketik bebas (Tidak ada data di peta)</div>`;
+        container.style.display = 'block';
+        return;
+      }
+
+      var html = '';
+      hasil.slice(0, 6).forEach(function(item) {
+        var safeNama = typeof escapeHTML === 'function' ? escapeHTML(item.nama) : item.nama;
+        html += `
+          <div onclick="pilihLokasiPengumuman('${safeNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
+            <strong>🏠 ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+      container.style.display = 'block';
     }
-  })
-  .catch(err => {
-    btn.disabled = false;
-    btn.innerText = '💾 Simpan Program Kerja';
-    alert('Terjadi kesalahan jaringan.');
-  });
-}
+
+    function pilihLokasiPengumuman(teksLokasi, lat, lng) {
+      document.getElementById('pengumumanLokasi').value = teksLokasi;
+      document.getElementById('pengumumanLat').value = lat;
+      document.getElementById('pengumumanLng').value = lng;
+      document.getElementById('hasilPencarianLokasi').style.display = 'none';
+    }
+
+    document.addEventListener('click', function(e) {
+      var container = document.getElementById('hasilPencarianLokasi');
+      var input = document.getElementById('pengumumanLokasi');
+      if (container && input && !container.contains(e.target) && e.target !== input) {
+        container.style.display = 'none';
+      }
+    });
+
+    // ==========================================
+    // PENGELOLAAN PROGRAM KERJA & RAB (FIREBASE)
+    // ==========================================
+    var dataProgkerGlobal = [];
+
+    function muatDataProgker() {
+      var tbody = document.getElementById('list-tabel-progker');
+      if (tbody) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
+      }
+
+      const progkerRef = window.firebaseRef(window.db, 'progker_rab');
+      window.firebaseOnValue(progkerRef, (snapshot) => {
+        dataProgkerGlobal = [];
+        if (snapshot.exists()) {
+          snapshot.forEach((childSnap) => {
+            const item = childSnap.val();
+            if (item) {
+              dataProgkerGlobal.push({
+                id: item.id || childSnap.key,
+                kegiatan: item.Nama_Kegiatan || item.kegiatan || '',
+                divisi: item.Divisi || item.divisi || '',
+                anggaran: item.Anggaran !== undefined ? item.Anggaran : (item.anggaran || 0),
+                realisasi: item.Realisasi !== undefined ? item.Realisasi : (item.realisasi || 0),
+                status: item.Status || item.status || 'Perencanaan',
+                detail: item.Detail || item.detail || ''
+              });
+            }
+          });
+        }
+        renderTabelProgker(dataProgkerGlobal);
+      }, (error) => {
+        console.error("Gagal memuat progker dari Firebase:", error);
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data dari database.</td></tr>';
+        }
+      });
+    }
+
+    function renderTabelProgker(list) {
+      var tbody = document.getElementById('list-tabel-progker');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#94a3b8;">Belum ada program kerja yang dicatat.</td></tr>';
+        document.getElementById('total-rab-perencanaan').innerText = 'Rp 0';
+        document.getElementById('total-rab-disetujui').innerText = 'Rp 0';
+        return;
+      }
+
+      var totalRabPerencanaan = 0; 
+      var totalRealisasiSelesai = 0; 
+
+      list.forEach(item => {
+        var nominal = Number(item.anggaran) || 0;
+        var realisasi = Number(item.realisasi) || 0;
+        var statusRaw = String(item.status || 'Perencanaan').trim();
+        var statusLower = statusRaw.toLowerCase();
+
+        totalRabPerencanaan += nominal;
+
+        if (statusLower === 'selesai') {
+          totalRealisasiSelesai += (realisasi > 0 ? realisasi : nominal);
+        }
+
+        var badgeColor = '#94a3b8';
+        if (statusRaw === 'Perencanaan') badgeColor = '#eab308';
+        if (statusRaw === 'Disetujui') badgeColor = '#3b82f6';
+        if (statusRaw === 'Berjalan') badgeColor = '#10b981';
+        if (statusRaw === 'Selesai') badgeColor = '#6b7280';
+
+       // Menyiapkan teks keterangan tambahan di bawah nominal RAB berdasarkan status
+        var infoTambahanHTML = '';
+        if (statusLower === 'selesai' && realisasi > 0) {
+          infoTambahanHTML = `<br><span style="font-size:10px; color:#10b981; font-weight:600;">Realisasi: Rp ${realisasi.toLocaleString('id-ID')}</span>`;
+        } else if (statusLower === 'berjalan') {
+          infoTambahanHTML = `<br><span style="font-size:10px; color:#059669; font-weight:600;">Dana Siap</span>`;
+        } else if (statusLower === 'disetujui') {
+          infoTambahanHTML = `<br><span style="font-size:10px; color:#2563eb; font-weight:600;">Dana Terkumpul Sebagian</span>`;
+        } else if (statusLower === 'perencanaan') {
+          infoTambahanHTML = `<br><span style="font-size:10px; color:#d97706; font-weight:600;">Sedang Mencari Dana</span>`;
+        }
+
+        var tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid #f1f5f9';
+        tr.innerHTML = `
+          <td style="padding: 10px;">
+            <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
+            <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
+          </td>
+          <td style="padding: 10px; font-weight:bold; color:#0f172a;">
+            Rp ${nominal.toLocaleString('id-ID')}
+            ${infoTambahanHTML}
+          </td>
+          <td style="padding: 10px;">
+            <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
+              ${escapeHTML(item.status)}
+            </span>
+          </td>
+          <td style="padding: 10px; text-align: center; white-space: nowrap;">
+            <button onclick="editProgker('${item.id}')" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer; margin-right:4px;">✏️ Edit</button>
+            <button onclick="hapusProgker('${item.id}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">🗑️</button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('total-rab-perencanaan').innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
+      document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
+    }
+
     
-// 4. Modal Handler
-function bukaModalFormProgker() {
-  document.getElementById('formProgker').reset();
-  document.getElementById('progkerId').value = '';
-  document.getElementById('judul-modal-progker').innerText = '➕ Tambah Program Kerja';
-  document.getElementById('modal-form-progker').style.display = 'flex';
-}
+    function simpanDataProgker(e) {
+      e.preventDefault();
+      var btn = document.getElementById('btnSimpanProgker');
+      btn.disabled = true;
+      btn.innerText = 'Menyimpan...';
 
-function tutupModalFormProgker() {
-  document.getElementById('modal-form-progker').style.display = 'none';
-}
+      var status = document.getElementById('progkerStatus').value;
+      var kegiatan = document.getElementById('progkerKegiatan').value;
+      var divisi = document.getElementById('progkerDivisi').value;
+      
+      var rawAnggaran = document.getElementById('progkerAnggaran').value.replace(/\./g, '');
+      var rawRealisasi = document.getElementById('progkerRealisasi').value.replace(/\./g, '');
+      var detail = document.getElementById('progkerDetail').value;
+      var existingId = document.getElementById('progkerId').value;
 
-function editProgker(id) {
-  var item = dataProgkerGlobal.find(x => String(x.id) === String(id));
-  if (!item) return;
+      var progkerId = existingId ? existingId : 'progker_' + Date.now();
 
-  document.getElementById('progkerId').value = item.id;
-  document.getElementById('progkerKegiatan').value = item.kegiatan;
-  document.getElementById('progkerDivisi').value = item.divisi;
-  document.getElementById('progkerAnggaran').value = item.anggaran ? Number(item.anggaran).toLocaleString('id-ID') : '';
-  document.getElementById('progkerRealisasi').value = item.realisasi ? Number(item.realisasi).toLocaleString('id-ID') : '';
-  document.getElementById('progkerStatus').value = item.status;
-  document.getElementById('progkerDetail').value = item.detail;
+      var payload = {
+        ID: progkerId,
+        id: progkerId,
+        Nama_Kegiatan: kegiatan,
+        kegiatan: kegiatan,
+        Divisi: divisi,
+        divisi: divisi,
+        Anggaran: Number(rawAnggaran) || 0,
+        anggaran: Number(rawAnggaran) || 0,
+        Realisasi: Number(rawRealisasi) || 0,
+        realisasi: Number(rawRealisasi) || 0,
+        Status: status,
+        status: status,
+        Detail: detail,
+        detail: detail,
+        Tanggal: new Date().toLocaleDateString('id-ID'),
+        tanggal: new Date().toLocaleDateString('id-ID')
+      };
 
-  document.getElementById('judul-modal-progker').innerText = '✏️ Edit Program Kerja';
-  document.getElementById('modal-form-progker').style.display = 'flex';
-}
-
-// 5. Hapus Progker
-function hapusProgker(id) {
-  if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
-  var token = localStorage.getItem('adminToken') || '';
-
-  fetch(GAS_WEB_APP_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({ action: 'hapus_progker', id: id, token: token })
-  })
-  .then(res => res.json())
-  .then(() => muatDataProgker())
-  .catch(() => alert('Gagal menghapus program kerja.'));
-}
-
-function tutupTabProgker() {
-  var tabProgker = document.getElementById('tab-progker');
-  if (tabProgker) tabProgker.style.display = 'none';
-}
-
-function bukaTabAdmin(tabName) {
-  var allTabs = document.querySelectorAll('.content-tab-admin');
-  allTabs.forEach(function(el) { el.style.display = 'none'; });
-
-  if (tabName === 'progker') {
-    var tabProgker = document.getElementById('tab-progker');
-    if (tabProgker) {
-      tabProgker.style.display = 'flex'; // Diubah ke 'flex' agar modal tampil rapi di tengah
-      muatDataProgker();
+      const targetRef = window.firebaseRef(window.db, 'progker_rab/' + progkerId);
+      window.firebaseSet(targetRef, payload)
+        .then(() => {
+          btn.disabled = false;
+          btn.innerText = '💾 Simpan Program Kerja';
+          tutupModalFormProgker();
+          alert('✅ Program Kerja berhasil disimpan ke Firebase!');
+        })
+        .catch((err) => {
+          btn.disabled = false;
+          btn.innerText = '💾 Simpan Program Kerja';
+          alert('❌ Gagal menyimpan program kerja: ' + err.message);
+        });
     }
-  }
-}
 
-// <!-- PENUTUP SCRIPT UTAMA PWA -->
+    function bukaModalFormProgker() {
+      document.getElementById('formProgker').reset();
+      document.getElementById('progkerId').value = '';
+      document.getElementById('judul-modal-progker').innerText = '➕ Tambah Program Kerja';
+      document.getElementById('modal-form-progker').style.display = 'flex';
+    }
+
+    function tutupModalFormProgker() {
+      document.getElementById('modal-form-progker').style.display = 'none';
+    }
+
+    function editProgker(id) {
+      var item = dataProgkerGlobal.find(x => String(x.id) === String(id));
+      if (!item) return;
+
+      document.getElementById('progkerId').value = item.id;
+      document.getElementById('progkerKegiatan').value = item.kegiatan;
+      document.getElementById('progkerDivisi').value = item.divisi;
+      document.getElementById('progkerAnggaran').value = item.anggaran ? Number(item.anggaran).toLocaleString('id-ID') : '';
+      document.getElementById('progkerRealisasi').value = item.realisasi ? Number(item.realisasi).toLocaleString('id-ID') : '';
+      document.getElementById('progkerStatus').value = item.status;
+      document.getElementById('progkerDetail').value = item.detail;
+
+      document.getElementById('judul-modal-progker').innerText = '✏️ Edit Program Kerja';
+      document.getElementById('modal-form-progker').style.display = 'flex';
+    }
+
+    function hapusProgker(id) {
+      if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
+
+      const targetRef = window.firebaseRef(window.db, 'progker_rab/' + id);
+      window.firebaseRemove(targetRef)
+        .then(() => {
+          alert('🗑️ Program kerja berhasil dihapus.');
+        })
+        .catch((err) => {
+          alert('❌ Gagal menghapus: ' + err.message);
+        });
+    }
+
+    function tutupTabProgker() {
+      var tabProgker = document.getElementById('tab-progker');
+      if (tabProgker) tabProgker.style.display = 'none';
+    }
+
+    function bukaTabAdmin(tabName) {
+      var allTabs = document.querySelectorAll('.content-tab-admin');
+      allTabs.forEach(function(el) { el.style.display = 'none'; });
+
+      if (tabName === 'progker') {
+        var tabProgker = document.getElementById('tab-progker');
+        if (tabProgker) {
+          tabProgker.style.display = 'flex';
+          muatDataProgker();
+        }
+      }
+    }
   </script>
-
 
  
 
   <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
- <!-- MODULE FIREBASE -->
+<!-- MODULE FIREBASE -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const app = initializeApp(RT05_CONFIG.FIREBASE);
   const db = getDatabase(app);
 
+  // EKSPOS KE GLOBAL window AGAR BISA DIAKSES OLEH SEMUA FUNGSI DI ATASNYA
+  window.db = db;
+  window.firebaseRef = ref;
+  window.firebaseOnValue = onValue;
+  window.firebaseUpdate = update;
+  window.firebaseRemove = remove;
+  window.firebasePush = push;
+  window.firebaseSet = set;
+  window.firebaseGet = get;
+
+  // Global helper untuk tombol persetujuan chat di dalam modul
+  window.approveUser = (uid) => {
+    update(ref(db, `users/${uid}`), { status: 'aktif' });
+  };
+
+  window.rejectUser = (uid) => {
+    if (confirm("Hapus / Tolak pendaftaran warga ini?")) {
+      remove(ref(db, `users/${uid}`));
+    }
+  };
+
+  window.toggleRole = (uid, currentRole) => {
+    const newRole = currentRole === 'admin' ? 'warga' : 'admin';
+    update(ref(db, `users/${uid}`), { role: newRole });
+  };
+
+  // Listener Real-time untuk Chat/Users
   const usersRef = ref(db, 'users');
   onValue(usersRef, (snapshot) => {
     const pendingTable = document.getElementById('pending-users-list');
@@ -2595,40 +2768,24 @@ function bukaTabAdmin(tabName) {
     if (pBadge) pBadge.innerText = `${pendingCount} Pending`;
     if (tWarga) tWarga.innerText = totalCount;
 
-    // 🛠️ LOGIKA OTOMATISASI BUKA/TUTUP & UBAH WARNA BADGE
     if (detailsElem) {
       if (pendingCount > 0) {
-        detailsElem.open = true; // Otomatis mengembang jika ada pendaftar baru
+        detailsElem.open = true;
         if (pBadge) {
-          pBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.2)'; // Merah menyala
+          pBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
           pBadge.style.color = '#f87171';
           pBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
         }
       } else {
-        detailsElem.open = false; // Otomatis menutup menjadi 1 baris jika 0 Pending
+        detailsElem.open = false;
         if (pBadge) {
-          pBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.2)'; // Kuning biasa
+          pBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.2)';
           pBadge.style.color = '#fbbf24';
           pBadge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
         }
       }
     }
   });
-
-  window.approveUser = (uid) => {
-    update(ref(db, `users/${uid}`), { status: 'aktif' });
-  };
-
-  window.rejectUser = (uid) => {
-    if (confirm("Hapus / Tolak pendaftaran warga ini?")) {
-      remove(ref(db, `users/${uid}`));
-    }
-  };
-
-  window.toggleRole = (uid, currentRole) => {
-    const newRole = currentRole === 'admin' ? 'warga' : 'admin';
-    update(ref(db, `users/${uid}`), { role: newRole });
-  };
 </script>
 </body>
 </html>

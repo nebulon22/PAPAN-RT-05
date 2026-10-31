@@ -5,28 +5,34 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="Papan Informasi Digital, Denah Interaktif, Keuangan, dan Pengumuman Warga RT 05 Kayen.">
   <title>Denah Interaktif & Keuangan RT 05 Kayen</title>
+
+  <!-- Preconnect ke CDN agar proses DNS & Handshake lebih cepat -->
+  <link rel="preconnect" href="https://unpkg.com" crossorigin>
+  <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+
   <!-- Leaflet CSS dengan Non-Blocking Load -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
 
   <!-- FontAwesome Icons (Non-Blocking Load) -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
   
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.5.8">
+  <link rel="manifest" href="manifest.json?v=1.6.0">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   
-  <script src="utils.js"></script>
-  <!-- Tambahkan atribut defer pada Leaflet JS -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <!-- Leaflet JS dengan atribut defer (Aman untuk Peta & Lolos Render-Blocking) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Konfigurasi Global & Firebase Utils berikutnya -->
+ 
   
  <script>
  var serviceWorkerMenunggu = null;
 
   if ('serviceWorker' in navigator) {
-    // 1. Auto-reload saat controller berpindah ke SW baru
     let sedangRefresh = false;
     navigator.serviceWorker.addEventListener('controllerchange', () => {
       if (!sedangRefresh) {
@@ -35,7 +41,6 @@
       }
     });
 
-    // 2. Registrasi Service Worker & Penanganan Update
     navigator.serviceWorker.register('./sw.js').then(reg => {
       const tangkapSWWaiting = (sw) => {
         if (!sw) return;
@@ -43,12 +48,10 @@
         tampilkanLoncengUpdate();
       };
 
-      // Cek jika sudah ada file update yang siap dipasang
       if (reg.waiting) {
         tangkapSWWaiting(reg.waiting);
       }
 
-      // Deteksi saat ada update baru yang sedang terunduh
       reg.addEventListener('updatefound', () => {
         const workerBaru = reg.installing;
         if (workerBaru) {
@@ -64,32 +67,25 @@
     });
   }
 
- // Fungsi untuk memunculkan lonceng + teks "Ada update nih!"
 function tampilkanLoncengUpdate() {
   var container = document.getElementById('container-update-pwa');
   if (container) container.style.display = 'flex';
 }
 
-// Fungsi yang dipicu saat lonceng/teks diklik warga
 function perbaruiAplikasiSekarang() {
   var container = document.getElementById('container-update-pwa');
-  
-  // 1. Ubah tampilan tombol untuk memberi tahu warga bahwa proses sedang berjalan
   if (container) {
     container.innerHTML = '<span style="font-size: 11px; font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Memasang pembaruan...</span>';
   }
 
-  // 2. Kirim sinyal skipWaiting ke Service Worker
   if (serviceWorkerMenunggu) {
     serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
   } else {
-    // Jalankan reload paksa jika service worker tidak merespons
     setTimeout(() => {
       window.location.reload(true);
     }, 500);
   }
 }
-   
 </script>
 
  <style>
@@ -98,10 +94,9 @@ function perbaruiAplikasiSekarang() {
     padding: 0; 
     height: 100%; 
     font-family: sans-serif; 
-    overflow: hidden; /* Mencegah halaman utama/peta ikut scroll saat modal terbuka */
+    overflow: hidden; 
   }
   
-  /* Tambahkan background placeholder agar LCP merespons lebih cepat */
   #map { 
     width: 100%; 
     height: 100vh; 
@@ -243,7 +238,6 @@ function perbaruiAplikasiSekarang() {
     font-weight: bold;
   }
 
-  /* --- PERBAIKAN UTAMA MODAL --- */
   .modal-bg {
     display: none;
     position: fixed;
@@ -260,14 +254,14 @@ function perbaruiAplikasiSekarang() {
     background: white;
     width: 92%;
     max-width: 420px;
-    max-height: 82vh; /* Batasi tinggi maksimum modal agar pas di layar HP */
+    max-height: 82vh;
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 5px 20px rgba(0,0,0,0.3);
     display: flex;
     flex-direction: column;
     box-sizing: border-box;
-    overflow: hidden; /* Mencegah kotak modal meluber keluar */
+    overflow: hidden;
   }
 
   .modal-header {
@@ -277,22 +271,21 @@ function perbaruiAplikasiSekarang() {
     border-bottom: 1px solid #eee;
     padding-bottom: 8px;
     margin-bottom: 12px;
-    flex-shrink: 0; /* Header dikunci agar tidak ikut menyusut/bergeser */
+    flex-shrink: 0;
   }
   
   .modal-header h3 { margin: 0; font-size: 16px; color: #111; }
   .close-btn { background: none; border: none; font-size: 22px; cursor: pointer; color: #777; font-weight: bold; }
   
   .modal-body { 
-    overflow-y: auto; /* Memunculkan scrollbar vertikal mandiri */
+    overflow-y: auto; 
     flex: 1; 
     display: flex; 
     flex-direction: column; 
     gap: 12px;
     padding-right: 4px;
-    -webkit-overflow-scrolling: touch; /* Efek scroll halus di perangkat iOS */
+    -webkit-overflow-scrolling: touch;
   }
-  /* ------------------------------ */
   
   .card-info {
     background: #fdfdfd;
@@ -338,9 +331,6 @@ function perbaruiAplikasiSekarang() {
     box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
   }
 
-/* ========================================== */
-/* 1. TOMBOL FLOATING DI LUAR */
-/* ========================================== */
 .btn-qr-floating {
   position: fixed;
   bottom: 20px;
@@ -349,15 +339,9 @@ function perbaruiAplikasiSekarang() {
   z-index: 1500;
   width: 64px;
   height: 64px;
-  
-  /* Efek Glassmorphism */
-  /* Warna biru dengan transparansi */
   background-color: rgba(2, 136, 209, 0.7); 
-  /* Efek blur pada area di belakang tombol */
   backdrop-filter: blur(2px); 
- /* Border tipis warna biru tua */
   border: 1px solid rgba(1, 87, 155, 0.3);
-  
   color: white;
   border-radius: 16px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -367,13 +351,12 @@ function perbaruiAplikasiSekarang() {
   align-items: center;
   justify-content: center;
   padding: 4px;
-  transition: all 0.3s ease; /* Transisi halus saat hover/tekan */
+  transition: all 0.3s ease;
 }
 
-/* Pengaturan Sudut Siku Sesuai Ukuran Baru */
 .btn-qr-floating .corner {
   position: absolute;
-  width: 10px;  /* Ukuran siku diperkecil agar pas */
+  width: 10px; 
   height: 10px;
   border-color: white;
   border-style: solid;
@@ -381,7 +364,6 @@ function perbaruiAplikasiSekarang() {
   pointer-events: none;
 }
 
-/* Posisi sudut siku yang pas dan rapi di dalam tombol 64px */
 .btn-qr-floating .top-left {
   top: 5px; 
   left: 5px;
@@ -414,10 +396,6 @@ function perbaruiAplikasiSekarang() {
   border-bottom-right-radius: 6px;
 }
 
-   
-/* ========================================== */
-/* 2. MODAL KAMERA SCANNER (Sesuai HTML Anda) */
-/* ========================================== */
 .qr-scanner-wrapper {
   position: relative;
   width: 100%;
@@ -432,10 +410,9 @@ function perbaruiAplikasiSekarang() {
   height: 100%;
   pointer-events: none;
   box-sizing: border-box;
-  padding: 30px; /* Jarak bingkai siku dari tepi kamera */
+  padding: 30px;
 }
 
-/* Desain Siku Besar untuk Modal Kamera */
 .qr-corner-overlay .corner {
   position: absolute;
   width: 35px;
@@ -468,8 +445,7 @@ function perbaruiAplikasiSekarang() {
   border-bottom-width: 4px; border-right-width: 4px;
   border-bottom-right-radius: 12px;
 }
-   
-   
+  
   @keyframes pulse {
     0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
     70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
@@ -506,28 +482,21 @@ function perbaruiAplikasiSekarang() {
     object-fit: contain !important;
     transition: transform 0.3s ease !important;
   }
-
- 
-   
 </style>
 </head>
 <body>
   <main>
- <!-- Container Navigasi Pojok Kanan Atas -->
 <div style="position: fixed; top: 12px; right: 12px; z-index: 2000; display: flex; align-items: center; gap: 8px;">
   
-  <!-- Wrapper Update PWA (Melayang & Berkedip Bersama) -->
   <div id="container-update-pwa" onclick="perbaruiAplikasiSekarang()" 
     style="display: none; flex-direction: column; align-items: center; cursor: pointer; animation: floatPulse 1.5s infinite; position: relative;" 
     title="Versi baru tersedia! Klik untuk memperbarui">
     
-    <!-- Tombol Lonceng -->
     <button id="btn-update-pwa" type="button" 
       style="background: #ef4444; color: white; border: none; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; cursor: pointer; box-shadow: 0 2px 8px rgba(239,68,68,0.5); display: flex; align-items: center; justify-content: center; padding: 0; outline: none; pointer-events: none;">
       🔔
     </button>
 
-    <!-- Teks Peringatan Kecil Melayang Tepat di Bawah Lonceng -->
     <span style="white-space: nowrap; background: #ef4444; color: #ffffff; font-size: 9px; font-weight: bold; padding: 2px 6px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.3); margin-top: 3px; pointer-events: none;">
       Ada update nih!
     </span>
@@ -545,17 +514,14 @@ function perbaruiAplikasiSekarang() {
   <!-- Peta Utama -->
   <div id="map"></div>
   
- <!-- Container Pojok Kiri Atas (Tombol Setting & Banner Sinkronisasi) -->
 <div style="position: fixed; top: 12px; left: 12px; z-index: 1000; display: flex; align-items: center; gap: 6px;">
   
-  <!-- Tombol Pengaturan ⚙️ -->
   <button type="button" onclick="bukaModalSetting()" 
     style="background: #ffffff; color: #333; border: 1px solid #cbd5e1; border-radius: 50%; width: 32px; height: 32px; font-size: 15px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
     title="Pengaturan Notifikasi & Suara">
     ⚙️
   </button>
   
-  <!-- Banner/Indikator Sinkronisasi -->
   <div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-align: center; background-color: rgba(209, 250, 229, 0.9); color: #065f46; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px;">
     <span style="width: 8px; height: 8px; background: #34a853; border-radius: 50%; display: inline-block;"></span>
     <span id="teks-sinkron">Online</span>
@@ -563,11 +529,10 @@ function perbaruiAplikasiSekarang() {
 
 </div>
 
-<!-- Panel pencarian dan filter melayang -->
   <div id="top-panel">
     <div id="search-box">
-      <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
-      <button onclick="cariLokasi()">Cari</button>
+  <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); jalankanPencarianPeta(); }">
+  <button onclick="jalankanPencarianPeta()">Cari</button>
     </div>
     
     <div class="filter-container">
@@ -590,18 +555,15 @@ function perbaruiAplikasiSekarang() {
       </div>
 
   <div class="filter-row">
-        <!-- TOMBOL REKAP JIMPITAN -->
         <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" onclick="bukaModalRiwayatJimpitan()">
           🪙 Rekap Jimpitan
         </button>
 
-        <!-- TOMBOL UTAMA & MENU POP-UP DENAH RT 05 -->
         <div style="flex: 1; position: relative;">
           <button type="button" id="btn-toggle-denah" onclick="toggleDenahMenu()" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
             🗺️ Denah RT 05
           </button>
 
-          <!-- DAFTAR PILIHAN FILTER: Menggunakan efek Transparan Glassmorphism & Tanpa Kotak Putih Pekat -->
           <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: -100%; width: 220px; margin-top: 6px; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(2px); padding: 10px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15); z-index: 100;">
             <button class="btn-filter active" onclick="pilihFilterDenah('semua', this)" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
             <button class="btn-filter" onclick="pilihFilterDenah('minimarket', this)" style="width: 100%;">🏪 Minimarket</button>
@@ -615,7 +577,6 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-  <!-- Modal Rekening Koran -->
   <div id="modal-keuangan" class="modal-bg" onclick="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
     <div class="modal-content" style="max-width: 650px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;">
       <div class="modal-header">
@@ -639,6 +600,15 @@ function perbaruiAplikasiSekarang() {
     <option value="transportasi">Transportasi</option>
   </select>
 </div>
+      <!-- 🌟 TOMBOL EXPORT EXCEL & PDF DI SINI -->
+     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+       <button type="button" onclick="unduhExcelRekeningKoran()" style="flex: 1; padding: 8px; background: #059669; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+         <i class="fa-solid fa-file-excel"></i> Unduh Excel
+       </button>
+       <button type="button" onclick="cetakPDFRekeningKoran()" style="flex: 1; padding: 8px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+         <i class="fa-solid fa-print"></i> Cetak PDF
+       </button>
+     </div>
 
       <div style="background:#0288d1; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
         <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Saldo Saat Ini</span>
@@ -671,18 +641,14 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-
-<!-- Modal Pengumuman & RAB (Ukuran Konsisten & Smooth) -->
 <div id="modal-info" class="modal-bg" onclick="bukaTutupLuar(event)">
   <div class="modal-content" style="max-width: 500px; width: 92%; height: 80vh; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box;">
     
-    <!-- Header Modal (Tetap Di Atas) -->
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px; flex-shrink: 0;">
       <h3 style="margin: 0; font-size: 16px; color: #111;">📢 Informasi & RAB RT 05</h3>
       <button class="close-btn" onclick="tutupModalInfo()">&times;</button>
     </div>
 
-    <!-- TAB NAVIGASI ATAS (Tetap Di Atas) -->
     <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; flex-shrink: 0;">
       <button type="button" id="btn-tab-info" onclick="switchTabWarga('info')" 
               style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">
@@ -694,29 +660,23 @@ function perbaruiAplikasiSekarang() {
       </button>
     </div>
 
-   <!-- WADAH KONTEN (Area Scroll) -->
 <div style="flex: 1; overflow-y: auto; padding-right: 2px;">
   
-  <!-- WADAH TAB 1: INFORMASI UMUM / PENGUMUMAN -->
   <div id="panel-tab-info">
     <div class="modal-body" id="list-pengumuman">
       <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
     </div>
   </div>
 
-  <!-- WADAH TAB 2: RAB / PROGKER (READ ONLY FOR WARGA) -->
   <div id="panel-tab-rab" style="display: none;">
     
-    <!-- Ringkasan Anggaran (2 Card Side-by-Side) -->
     <div style="display: flex; gap: 8px; margin-bottom: 10px;">
       
-      <!-- KIRI: TOTAL ESTIMASI RAB (Proses, Rencana & Selesai) -->
       <div style="flex: 1; background: #eff6ff; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #3b82f6;">
         <span style="font-size: 9.5px; color: #1d4ed8; font-weight: bold; text-transform: uppercase; display: block;">Total Estimasi RAB</span>
         <div id="warga-total-rab" style="font-size: 15px; font-weight: bold; color: #1e40af;">Rp 0</div>
       </div>
 
-      <!-- KANAN: TOTAL REALISASI (Program Kerja Selesai) -->
       <div style="flex: 1; background: #ecfdf5; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #10b981;">
         <span style="font-size: 9.5px; color: #047857; font-weight: bold; text-transform: uppercase; display: block;">Realisasi Selesai</span>
         <div id="warga-total-realisasi" style="font-size: 15px; font-weight: bold; color: #065f46;">Rp 0</div>
@@ -724,7 +684,6 @@ function perbaruiAplikasiSekarang() {
 
     </div>
 
-    <!-- Tabel Transparansi Progker/RAB -->
     <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
       <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
         <thead>
@@ -742,15 +701,11 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-</div> <!-- Ini penutup WADAH KONTEN -->
+</div> 
 
-  <!-- TAMBAHKAN DUA BARIS INI -->
-  </div> <!-- Penutup modal-content -->
-</div> <!-- Penutup modal-info -->
+  </div> 
+</div>
 
-
-    
-<!-- Modal Foto Layar Penuh (Peta & Poster Pengumuman) -->
 <div id="modal-foto" class="modal-foto-bg" onclick="tutupFotoBesar(event)" style="
   display: none; 
   position: fixed; 
@@ -763,8 +718,6 @@ function perbaruiAplikasiSekarang() {
 ">
   <div style="position: relative; max-width: 100%; max-height: 90vh; display: flex; align-items: center; justify-content: center;">
 
-   
-    <!-- Tombol X Merah Minimalis Melayang di Pojok Gambar -->
     <button type="button" onclick="tutupFotoBesar(event)" title="Tutup" style="
       position: absolute; 
       top: -12px; 
@@ -788,7 +741,6 @@ function perbaruiAplikasiSekarang() {
       ✕
     </button>
     
-    <!-- Gambar Poster/Flyer Tampil Pas di Tengah Layar HP -->
     <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" onclick="event.stopPropagation()" style="
       max-width: 100%; 
       max-height: 85vh; 
@@ -802,7 +754,6 @@ function perbaruiAplikasiSekarang() {
   </div>
 </div>
 
-  <!-- Modal Popup khusus Video (Berdiri Mandiri & Bersih) -->
 <div id="modal-video-popup" style="
   display: none; 
   position: fixed; 
@@ -814,7 +765,6 @@ function perbaruiAplikasiSekarang() {
   align-items: center; 
   justify-content: center;
 ">
-  <!-- Tombol Rotate (Muncul Khusus Video Landscape) -->
   <button id="btn-rotate-video" type="button" onclick="toggleRotasiVideo()" title="Putar Layar" style="
     display: none; 
     position: absolute; 
@@ -833,7 +783,6 @@ function perbaruiAplikasiSekarang() {
     -webkit-backdrop-filter: blur(4px); 
     outline: none;
   ">🔄 Putar Layar</button>
- <!-- Tombol Close Minimalis & Elegan (Semi-Transparan) -->
 <button type="button" onclick="tutupModalVideo()" title="Tutup Video" style="
   position: absolute; 
   top: 16px; 
@@ -857,7 +806,6 @@ function perbaruiAplikasiSekarang() {
   outline: none;
 ">✖</button>
 
-  <!-- Container Pemutaran Video -->
   <div style="
     width: 100%; 
     height: 100%; 
@@ -879,7 +827,6 @@ function perbaruiAplikasiSekarang() {
   </div>
 </div>
 
-  <!-- Modal Inventaris Perkakas (Menggunakan iframe) -->
 <div id="modal-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-inventaris') tutupModalInventaris()">
   <div class="modal-content" style="max-width: 600px; width: 95%; height: 85vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
     
@@ -888,40 +835,60 @@ function perbaruiAplikasiSekarang() {
       <button class="close-btn" onclick="tutupModalInventaris()">&times;</button>
     </div>
     
-    <!-- Memanggil file inventaris.html ke dalam kotak popup secara mulus -->
     <iframe src="inventaris.html" style="width: 100%; flex: 1; border: none; background: #f9fafb;"></iframe>
     
   </div>
 </div>
 
-
-  <!-- Modal Riwayat Jimpitan -->
-  <div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
+<div id="modal-riwayat-jimpitan" class="modal-bg" onclick="if(event.target.id==='modal-riwayat-jimpitan') tutupModalRiwayatJimpitan()">
     <div class="modal-content" style="max-width: 800px; width: 95%;">
       <div class="modal-header">
         <h3>🪙 Rekap Hasil Jimpitan Ronda</h3>
         <button class="close-btn" onclick="tutupModalRiwayatJimpitan()">&times;</button>
       </div>
       
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; background: #f9fafb; padding: 8px 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
-        <label for="select-bulan-jimpitan" style="font-size: 13px; font-weight: bold; color: #374151;">📅 Pilih Periode:</label>
-        <select id="select-bulan-jimpitan" onchange="muatDataJimpitan()" style="padding: 6px 12px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13px; font-weight: 500; outline: none; cursor: pointer;">
-        </select>
-      </div>
+     <!-- 🌟 PERBAIKAN: Gunakan flex-direction: column atau flex-wrap agar aman di HP -->
+<div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; background: #f9fafb; padding: 10px 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
+  <label for="select-bulan-jimpitan" style="font-size: 12px; font-weight: bold; color: #374151;">📅 Pilih Periode:</label>
+  <select id="select-bulan-jimpitan" onchange="muatDataJimpitan()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; box-sizing: border-box; background: white;">
+  </select>
+</div>
 
-      <!-- Ditambahkan id="label-total-jimpitan" pada span berikut -->
-      <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
+      <div style="background:#10b981; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:12px;">
         <span id="label-total-jimpitan" style="font-size:11px; text-transform:uppercase; opacity:0.9;">TOTAL JIMPITAN HARI INI</span>
         <div id="total-jimpitan" style="font-size:22px; font-weight:bold;">Rp 0</div>
       </div>
 
-      <div id="grid-jimpitan" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; max-height: 55vh; overflow-y: auto; padding: 4px;">
+      <!-- 🌟 TOMBOL EXPORT / UNDUH LAPORAN -->
+      <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+        <button type="button" onclick="exportJimpitanToCSV()" style="flex: 1; padding: 8px; background: #059669; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+          <i class="fa-solid fa-file-excel"></i> Unduh Excel (CSV)
+        </button>
+        <button type="button" onclick="cetakLaporanJimpitan()" style="flex: 1; padding: 8px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 5px;">
+          <i class="fa-solid fa-print"></i> Cetak / Simpan PDF
+        </button>
+      </div>
+
+      <!-- 🌟 KUNCI TINGGI KONTEN (HEIGHT & MAX-HEIGHT DISET SAMA AGAR SMOOTH) -->
+      <div id="grid-jimpitan" style="height: 320px; max-height: 320px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; padding: 4px; box-sizing: border-box;">
       </div>
     </div>
   </div>
 
+    <!-- Modal Catatan Khusus Malam Minggu -->
+<div id="modal-catatan-ronda" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; justify-content:center; align-items:center;">
+  <div style="background:#fff; width:90%; max-width:400px; border-radius:8px; padding:16px; max-height:80vh; overflow-y:auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #f59e0b; padding-bottom:8px; margin-bottom:12px;">
+      <h3 style="margin:0; font-size:14px; color:#b45309; font-weight:bold;">📋 Catatan Khusus Malam Minggu</h3>
+      <button onclick="tutupModalCatatanRonda()" style="background:none; border:none; font-size:16px; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+    </div>
+    <!-- Tempat daftar data catatan ronda dirender -->
+    <div id="grid-catatan-ronda">
+      <div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Memuat data...</div>
+    </div>
+  </div>
+</div>
 
-<!-- Modal Kamera QR Scanner -->
 <div id="modal-qr-scanner" class="modal-bg" style="display: none; z-index: 3000;">
   <div class="modal-content" style="max-width: 320px; text-align: center;">
     <div class="modal-header">
@@ -929,11 +896,9 @@ function perbaruiAplikasiSekarang() {
       <button class="close-btn" onclick="stopScanQR()">&times;</button>
     </div>
     
-    <!-- Wrapper untuk kamera dan bingkai sudut siku -->
     <div class="qr-scanner-wrapper" style="position: relative; width: 100%; border-radius: 8px; overflow: hidden;">
       <div id="qr-reader" style="width: 100%;"></div>
       
-      <!-- Bingkai Sudut Siku Melengkung (Overlay) -->
       <div class="qr-corner-overlay">
         <div class="corner top-left"></div>
         <div class="corner top-right"></div>
@@ -946,16 +911,13 @@ function perbaruiAplikasiSekarang() {
   </div>
 </div>
 
-  <!-- Tombol Melayang Scan QR -->
   <button id="btn-scan-jimpitan" onclick="mulaiScanJimpitan()" class="btn-qr-floating">
     
-    <!-- 4 Sudut Siku Putih Melengkung (Melingkupi seluruh tombol) -->
     <div class="corner top-left"></div>
     <div class="corner top-right"></div>
     <div class="corner bottom-left"></div>
     <div class="corner bottom-right"></div>
 
-    <!-- Gambar Kentongan -->
     <img src="kentongan-slit-drum.png" alt="Kentongan" style="
       width: 28px; 
       height: 28px; 
@@ -964,7 +926,6 @@ function perbaruiAplikasiSekarang() {
       filter: brightness(0) invert(1) drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
     ">
     
-    <!-- Teks Ronda Broo -->
     <span style="
       font-size: 8px; 
       font-weight: bold; 
@@ -974,13 +935,11 @@ function perbaruiAplikasiSekarang() {
     ">Ronda Broo</span>
   </button>
 
-<!-- Tombol Senter -->
 <button onclick="toggleSenterRonda()" id="btn-senter-ronda" title="Senter Ronda" style="position: fixed; bottom: 20px; left: calc(50% + 45px); z-index: 1000; background: #1e293b; color: #fbbf24; border: 1px solid #334155; padding: 6px; border-radius: 10px; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.3); display: flex; flex-direction: column; align-items: center; justify-content: center; width: 42px; height: 42px; transition: all 0.2s;">
   <i class="fa-solid fa-lightbulb" id="icon-senter-ronda" style="font-size: 16px;"></i>
   <span id="status-senter-ronda" style="font-size: 8px; font-weight: bold; margin-top: 2px;">OFF</span>
 </button>
 
-  <!-- Modal Form Input Jimpitan -->
   <div id="modal-jimpitan" class="modal-bg" style="display: none; z-index: 3000;">
     <div class="modal-content">
       <div class="modal-header">
@@ -1011,7 +970,6 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-  <!-- Modal Form Pendataan Warga Baru -->
   <div id="modal-warga-baru" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-warga-baru') tutupModalWargaBaru()">
     <div class="modal-content" style="max-width: 400px; width: 90%;">
       <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
@@ -1057,35 +1015,27 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
   
-<!-- Modal Info / Changelog -->
 <div id="modal-changelog" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-changelog') tutupModalChangelog()">
   <div class="modal-content" style="max-width: 400px; max-height: 80vh; display: flex; flex-direction: column; text-align: left;">
     
-    <!-- Header (Tetap di atas) -->
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; flex-shrink: 0;">
       <h3 style="margin: 0; font-size: 16px; color: #333;">ℹ️ Informasi & Catatan Perubahan</h3>
       <span onclick="tutupModalChangelog()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
     </div>
 
-    <!-- Area Konten (Bisa di-scroll) -->
     <div id="konten-changelog" style="font-size: 13px; color: #444; line-height: 1.5; overflow-y: auto; flex: 1; padding-right: 4px;"></div>
 
-    <!-- Section Credits (Disisipkan di sini) -->
     <div style="margin-top: 10px; padding-top: 8px; border-top: 1px solid #eee; text-align: center; font-size: 11px; color: #666; flex-shrink: 0;">
       <strong>Papan Informasi Digital RT 05 Kayen</strong><br>
       <span style="font-size: 10px; color: #888;">Dikembangkan oleh Pengurus RT 05 Kayen • Powered by Leaflet</span><br>
       <span style="font-size: 10px; color: #0288d1; font-weight: 500;">Developed with ❤️ by ©Deny Rinawan</span>
     </div>
 
-    <!-- Tombol Tutup (Tetap di bawah) -->
     <button type="button" onclick="tutupModalChangelog()" style="width: 100%; margin-top: 10px; padding: 10px; background: #4CAF50; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; flex-shrink: 0;">
       Tutup
     </button>
   </div>
 </div>
-
-
-
 
 <style>
   @keyframes softPulse {
@@ -1107,20 +1057,17 @@ function perbaruiAplikasiSekarang() {
     animation: softPulse 2s infinite ease-in-out !important;
   }
 </style>
-<!-- 1. TOMBOL CHAT MELAYANG (Pojok Kiri Bawah) -->
+
 <button id="floating-chat-btn" onclick="toggleChatModal()" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #22c55e; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer;" title="Buka Live Chat RT">
   <i class="fa-solid fa-comments" style="font-size: 20px;"></i>
   
-  <!-- BADGE UNREAD OBROLAN GRUP UTAMA -->
   <span id="badge-chat-main" style="display: none; position: absolute; top: -3px; right: -3px; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 12px; border: 2px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); min-width: 18px; text-align: center; line-height: 1;">
     0
   </span>
 </button>
 
-<!-- 2. KOTAK PANEL CHAT OVERLAY (Transparan Hitam 20% Okupasi) -->
 <div id="chat-overlay-modal" style="display: none; position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1000; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
   
-  <!-- Header Chat Overlay -->
   <div style="background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
     <div style="display: flex; align-items: center; gap: 8px;">
       <i class="fa-solid fa-comments" style="color: #38bdf8;"></i>
@@ -1131,13 +1078,10 @@ function perbaruiAplikasiSekarang() {
     </div>
   </div>
 
-
-  <!-- Frame Tampilan Chat (Iframe Transparan) -->
   <iframe src="chat.html" style="width: 100%; height: 100%; border: none; background: transparent;" allowtransparency="true"></iframe>
 
 </div>
 
-<!-- Modal Pengaturan Notifikasi & Suara -->
 <div id="modal-setting" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-setting') tutupModalSetting()">
   <div class="modal-content" style="max-width: 380px; display: flex; flex-direction: column; text-align: left;">
     
@@ -1148,7 +1092,7 @@ function perbaruiAplikasiSekarang() {
 
     <div style="font-size: 13px; color: #444; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: 60vh;">
       
-      <!-- Pilihan Mode Notifikasi -->
+      <!-- Mode Notifikasi Global -->
       <div style="background: #f8fafb; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
         <label for="setting-mode-notif" style="font-weight: bold; display: block; margin-bottom: 6px; color: #1e293b;">Mode Notifikasi (Chat, Update, & Info):</label>
         <select id="setting-mode-notif" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 500; outline: none;">
@@ -1159,44 +1103,70 @@ function perbaruiAplikasiSekarang() {
         </select>
       </div>
 
-<!-- Pilihan Suara Notifikasi -->
-<div style="margin-top: 10px;">
-  <label for="setting-sound-choice" style="font-size: 11px; font-weight: bold; color: #374151; display: block; margin-bottom: 3px;">Pilih Nada Notifikasi:</label>
-  <select id="setting-sound-choice" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 11px; background-color: #f9fafb; color: #1f2937;">
-    <option value="audio/bell2.mp3">🛎️ Bell 2</option>
-    <option value="audio/bell3.mp3">🛎️ Bell 3</option>
-    <option value="audio/bubble1.mp3">💧 Bubble 1</option>
-    <option value="audio/bubble2.mp3">💧 Bubble 2</option>
-    <option value="audio/bubble3.mp3">💧 Bubble 3</option>
-    <option value="audio/bubble4.mp3">💧 Bubble 4</option>
-    <option value="audio/cring1.mp3">✨ Cring 1</option>
-    <option value="audio/cring2.mp3">✨ Cring 2</option>
-    <option value="audio/kling1.mp3">🔔 Kling 1</option>
-    <option value="audio/kling2.mp3">🔔 Kling 2</option>
-    <option value="audio/kling3.mp3">🔔 Kling 3</option>
-    <option value="audio/ping1.mp3">💬 Ping 1</option>
-    <option value="audio/ping2.mp3">💬 Ping 2</option>
-  </select>
-</div>
-
-      <!-- Toggle Khusus Chat -->
-      <div style="background: #f8fafb; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
-        <div>
-          <span style="font-weight: bold; display: block; color: #1e293b;">Notifikasi Chat Masuk</span>
-          <span style="font-size: 11px; color: #64748b;">Putar suara saat ada pesan baru di grup</span>
+      <!-- Pilihan Suara Chat Grup -->
+      <div style="background: #f8fafb; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <label for="setting-sound-grup" style="font-size: 12px; font-weight: bold; color: #1e293b; display: block; margin-bottom: 3px;">🎵 Nada Notifikasi Chat Grup:</label>
+        <select id="setting-sound-grup" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 11px; background-color: #fff; color: #1f2937; margin-bottom: 8px;">
+          <option value="audio/bell2.mp3">🛎️ Bell 2</option>
+          <option value="audio/bell3.mp3">🛎️ Bell 3</option>
+          <option value="audio/bubble1.mp3">💧 Bubble 1</option>
+          <option value="audio/bubble2.mp3">💧 Bubble 2</option>
+          <option value="audio/bubble3.mp3">💧 Bubble 3</option>
+          <option value="audio/bubble4.mp3">💧 Bubble 4</option>
+          <option value="audio/cring1.mp3">✨ Cring 1</option>
+          <option value="audio/cring2.mp3">✨ Cring 2</option>
+          <option value="audio/kling1.mp3">🔔 Kling 1</option>
+          <option value="audio/kling2.mp3">🔔 Kling 2</option>
+          <option value="audio/kling3.mp3">🔔 Kling 3</option>
+          <option value="audio/ping1.mp3">💬 Ping 1</option>
+          <option value="audio/ping2.mp3">💬 Ping 2</option>
+        </select>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; pt-2; margin-top: 6px; padding-top: 6px;">
+          <div>
+            <span style="font-weight: bold; display: block; color: #1e293b; font-size: 12px;">Aktifkan Chat Grup</span>
+            <span style="font-size: 10px; color: #64748b;">Putar suara saat pesan grup masuk</span>
+          </div>
+          <input type="checkbox" id="setting-chat-active" style="width: 18px; height: 18px; cursor: pointer;" checked>
         </div>
-        <input type="checkbox" id="setting-chat-active" style="width: 18px; height: 18px; cursor: pointer;" checked>
+      </div>
+
+      <!-- Pilihan Suara Chat Private -->
+      <div style="background: #f8fafb; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+        <label for="setting-sound-private" style="font-size: 12px; font-weight: bold; color: #1e293b; display: block; margin-bottom: 3px;">🎵 Nada Notifikasi Chat Private:</label>
+        <select id="setting-sound-private" style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 11px; background-color: #fff; color: #1f2937; margin-bottom: 8px;">
+          <option value="audio/bell1.mp3">🛎️ Bell 1</option>
+          <option value="audio/bell2.mp3">🛎️ Bell 2</option>
+          <option value="audio/bubble1.mp3">💧 Bubble 1</option>
+          <option value="audio/bubble2.mp3">💧 Bubble 2</option>
+          <option value="audio/bubble3.mp3">💧 Bubble 3</option>
+          <option value="audio/bubble4.mp3">💧 Bubble 4</option>
+          <option value="audio/cring1.mp3">✨ Cring 1</option>
+          <option value="audio/cring2.mp3">✨ Cring 2</option>
+          <option value="audio/kling1.mp3">🔔 Kling 1</option>
+          <option value="audio/kling2.mp3">🔔 Kling 2</option>
+          <option value="audio/kling3.mp3">🔔 Kling 3</option>
+          <option value="audio/ping1.mp3">💬 Ping 1</option>
+          <option value="audio/ping2.mp3">💬 Ping 2</option>
+        </select>
+        
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; margin-top: 6px; padding-top: 6px;">
+          <div>
+            <span style="font-weight: bold; display: block; color: #1e293b; font-size: 12px;">Aktifkan Chat Private</span>
+            <span style="font-size: 10px; color: #64748b;">Putar suara saat pesan private masuk</span>
+          </div>
+          <input type="checkbox" id="setting-private-active" style="width: 18px; height: 18px; cursor: pointer;" checked>
+        </div>
       </div>
 
     </div>
 
-    <!-- Tombol Simpan -->
     <button type="button" onclick="simpanPengaturanApp()" style="width: 100%; margin-top: 15px; padding: 10px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
       💾 Simpan Pengaturan
     </button>
   </div>
 </div>
-    
+  
 </main>
 <script>
   function toggleChatModal() {
@@ -1208,15 +1178,12 @@ function perbaruiAplikasiSekarang() {
     if (modal.style.display === 'none' || modal.style.display === '') {
       modal.style.display = 'flex';
       
-      // Sembunyikan badge saat modal chat dibuka
       const badge = document.getElementById('badge-chat-main');
       if (badge) badge.style.display = 'none';
 
-      // 🛑 Matikan animasi tombol ketika modal dibuka
       const chatBtn = document.getElementById('floating-chat-btn');
       if (chatBtn) chatBtn.classList.remove('chat-btn-animated');
 
-      // Pindahkan ke Public Group & tandai terbaca HANYA saat modal DIBUKA
       if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
         iframe.contentWindow.switchChatRoom('public');
       }
@@ -1225,20 +1192,16 @@ function perbaruiAplikasiSekarang() {
     }
   }
 
-  // 📥 SATU-SATUNYA PENGHUBUNG PESAN DARI IFRAME CHAT
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
       const count = event.data.unreadPublicCount || 0;
       const modal = document.getElementById('chat-overlay-modal');
       const isModalOpen = (modal && modal.style.display === 'flex');
 
-      // Jika modal terbuka, anggap pesan sudah dibaca (count = 0)
       const effectiveCount = isModalOpen ? 0 : count;
 
-      // Perbarui tampilan badge di tombol luar dan animasinya
       updatePublicTabBadge(effectiveCount);
 
-      // Update badge ikon aplikasi PWA di Home Screen HP
       if ('setAppBadge' in navigator) {
         try {
           if (effectiveCount > 0) {
@@ -1246,14 +1209,11 @@ function perbaruiAplikasiSekarang() {
           } else {
             navigator.clearAppBadge().catch(err => console.log(err));
           }
-        } catch (e) {
-          // Abaikan jika browser tidak mendukung
-        }
+        } catch (e) {}
       }
     }
   });
 
-  // Fungsi untuk memperbarui Badge pada Ikon Aplikasi PWA (Home Screen)
   function updatePWABadge(totalUnread) {
     if ('setAppBadge' in navigator) {
       try {
@@ -1266,7 +1226,6 @@ function perbaruiAplikasiSekarang() {
     }
   }
 
-  // 🔥 FUNGSI UTAMA PENGATUR BADGE & ANIMASI BERDENYUT
   function updatePublicTabBadge(count) {
     const badge = document.getElementById('badge-chat-main');
     const chatBtn = document.getElementById('floating-chat-btn');
@@ -1276,305 +1235,244 @@ function perbaruiAplikasiSekarang() {
     if (count > 0) {
       badge.style.display = 'inline-block';
       badge.innerText = count > 99 ? '99+' : count;
-      
-      // 🔥 NYALAKAN ANIMASI LEMBUT KETIKA ADA PESAN BARU
       chatBtn.classList.add('chat-btn-animated');
     } else {
       badge.style.display = 'none';
       badge.innerText = '0';
-      
-      // 🛑 MATIKAN ANIMASI JIKA SUDAH DIBACA
       chatBtn.classList.remove('chat-btn-animated');
     }
   }
 </script>
 
-  <script>
-  // --- KODE PETA & DATA ---
-   
-  var GID_PENGUMUMAN = '1885853390'; 
-  var GID_KEUANGAN = '1568425671';
+ <script>
+var map; 
+var daftarPin = [];
+var daftarPengumuman = [];
+var dataKeuangan = [];
+var pinRumahAktif = null;
 
-  var SHEET_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv`;
-  var PENGUMUMAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_PENGUMUMAN}`;
-  var KEUANGAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_KEUANGAN}`;
+window.addEventListener('utilsSiap', () => {
+  // 1. Pastikan DOM / Kontainer Peta sudah siap sepenuhnya
+  const containerMap = document.getElementById('map');
+  if (!containerMap) return;
 
-  var map; 
-  var daftarPin = [];
-  var daftarPengumuman = [];
-  var dataKeuangan = [];
-  var pinRumahAktif = null;
-
-  // ==========================================
-  // BAGIAN 1: PEMUATAN DATA CERDAS (CACHING)
-  // ==========================================
-
-  // 🔥 INISIALISASI PETA DENGAN DEFERRED LOADING (Ditunda 150ms agar UI mulus dulu)
-  window.addEventListener('DOMContentLoaded', () => {
-    setTimeout(() => {
-      map = L.map('map').setView([-7.7423, 110.3842], 17);
-
-      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-          maxZoom: 20,
-          subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-          attribution: '&copy; Google Maps'
-      }).addTo(map);
-
-      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
-
-      // Setelah peta siap, jalankan fungsi pemuatan data peta di bawah
-      muatDataPetaWarga();
-    }, 200);
-  });
-  
-  // 1. Bungkus ke dalam fungsi muatDataPetaWarga()
-function muatDataPetaWarga() {
-    ambilDataSheets('cache_peta_warga', SHEET_URL, (data, fromCache) => {
-      if (!data) return;
-      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-      
-      // Bersihkan marker lama jika ada update dari background
-      daftarPin.forEach(pin => map.removeLayer(pin.marker));
-      daftarPin = [];
-
-      // Konfigurasi Chunking (Pecah per 20 data agar main thread tidak terblokir)
-      var index = 0;
-      var chunkSize = 20;
-
-      function prosesChunk() {
-        var batas = Math.min(index + chunkSize, baris.length);
-        
-        for (let i = index; i < batas; i++) {
-          var kolom = baris[i];
-          if (kolom.length >= 3 && kolom[0] !== '') {
-            var latClean = perbaikiKoordinat(kolom[1]);
-            var lngClean = perbaikiKoordinat(kolom[2]);
-            
-            var statusHidden = kolom[3] ? String(kolom[3]).trim().toUpperCase() === 'TRUE' : false;
-            var kategoriManual = kolom[4] ? String(kolom[4]).trim().toLowerCase() : '';
-            var urlFoto = kolom[5] ? String(kolom[5]).trim() : '';
-            var namaAsli = kolom[0] ? String(kolom[0]).trim() : '';
-
-            var item = {
-              name: namaAsli,
-              nameAsli: namaAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
-              hidden: statusHidden,
-              foto: urlFoto
-            };
-
-            if (isNaN(item.lat) || isNaN(item.lng)) continue;
-
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" loading="lazy" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
-            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-            
-            var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
-
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            
-            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-            
-            // 🔥 HANYA TAMPILKAN KATEGORI 'FASUM' DI AWAL PEMUATAN
-            if (!item.hidden && dataIkon.kategori === 'fasum') {
-              marker.addTo(map);
-            }
-
-            daftarPin.push({ 
-              namaRaw: item.nameAsli,
-              nama: item.nameAsli.toLowerCase(), 
-              marker: marker, 
-              lat: item.lat, 
-              lng: item.lng,
-              hidden: item.hidden,
-              kategori: dataIkon.kategori 
-            });
-          }
-        }
-
-        index = batas;
-
-        // Jika masih ada sisa data, jadwalkan eksekusi chunk berikutnya
-        if (index < baris.length) {
-          if ('requestIdleCallback' in window) {
-            requestIdleCallback(prosesChunk, { timeout: 50 });
-          } else {
-            setTimeout(prosesChunk, 4);
-          }
-        }
-      }
-
-      // Mulai proses chunk pertama
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(prosesChunk, { timeout: 50 });
-      } else {
-        setTimeout(prosesChunk, 4);
-      }
-    });
+  // 2. Cek apakah peta sudah pernah diinisialisasi sebelumnya
+  if (typeof map !== 'undefined' && map !== null) {
+    return; // Jika sudah ada, hentikan agar tidak inisialisasi ulang
   }
 
-    
-// 2. Muat Data Pengumuman
-ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
-  if (!data) return;
-  var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-  daftarPengumuman = [];
+  // 3. Bersihkan status inisialisasi lama jika ada
+  let container = L.DomUtil.get('map');
+  if (container != null && container._leaflet_id != null) {
+    container._leaflet_id = null;
+  }
 
-  baris.forEach(function(kolom) {
-    if (kolom.length >= 2 && kolom[1] !== '') {
-      var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
-      if (status === 'AKTIF') {
-        
-        // 🛠️ PERBAIKAN FORMAT TANGGAL ISO:
-        var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
-        var tglRapi = tglRaw;
-        
-        if (tglRapi.includes('T')) {
-          var parts = tglRapi.split('T')[0].split('-');
-          if (parts.length === 3) {
-            tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`; // Mengubah "2026-09-14T..." menjadi "14/09/2026"
-          }
-        }
-
-        daftarPengumuman.push({
-          tanggal: tglRapi,
-          judul: kolom[1] ? String(kolom[1]).trim() : '',
-          detail: kolom[2] ? String(kolom[2]).trim() : '',
-          lokasi: kolom[3] ? String(kolom[3]).trim() : '',
-          foto: kolom[5] ? String(kolom[5]).trim() : '' // Membaca URL Foto/Video di Kolom F
-        });
-      }
-    }
-  });
-
-  // 🔄 URUTKAN BERDASARKAN TANGGAL EVENT
-  daftarPengumuman.sort((a, b) => {
-    var partsA = a.tanggal.split('/');
-    var partsB = b.tanggal.split('/');
-    
-    var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
-    var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
-    
-    return dateB - dateA;
-  });
-
-  // Tampilkan hanya 10 pengumuman terbaru di layar warga
-  daftarPengumuman = daftarPengumuman.slice(0, 10);
+  // 4. Inisialisasi Peta dijalankan lebih dulu agar objek 'map' sah dan tersedia
+  map = L.map('map').setView([-7.7423, 110.3842], 17);
   
-  // TAMPILKAN BADGE NOTIFIKASI
-  var badge = document.getElementById('badge-count');
-  if (badge) {
-    if (daftarPengumuman.length > 0) {
-      badge.innerText = daftarPengumuman.length;
-      badge.style.display = 'inline-block';
-    } else {
-      badge.style.display = 'none';
-    }
+  L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+  }).addTo(map);
+  
+  L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+
+  // 5. Setelah peta siap, baru tarik data berat di latar belakang menggunakan requestIdleCallback / setTimeout
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(() => {
+      muatDataPetaWarga();
+      muatPengumumanFirebase();
+    }, { timeout: 200 });
+  } else {
+    setTimeout(() => {
+      muatDataPetaWarga();
+      muatPengumumanFirebase();
+    }, 50);
+  }
+
+  perbaruiIndikatorSync();
+  if (navigator.onLine) {
+    kirimDataPendingJimpitan();
   }
 });
 
-function escapeHTML(text) {
-  if (!text) return '';
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
+function muatDataPetaWarga() {
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatDataPetaWarga, 50);
+    return;
+  }
 
-function bukaModalInfo() {
-  var container = document.getElementById('list-pengumuman');
-  
-  // 1. Tampilkan modalnya dulu secara instan
-  document.getElementById('modal-info').style.display = 'flex';
+  // Pastikan markerGroup terpasang di peta
+  if (typeof markerGroup === 'undefined' || !markerGroup) {
+    window.markerGroup = L.layerGroup().addTo(map);
+  } else if (!map.hasLayer(markerGroup)) {
+    markerGroup.addTo(map);
+  }
 
-  // 2. Fungsi helper untuk merender daftar pengumuman ke HTML
-  function renderDaftarPengumuman() {
-    container.innerHTML = '';
+  const petaRef = window.firebaseRef(window.db, 'peta_warga');
 
-    if (daftarPengumuman.length === 0) {
-      container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
-      return;
-    }
+  window.firebaseOnValue(petaRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    
+    markerGroup.clearLayers();
+    daftarPin = [];
 
-    daftarPengumuman.forEach(function(info, idx) {
-      var lokasiParam = encodeURIComponent(info.lokasi);
+    if (!dataObj) return;
+
+    var baris = [];
+    Object.keys(dataObj).forEach(key => {
+      var item = dataObj[key];
+      if (item && (item.nama || item.name || item.Nama)) {
+        baris.push(item);
+      }
+    });
+
+    var index = 0;
+    var chunkSize = 20;
+
+    function prosesChunk() {
+      var batas = Math.min(index + chunkSize, baris.length);
       
-      var htmlFoto = '';
-      if (info.foto) {
-        var urlFoto = info.foto.toLowerCase();
-        
-        if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
-          htmlFoto = `
-            <div onclick="bukaModalVideo('${info.foto}')" style="
-              position: relative; 
-              width: 100%; 
-              max-height: 200px; 
-              border-radius: 6px; 
-              overflow: hidden; 
-              margin-top: 8px; 
-              background: #000; 
-              cursor: pointer;
-              display: flex;
-              align-items: center;
-              justify-content: center;
-            ">
-            <video src="${info.foto}" preload="metadata" onloadeddata="this.currentTime=3" style="
-              width: 100%; 
-              max-height: 200px; 
-              object-fit: cover; 
-              opacity: 0.8;
-              pointer-events: none;
-            "></video>
-              <div style="
-                position: absolute; 
-                background: rgba(239, 68, 68, 0.9); 
-                color: #fff; 
-                border-radius: 50%; 
-                width: 48px; height: 48px; 
-                display: flex; align-items: center; justify-content: center; 
-                font-size: 22px; 
-                box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-              ">▶</div>
-            </div>`;
-        } else {
-          htmlFoto = `
-            <img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
+      for (let i = index; i < batas; i++) {
+        var kolom = baris[i];
+
+        var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
+
+        if (namaAsli !== '') {
+          var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
+          var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
+          var latClean = perbaikiKoordinat(rawLat);
+          var lngClean = perbaikiKoordinat(rawLng);
+          
+          var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
+          var statusHidden = typeof rawHidden === 'boolean' 
+            ? rawHidden 
+            : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+
+          var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
+          var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
+
+          var item = {
+            name: namaAsli,
+            nameAsli: namaAsli,
+            lat: parseFloat(latClean),
+            lng: parseFloat(lngClean),
+            hidden: statusHidden,
+            foto: urlFoto
+          };
+
+          if (isNaN(item.lat) || isNaN(item.lng)) continue;
+
+          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+          var htmlFoto = item.foto ? `<br><img src="${item.foto}" loading="lazy" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+          
+          var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+
+          var customIcon = L.divIcon({
+            className: 'custom-pin',
+            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+          });
+          
+          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+
+          // Cukup simpan penanda ke array daftarPin (penampilan ke peta diserahkan ke filterKategori)
+          daftarPin.push({ 
+            namaRaw: item.nameAsli,
+            nama: item.nameAsli.toLowerCase(), 
+            marker: marker, 
+            lat: item.lat, 
+            lng: item.lng,
+            hidden: item.hidden,
+            kategori: kategoriManual || dataIkon.kategori 
+          });
         }
       }
 
-      var html = `
-        <div class="card-info">
-          ${info.tanggal ? `<div class="tgl">📅 ${escapeHTML(info.tanggal)}</div>` : ''}
-          <div class="judul">${escapeHTML(info.judul)}</div>
-          <div class="detail">${escapeHTML(info.detail)}</div>
-          ${htmlFoto}
-          ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHTML(info.lokasi)})</button>` : ''}
-        </div>
-      `;
-      container.innerHTML += html;
-    });
+      index = batas;
+
+      if (index < baris.length) {
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(prosesChunk, { timeout: 50 });
+        } else {
+          setTimeout(prosesChunk, 4);
+        }
+      } else {
+        // SETELAH SELURUH DATA SELESAI DIMUAT:
+        // Panggil filter 'awal' agar HANYA FASUM, Rumah Pak RT, dan Rumah Pak RW yang tampil di awal.
+        if (typeof filterKategori === 'function') {
+          filterKategori('awal');
+        }
+      }
+    }
+
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(prosesChunk, { timeout: 50 });
+    } else {
+      setTimeout(prosesChunk, 4);
+    }
+  }, (error) => {
+    console.error("Gagal memuat peta warga dari Firebase RTDB:", error);
+  });
+}
+
+function jalankanPencarianPeta() {
+  var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
+  if (!kataKunci) return;
+
+  // Memanggil fungsi cariLokasi universal yang ada di utils.js
+  // Kita passing daftarPin sebagai sumber datanya
+  cariLokasi(kataKunci, daftarPin, function(hasilPencarian) {
+    if (hasilPencarian && hasilPencarian.length > 0) {
+      // Ambil hasil pertama yang cocok dari pencarian universal
+      var hasil = hasilPencarian[0]; 
+      
+      if (hasil.marker) {
+        if (typeof pinRumahAktif !== 'undefined' && pinRumahAktif) { 
+          map.removeLayer(pinRumahAktif); 
+          pinRumahAktif = null; 
+        }
+        if (!map.hasLayer(hasil.marker)) {
+          hasil.marker.addTo(map);
+          pinRumahAktif = hasil.marker;
+        }
+
+        var pointM = map.project([hasil.lat, hasil.lng], 19);
+        var pointC = L.point(pointM.x, pointM.y - 200);
+        map.flyTo(map.unproject(pointC, 19), 19);
+
+        map.once('moveend', function() {
+          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+          hasil.marker.openPopup();
+        });
+      }
+    } else {
+      alert("Nomor atau nama tempat tidak ditemukan.");
+    }
+  });
+}
+   
+function muatPengumumanFirebase() {
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatPengumumanFirebase, 50);
+    return;
   }
 
-  // 3. Jika data di memori sudah ada, langsung render seketika (mengambil dari cache localStorage via helper)
-  if (daftarPengumuman.length > 0) {
-    renderDaftarPengumuman();
-  } else {
-    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Memuat informasi...</p>';
-  }
+  const pengumumanRef = window.firebaseRef(window.db, "pengumuman");
+  
+  window.firebaseOnValue(pengumumanRef, (snapshot) => {
+    const data = snapshot.val();
+    daftarPengumuman = [];
 
-  // 4. Ambil data terbaru dari server di latar belakang untuk memastikan selalu sinkron
-  ambilDataSheets('cache_pengumuman_warga', PENGUMUMAN_URL, (data, fromCache) => {
-    if (!data) return;
-    var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-    var pengumumanBaru = [];
-
-    baris.forEach(function(kolom) {
-      if (kolom.length >= 2 && kolom[1] !== '') {
-        var status = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'AKTIF';
+    if (data) {
+      Object.keys(data).forEach(key => {
+        const item = data[key];
+        var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
+        
         if (status === 'AKTIF') {
-          var tglRaw = kolom[0] ? String(kolom[0]).trim() : '';
+          var tglRaw = item.tanggal || '';
           var tglRapi = tglRaw;
           
           if (tglRapi.includes('T')) {
@@ -1584,28 +1482,29 @@ function bukaModalInfo() {
             }
           }
 
-          pengumumanBaru.push({
+          daftarPengumuman.push({
             tanggal: tglRapi,
-            judul: kolom[1] ? String(kolom[1]).trim() : '',
-            detail: kolom[2] ? String(kolom[2]).trim() : '',
-            lokasi: kolom[3] ? String(kolom[3]).trim() : '',
-            foto: kolom[5] ? String(kolom[5]).trim() : ''
+            judul: item.judul || '',
+            detail: item.detail || '',
+            lokasi: item.lokasi || '',
+            foto: item.foto || ''
           });
         }
-      }
-    });
+      });
+    }
 
-    pengumumanBaru.sort((a, b) => {
+    daftarPengumuman.sort((a, b) => {
       var partsA = a.tanggal.split('/');
       var partsB = b.tanggal.split('/');
+      
       var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
       var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
+      
       return dateB - dateA;
     });
 
-    daftarPengumuman = pengumumanBaru.slice(0, 10);
+    daftarPengumuman = daftarPengumuman.slice(0, 10);
     
-    // Perbarui badge notifikasi
     var badge = document.getElementById('badge-count');
     if (badge) {
       if (daftarPengumuman.length > 0) {
@@ -1615,19 +1514,87 @@ function bukaModalInfo() {
         badge.style.display = 'none';
       }
     }
-
-    // Render ulang tampilan jika ada data baru dari server
-    renderDaftarPengumuman();
   });
 }
+
+
+function escapeHTML(text) {
+  if (!text) return '';
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+}
+
+function bukaModalInfo() {
+  var container = document.getElementById('list-pengumuman');
+  
+  document.getElementById('modal-info').style.display = 'flex';
+  container.innerHTML = '';
+
+  if (!daftarPengumuman || daftarPengumuman.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
+    return;
+  }
+
+  daftarPengumuman.forEach(function(info) {
+    var lokasiParam = encodeURIComponent(info.lokasi);
+    var htmlFoto = '';
     
+    if (info.foto) {
+      var urlFoto = info.foto.toLowerCase();
+      
+      if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+        htmlFoto = `
+          <div onclick="bukaModalVideo('${info.foto}')" style="
+            position: relative; 
+            width: 100%; 
+            max-height: 200px; 
+            border-radius: 6px; 
+            overflow: hidden; 
+            margin-top: 8px; 
+            background: #000; 
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          ">
+          <video src="${info.foto}" preload="metadata" onloadeddata="this.currentTime=3" style="
+            width: 100%; 
+            max-height: 200px; 
+            object-fit: cover; 
+            opacity: 0.8;
+            pointer-events: none;
+          "></video>
+            <div style="
+              position: absolute; 
+              background: rgba(239, 68, 68, 0.9); 
+              color: #fff; 
+              border-radius: 50%; 
+              width: 48px; height: 48px; 
+              display: flex; align-items: center; justify-content: center; 
+              font-size: 22px; 
+              box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            ">▶</div>
+          </div>`;
+      } else {
+        htmlFoto = `
+          <img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
+      }
+    }
 
+    var html = `
+      <div class="card-info">
+        ${info.tanggal ? `<div class="tgl">📅 ${escapeHTML(info.tanggal)}</div>` : ''}
+        <div class="judul">${escapeHTML(info.judul)}</div>
+        <div class="detail">${escapeHTML(info.detail)}</div>
+        ${htmlFoto}
+        ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" onclick="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHTML(info.lokasi)})</button>` : ''}
+      </div>
+    `;
+    container.innerHTML += html;
+  });
+}
 
-
-// Variable status rotasi
 var isVideoRotated = false;
 
-// Fungsi Toggle Memutar Layar 90 Derajat
 window.toggleRotasiVideo = function() {
   var player = document.getElementById('player-video-modal');
   var btnRotate = document.getElementById('btn-rotate-video');
@@ -1658,7 +1625,6 @@ window.bukaModalVideo = function(videoUrl, event) {
   var player = document.getElementById('player-video-modal');
   var btnRotate = document.getElementById('btn-rotate-video');
 
-  // Reset rotasi & tombol saat video baru dibuka
   isVideoRotated = false;
   if (player) player.classList.remove('video-rotated');
   if (btnRotate) {
@@ -1672,7 +1638,6 @@ window.bukaModalVideo = function(videoUrl, event) {
     
     player.load();
     
-    // Deteksi Otomatis: Tampilkan tombol jika video Landscape
     player.onloadedmetadata = function() {
       if (player.videoWidth > player.videoHeight) {
         if (btnRotate) btnRotate.style.display = 'block';
@@ -1695,7 +1660,6 @@ window.tutupModalVideo = function() {
   var player = document.getElementById('player-video-modal');
   var btnRotate = document.getElementById('btn-rotate-video');
 
-  // Reset rotasi
   isVideoRotated = false;
   if (player) {
     player.classList.remove('video-rotated');
@@ -1710,16 +1674,15 @@ window.tutupModalVideo = function() {
   var modalInfo = document.getElementById('modal-info');
   if (modalInfo) modalInfo.style.display = 'flex';
 };
+
+function tutupModalInfo() {  
+  document.getElementById('modal-info').style.display = 'none';  
+}
+
+function bukaTutupLuar(e) {  
+  if (e.target.id === 'modal-info') tutupModalInfo();  
+}
     
-// ✅ VERSI BERSIH & RINGKAS
-function tutupModalInfo() { 
-  document.getElementById('modal-info').style.display = 'none'; 
-}
-
-function bukaTutupLuar(e) { 
-  if (e.target.id === 'modal-info') tutupModalInfo(); 
-}
-
 function switchTabWarga(tab) {
   const panelInfo = document.getElementById('panel-tab-info');
   const panelRab = document.getElementById('panel-tab-rab');
@@ -1744,56 +1707,63 @@ function muatProgkerWarga() {
   const tbody = document.getElementById('tabel-progker-warga');
   if (!tbody) return;
 
-  // Fungsi internal untuk merender data ke tabel & menghitung total RAB
-  function renderData(data) {
-    if (!data || !Array.isArray(data) || data.length === 0) {
+  function renderData(dataArray) {
+    if (!dataArray || dataArray.length === 0) {
       tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
+      
+      const totalEstimasiEl = document.getElementById('warga-total-rab') || document.getElementById('warga-total-estimasi');
+      if (totalEstimasiEl) totalEstimasiEl.innerText = 'Rp 0';
+      
+      const totalRealisasiEl = document.getElementById('warga-total-realisasi');
+      if (totalRealisasiEl) totalRealisasiEl.innerText = 'Rp 0';
       return;
     }
 
-    var totalRabPerencanaan = 0; 
-    var totalRealisasiSelesai = 0; 
+    var totalRabPerencanaan = 0;  
+    var totalRealisasiSelesai = 0;  
     var html = '';
 
-    data.forEach(item => {
-      var angPlan = Number(item.anggaran || item.anggaran_disetujui || item.nominal || 0);
-      var angRealisasi = Number(item.realisasi || 0);
-      var statusRaw = String(item.status || 'Perencanaan').trim();
+    dataArray.forEach(item => {
+      // Mendukung huruf kecil maupun kapital dari Firebase
+      var angPlan = Number(item.Anggaran || item.anggaran || item.anggaran_disetujui || item.nominal || 0);
+      var angRealisasi = Number(item.Realisasi || item.realisasi || 0);
+      var statusRaw = String(item.Status || item.status || 'Perencanaan').trim();
+      var namaKegiatan = item.Nama_Kegiatan || item.kegiatan || 'Kegiatan RT';
+      var namaDivisi = item.Divisi || item.divisi || 'Umum';
+      var detailProg = item.Detail || item.detail || '';
 
       totalRabPerencanaan += angPlan;
 
-      if (statusRaw === 'Selesai') {
+      if (statusRaw.toLowerCase() === 'selesai') {
         totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
       }
 
       var badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
-      if (statusRaw === 'Berjalan' || statusRaw === 'Selesai') {
+      if (statusRaw.toLowerCase() === 'berjalan' || statusRaw.toLowerCase() === 'selesai' || statusRaw.toLowerCase() === 'disetujui') {
         badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
       }
 
       var badgeColor = '#eab308';
-      var labelStatus = 'Jangka Panjang';
+      var labelStatus = statusRaw;
 
-      if (statusRaw === 'Disetujui') {
-        badgeColor = '#3b82f6'; 
-        labelStatus = 'Jangka Pendek';
-      } else if (statusRaw === 'Berjalan') {
-        badgeColor = '#10b981'; 
-        labelStatus = 'Berjalan';
-      } else if (statusRaw === 'Selesai') {
-        badgeColor = '#6b7280'; 
-        labelStatus = 'Selesai';
+      if (statusRaw.toLowerCase() === 'disetujui') {
+        badgeColor = '#3b82f6';  
+      } else if (statusRaw.toLowerCase() === 'berjalan') {
+        badgeColor = '#10b981';  
+      } else if (statusRaw.toLowerCase() === 'selesai') {
+        badgeColor = '#6b7280';  
+      } else if (statusRaw.toLowerCase() === 'perencanaan') {
+        badgeColor = '#f59e0b';
       }
 
       var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${labelStatus}</span>`;
 
-    // TABEL (Diperbarui dengan tambahan informasi Detail)
       html += `
         <tr style="border-bottom: 1px solid #f1f5f9;">
           <td style="padding: 8px;">
-            <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
-            <span style="font-size:10px; color:#64748b; display:block;">🏷️ ${escapeHTML(item.divisi)}</span>
-            ${item.detail ? `<span style="font-size:9.5px; color:#475569; font-style:italic; display:block; margin-top:2px;">📝 ${escapeHTML(item.detail)}</span>` : ''}
+            <strong style="color:#1e293b; display:block;">${escapeHTML(namaKegiatan)}</strong>
+            <span style="font-size:10px; color:#64748b; display:block;">🏷️ ${escapeHTML(namaDivisi)}</span>
+            ${detailProg ? `<span style="font-size:9.5px; color:#475569; font-style:italic; display:block; margin-top:2px;">📝 ${escapeHTML(detailProg)}</span>` : ''}
           </td>
           <td style="padding: 8px;">
             <div style="font-size:11px; font-weight:bold; color:#0f172a;">Plan: Rp ${angPlan.toLocaleString('id-ID')}</div>
@@ -1818,32 +1788,27 @@ function muatProgkerWarga() {
     }
   }
 
-  // 1. TAMPILKAN DARI CACHE LOKAL SECARA INSTAN JIKA ADA
-  const cachedData = localStorage.getItem('cache_progker_rt05');
-  if (cachedData) {
-    try {
-      renderData(JSON.parse(cachedData));
-    } catch (e) {
-      console.error("Gagal memuat cache progker:", e);
-    }
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatProgkerWarga, 50);
+    return;
   }
 
-  // 2. AMBIL DATA TERBARU DARI SERVER DI LATAR BELAKANG
-  fetch(RT05_CONFIG.GAS_WEB_APP_URL + '?action=get_progker')
-    .then(res => res.json())
-    .then(data => {
-      if (data && Array.isArray(data)) {
-        // Simpan ke localStorage untuk kunjungan berikutnya
-        localStorage.setItem('cache_progker_rt05', JSON.stringify(data));
-        renderData(data);
-      }
-    })
-    .catch(err => {
-      console.warn("Gagal memperbarui data progker dari server, menggunakan cache lokal.", err);
-      if (!cachedData) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
-      }
-    });
+  const progkerRef = window.firebaseRef(window.db, "progker_rab");
+  window.firebaseOnValue(progkerRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    let dataArray = [];
+
+    if (dataObj) {
+      Object.keys(dataObj).forEach(key => {
+        dataArray.push(dataObj[key]);
+      });
+    }
+
+    renderData(dataArray);
+  }, (error) => {
+    console.error("Gagal memuat data RAB dari Firebase:", error);
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
+  });
 }
     
 function sorotLokasi(lokasiEncoded) {
@@ -1874,52 +1839,80 @@ function sorotLokasi(lokasiEncoded) {
   }
 }
 
-function cariLokasi() {
-  var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
-  if (!kataKunci) return;
 
-  var hasil = daftarPin.find(pin => String(pin.namaRaw || '').toLowerCase() === kataKunci);
 
-  if (!hasil && /^\d+$/.test(kataKunci)) {
-    var angkaCari = parseInt(kataKunci, 10);
-    hasil = daftarPin.find(pin => String(pin.nama || '').split(/[\s,().-]+/).some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari));
+   // 🛠️ FUNGSI FILTER PETA LENGKAP UNTUK INDEX.HTML (MODE WARGA)
+function filterKategori(kat, btnElement) {
+  // 1. Atur warna/status aktif tombol UI (Aman jika dipanggil tanpa btnElement)
+  if (btnElement && btnElement.classList) {
+    document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
+    btnElement.classList.add('active');
   }
 
-  if (!hasil && !/^\d+$/.test(kataKunci)) {
-    hasil = daftarPin.find(pin => String(pin.nama || '').includes(kataKunci));
-  }
-  
-  if (hasil) {
-    if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
-    if (!map.hasLayer(hasil.marker)) {
-      hasil.marker.addTo(map);
-      pinRumahAktif = hasil.marker;
-    }
+  var kategoriPilihan = String(kat || 'awal').trim().toLowerCase();
 
-    var pointM = map.project([hasil.lat, hasil.lng], 19);
-    var pointC = L.point(pointM.x, pointM.y - 200);
-    map.flyTo(map.unproject(pointC, 19), 19);
-
-    map.once('moveend', function() {
-      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-      hasil.marker.openPopup();
-    });
+  // 2. Bersihkan layer penanda lama
+  if (typeof markerGroup !== 'undefined' && markerGroup) {
+    markerGroup.clearLayers();
   } else {
-    alert("Nomor atau nama tempat tidak ditemukan.");
+    daftarPin.forEach(pin => map.removeLayer(pin.marker));
   }
-}
 
-    function filterKategori(kat, btnElement) {
-      document.querySelectorAll('.btn-filter:not(.btn-info-rt)').forEach(btn => btn.classList.remove('active'));
-      btnElement.classList.add('active');
+  daftarPin.forEach(function(pin) {
+    // KUNCI UTAMA: Sembunyikan rumah warga yang sengaja di-hidden (hanya muncul jika DICARI)
+    if (pin.hidden) return;
 
-      daftarPin.forEach(pin => {
-        map.removeLayer(pin.marker);
-        if (!pin.hidden && (kat === 'semua' || pin.kategori === kat)) {
-          pin.marker.addTo(map);
-        }
-      });
+    var teksKategori = String(pin.kategori || '').toLowerCase();
+    var teksNama = String(pin.nama || '').toLowerCase();
+    var isMatch = false;
+
+    // Deteksi Kategori Fasum & Rumah Pengurus (Pak RT & Pak RW)
+    var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || 
+                  teksKategori.includes('pos') || teksNama.includes('fasum') || 
+                  teksNama.includes('pos') || teksNama.includes('musholla') || 
+                  teksNama.includes('masjid') || teksNama.includes('balai') || teksNama.includes('sd');
+
+    var isPengurus = teksNama.includes('ketua rt') || teksNama.includes('ketua rw') || 
+                     teksNama.includes('pak rt') || teksNama.includes('pak rw') ||
+                     teksNama.includes('rumah rt') || teksNama.includes('rumah rw');
+
+    // Deteksi Kategori Usaha & Publik Lainnya
+    var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
+                 teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+
+    var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || 
+                    teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan') || teksNama.includes('coffee');
+
+    var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
+                       teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+
+    // 3. LOGIKA ATURAN TAMPILAN
+    if (kategoriPilihan === 'awal' || kategoriPilihan === 'default') {
+      // 🟢 PERTAMA KALI DIBUKA: Hanya FASUM, Rumah Pak RT, dan Rumah Pak RW
+      isMatch = isFasum || isPengurus;
+    } else if (kategoriPilihan === 'semua') {
+      // 🔵 KLIK FILTER SEMUA: Tampilkan SEMUA titik publik (Fasum, Minimarket, Kuliner, Kost, dll yang NOT HIDDEN)
+      isMatch = true;
+    } else if (kategoriPilihan === 'kost') {
+      isMatch = isKost;
+    } else if (kategoriPilihan === 'fasum') {
+      isMatch = isFasum || isPengurus;
+    } else if (kategoriPilihan === 'kuliner') {
+      isMatch = isKuliner;
+    } else if (kategoriPilihan === 'minimarket') {
+      isMatch = isMinimarket;
     }
+
+    // 4. Tempelkan penanda yang sesuai kriteria ke peta
+    if (isMatch) {
+      if (typeof markerGroup !== 'undefined' && markerGroup) {
+        markerGroup.addLayer(pin.marker);
+      } else {
+        pin.marker.addTo(map);
+      }
+    }
+  });
+}
 
     function bukaFotoBesar(src, e) {
       if (e) e.stopPropagation();
@@ -1938,31 +1931,36 @@ function cariLokasi() {
   }
 }
 
- // 3. Muat Data Keuangan
-  function muatDataKeuangan() {
-    ambilDataSheets('cache_keuangan_warga', KEUANGAN_URL, (data, fromCache) => {
-      if (!data) return;
-      var baris = Array.isArray(data) ? data.slice(1) : parseCSV(data).slice(1);
-      dataKeuangan = [];
-      
-      // 🛠️ Gunakan Map agar terhindar dari duplikat huruf besar/kecil (Case-Insensitive Deduplication)
-      var divisiMap = new Map();
+function muatDataKeuangan() {
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatDataKeuangan, 50);
+    return;
+  }
 
-      baris.forEach(function(kolom) {
-        if (kolom.length >= 5 && (kolom[0] !== '' || kolom[1] !== '')) {
-          var tglRaw = kolom[1] ? String(kolom[1]).trim() : (kolom[0] ? String(kolom[0]).split(' ')[0] : '-');
-          var divisi = kolom[2] ? String(kolom[2]).trim() : 'Umum';
-          var ket = kolom[3] ? String(kolom[3]).trim() : '-';
-          var tipeRaw = kolom[4] ? String(kolom[4]).trim().toUpperCase() : 'MASUK';
+  const keuanganRef = window.firebaseRef(window.db, "keuangan");
+
+  window.firebaseOnValue(keuanganRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    dataKeuangan = [];
+    
+    var divisiMap = new Map();
+
+    if (dataObj) {
+      Object.keys(dataObj).forEach(key => {
+        var item = dataObj[key];
+        if (item) {
+          var tglRaw = item.tanggal || item.tgl || item["Tanggal Input"] || '-';
+          var divisi = item.divisi || item.Divisi ? String(item.divisi || item.Divisi).trim() : 'Umum';
+          var ket = item.keterangan || item.ket || item["Keterangan/Keperluan"] || '-';
+          var tipeRaw = item.tipe || item["Jenis Transaksi"] ? String(item.tipe || item["Jenis Transaksi"]).trim().toUpperCase() : 'MASUK';
           var tipe = (tipeRaw.includes('KELUAR') || tipeRaw.includes('PENGELUARAN')) ? 'KELUAR' : 'MASUK';
           
-          var nominalRaw = kolom[5] !== undefined ? kolom[5] : kolom[4];
+          var nominalRaw = item.nominal !== undefined ? item.nominal : (item["Jumlah/Nominal"] !== undefined ? item["Jumlah/Nominal"] : 0);
           var nominal = typeof nominalRaw === 'number' 
             ? nominalRaw 
             : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
 
-          // 🛠️ PERBAIKAN FORMAT TANGGAL ISO: Mengubah "2026-09-27T17:00:00.000Z" menjadi "27/09/2026"
-          var tgl = tglRaw;
+          var tgl = String(tglRaw);
           if (tgl.includes('T')) {
             var parts = tgl.split('T')[0].split('-');
             if (parts.length === 3) {
@@ -1970,7 +1968,6 @@ function cariLokasi() {
             }
           }
 
-          // 🛠️ DEDUPLIKASI DROPDOWN: Simpan nama divisi versi huruf rapi (Title Case)
           if (divisi) {
             var kunciLower = divisi.toLowerCase();
             if (!divisiMap.has(kunciLower) || divisi !== kunciLower) {
@@ -1981,37 +1978,35 @@ function cariLokasi() {
           dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
         }
       });
+    }
 
-      var selectDivisi = document.getElementById('filterDivisi');
-      var divisiSebelumnya = selectDivisi.value;
-      selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
-      
-      // 🛠️ Urutkan dan masukkan nama divisi rapi tanpa duplikat
-  Array.from(divisiMap.values()).sort().forEach(div => {
-  // Fungsi pemformat teks agar setiap awal kata menjadi Huruf Besar/Kapital
-  var divFormatRapi = div.replace(/\w\S*/g, function(teks) {
-    return teks.charAt(0).toUpperCase() + teks.substr(1).toLowerCase();
-  });
+    var selectDivisi = document.getElementById('filterDivisi');
+    if (!selectDivisi) return;
 
-  // Teks di dalam tag <option> memakai 'divFormatRapi' agar tampilan layar menjadi Kapital Rapi
-  selectDivisi.innerHTML += `<option value="${escapeHTML(div)}">${escapeHTML(divFormatRapi)}</option>`;
-});
-      
-      if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
-        selectDivisi.value = divisiSebelumnya;
-      } else {
-        selectDivisi.value = 'semua';
-      }
-      tampilkanRekeningKoran();
+    var divisiSebelumnya = selectDivisi.value;
+    selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
+    
+    Array.from(divisiMap.values()).sort().forEach(div => {
+      var divFormatRapi = div.replace(/\w\S*/g, function(teks) {
+        return teks.charAt(0).toUpperCase() + teks.substr(1).toLowerCase();
+      });
+
+      selectDivisi.innerHTML += `<option value="${escapeHTML(div)}">${escapeHTML(divFormatRapi)}</option>`;
     });
-  }
+    
+    if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
+      selectDivisi.value = divisiSebelumnya;
+    } else {
+      selectDivisi.value = 'semua';
+    }
 
-    function bukaModalInventaris() {
-  document.getElementById('modal-inventaris').style.display = 'flex';
+    tampilkanRekeningKoran();
+  }, (error) => {
+    console.error("Gagal memuat data keuangan dari Firebase:", error);
+  });
 }
-function tutupModalInventaris() {
-  document.getElementById('modal-inventaris').style.display = 'none';
-}
+
+
 
   function tampilkanRekeningKoran() {
     var selectDivisi = document.getElementById('filterDivisi');
@@ -2064,6 +2059,152 @@ function tutupModalInventaris() {
     });
   }
 
+// 1. Fungsi Unduh Excel (CSV) Rekening Koran (Dengan Baris Total di Bawah)
+window.unduhExcelRekeningKoran = () => {
+  var selectDivisi = document.getElementById('filterDivisi');
+  var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+  var selectedText = selectDivisi ? selectDivisi.options[selectDivisi.selectedIndex].text : 'Semua Divisi';
+
+  // Filter data dari array dataKeuangan sesuai pilihan di dropdown
+  var dataFilter = (divisiTerpilih === 'semua')
+    ? dataKeuangan
+    : dataKeuangan.filter(item => item.divisi && item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
+
+  if (!dataFilter || dataFilter.length === 0) {
+    alert("Tidak ada data keuangan untuk diunduh pada kategori ini.");
+    return;
+  }
+
+  // Hitung total saldo / akumulasi nominal dari data yang difilter
+  let totalNominal = 0;
+  dataFilter.forEach(item => {
+    let nominal = Number(item.nominal || 0);
+    if (item.tipe === 'KELUAR') {
+      totalNominal -= nominal;
+    } else {
+      totalNominal += nominal;
+    }
+  });
+
+  // Susun format CSV (Menggunakan titik koma ';' agar otomatis rapi di Excel Indonesia)
+  let csvContent = "\uFEFF";
+  csvContent += `"REKENING KORAN KEUANGAN - RT 05 KAYEN"\n`;
+  csvContent += `"Kategori: ${selectedText}"\n\n`;
+  csvContent += `"Tanggal";"Divisi";"Jenis";"Keterangan";"Nominal"\n`;
+
+  dataFilter.forEach(item => {
+    var row = [
+      item.tanggal || item.tgl || '',
+      `"${item.divisi || ''}"`,
+      item.tipe || '',
+      `"${(item.keterangan || item.ket || '').replace(/"/g, '""')}"`,
+      item.nominal || 0
+    ];
+    csvContent += row.join(";") + "\n";
+  });
+
+  // Tambahkan baris kosong dan baris Total Saldo di bagian bawah
+  csvContent += `\n`;
+  csvContent += `"TOTAL / SALDO AKHIR";"";"";"";"${totalNominal}"\n`;
+
+  // Proses trigger unduh file CSV
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Rekening_Koran_${divisiTerpilih.toUpperCase()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+// 2. Fungsi Cetak / Simpan PDF Rekening Koran
+window.cetakPDFRekeningKoran = () => {
+  var selectDivisi = document.getElementById('filterDivisi');
+  var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+  var selectedText = selectDivisi ? selectDivisi.options[selectDivisi.selectedIndex].text : 'Semua Divisi';
+  var saldoText = document.getElementById('saldo-kas')?.innerText || 'Rp 0';
+
+  // Filter data dari array dataKeuangan sesuai pilihan di dropdown
+  var dataFilter = (divisiTerpilih === 'semua')
+    ? dataKeuangan
+    : dataKeuangan.filter(item => item.divisi && item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
+
+  if (!dataFilter || dataFilter.length === 0) {
+    alert("Tidak ada data keuangan untuk dicetak pada kategori ini.");
+    return;
+  }
+
+  // Buat baris tabel HTML secara dinamis
+  var tableRows = '';
+  dataFilter.forEach(item => {
+    var formattedNominal = Number(item.nominal || 0).toLocaleString('id-ID');
+    var warnaTeks = item.tipe === 'MASUK' ? '#16a34a' : '#dc2626';
+    tableRows += `
+      <tr>
+        <td>${item.tgl || '-'}</td>
+        <td style="text-transform: capitalize;">${item.divisi || '-'}</td>
+        <td style="font-weight: bold; color: ${warnaTeks};">${item.tipe || '-'}</td>
+        <td>${item.ket || '-'}</td>
+        <td style="text-align: right; font-weight: bold;">Rp ${formattedNominal}</td>
+      </tr>
+    `;
+  });
+
+  // Buka jendela baru khusus cetak/PDF yang bersih
+  var printWindow = window.open('', '_blank', 'height=700,width=900');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Rekening Koran - RT 05 Kayen</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 25px; color: #333; }
+          h2, h3 { margin: 0 0 5px 0; }
+          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+          .subtitle { font-size: 13px; color: #555; margin-bottom: 15px; text-align: center; }
+          .saldo-box { background: #f0f9ff; border: 1px solid #0288d1; padding: 10px; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 14px; border-radius: 6px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+          th { background: #f1f5f9; font-weight: bold; }
+          .text-right { text-align: right; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>RT 05 KAYEN - REKENING KORAN KEUANGAN</h2>
+          <div class="subtitle">Kategori: <b>${selectedText}</b> | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+        </div>
+        <div class="saldo-box">
+          Saldo Saat Ini: ${saldoText}
+        </div>
+        <h3>Rincian Transaksi</h3>
+      <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Divisi</th>
+              <th>Jenis</th>
+              <th>Keterangan</th>
+              <th class="text-right">Nominal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  
+  printWindow.document.close();
+  
+  // Berikan jeda sebentar agar konten selesai dimuat, lalu cetak
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 400);
+};
+
 let isDenahOpen = false;
 
   function toggleDenahMenu() {
@@ -2072,17 +2213,16 @@ let isDenahOpen = false;
     const mainBtn = document.getElementById('btn-toggle-denah');
 
     if (isDenahOpen) {
-      popup.style.display = 'grid'; // Tampilkan dengan grid 2 kolom
-      mainBtn.style.background = '#111827'; // Tombol utama berubah gelap saat aktif
+      popup.style.display = 'grid'; 
+      mainBtn.style.background = '#111827'; 
       mainBtn.style.borderColor = '#111827';
     } else {
-      popup.style.display = 'none'; // Sembunyikan
-      mainBtn.style.background = '#10b981'; // Tombol kembali Hijau Emerald
+      popup.style.display = 'none'; 
+      mainBtn.style.background = '#10b981'; 
       mainBtn.style.borderColor = '#059669';
     }
   }
 
-  // Menutup menu otomatis jika diklik di luar area
   document.addEventListener('click', function(event) {
     const container = document.getElementById('btn-toggle-denah');
     const popup = document.getElementById('denah-filter-popup');
@@ -2093,39 +2233,32 @@ let isDenahOpen = false;
     }
   });
 
-let denahTimer = null; // Variabel untuk menyimpan timer
+let denahTimer = null; 
 
   function pilihFilterDenah(kategori, element) {
-    // 1. Panggil fungsi filter asli Anda
     filterKategori(kategori, element);
 
-    // 2. Hapus kelas 'active' dari semua tombol di dalam popup denah
     const popup = document.getElementById('denah-filter-popup');
     if (popup) {
       const buttons = popup.querySelectorAll('.btn-filter');
       buttons.forEach(btn => btn.classList.remove('active'));
     }
 
-    // 3. Tambahkan kelas 'active' HANYA ke tombol yang sedang diklik
     if (element) {
       element.classList.add('active');
     }
 
-    // 4. BATALKAN timer sebelumnya jika user mengeklik tombol lain sebelum 3 detik habis
     if (denahTimer) {
       clearTimeout(denahTimer);
     }
 
-    // 5. ATUR TIMER BARU: Tutup otomatis popup setelah 2 detik (2000 ms)
     denahTimer = setTimeout(() => {
-      // Periksa apakah popup sedang terbuka, lalu tutup menggunakan fungsi toggle
       const popupEl = document.getElementById('denah-filter-popup');
       if (popupEl && popupEl.style.display === 'grid') {
         toggleDenahMenu();
       }
     }, 2000);
   }
-    
     
     function bukaModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'flex';
@@ -2136,17 +2269,15 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
-    // --- FITUR MALAM RONDA / JIMPITAN RONDA (PUBLIK) ---
     function getInfoMalamRonda(dateObj = new Date()) {
       let d = new Date(dateObj);
       let hour = d.getHours();
       
-      // Jam 00.00 - 08.59 masuk shift malam hari sebelumnya (grace window)
       if (hour < 9) {
         d.setDate(d.getDate() - 1);
       }
       
-      let effectiveDay = d.getDay(); // 0=Minggu, 1=Senin, ..., 6=Sabtu
+      let effectiveDay = d.getDay(); 
       const mapMalam = {
         6: 'Malam Minggu',
         0: 'Malam Senin',
@@ -2159,12 +2290,10 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       
       return {
         kelompokMalam: mapMalam[effectiveDay],
-        masukTabel: effectiveDay !== 6 // false khusus Malam Minggu
+        masukTabel: effectiveDay !== 6 
       };
     }
 
-   // --- FITUR SCAN JIMPITAN RONDA (PUBLIK) ---
-    
     let audioCtx = null;
     let html5QrcodeScanner = null;
     let sedangScanning = false;
@@ -2209,15 +2338,11 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
     }
 
-    // 🔥 1. PINTU UTAMA (LAZY LOAD): Pustaka diunduh HANYA saat tombol ditekan
     function mulaiScanJimpitan() {
       if (typeof Html5Qrcode === 'undefined' && typeof Html5QrcodeScanner === 'undefined') {
-        console.log("Memuat pustaka QR Scanner...");
-        
         let script = document.createElement('script');
         script.src = 'html5-qrcode.min.js';
         script.onload = () => {
-          console.log("Pustaka QR Scanner berhasil dimuat.");
           eksekusiMulaiScanJimpitan(); 
         };
         script.onerror = () => {
@@ -2229,7 +2354,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       }
     }
 
-    // 🔥 2. FUNGSI EKSEKUSI KAMERA (Logika asli Anda di sini)
     function eksekusiMulaiScanJimpitan() {
       if (!audioCtx) {
         audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -2261,8 +2385,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
           ).then(() => {
             sedangScanning = true;
           }).catch(err => {
-            console.warn("facingMode gagal, mencoba fallback ke daftar kamera...", err);
-
             Html5Qrcode.getCameras().then(devices => {
               if (devices && devices.length > 0) {
                 let selectedId = devices[devices.length - 1].id;
@@ -2325,7 +2447,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
         html5QrcodeScanner.stop().then(() => {
           bersihkanScanner();
         }).catch(err => {
-          console.warn("Gagal menghentikan scanner secara normal:", err);
           bersihkanScanner();
         });
       } else {
@@ -2345,8 +2466,7 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       if (qrElement) qrElement.innerHTML = '';
     }
 
-    // --- SINKRONISASI OFFLINE ---
-   function perbaruiIndikatorSync() {
+    function perbaruiIndikatorSync() {
       let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
       let badge = document.getElementById('status-sync');
       
@@ -2405,14 +2525,15 @@ let denahTimer = null; // Variabel untuk menyimpan timer
 
       for (let item of antrean) {
         try {
-          await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams(item)
+          const dbRef = window.firebaseRef(window.db, item.targetNode);
+          await window.firebasePush(dbRef, {
+            tanggal: item.tanggal,
+            kelompokMalam: item.kelompokMalam,
+            warga: item.warga,
+            nominal: item.nominal,
+            timestamp: Date.now()
           });
         } catch (err) {
-          console.warn("Gagal terhubung ke jaringan:", err);
           sisaAntrean.push(item);
         }
       }
@@ -2427,7 +2548,8 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       let rawNominal = 0;
 
       if (dataInput && typeof dataInput === 'object') {
-        rawWarga = dataInput.warga || dataInput.nama || '';
+        // Mendukung berbagai variasi properti nama dari objek input/scan QR
+        rawWarga = dataInput.warga || dataInput.nama || dataInput.nama_warga || '';
         rawNominal = parseInt(dataInput.nominal, 10) || 0;
       } else {
         let elNama = document.getElementById('jimpitanNamaWarga');
@@ -2435,21 +2557,24 @@ let denahTimer = null; // Variabel untuk menyimpan timer
 
         rawWarga = elNama ? elNama.value.trim() : '';
         rawNominal = parseInt(elNominal ? elNominal.value : 0, 10);
+      }
 
-        if (!rawWarga) {
-          alert("Nama warga / rumah belum terisi!");
-          return;
-        }
+      // Validasi dipindah ke luar agar berlaku untuk objek maupun input manual
+      if (!rawWarga) {
+        alert("Nama warga / rumah belum terisi!");
+        return;
       }
 
       let infoMalam = getInfoMalamRonda(new Date());
+      let targetNode = infoMalam.masukTabel ? 'jimpitan' : 'catatan_ronda';
 
+      // Sertakan properti ganda (warga & nama_warga) agar aman dan kompatibel dengan semua modul tampilan
       let dataBaru = {
-        action: infoMalam.masukTabel ? 'jimpitan' : 'jimpitan_catatan',
+        targetNode: targetNode,
         kelompokMalam: infoMalam.kelompokMalam,
-        masukTabel: infoMalam.masukTabel,
         tanggal: new Date().toLocaleString('id-ID'),
         warga: rawWarga,
+        nama_warga: rawWarga, // Kompatibilitas dengan catatan lama
         nominal: rawNominal
       };
 
@@ -2473,7 +2598,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
     }
 
     window.addEventListener('online', () => {
-      console.log("Koneksi kembali terhubung. Mengirim data pending...");
       perbaruiIndikatorSync();
       kirimDataPendingJimpitan();
     });
@@ -2482,19 +2606,6 @@ let denahTimer = null; // Variabel untuk menyimpan timer
       perbaruiIndikatorSync();
     });
 
-    document.addEventListener('DOMContentLoaded', () => {
-      perbaruiIndikatorSync();
-      if (navigator.onLine) {
-        kirimDataPendingJimpitan();
-      }
-    });
-
-
-    
-// --- FITUR REKAP & RIWAYAT JIMPITAN ---
-var GID_JIMPITAN = '515393252'; 
-var JIMPITAN_URL = `https://docs.google.com/spreadsheets/d/${RT05_CONFIG.SHEET_ID}/export?format=csv&gid=${GID_JIMPITAN}`;
-
 var cacheDataHarian = {};
 var cacheDataBulanan = {};
 var arrayTanggal = [];
@@ -2502,128 +2613,100 @@ var arrayBulan = [];
 let isJimpitanLoaded = false;
 let modeJimpitan = 'harian'; 
 
-// Helper anti-error untuk merapikan teks (menggantikan escapeHTML yang rawan macet)
 function teksAman(str) {
   return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
 }
 
-// ==========================================
-// BAGIAN 2: OPTIMASI RIWAYAT JIMPITAN
-// ==========================================
-
 function muatDataJimpitan() {
- 
-  var gridContainer = document.getElementById('grid-jimpitan');
-  
-  // Tampilkan loading HANYA jika data cache belum ada di HP
-  if (!localStorage.getItem('cache_jimpitan_warga') && gridContainer) {
-    gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data terbaru...</div>';
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatDataJimpitan, 50);
+    return;
   }
 
-  // Menggunakan helper ambilDataSheets untuk caching
-  ambilDataSheets('cache_jimpitan_warga', JIMPITAN_URL, (data, fromCache) => {
-    if (!data || data.length === 0) {
-      if (!fromCache && gridContainer) {
-        gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data atau sedang offline.</div>';
-      }
-      return;
-    }
+  var gridContainer = document.getElementById('grid-jimpitan');
+  
+  if (gridContainer) {
+    gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data jimpitan terbaru...</div>';
+  }
 
-    // Adaptasi otomatis jika respons berupa Array JSON atau teks CSV
-    var baris = Array.isArray(data) ? data.slice(1).slice(-2000) : parseCSV(data).slice(1).slice(-2000);
+  const jimpitanRef = window.firebaseRef(window.db, 'jimpitan');
+  
+  window.firebaseOnValue(jimpitanRef, (snapshot) => {
+    const dataObj = snapshot.val();
     
     cacheDataHarian = {};
     cacheDataBulanan = {};
     arrayTanggal = [];
     arrayBulan = [];
 
-  baris.forEach(kolom => {
-      if (kolom.length >= 3 && kolom[0] !== '') {
-        // PERBAIKAN 1: Pastikan tanggal mutlak menjadi string agar .match() tidak memicu error
-        var tglStr = String(kolom[0] || '');
-        var malamManual = '';
-        var warga = '-';
-        var nominal = 0;
+    if (dataObj) {
+      Object.keys(dataObj).forEach(key => {
+        var kolom = dataObj[key];
+        if (kolom) {
+          var tglStr = String(kolom.tanggal_waktu || kolom.tanggal || ''); // 🛠️ Sesuaikan ke tanggal_waktu
+          var malamManual = String(kolom.kelompok_malam || '');
+          var warga = String(kolom.nama_warga || kolom.warga || '-'); // 🛠️ Sesuaikan ke nama_warga
+          var nominal = parseInt(kolom.nominal, 10) || 0;
 
-        // PERBAIKAN 2: Pastikan kolom 1 menjadi string sebelum dicek .startsWith() atau .trim()
-        var col1Str = String(kolom[1] || '');
-        
-        if (col1Str && (col1Str.startsWith('Malam') || col1Str === '-')) {
-          malamManual = col1Str.trim(); 
-          warga = String(kolom[2] || '-');
-          var nominalRaw = kolom[3] ? String(kolom[3]).replace(/[^0-9]/g, '') : '0';
-          nominal = parseInt(nominalRaw, 10) || 0;
-        } else {
-          warga = col1Str || '-';
-          var nominalRaw = kolom[2] ? String(kolom[2]).replace(/[^0-9]/g, '') : '0';
-          nominal = parseInt(nominalRaw, 10) || 0;
+          var angkaTanggal = tglStr.match(/\d+/g); 
+          if (angkaTanggal && angkaTanggal.length >= 3) {
+            var tgl = parseInt(angkaTanggal[0], 10);
+            var bln = parseInt(angkaTanggal[1], 10) - 1;
+            var thn = parseInt(angkaTanggal[2], 10);
+            var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
+            var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+
+            var dateObj = new Date(thn, bln, tgl, jam, menit);
+            var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
+            var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            
+            var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
+
+            var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
+            var isoTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
+            
+            var keyTanggal = (namaMalam + '_' + isoTanggal).replace(/\s+/g, '_');
+
+            if (!cacheDataHarian[keyTanggal]) {
+              cacheDataHarian[keyTanggal] = { 
+                label: namaMalam + ' (' + labelTanggal + ')', 
+                subtotal: 0, 
+                items: [],
+                isoDate: isoTanggal 
+              };
+              arrayTanggal.push(keyTanggal);
+            }
+            cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
+            cacheDataHarian[keyTanggal].subtotal += nominal;
+
+            var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
+            var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
+
+            if (!cacheDataBulanan[keyBulan]) {
+              cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
+              if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
+            }
+            
+            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
+              cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
+            }
+            
+            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
+              cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
+            }
+
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
+            cacheDataBulanan[keyBulan].total += nominal;
+          }
         }
+      });
+    }
 
-        var angkaTanggal = tglStr.match(/\d+/g); 
-        if (angkaTanggal && angkaTanggal.length >= 3) {
-          var tgl = parseInt(angkaTanggal[0], 10);
-          var bln = parseInt(angkaTanggal[1], 10) - 1;
-          var thn = parseInt(angkaTanggal[2], 10);
-          var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
-          var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
-
-          var dateObj = new Date(thn, bln, tgl, jam, menit);
-          var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
-          var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-          
-          var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
-
-          // --- DATA HARIAN (Gantian Baru) ---
-          var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
-          var isoTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
-          
-          // Kunci Unik Gabungan Nama Malam + ISO Tanggal
-          var keyTanggal = (namaMalam + '_' + isoTanggal).replace(/\s+/g, '_');
-
-          if (!cacheDataHarian[keyTanggal]) {
-            cacheDataHarian[keyTanggal] = { 
-              label: namaMalam + ' (' + labelTanggal + ')', 
-              subtotal: 0, 
-              items: [],
-              isoDate: isoTanggal // Disimpan untuk pengurutan tanggal
-            };
-            arrayTanggal.push(keyTanggal);
-          }
-          cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
-          cacheDataHarian[keyTanggal].subtotal += nominal;
-
-         
-
-          
-          // --- DATA BULANAN ---
-          var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
-          var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
-
-          if (!cacheDataBulanan[keyBulan]) {
-            cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
-            if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
-          }
-          
-          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
-            cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
-          }
-          
-          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
-            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
-          }
-
-          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
-          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
-          cacheDataBulanan[keyBulan].total += nominal;
-        }
-      }
+    Object.keys(cacheDataHarian).forEach(key => {
+      cacheDataHarian[key].items.reverse();
     });
 
-      Object.keys(cacheDataHarian).forEach(key => {
-          cacheDataHarian[key].items.reverse();
-          });
-
-    // Urutkan dropdown harian berdasarkan isoDate dari yang paling baru
     arrayTanggal.sort((a, b) => {
       var dateA = cacheDataHarian[a].isoDate;
       var dateB = cacheDataHarian[b].isoDate;
@@ -2635,6 +2718,11 @@ function muatDataJimpitan() {
     
     setupToggleJimpitan();
     renderDropdownTanggal();
+  }, (error) => {
+    console.error("Gagal memuat rekap jimpitan dari Firebase:", error);
+    if (gridContainer) {
+      gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data dari Firebase.</div>';
+    }
   });
 }
     
@@ -2648,10 +2736,9 @@ function setupToggleJimpitan() {
   if (!container) {
     container = document.createElement('div');
     container.id = containerId;
-    // PERBAIKAN TATA LETAK: Membentang penuh (100%) dan tidak nyempil di sebelah dropdown
-    container.style.cssText = 'display:flex; background:#f1f5f9; border-radius:8px; padding:4px; margin-bottom:12px; width:100%;';
+    // Dibuat flex column agar tombol Harian/Bulanan di atas, dan tombol Malam Minggu di bawahnya
+    container.style.cssText = 'display:flex; flex-direction:column; gap:6px; background:#f1f5f9; border-radius:8px; padding:6px; margin-bottom:12px; width:100%;';
     
-    // Disisipkan TEPAT DI ATAS wadah "Pilih Periode", bukan di dalamnya
     var parentBaris = select.parentNode; 
     if (parentBaris) {
       parentBaris.parentNode.insertBefore(container, parentBaris);
@@ -2662,16 +2749,15 @@ function setupToggleJimpitan() {
   var btnBulananStyle = modeJimpitan === 'bulanan' ? 'background:#10b981; color:#fff; font-weight:bold; box-shadow:0 1px 3px rgba(0,0,0,0.1);' : 'background:transparent; color:#64748b;';
 
   container.innerHTML = `
-    <button onclick="switchModeJimpitan('harian')" style="flex:1; border:none; border-radius:6px; padding:8px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnHarianStyle}">🌙 Harian</button>
-    <button onclick="switchModeJimpitan('bulanan')" style="flex:1; border:none; border-radius:6px; padding:8px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnBulananStyle}">📅 Bulanan</button>
+    <div style="display:flex; width:100%; gap:4px;">
+      <button onclick="switchModeJimpitan('harian')" style="flex:1; border:none; border-radius:6px; padding:8px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnHarianStyle}">🌙 Harian</button>
+      <button onclick="switchModeJimpitan('bulanan')" style="flex:1; border:none; border-radius:6px; padding:8px 0; font-size:11px; cursor:pointer; transition:all 0.2s; ${btnBulananStyle}">📅 Bulanan</button>
+    </div>
+    <button onclick="bukaModalCatatanRonda()" style="width:100%; border:none; border-radius:6px; padding:8px 0; font-size:11px; font-weight:bold; cursor:pointer; background:#f59e0b; color:#fff; transition:all 0.2s;">
+      📋 Catatan Khusus Malam Minggu
+    </button>
   `;
 }
-
-window.switchModeJimpitan = function(mode) {
-  modeJimpitan = mode;
-  setupToggleJimpitan();
-  renderDropdownTanggal();
-};
 
 function renderDropdownTanggal() {
   var select = document.getElementById('select-bulan-jimpitan');
@@ -2695,7 +2781,6 @@ function renderDropdownTanggal() {
     renderCardHarian(limitData[0]);
 
   } else {
-    // Mode Laporan Bulanan
     if (arrayBulan.length === 0) {
       select.innerHTML = '<option>Belum ada laporan bulanan</option>';
       renderCardBulanan(null);
@@ -2715,9 +2800,8 @@ function renderDropdownTanggal() {
 function renderCardHarian(keyTanggal) {
   var gridContainer = document.getElementById('grid-jimpitan');
   var totalElem = document.getElementById('total-jimpitan');
-  var labelTotalElem = document.getElementById('label-total-jimpitan'); // Penambahan elemen label
+  var labelTotalElem = document.getElementById('label-total-jimpitan');
 
-  // Ubah judul kartu hijau secara dinamis ke mode harian
   if (labelTotalElem) labelTotalElem.innerText = 'TOTAL';
 
   if (!gridContainer) return;
@@ -2760,7 +2844,6 @@ function renderCardBulanan(keyBulan) {
 
   var dataBulan = cacheDataBulanan[keyBulan];
   
-  // Urutkan jadwal malam ronda agar tampil rapi dari Senin s/d Minggu
   var urutanMalam = ['Malam Senin', 'Malam Selasa', 'Malam Rabu', 'Malam Kamis', 'Malam Jumat', 'Malam Sabtu', 'Malam Minggu'];
   var daftarMalam = Object.keys(dataBulan.rekapMalam).sort((a, b) => {
     var idxA = urutanMalam.indexOf(a);
@@ -2768,7 +2851,6 @@ function renderCardBulanan(keyBulan) {
     return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
   });
   
-  // Cetak daftar regu malam beserta total setorannya selama sebulan
   var itemListHTML = daftarMalam.map(malam => {
     var subtotalMalam = dataBulan.rekapMalam[malam].subtotal;
 
@@ -2780,7 +2862,6 @@ function renderCardBulanan(keyBulan) {
     `;
   }).join('');
 
-  // Tampilkan dalam 1 kartu rekapitulasi saja
   buatDanTampilkanKartu(gridContainer, "📅 Rekap " + dataBulan.label, dataBulan.total, itemListHTML);
 
   if (totalElem) totalElem.innerText = 'Rp ' + dataBulan.total.toLocaleString('id-ID');
@@ -2813,19 +2894,233 @@ function tutupModalRiwayatJimpitan() {
   document.getElementById('modal-riwayat-jimpitan').style.display = 'none';
 }
 
+function bukaModalCatatanRonda() {
+      const modal = document.getElementById('modal-catatan-ronda');
+      if (modal) modal.style.display = 'flex';
+      muatDataCatatanRonda();
+    }
+
+    function tutupModalCatatanRonda() {
+      const modal = document.getElementById('modal-catatan-ronda');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function muatDataCatatanRonda() {
+      const gridContainer = document.getElementById('grid-catatan-ronda');
+      if (!gridContainer) return;
+
+      gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat catatan malam minggu...</div>';
+
+      const catatanRef = window.firebaseRef(window.db, 'catatan_ronda');
+
+      window.firebaseOnValue(catatanRef, (snapshot) => {
+        const dataObj = snapshot.val();
+        gridContainer.innerHTML = '';
+
+        if (!dataObj) {
+          gridContainer.innerHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada catatan ronda malam minggu</div>';
+          return;
+        }
+
+        let htmlList = '';
+        let totalNominalMalamMinggu = 0;
+
+        let items = Object.values(dataObj).reverse();
+
+        items.forEach(item => {
+          // 🌟 Pengecekan ganda untuk membaca properti 'warga' atau 'nama_warga'
+          let warga = item.warga || item.nama_warga || item.nama || '-';
+          let nominal = parseInt(item.nominal, 10) || 0;
+          // 🌟 Pengecekan ganda untuk membaca format tanggal lama & baru
+          let waktu = item.tanggal || item.tanggal_waktu || '-';
+          let ket = item.keterangan || item.kelompokMalam || 'Catatan Malam Minggu';
+
+          totalNominalMalamMinggu += nominal;
+
+          htmlList += `
+            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; border-bottom: 1px dashed #e5e7eb; padding: 6px 0;">
+              <div>
+                <strong style="color: #374151; display: block;">${warga}</strong>
+                <span style="color: #9ca3af; font-size: 10px;">${waktu} (${ket})</span>
+              </div>
+              <span style="color: #b45309; font-weight: bold;">Rp ${nominal.toLocaleString('id-ID')}</span>
+            </div>
+          `;
+        });
+
+        gridContainer.innerHTML = `
+          <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:6px; padding:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+            <span style="font-weight:bold; color:#92400e;">Total Catatan:</span>
+            <span style="font-weight:bold; color:#b45309;">Rp ${totalNominalMalamMinggu.toLocaleString('id-ID')}</span>
+          </div>
+          <div style="max-height: 250px; overflow-y: auto;">
+            ${htmlList}
+          </div>
+        `;
+      }, (error) => {
+        console.error("Gagal memuat catatan ronda:", error);
+        gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data dari Firebase.</div>';
+      });
+    }
+
+   // 1. Fungsi Unduh ke Excel (Format CSV)
+function exportJimpitanToCSV() {
+    const selectPeriode = document.getElementById('select-bulan-jimpitan');
+    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap_Jimpitan";
+    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
+    const gridJimpitan = document.getElementById('grid-jimpitan');
+
+    if (!gridJimpitan) {
+        alert("Data rekap tidak ditemukan!");
+        return;
+    }
+
+    let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
+
+    if (rawTextLines.length === 0) {
+        alert("Tidak ada data untuk diunduh pada periode ini.");
+        return;
+    }
+
+    // Menggunakan BOM (\uFEFF) agar karakter khusus/Rupiah terbaca sempurna di Excel
+    let csvContent = "\uFEFF";
+    csvContent += `"LAPORAN REKAP JIMPITAN RT 05 KAYEN"\n`;
+    csvContent += `"Periode: ${namaPeriode}"\n`;
+    csvContent += `"Total Keseluruhan: ${totalNominal}"\n\n`;
+    
+    // Header Kolom (Menggunakan titik koma ';' sebagai pemisah kolom agar otomatis rapi di Excel Indonesia)
+    csvContent += `"Nama Warga / Keterangan";"Nominal Jimpitan"\n`;
+
+    // Masukkan data baris per baris
+    for (let i = 0; i < rawTextLines.length; i += 2) {
+        let col1 = rawTextLines[i] ? rawTextLines[i].replace(/"/g, '""') : '';
+        let col2 = rawTextLines[i+1] ? rawTextLines[i+1].replace(/"/g, '""') : '';
+        if (col1) {
+            csvContent += `"${col1}";"${col2}"\n`;
+        }
+    }
+
+    // Tambahkan baris total di bagian bawah
+    csvContent += `"TOTAL KESELURUHAN";"${totalNominal}"\n`;
+
+    // Unduh sebagai file .csv
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+   
+// 2. Fungsi Cetak / Simpan ke PDF via Print Dialog Browser
+function cetakLaporanJimpitan() {
+    const selectPeriode = document.getElementById('select-bulan-jimpitan');
+    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap Jimpitan";
+    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
+    const gridJimpitan = document.getElementById('grid-jimpitan');
+
+    if (!gridJimpitan) {
+        alert("Data rekap tidak ditemukan!");
+        return;
+    }
+
+    // Ambil baris teks secara bersih dari elemen grid
+    let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
+
+    if (rawTextLines.length === 0) {
+        alert("Tidak ada data untuk dicetak pada periode ini.");
+        return;
+    }
+
+    // Buka jendela baru khusus untuk lembar cetak dokumen
+    const printWindow = window.open('', '_blank', 'height=700,width=900');
+    printWindow.document.write('<html><head><title>Laporan Rekap Jimpitan RT 05 Kayen</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: Arial, sans-serif; padding: 30px; color: #111; }');
+    printWindow.document.write('h2 { text-align: center; color: #0288d1; margin-bottom: 5px; font-size: 18px; }');
+    printWindow.document.write('.subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 20px; }');
+    printWindow.document.write('.total-box { background: #10b981; color: white; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; font-size: 15px; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; }');
+    printWindow.document.write('th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f1f5f9; color: #1e293b; font-weight: bold; }');
+    printWindow.document.write('tr:nth-child(even) { background-color: #f8fafc; }');
+    printWindow.document.write('.text-right { text-align: right; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    
+    // Header Dokumen
+    printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN REKAP JIMPITAN</h2>');
+    printWindow.document.write(`<div class="subtitle">Periode Laporan: ${namaPeriode}</div>`);
+    printWindow.document.write(`<div class="total-box">TOTAL KESELURUHAN: ${totalNominal}</div>`);
+    
+    // Tabel Dokumen Resmi
+    printWindow.document.write('<table>');
+    printWindow.document.write('<thead><tr><th>Nama Warga / Keterangan / Malam</th><th class="text-right">Nominal (Rp)</th></tr></thead>');
+    printWindow.document.write('<tbody>');
+
+    // Masukkan data baris per baris ke dalam tabel cetak
+    for (let i = 0; i < rawTextLines.length; i += 2) {
+        let col1 = rawTextLines[i] ? rawTextLines[i] : '';
+        let col2 = rawTextLines[i+1] ? rawTextLines[i+1] : '';
+        if (col1) {
+            printWindow.document.write(`<tr><td>${col1}</td><td class="text-right">${col2}</td></tr>`);
+        }
+    }
+
+    printWindow.document.write('</tbody></table>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    
+    // Berikan jeda sebentar agar dokumen merender tabel dengan sempurna sebelum dialog print muncul
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 600);
+}
+
 window.refreshDataJimpitan = function() {
   isJimpitanLoaded = false; 
   muatDataJimpitan(); 
 };
+// Tambahkan fungsi-fungsi global ini di skrip Anda
+window.switchModeJimpitan = function(mode) {
+  modeJimpitan = mode;
+  setupToggleJimpitan();
+  renderDropdownTanggal();
+};
 
-    
-    // --- CHANGELOG ---
+window.bukaModalCatatanRonda = function() {
+  const modal = document.getElementById('modal-catatan-ronda');
+  if (modal) modal.style.display = 'flex';
+  muatDataCatatanRonda();
+};
+
+window.tutupModalCatatanRonda = function() {
+  const modal = document.getElementById('modal-catatan-ronda');
+  if (modal) modal.style.display = 'none';
+};
+
     const dataChangelog = [
        {
-        versi: "v1.5.8",
-        tanggal: "26 Okt 2026",
+        versi: "v1.6.0",
+        tanggal: "31 Okt 2026",
         status: "Terbaru",
         warna: "#4CAF50",
+        fitur: [
+          "Perbaikan fitur tombol Setting/Pengaturan suara notif",
+          "Kini bisa atur jenis notifikasi suara Grup Chat dan Obrolan Private Chat",
+          "Tambahan fitur export laporn dalam bentuk excel dan pdf"
+        ]
+      },
+       {
+        versi: "v1.5.9",
+        tanggal: "26 Okt 2026",
+        status: "",
+        warna: "#888",
         fitur: [
           "Perbaikan fitur tombol Setting/Pengaturan",
           "Penambahan pilihan suara notifikasi pesan/chat",
@@ -3066,55 +3361,97 @@ window.refreshDataJimpitan = function() {
       document.getElementById('formWargaBaru').reset();
     }
 
-    async function simpanWargaBaru() {
-      const nama = document.getElementById('wargaNama').value.trim();
-      const noRumah = document.getElementById('wargaNoRumah').value.trim();
-      const hp = document.getElementById('wargaHp').value.trim();
-      const status = document.getElementById('wargaStatus').value;
-      const cerita = document.getElementById('wargaCerita').value.trim();
+async function simpanWargaBaru() {
+    // 🛡️ PENGAMAN UTAMA: Pastikan Firebase siap sebelum dipakai
+    if (typeof window.firebaseRef !== 'function' || !window.db) {
+      alert('⚠️ Koneksi database sedang bersiap, mohon coba klik tombol Kirim sekali lagi dalam 1 detik.');
+      return;
+    }
 
-      if (!nama || !noRumah || !hp) {
-        alert('Mohon isi nama, nama kost/rumah, dan no HP dengan lengkap!');
-        return;
-      }
+    const nama = document.getElementById('wargaNama').value.trim();
+    const noRumah = document.getElementById('wargaNoRumah').value.trim();
+    const hp = document.getElementById('wargaHp').value.trim();
+    const status = document.getElementById('wargaStatus').value;
+    const cerita = document.getElementById('wargaCerita').value.trim();
 
-      const btn = document.getElementById('btnSimpanWarga');
-      btn.disabled = true;
-      btn.innerText = '⏳ Mengirim...';
+    if (!nama || !noRumah || !hp) {
+      alert('Mohon isi nama, nama kost/rumah, dan no HP dengan lengkap!');
+      return;
+    }
 
-      const payload = {
-        action: 'tambahWargaBaru',
+    const btn = document.getElementById('btnSimpanWarga');
+    btn.disabled = true;
+    btn.innerText = '⏳ Menyimpan ke Firebase...';
+
+    try {
+      const dbRef = window.firebaseRef(window.db, 'warga_baru');
+      await window.firebasePush(dbRef, {
         nama: nama,
         noRumah: noRumah,
         hp: hp,
         status: status,
-        cerita: cerita
-      };
+        cerita: cerita,
+        tanggal: new Date().toLocaleString('id-ID'),
+        timestamp: Date.now()
+      });
 
-      try {
-        const res = await fetch(RT05_CONFIG.GAS_WEB_APP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify(payload)
-        });
-        const text = await res.text();
+      btn.disabled = false;
+      btn.innerText = '📤 Kirim Data Warga Baru';
 
-        btn.disabled = false;
-        btn.innerText = '📤 Kirim Data Warga Baru';
-
-        if (text.includes('SUCCESS')) {
-          alert('✅ Data Warga Baru berhasil terdaftar!');
-          tutupModalWargaBaru();
-        } else {
-          alert('❌ Gagal mengirim: ' + text);
-        }
-      } catch (err) {
-        btn.disabled = false;
-        btn.innerText = '📤 Kirim Data Warga Baru';
-        alert('❌ Error koneksi: ' + err);
-      }
+      alert('✅ Data Warga Baru berhasil terdaftar di database!');
+      tutupModalWargaBaru();
+    } catch (err) {
+      btn.disabled = false;
+      btn.innerText = '📤 Kirim Data Warga Baru';
+      alert('❌ Gagal menyimpan ke Firebase: ' + err);
     }
+}
   </script>
+  
   <script src="setting.js"></script>
+  
+<!-- 1. Muat skrip konfigurasi & utils terlebih dahulu -->
+  <script src="utils.js"></script>
+
+  <!-- 2. Modul Firebase diinisialisasi secara tertunda (Lazy Load) untuk HP Kentang -->
+  <script>
+    // Siapkan objek penampung global agar fungsi lain tidak error "undefined"
+    window.db = null;
+    window.firebaseRef = null;
+    window.firebaseOnValue = null;
+    window.firebaseUpdate = null;
+    window.firebaseRemove = null;
+    window.firebasePush = null;
+    window.firebaseSet = null;
+    window.firebaseGet = null;
+
+    // Muat Firebase di latar belakang setelah halaman selesai dirender secara visual
+    window.addEventListener('load', () => {
+      setTimeout(async () => {
+        try {
+          const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+          const { getDatabase, ref, onValue, update, remove, push, set, get } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
+
+          const app = initializeApp(RT05_CONFIG.FIREBASE);
+          const db = getDatabase(app);
+
+          // EKSPOS KE GLOBAL WINDOW AGAR TIDAK ERROR "is not a function"
+          window.db = db;
+          window.firebaseRef = ref;
+          window.firebaseOnValue = onValue;
+          window.firebaseUpdate = update;
+          window.firebaseRemove = remove;
+          window.firebasePush = push;
+          window.firebaseSet = set;
+          window.firebaseGet = get;
+
+          // 3. Picu event agar peta tahu bahwa Firebase & Utils sudah siap
+          window.dispatchEvent(new Event('utilsSiap'));
+        } catch (err) {
+          console.error("Gagal memuat modul Firebase secara background:", err);
+        }
+      }, 300); // Jeda 300ms agar peta dan UI utama muncul mulus tanpa hambatan
+    });
+  </script>
 </body>
 </html>

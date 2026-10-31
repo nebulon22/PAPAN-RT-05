@@ -6,7 +6,13 @@
   <title>Inventaris Perkakas RT 05</title>
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
 
+  <!-- 1. WAJIB: Muat Firebase Versi Compat (Non-Module) agar aman untuk badge & chat -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
+  <!-- 2. Muat utils.js secara normal (Tanpa type="module") -->
   <script src="utils.js"></script>
+
   <script>
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('./sw.js');
@@ -31,7 +37,6 @@
   </style>
 </head>
 <body>
-
 
   <!-- Indikator Status Offline -->
   <div id="status-offline">⚠️ Anda sedang offline. Menampilkan data tersimpan di perangkat.</div>
@@ -58,107 +63,137 @@
     Klik untuk pinjam perkakas via WA
   </a>
 
+<!-- Script Logika Halaman Inventaris (Tanpa Modul, Menggunakan dbRT05 dari utils.js) -->
 <script>
-    const CACHE_KEY = 'cache_inventaris_rt05';
+  document.addEventListener("DOMContentLoaded", () => {
+    cekStatusJaringan();
+    muatStokInventarisFirebase();
 
-    document.addEventListener("DOMContentLoaded", () => {
+    window.addEventListener('online', () => {
       cekStatusJaringan();
-      muatStokInventaris();
-
-      window.addEventListener('online', () => {
-        cekStatusJaringan();
-        muatStokInventaris();
-      });
-
-      window.addEventListener('offline', () => {
-        cekStatusJaringan();
-      });
+      muatStokInventarisFirebase();
     });
 
-    function cekStatusJaringan() {
-      const bannerOffline = document.getElementById('status-offline');
-      if (!navigator.onLine) {
-        if (bannerOffline) bannerOffline.style.display = 'block';
-      } else {
-        if (bannerOffline) bannerOffline.style.display = 'none';
-      }
+    window.addEventListener('offline', () => {
+      cekStatusJaringan();
+    });
+  });
+
+  function cekStatusJaringan() {
+    const bannerOffline = document.getElementById('status-offline');
+    if (!navigator.onLine) {
+      if (bannerOffline) bannerOffline.style.display = 'block';
+    } else {
+      if (bannerOffline) bannerOffline.style.display = 'none';
     }
+  }
 
-    async function muatStokInventaris() {
-      const container = document.getElementById("daftar-inventaris");  
-      if (!container) return;
+  function muatStokInventarisFirebase() {
+    const container = document.getElementById("daftar-inventaris");  
+    if (!container) return;
 
-      // Panggil URL Polos agar backend mengembalikan objek { perkakas: [...], peminjaman: [...] }
-      const urlInventaris = RT05_CONFIG.GAS_WEB_APP_URL;
+    container.innerHTML = `<div style="text-align:center; padding: 20px; color: #666;">⏳ Memuat inventaris dari Firebase...</div>`;
 
-      ambilDataSheets(CACHE_KEY, urlInventaris, (data, fromCache) => {
-        if (data && data.perkakas) {
-          renderHTML(data);
-        } else if (!fromCache && (!data || !data.perkakas)) {
+    setTimeout(() => {
+      try {
+        // Menggunakan dbRT05 yang sudah disiapkan secara global di utils.js
+        if (!window.dbRT05) {
+          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Koneksi database belum siap.</div>`;
+          return;
+        }
+
+        const inventarisRef = window.dbRT05.ref('inventaris');
+        const peminjamanRef = window.dbRT05.ref('peminjaman');
+
+        // Ambil data inventaris dan peminjaman secara bersamaan
+        Promise.all([
+          inventarisRef.once('value'),
+          peminjamanRef.once('value')
+        ]).then(([snapInv, snapPem]) => {
+          let daftarPerkakas = [];
+          let daftarPinjaman = [];
+
+          if (snapInv.exists()) {
+            snapInv.forEach(child => { daftarPerkakas.push(child.val()); });
+          }
+          if (snapPem.exists()) {
+            snapPem.forEach(child => { daftarPinjaman.push(child.val()); });
+          }
+
+          renderHTML({ perkakas: daftarPerkakas, peminjaman: daftarPinjaman });
+        }).catch(error => {
+          console.error("Gagal memuat data:", error);
           container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris.</div>`;
-        }
-      });
+        });
+
+      } catch (err) {
+        console.error("Error inisialisasi inventaris:", err);
+        container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Terjadi kesalahan sistem.</div>`;
+      }
+    }, 300);
+  }
+
+  // Fungsi Render Tampilan Kartu Barang
+  function renderHTML(data) {
+    const container = document.getElementById("daftar-inventaris");
+    const daftarPerkakas = data.perkakas || [];
+    const dataPinjaman = data.peminjaman || [];
+
+    if (daftarPerkakas.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Belum ada data perkakas di database.</div>`;
+      return;
     }
 
-    // Fungsi Render Tampilan
-    function renderHTML(data) {
-      const container = document.getElementById("daftar-inventaris");
-      const daftarPerkakas = data.perkakas || [];
-      const dataPinjaman = data.peminjaman || [];
-
-      if (daftarPerkakas.length === 0) {
-        container.innerHTML = `<div style="text-align:center; padding:20px; color:#666;">Belum ada data barang di tab 'Perkakas'.</div>`;
-        return;
+    // Buat pemetaan peminjaman aktif secara fleksibel
+    const dipinjamAktif = dataPinjaman.filter(row => row && String(row.status || '').trim().toLowerCase() === "dipinjam");
+    const rekapDipinjam = {};
+    dipinjamAktif.forEach(row => {
+      const namaBarang = String(row.barang || row.namaBarang || row[2] || '').trim();
+      const jumlah = parseInt(row.jumlah || row[3], 10) || 0;
+      if (namaBarang) {
+        rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
       }
+    });
 
-      // Buat pemetaan peminjaman aktif secara efisien
-      const dipinjamAktif = dataPinjaman.filter(row => row && String(row[5] || '').trim().toLowerCase() === "dipinjam");
-      const rekapDipinjam = {};
-      dipinjamAktif.forEach(row => {
-        const namaBarang = String(row[2] || '').trim();
-        const jumlah = parseInt(row[3], 10) || 0;
-        if (namaBarang) {
-          rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
-        }
-      });
+    // Render Kartu Barang sesuai struktur Firebase (namaBarang, totalStok)
+    container.innerHTML = daftarPerkakas.map(item => {
+      const namaItem = item.namaBarang || item.nama || item.name || 'Perkakas RT';
+      const fotoItem = item.foto || item.fotoUrl || item.image || '';
+      const terpakai = rekapDipinjam[namaItem] || 0;
+      const totalAwal = parseInt(item.totalStok !== undefined ? item.totalStok : (item.stok !== undefined ? item.stok : item.jumlah), 10) || 0;
+      const sisaStok = Math.max(0, totalAwal - terpakai);  
+      
+      const statusBadge = sisaStok > 0 
+        ? `<span style="background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Tersedia</span>`
+        : `<span style="background: #fef2f2; color: #991b1b; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Habis Dipinjam</span>`;
 
-      // Render Kartu Barang
-      container.innerHTML = daftarPerkakas.map(item => {
-        const terpakai = rekapDipinjam[item.nama] || 0;
-        const sisaStok = parseInt(item.total) || 0;
-        const totalAwal = sisaStok + terpakai;  
-        
-        const statusBadge = sisaStok > 0 
-          ? `<span style="background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Tersedia</span>`
-          : `<span style="background: #fef2f2; color: #991b1b; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Habis Dipinjam</span>`;
+      return `
+        <div class="card-barang">
+          ${fotoItem ? `<img src="${fotoItem}" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:10px;" loading="lazy" onError="this.style.display='none'">` : ''}
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 15px; color: #111827;">${namaItem}</h3>
+            ${statusBadge}
+          </div>
 
-        return `
-          <div class="card-barang">
-            ${item.foto ? `<img src="${item.foto}" style="width:100%; height:160px; object-fit:cover; border-radius:6px; margin-bottom:10px;" loading="lazy" onError="this.style.display='none'">` : ''}
-            
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-              <h3 style="margin: 0; font-size: 15px; color: #111827;">${item.nama}</h3>
-              ${statusBadge}
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f9fafb; padding: 8px; border-radius: 6px; font-size: 12px; text-align: center; border: 1px solid #f3f4f6;">
+            <div>
+              <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Total Stok</span>
+              <strong style="color: #374151; font-size: 13px;">${totalAwal}</strong>
             </div>
-
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f9fafb; padding: 8px; border-radius: 6px; font-size: 12px; text-align: center; border: 1px solid #f3f4f6;">
-              <div>
-                <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Total Stok</span>
-                <strong style="color: #374151; font-size: 13px;">${totalAwal}</strong>
-              </div>
-              <div>
-                <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Dipinjam</span>
-                <strong style="color: #dc2626; font-size: 13px;">${terpakai}</strong>
-              </div>
-              <div>
-                <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Sisa Stok</span>
-                <strong style="color: #059669; font-size: 13px;">${sisaStok}</strong>
-              </div>
+            <div>
+              <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Dipinjam</span>
+              <strong style="color: #dc2626; font-size: 13px;">${terpakai}</strong>
+            </div>
+            <div>
+              <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Sisa Stok</span>
+              <strong style="color: #059669; font-size: 13px;">${sisaStok}</strong>
             </div>
           </div>
-        `;
-      }).join('');
-    }
-  </script>
+        </div>
+      `;
+    }).join('');
+  }
+</script>
 </body>
 </html>
