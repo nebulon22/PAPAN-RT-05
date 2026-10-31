@@ -2303,10 +2303,11 @@ async function cetakLaporanSensus() {
         var nominal = Number(item.anggaran) || 0;
         var realisasi = Number(item.realisasi) || 0;
         var statusRaw = String(item.status || 'Perencanaan').trim();
+        var statusLower = statusRaw.toLowerCase();
 
         totalRabPerencanaan += nominal;
 
-        if (statusRaw.toLowerCase() === 'selesai') {
+        if (statusLower === 'selesai') {
           totalRealisasiSelesai += (realisasi > 0 ? realisasi : nominal);
         }
 
@@ -2315,6 +2316,16 @@ async function cetakLaporanSensus() {
         if (statusRaw === 'Disetujui') badgeColor = '#3b82f6';
         if (statusRaw === 'Berjalan') badgeColor = '#10b981';
         if (statusRaw === 'Selesai') badgeColor = '#6b7280';
+
+        // Menyiapkan teks keterangan tambahan di bawah nominal RAB berdasarkan status
+        var infoTambahanHTML = '';
+        if (statusLower === 'selesai' && realisasi > 0) {
+          infoTambahanHTML = `<br><span style="font-size:10px; color:#10b981; font-weight:600;">Realisasi: Rp ${realisasi.toLocaleString('id-ID')}</span>`;
+        } else if (statusLower === 'berjalan') {
+          infoTambahanHTML = `<br><span style="font-size:10px; color:#059669; font-weight:600;">Dana Siap</span>`;
+        } else if (statusLower === 'perencanaan') {
+          infoTambahanHTML = `<br><span style="font-size:10px; color:#d97706; font-weight:600;">Sedang mencari dana</span>`;
+        }
 
         var tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid #f1f5f9';
@@ -2325,6 +2336,7 @@ async function cetakLaporanSensus() {
           </td>
           <td style="padding: 10px; font-weight:bold; color:#0f172a;">
             Rp ${nominal.toLocaleString('id-ID')}
+            ${infoTambahanHTML}
           </td>
           <td style="padding: 10px;">
             <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
@@ -2343,6 +2355,7 @@ async function cetakLaporanSensus() {
       document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
     }
 
+    
     function simpanDataProgker(e) {
       e.preventDefault();
       var btn = document.getElementById('btnSimpanProgker');
