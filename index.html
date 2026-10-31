@@ -2059,7 +2059,7 @@ function muatDataKeuangan() {
     });
   }
 
-// 1. Fungsi Unduh Excel (CSV) Rekening Koran
+// 1. Fungsi Unduh Excel (CSV) Rekening Koran (Dengan Baris Total di Bawah)
 window.unduhExcelRekeningKoran = () => {
   var selectDivisi = document.getElementById('filterDivisi');
   var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
@@ -2075,6 +2075,17 @@ window.unduhExcelRekeningKoran = () => {
     return;
   }
 
+  // Hitung total saldo / akumulasi nominal dari data yang difilter
+  let totalNominal = 0;
+  dataFilter.forEach(item => {
+    let nominal = Number(item.nominal || 0);
+    if (item.tipe === 'KELUAR') {
+      totalNominal -= nominal;
+    } else {
+      totalNominal += nominal;
+    }
+  });
+
   // Susun format CSV (Menggunakan titik koma ';' agar otomatis rapi di Excel Indonesia)
   let csvContent = "\uFEFF";
   csvContent += `"REKENING KORAN KEUANGAN - RT 05 KAYEN"\n`;
@@ -2083,14 +2094,18 @@ window.unduhExcelRekeningKoran = () => {
 
   dataFilter.forEach(item => {
     var row = [
-      item.tgl || '',
+      item.tanggal || item.tgl || '',
       `"${item.divisi || ''}"`,
       item.tipe || '',
-      `"${(item.ket || '').replace(/"/g, '""')}"`,
+      `"${(item.keterangan || item.ket || '').replace(/"/g, '""')}"`,
       item.nominal || 0
     ];
     csvContent += row.join(";") + "\n";
   });
+
+  // Tambahkan baris kosong dan baris Total Saldo di bagian bawah
+  csvContent += `\n`;
+  csvContent += `"TOTAL / SALDO AKHIR";"";"";"";"${totalNominal}"\n`;
 
   // Proses trigger unduh file CSV
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
