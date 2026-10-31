@@ -1627,7 +1627,7 @@ function formatRupiahInput(el) {
       }
     }
 
-    // 1. Fungsi Unduh Data Sensus ke Excel (CSV) - Mengambil dari node 'sensus_warga'
+   // 1. Fungsi Unduh Data Sensus ke Excel (CSV) dengan Ringkasan Total
 async function exportSensusToCSV() {
     try {
         const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'sensus_warga'));
@@ -1636,18 +1636,36 @@ async function exportSensusToCSV() {
             return;
         }
 
-        let csvContent = "\uFEFF";
-        csvContent += `"LAPORAN DATA KELUARGA & SENSUS WARGA RT 05 KAYEN"\n\n`;
-        csvContent += `"Nama Rumah / Lokasi";"Nama Kepala Keluarga";"Anggota Keluarga"\n`;
+        let totalKK = 0;
+        let totalJiwa = 0;
+        let rowsData = [];
 
         snapshot.forEach(child => {
+            totalKK++;
             const data = child.val();
             const namaRumah = (data.namaRumah || '-').replace(/"/g, '""');
             const kepala = (data.kepalaKeluarga || '-').replace(/"/g, '""');
-            const anggota = (data.anggotaKeluarga || '-').replace(/\n/g, ', ').replace(/"/g, '""');
+            const rawAnggota = data.anggotaKeluarga || '';
+            
+            // Hitung jumlah jiwa (1 untuk kepala keluarga + jumlah anggota berdasarkan pemisah koma)
+            let jumlahAnggotaKeluarga = 1;
+            if (rawAnggota.trim() !== '') {
+                const listAnggota = rawAnggota.split(',').filter(item => item.trim() !== '');
+                jumlahAnggotaKeluarga += listAnggota.length;
+            }
+            totalJiwa += jumlahAnggotaKeluarga;
 
-            csvContent += `"${namaRumah}";"${kepala}";"${anggota}"\n`;
+            const anggota = rawAnggota.replace(/\n/g, ', ').replace(/"/g, '""');
+            rowsData.push(`"${namaRumah}";"${kepala}";"${anggota}";"${jumlahAnggotaKeluarga}"`);
         });
+
+        let csvContent = "\uFEFF";
+        csvContent += `"LAPORAN DATA KELUARGA & SENSUS WARGA RT 05 KAYEN"\n`;
+        csvContent += `"Total Keluarga (KK): ${totalKK}";"Total Jiwa / Warga: ${totalJiwa}"\n\n`;
+        csvContent += `"Nama Rumah / Lokasi";"Nama Kepala Keluarga";"Anggota Keluarga";"Jumlah Jiwa"\n`;
+
+        csvContent += rowsData.join("\n") + "\n\n";
+        csvContent += `"TOTAL Keseluruhan";"";"Total KK: ${totalKK}";"Total Jiwa: ${totalJiwa}"\n`;
 
         const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         const url = URL.createObjectURL(blob);
@@ -1662,7 +1680,7 @@ async function exportSensusToCSV() {
     }
 }
 
-// 2. Fungsi Cetak / Simpan ke PDF untuk Data Sensus - Mengambil dari node 'sensus_warga'
+// 2. Fungsi Cetak / Simpan ke PDF dengan Ringkasan Total
 async function cetakLaporanSensus() {
     try {
         const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'sensus_warga'));
@@ -1671,8 +1689,31 @@ async function cetakLaporanSensus() {
             return;
         }
 
-        const totalKK = document.getElementById('stat-total-kk')?.innerText || "0";
-        const totalJiwa = document.getElementById('stat-total-jiwa')?.innerText || "0";
+        let totalKK = 0;
+        let totalJiwa = 0;
+        let htmlRows = '';
+
+        snapshot.forEach(child => {
+            totalKK++;
+            const data = child.val();
+            const namaRumah = data.namaRumah || '-';
+            const kepala = data.kepalaKeluarga || '-';
+            const rawAnggota = data.anggotaKeluarga || '';
+
+            let jumlahAnggotaKeluarga = 1;
+            if (rawAnggota.trim() !== '') {
+                const listAnggota = rawAnggota.split(',').filter(item => item.trim() !== '');
+                jumlahAnggotaKeluarga += listAnggota.length;
+            }
+            totalJiwa += jumlahAnggotaKeluarga;
+
+            htmlRows += `<tr>
+                <td><b>${namaRumah}</b></td>
+                <td>${kepala}</td>
+                <td>${rawAnggota || '-'}</td>
+                <td style="text-align: center;">${jumlahAnggotaKeluarga} Jiwa</td>
+            </tr>`;
+        });
 
         const printWindow = window.open('', '_blank', 'height=700,width=900');
         printWindow.document.write('<html><head><title>Laporan Data Keluarga & Sensus Warga RT 05 Kayen</title>');
@@ -1685,27 +1726,21 @@ async function cetakLaporanSensus() {
         printWindow.document.write('th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: left; vertical-align: top; }');
         printWindow.document.write('th { background-color: #0288d1; color: white; font-weight: bold; }');
         printWindow.document.write('tr:nth-child(even) { background-color: #f8fafc; }');
+        printWindow.document.write('.total-row { background-color: #e2e8f0 !important; font-weight: bold; }');
         printWindow.document.write('</style>');
         printWindow.document.write('</head><body>');
         
         printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN REKAPITULASI KEPENDUDUKAN</h2>');
         printWindow.document.write(`<div class="subtitle">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}</div>`);
-        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK}</div><div>Total Jiwa / Warga: ${totalJiwa}</div></div>`);
+        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK} KK</div><div>Total Jiwa / Warga: ${totalJiwa} Orang</div></div>`);
         
         printWindow.document.write('<table>');
-        printWindow.document.write('<thead><tr><th style="width: 25%;">Nama Rumah / Lokasi</th><th style="width: 35%;">Kepala Keluarga</th><th style="width: 40%;">Anggota Keluarga</th></tr></thead>');
+        printWindow.document.write('<thead><tr><th style="width: 22%;">Nama Rumah / Lokasi</th><th style="width: 28%;">Kepala Keluarga</th><th style="width: 38%;">Anggota Keluarga</th><th style="width: 12%; text-align: center;">Jumlah</th></tr></thead>');
         printWindow.document.write('<tbody>');
-
-        snapshot.forEach(child => {
-            const data = child.val();
-            const namaRumah = data.namaRumah || '-';
-            const kepala = data.kepalaKeluarga || '-';
-            const anggota = data.anggotaKeluarga || '-';
-
-            printWindow.document.write(`<tr><td><b>${namaRumah}</b></td><td>${kepala}</td><td>${anggota}</td></tr>`);
-        });
-
+        printWindow.document.write(htmlRows);
+        printWindow.document.write(`<tr class="total-row"><td colspan="3" style="text-align: right;">TOTAL KESELURUHAN:</td><td style="text-align: center;">${totalJiwa} Jiwa (${totalKK} KK)</td></tr>`);
         printWindow.document.write('</tbody></table>');
+        
         printWindow.document.write('</body></html>');
         printWindow.document.close();
         printWindow.focus();
@@ -1719,6 +1754,8 @@ async function cetakLaporanSensus() {
     }
 }
 
+
+    
     function bukaModalLaporan() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('laporanTanggal').value = today;
