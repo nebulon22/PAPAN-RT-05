@@ -2115,15 +2115,20 @@ function simpanPerubahanWarga(e) {
 
     // 1. Fitur Autocomplete saat admin mengetik (Menyesuaikan globalDataWarga)
 function prosesAutocompleteAdmin(keyword) {
-  const container = document.getElementById("listDropdownWargaAdmin");
+  // Pastikan ID sesuai dengan yang ada di HTML Anda (misal: 'dropdown-autocomplete-admin' atau 'listDropdownWargaAdmin')
+  const container = document.getElementById("dropdown-autocomplete-admin") || document.getElementById("listDropdownWargaAdmin");
+  
+  // Jika wadah dropdown belum ada di HTML, hentikan fungsi agar tidak error
+  if (!container) return;
+
   const textCari = keyword.toLowerCase().trim();
 
   if (!textCari || !globalDataWarga) {
-    if (container) container.style.display = "none";
+    container.style.display = "none";
+    container.innerHTML = "";
     return;
   }
 
-  // globalDataWarga berisi array: [val.kepalaKeluarga, val.anggotaKeluarga, val.namaRumah]
   const hasilFilter = globalDataWarga.filter(row => 
     (row[0] && String(row[0]).toLowerCase().includes(textCari)) || 
     (row[1] && String(row[1]).toLowerCase().includes(textCari)) ||
