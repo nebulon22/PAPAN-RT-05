@@ -600,6 +600,15 @@ function perbaruiAplikasiSekarang() {
     <option value="transportasi">Transportasi</option>
   </select>
 </div>
+      <!-- 🌟 TOMBOL EXPORT EXCEL & PDF DI SINI -->
+     <div style="display: flex; gap: 8px; margin-bottom: 15px;">
+       <button type="button" onclick="unduhExcelRekeningKoran()" style="flex: 1; padding: 8px; background: #059669; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+         <i class="fa-solid fa-file-excel"></i> Unduh Excel
+       </button>
+       <button type="button" onclick="cetakPDFRekeningKoran()" style="flex: 1; padding: 8px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 4px;">
+         <i class="fa-solid fa-print"></i> Cetak PDF
+       </button>
+     </div>
 
       <div style="background:#0288d1; color:white; padding:12px; border-radius:8px; text-align:center; margin-bottom:15px;">
         <span style="font-size:11px; text-transform:uppercase; opacity:0.9;">Saldo Saat Ini</span>
@@ -2049,6 +2058,136 @@ function muatDataKeuangan() {
       tbody.appendChild(tr);
     });
   }
+
+// 1. Fungsi Unduh Excel (CSV) Rekening Koran
+window.unduhExcelRekeningKoran = () => {
+  var selectDivisi = document.getElementById('filterDivisi');
+  var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+  var selectedText = selectDivisi ? selectDivisi.options[selectDivisi.selectedIndex].text : 'Semua Divisi';
+
+  // Filter data dari array dataKeuangan sesuai pilihan di dropdown
+  var dataFilter = (divisiTerpilih === 'semua')
+    ? dataKeuangan
+    : dataKeuangan.filter(item => item.divisi && item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
+
+  if (!dataFilter || dataFilter.length === 0) {
+    alert("Tidak ada data keuangan untuk diunduh pada kategori ini.");
+    return;
+  }
+
+  // Susun format CSV (Menggunakan titik koma ';' agar otomatis rapi di Excel Indonesia)
+  let csvContent = "\uFEFF";
+  csvContent += `"REKENING KORAN KEUANGAN - RT 05 KAYEN"\n`;
+  csvContent += `"Kategori: ${selectedText}"\n\n`;
+  csvContent += `"Tanggal";"Divisi";"Jenis";"Keterangan";"Nominal"\n`;
+
+  dataFilter.forEach(item => {
+    var row = [
+      item.tgl || '',
+      `"${item.divisi || ''}"`,
+      item.tipe || '',
+      `"${(item.ket || '').replace(/"/g, '""')}"`,
+      item.nominal || 0
+    ];
+    csvContent += row.join(";") + "\n";
+  });
+
+  // Proses trigger unduh file CSV
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Rekening_Koran_${divisiTerpilih.toUpperCase()}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
+
+// 2. Fungsi Cetak / Simpan PDF Rekening Koran
+window.cetakPDFRekeningKoran = () => {
+  var selectDivisi = document.getElementById('filterDivisi');
+  var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+  var selectedText = selectDivisi ? selectDivisi.options[selectDivisi.selectedIndex].text : 'Semua Divisi';
+  var saldoText = document.getElementById('saldo-kas')?.innerText || 'Rp 0';
+
+  // Filter data dari array dataKeuangan sesuai pilihan di dropdown
+  var dataFilter = (divisiTerpilih === 'semua')
+    ? dataKeuangan
+    : dataKeuangan.filter(item => item.divisi && item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
+
+  if (!dataFilter || dataFilter.length === 0) {
+    alert("Tidak ada data keuangan untuk dicetak pada kategori ini.");
+    return;
+  }
+
+  // Buat baris tabel HTML secara dinamis
+  var tableRows = '';
+  dataFilter.forEach(item => {
+    var formattedNominal = Number(item.nominal || 0).toLocaleString('id-ID');
+    var warnaTeks = item.tipe === 'MASUK' ? '#16a34a' : '#dc2626';
+    tableRows += `
+      <tr>
+        <td>${item.tgl || '-'}</td>
+        <td style="text-transform: capitalize;">${item.divisi || '-'}</td>
+        <td style="font-weight: bold; color: ${warnaTeks};">${item.tipe || '-'}</td>
+        <td>${item.ket || '-'}</td>
+        <td style="text-align: right; font-weight: bold;">Rp ${formattedNominal}</td>
+      </tr>
+    `;
+  });
+
+  // Buka jendela baru khusus cetak/PDF yang bersih
+  var printWindow = window.open('', '_blank', 'height=700,width=900');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Rekening Koran - RT 05 Kayen</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 25px; color: #333; }
+          h2, h3 { margin: 0 0 5px 0; }
+          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+          .subtitle { font-size: 13px; color: #555; margin-bottom: 15px; text-align: center; }
+          .saldo-box { background: #f0f9ff; border: 1px solid #0288d1; padding: 10px; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 14px; border-radius: 6px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+          th { background: #f1f5f9; font-weight: bold; }
+          .text-right { text-align: right; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>RT 05 KAYEN - REKENING KORAN KEUANGAN</h2>
+          <div class="subtitle">Kategori: <b>${selectedText}</b> | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+        </div>
+        <div class="saldo-box">
+          Saldo Saat Ini: ${saldoText}
+        </div>
+        <h3>Rincian Transaksi</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Divisi</th>
+              <th>Jenis</th>
+              <th>Keterangan</th>
+              <th class="text-right">Nominal</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRows}
+          </tbody>
+        </table>
+        <script>
+          setTimeout(() => {
+            window.print();
+            window.close();
+          }, 400);
+        </script>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+};
 
 let isDenahOpen = false;
 
