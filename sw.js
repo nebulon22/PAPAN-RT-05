@@ -46,20 +46,26 @@ messaging.onBackgroundMessage((payload) => {
     options.vibrate = [100, 50, 100];
   }
 
-  self.registration.waitUntil(
-    Promise.all([
-      self.registration.showNotification(title, options),
-      (async () => {
-        if ('setAppBadge' in navigator) {
-          try {
-            await navigator.setAppBadge(count);
-          } catch (err) {
-            console.log('Gagal memperbarui app badge:', err);
+// 🌟 PERBAIKAN: Gunakan optional chaining (?.) agar aman jika belum siap
+  if (self.registration && typeof self.registration.waitUntil === 'function') {
+    self.registration.waitUntil(
+      Promise.all([
+        self.registration.showNotification(title, options),
+        (async () => {
+          if ('setAppBadge' in navigator) {
+            try {
+              await navigator.setAppBadge(count);
+            } catch (err) {
+              console.log('Gagal memperbarui app badge:', err);
+            }
           }
-        }
-      })()
-    ])
-  );
+        })()
+      ])
+    );
+  } else {
+    // Fallback jika registration belum siap, tetap jalankan notifikasinya
+    self.registration.showNotification(title, options);
+  }
 });
 
 self.addEventListener('install', (e) => {
