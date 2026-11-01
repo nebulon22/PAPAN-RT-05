@@ -23,13 +23,12 @@
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   
-  <!-- 🌟 Leaflet JS dengan atribut defer (Aman dari Render-Blocking karena menggunakan event 'utilsSiap' di bawah) -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer></script>
+  <!-- 🌟 Leaflet JS dengan atribut defer & event listener onload agar aman terinisialisasi berurutan -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer onload="window.leafletLoaded = true;"></script>
   
-  <!-- Konfigurasi Global & Firebase Utils berikutnya -->
-  
-
-
+  <!-- Konfigurasi Global & Utils -->
+  <script src="utils.js" defer></script>
+  <script src="setting.js" defer></script>
 
  <style>
   html, body { 
@@ -3437,14 +3436,8 @@ async function simpanWargaBaru() {
 }
   </script>
   
-  <script src="setting.js"></script>
-  
-<!-- 1. Muat skrip konfigurasi & utils terlebih dahulu -->
-  <script src="utils.js"></script>
-
-  <!-- 2. Modul Firebase diinisialisasi secara tertunda (Lazy Load) untuk HP Kentang -->
+<!-- 🌟 MODifikasi Logika Inisialisasi Deferred agar Menunggu Leaflet & DOM Selesai -->
   <script>
-    // Siapkan objek penampung global agar fungsi lain tidak error "undefined"
     window.db = null;
     window.firebaseRef = null;
     window.firebaseOnValue = null;
@@ -3454,7 +3447,6 @@ async function simpanWargaBaru() {
     window.firebaseSet = null;
     window.firebaseGet = null;
 
-    // Muat Firebase di latar belakang setelah halaman selesai dirender secara visual
     window.addEventListener('load', () => {
       setTimeout(async () => {
         try {
@@ -3464,7 +3456,6 @@ async function simpanWargaBaru() {
           const app = initializeApp(RT05_CONFIG.FIREBASE);
           const db = getDatabase(app);
 
-          // EKSPOS KE GLOBAL WINDOW AGAR TIDAK ERROR "is not a function"
           window.db = db;
           window.firebaseRef = ref;
           window.firebaseOnValue = onValue;
@@ -3474,12 +3465,20 @@ async function simpanWargaBaru() {
           window.firebaseSet = set;
           window.firebaseGet = get;
 
-          // 3. Picu event agar peta tahu bahwa Firebase & Utils sudah siap
-          window.dispatchEvent(new Event('utilsSiap'));
+          // Fungsi pengecekan apakah Leaflet sudah benar-benar siap terunduh & ter-parse
+          const cekLeafletDanKirimEvent = () => {
+            if (typeof L !== 'undefined') {
+              window.dispatchEvent(new Event('utilsSiap'));
+            } else {
+              setTimeout(cekLeafletDanKirimEvent, 50);
+            }
+          };
+
+          cekLeafletDanKirimEvent();
         } catch (err) {
           console.error("Gagal memuat modul Firebase secara background:", err);
         }
-      }, 300); // Jeda 300ms agar peta dan UI utama muncul mulus tanpa hambatan
+      }, 300);
     });
   </script>
 </body>
