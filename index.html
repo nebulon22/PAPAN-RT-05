@@ -1738,19 +1738,28 @@ function muatProgkerWarga() {
         totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
       }
 
-      // 🌟 DISELARASKAN DENGAN ADMIN: Logika Status Dana & Warna Badge
-      var badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
-     var infoTambahanHTML = '';
+     // 🌟 LOGIKA STATUS DANA & WARNA BADGE YANG SUDAH DISELARASKAN AKURAT
+      var badgeDana = '';
+      var infoTambahanHTML = '';
+
       if (statusLower === 'selesai') {
-        badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
+        // Status Selesai: Dana sudah dibelanjakan (bukan lagi Dana Siap)
+        badgeDana = '<span style="background:#e5e7eb; color:#374151; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">⚪ Selesai Dibelanjakan</span>';
         infoTambahanHTML = `<div style="font-size:10px; color:#059669; font-weight:bold;">Realisasi: Rp ${(angRealisasi > 0 ? angRealisasi : angPlan).toLocaleString('id-ID')}</div>`;
+      
       } else if (statusLower === 'berjalan') {
+        // Status Berjalan: Dana benar-benar sudah siap
         badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
         infoTambahanHTML = `<div style="font-size:10px; color:#10b981; font-weight:bold;">Dana Siap</div>`;
+      
       } else if (statusLower === 'disetujui') {
-        badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
+        // Status Disetujui (Jangka Pendek): Dana masih terkumpul sebagian
+        badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Dana Terkumpul Sebagian</span>';
         infoTambahanHTML = `<div style="font-size:10px; color:#3b82f6; font-weight:bold;">Dana Terkumpul Sebagian</div>`;
+      
       } else {
+        // Status Perencanaan / Jangka Panjang
+        badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
         infoTambahanHTML = `<div style="font-size:10px; color:#d97706; font-weight:bold;">Sedang Mencari Dana</div>`;
       }
 
