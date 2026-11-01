@@ -1724,39 +1724,57 @@ function muatProgkerWarga() {
     var html = '';
 
     dataArray.forEach(item => {
-      // Mendukung huruf kecil maupun kapital dari Firebase
       var angPlan = Number(item.Anggaran || item.anggaran || item.anggaran_disetujui || item.nominal || 0);
       var angRealisasi = Number(item.Realisasi || item.realisasi || 0);
       var statusRaw = String(item.Status || item.status || 'Perencanaan').trim();
+      var statusLower = statusRaw.toLowerCase();
       var namaKegiatan = item.Nama_Kegiatan || item.kegiatan || 'Kegiatan RT';
       var namaDivisi = item.Divisi || item.divisi || 'Umum';
       var detailProg = item.Detail || item.detail || '';
 
       totalRabPerencanaan += angPlan;
 
-      if (statusRaw.toLowerCase() === 'selesai') {
+      if (statusLower === 'selesai') {
         totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
       }
 
-      var badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
-      if (statusRaw.toLowerCase() === 'berjalan' || statusRaw.toLowerCase() === 'selesai' || statusRaw.toLowerCase() === 'disetujui') {
+     // 🌟 LOGIKA STATUS DANA & WARNA BADGE YANG SUDAH DISELARASKAN AKURAT
+      var badgeDana = '';
+      var infoTambahanHTML = '';
+
+      if (statusLower === 'selesai') {
+        // Status Selesai: Dana sudah dibelanjakan (bukan lagi Dana Siap)
+        badgeDana = '<span style="background:#e5e7eb; color:#374151; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">⚪ Dana Telah Direalisasikan</span>';
+        infoTambahanHTML = `<div style="font-size:10px; color:#059669; font-weight:bold;">Realisasi: Rp ${(angRealisasi > 0 ? angRealisasi : angPlan).toLocaleString('id-ID')}</div>`;
+      
+      } else if (statusLower === 'berjalan') {
+        // Status Berjalan: Dana benar-benar sudah siap
         badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
+        infoTambahanHTML = `<div style="font-size:10px; color:#10b981; font-weight:bold;">Dana Siap Direalisasikan</div>`;
+      
+      } else if (statusLower === 'disetujui') {
+        // Status Disetujui (Jangka Pendek): Selaras dengan warna biru tombol Status Progker
+        badgeDana = '<span style="background:#eff6ff; color:#1d4ed8; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🔵 Dana Terkumpul Sebagian</span>';
+        infoTambahanHTML = `<div style="font-size:10px; color:#2563eb; font-weight:bold;">Dalam tahap pemenuhan dana dan sumber daya</div>`;
+      
+      } else {
+        // Status Perencanaan / Jangka Panjang
+        badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
+        infoTambahanHTML = `<div style="font-size:10px; color:#d97706; font-weight:bold;">Proses Penggalangan Dana/Mobilisasi Sumber Daya</div>`;
       }
 
       var badgeColor = '#eab308';
-      var labelStatus = statusRaw;
-
-      if (statusRaw.toLowerCase() === 'disetujui') {
+      if (statusLower === 'disetujui') {
         badgeColor = '#3b82f6';  
-      } else if (statusRaw.toLowerCase() === 'berjalan') {
+      } else if (statusLower === 'berjalan') {
         badgeColor = '#10b981';  
-      } else if (statusRaw.toLowerCase() === 'selesai') {
+      } else if (statusLower === 'selesai') {
         badgeColor = '#6b7280';  
-      } else if (statusRaw.toLowerCase() === 'perencanaan') {
+      } else if (statusLower === 'perencanaan') {
         badgeColor = '#f59e0b';
       }
 
-      var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${labelStatus}</span>`;
+      var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${escapeHTML(statusRaw)}</span>`;
 
       html += `
         <tr style="border-bottom: 1px solid #f1f5f9;">
@@ -1766,8 +1784,8 @@ function muatProgkerWarga() {
             ${detailProg ? `<span style="font-size:9.5px; color:#475569; font-style:italic; display:block; margin-top:2px;">📝 ${escapeHTML(detailProg)}</span>` : ''}
           </td>
           <td style="padding: 8px;">
-            <div style="font-size:11px; font-weight:bold; color:#0f172a;">Plan: Rp ${angPlan.toLocaleString('id-ID')}</div>
-            ${angRealisasi > 0 ? `<div style="font-size:10px; color:#059669; font-weight:bold;">Real: Rp ${angRealisasi.toLocaleString('id-ID')}</div>` : ''}
+            <div style="font-size:11px; font-weight:bold; color:#0f172a;">Rp ${angPlan.toLocaleString('id-ID')}</div>
+            ${infoTambahanHTML}
           </td>
           <td style="padding: 8px; text-align: center;">${badgeDana}</td>
           <td style="padding: 8px; text-align: center;">${badgeProgker}</td>
