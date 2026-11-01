@@ -2325,11 +2325,18 @@ html += `
       });
     }
 
-    function editPengumuman(id) {
+    // 1. Simpan ID yang sedang diedit dalam variabel global
+let currentEditPengumumanId = null;
+
+function editPengumuman(id) {
   const pengumumanRef = window.firebaseRef(window.db, 'pengumuman/' + id);
   window.firebaseGet(pengumumanRef).then((snapshot) => {
     if (snapshot.exists()) {
       const val = snapshot.val();
+      
+      // Simpan ID yang sedang diedit
+      currentEditPengumumanId = id;
+
       // Konversi format tanggal kembali ke YYYY-MM-DD untuk input date HTML
       if (val.tanggal) {
         const p = val.tanggal.split('/');
@@ -2344,9 +2351,11 @@ html += `
       if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = val.lng || '';
       document.getElementById('pengumumanFoto').value = val.foto || '';
 
-      // Ubah perilaku tombol simpan agar melakukan update alih-alih membuat key baru
-      // Atau Anda bisa menyesuaikan fungsi simpanPengumumanAdmin() agar mendeteksi mode edit.
-      alert("Mode Edit: Silakan perbarui data di atas lalu klik tombol Terbitkan/Simpan.");
+      // Ubah teks tombol simpan agar admin tahu sedang dalam mode edit
+      const btnSimpan = document.getElementById('btnSimpanPengumuman');
+      if (btnSimpan) btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
+
+      alert("Mode Edit Aktif: Silakan ubah data di form lalu klik 'Simpan Perubahan'.");
     }
   });
 }
@@ -2450,62 +2459,66 @@ html += `
   }
 }
 
-    async function simpanPengumumanAdmin() {
-      const tglInput = document.getElementById('pengumumanTanggal').value;
-      const judul = document.getElementById('pengumumanJudul').value.trim();
-      const detail = document.getElementById('pengumumanDetail').value.trim();
-      const lokasi = document.getElementById('pengumumanLokasi').value.trim();
-      
-      const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
-      const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
-      const foto = document.getElementById('pengumumanFoto').value.trim();
+  async function simpanPengumumanAdmin() {
+  const tglInput = document.getElementById('pengumumanTanggal').value;
+  const judul = document.getElementById('pengumumanJudul').value.trim();
+  const detail = document.getElementById('pengumumanDetail').value.trim();
+  const lokasi = document.getElementById('pengumumanLokasi').value.trim();
+  
+  const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
+  const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
+  const foto = document.getElementById('pengumumanFoto').value.trim();
 
-      if (!judul || !tglInput) {
-        alert("Mohon isi tanggal dan judul pengumuman!");
-        return;
-      }
+  if (!judul || !tglInput) {
+    alert("Mohon isi tanggal dan judul pengumuman!");
+    return;
+  }
 
-      const parts = tglInput.split('-');
-      const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const parts = tglInput.split('-');
+  const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
-      const btn = document.getElementById('btnSimpanPengumuman');
-      btn.disabled = true;
-      btn.innerText = "⏳ Menyimpan ke Firebase...";
+  const btn = document.getElementById('btnSimpanPengumuman');
+  btn.disabled = true;
+  btn.innerText = "⏳ Menyimpan ke Firebase...";
 
-      const pengumumanId = 'info_' + Date.now();
-      const payload = {
-        id: pengumumanId,
-        tanggal: tglRapi,
-        judul: judul,
-        detail: detail,
-        lokasi: lokasi,
-        lat: lat,
-        lng: lng,
-        foto: foto,
-        status: 'AKTIF',
-        timestamp: Date.now()
-      };
+  // Jika currentEditPengumumanId ada isinya, berarti pakai ID lama (Update). Jika null, buat ID baru.
+  const pengumumanId = currentEditPengumumanId ? currentEditPengumumanId : ('info_' + Date.now());
+  
+  const payload = {
+    id: pengumumanId,
+    tanggal: tglRapi,
+    judul: judul,
+    detail: detail,
+    lokasi: lokasi,
+    lat: lat,
+    lng: lng,
+    foto: foto,
+    status: 'AKTIF',
+    timestamp: Date.now()
+  };
 
-      try {
-        const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
-        await window.firebaseSet(targetRef, payload);
+  try {
+    const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
+    await window.firebaseSet(targetRef, payload);
 
-        btn.disabled = false;
-        btn.innerText = "💾 Terbitkan Pengumuman";
+    btn.disabled = false;
+    btn.innerText = "💾 Terbitkan Pengumuman";
+    currentEditPengumumanId = null; // Reset mode edit
 
-        alert("✅ Pengumuman berhasil diterbitkan ke Firebase!");
-        document.getElementById('formInputPengumuman').reset();
-        
-        if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
-        if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
-        
-        tutupModalPengumumanAdmin();
-      } catch (err) {
-        btn.disabled = false;
-        btn.innerText = "💾 Terbitkan Pengumuman";
-        alert("❌ Gagal menyimpan ke Firebase: " + err.message);
-      }
-    }
+    alert("✅ Pengumuman berhasil diperbarui/diterbitkan ke Firebase!");
+    document.getElementById('formInputPengumuman').reset();
+    
+    if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
+    if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
+    
+    tutupModalPengumumanAdmin();
+    muatDaftarPengumumanAdmin();
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerText = "💾 Terbitkan Pengumuman";
+    alert("❌ Gagal menyimpan ke Firebase: " + err.message);
+  }
+}
 
     async function toggleStatusPengumuman(idUnik, statusBaru) {
       try {
