@@ -106,16 +106,24 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
+  // 🌟 PERBAIKAN 1: Bypass Request Video/Audio (Range Requests)
+  // Biarkan OS HP/Browser menangani unduhan video sepotong-sepotong secara langsung (tanpa campur tangan Service Worker)
+  if (event.request.headers.has('range')) {
+    return; 
+  }
+
+  // 🌟 PERBAIKAN 2: Longgarkan tangkapan untuk API dan Media Eksternal
   if (
     event.request.mode === 'navigate' || 
     url.origin.includes('firebase') || 
     url.origin.includes('gstatic') ||
-    url.pathname.endsWith('.webm') || 
-    url.pathname.endsWith('.mp4') ||
-    url.origin.includes('catbox.moe')
+    url.origin.includes('firebasestorage') || // Pastikan storage firebase juga ter-bypass
+    url.origin.includes('catbox.moe') ||
+    url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif)$/i) // Termasuk gambar eksternal
   ) {
     event.respondWith(
       fetch(event.request).catch((err) => {
+        // Jika jaringan seluler putus, coba cari di cache
         return caches.match(event.request).then((cached) => {
           return cached || new Response(null, { status: 404, statusText: 'Not Found' });
         });
@@ -124,6 +132,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Cache First untuk aset statis UI PWA (HTML lokal, CSS, JS, Icon)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -136,6 +145,7 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
 
 // Perintah skipWaiting dari lonceng
 self.addEventListener('message', (event) => {

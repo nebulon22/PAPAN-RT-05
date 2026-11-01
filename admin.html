@@ -254,73 +254,88 @@
 
 <!-- Modal Kelola Pengumuman -->
 <div id="modal-admin-pengumuman" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-pengumuman') tutupModalPengumumanAdmin()">
-  <div class="modal-content" style="max-width: 500px; width: 92%;">
-    <div class="modal-header">
-      <h3 style="margin:0; font-size:16px;">📢 Form Input & Arsip Pengumuman</h3>
+  <div class="modal-content" style="max-width: 500px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
+    
+    <!-- HEADER MODAL (Tetap di atas) -->
+    <div class="modal-header" style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+      <h3 style="margin:0; font-size:15px;">📢 Form Input & Arsip Pengumuman</h3>
       <button class="close-btn" onclick="tutupModalPengumumanAdmin()">&times;</button>
     </div>
+    
+    <!-- 🌟 WADAH UTAMA BER-SCROLL (Form & Tabel berada di sini agar bisa digulir ke bawah) -->
+    <div style="flex: 1; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 10px;">
 
-   <!-- Form Tambah Pengumuman Baru -->
-    <form id="formInputPengumuman" style="background: #fef3c7; padding: 12px; border-radius: 8px; border: 1px solid #fde68a; margin-bottom: 15px;">
-      <div style="font-weight: bold; font-size: 12px; color: #b45309; margin-bottom: 8px;">➕ Input Pengumuman / Event Baru</div>
-      
-      <div class="form-group" style="margin-bottom: 8px;">
-        <label for="pengumumanTanggal" style="font-size: 11px; font-weight: bold;">Tanggal Acara / Kegiatan:</label>
-        <input type="date" id="pengumumanTanggal" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+      <!-- Form Tambah/Edit Pengumuman Baru -->
+      <form id="formInputPengumuman" style="background: #fef3c7; padding: 10px; border-radius: 8px; border: 1px solid #fde68a; flex-shrink: 0;">
+        <div style="font-weight: bold; font-size: 12px; color: #b45309; margin-bottom: 8px;">➕ Input Pengumuman / Event Baru</div>
+        
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanTanggal" style="font-size: 11px; font-weight: bold;">Tanggal Acara / Kegiatan:</label>
+          <input type="date" id="pengumumanTanggal" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanJudul" style="font-size: 11px; font-weight: bold;">Judul Kegiatan / Event:</label>
+          <input type="text" id="pengumumanJudul" placeholder="Contoh: Kerja Bakti / Arisan RT" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanDetail" style="font-size: 11px; font-weight: bold;">Detail & Catatan Informasi:</label>
+          <textarea id="pengumumanDetail" rows="2" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px; position: relative;">
+          <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Ketik Nama Warga / Pilih):</label>
+          <input type="text" id="pengumumanLokasi" placeholder="Ketik nama warga (misal: Bejo)..." autocomplete="off" oninput="cariLokasiPengumuman(this.value)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+          <div id="hasilPencarianLokasi" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 140px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+          <input type="hidden" id="pengumumanLat" value="">
+          <input type="hidden" id="pengumumanLng" value="">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
+          <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <!-- Kotak Upload Media -->
+        <div style="background: #f8fafc; padding: 8px; border-radius: 8px; border: 1px solid #e2e8f0; margin-bottom: 8px;">
+          <label style="font-weight: bold; font-size: 11px; display: block; margin-bottom: 4px;">📁 Upload Foto/Video Kegiatan:</label>
+          <input type="file" id="inputFileMedia" accept="image/png, image/jpeg, video/mp4, video/webm" style="width: 100%; font-size: 10px; margin-bottom: 6px;">
+          <button type="button" onclick="uploadDanSimpanMedia()" style="background: #0288d1; color: white; border: none; padding: 6px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; cursor: pointer;">
+            🚀 Upload & Simpan ke Database
+          </button>
+          <div id="statusUpload" style="font-size: 10px; margin-top: 4px; color: #64748b;"></div>
+        </div>
+
+        <button type="button" onclick="simpanPengumumanAdmin()" id="btnSimpanPengumuman" style="width: 100%; padding: 7px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">
+          💾 Terbitkan Pengumuman
+        </button>
+      </form>
+
+      <!-- Daftar Pengumuman & Tombol Edit/Arsip (Sekarang terlihat dan dapat digulir) -->
+      <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; flex-shrink: 0;">
+        <h4 style="margin: 0 0 6px 0; font-size: 12px; color: #374151;">📋 Daftar Pengumuman & Status Arsip:</h4>
+        <div style="max-height: 180px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+            <thead>
+              <tr style="background: #111827; color: white; position: sticky; top: 0; z-index: 5;">
+                <th style="padding: 6px;">Kegiatan</th>
+                <th style="padding: 6px; text-align: center;">Status</th>
+                <th style="padding: 6px; text-align: center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tabel-pengumuman-admin">
+              <tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
 
-      <div class="form-group" style="margin-bottom: 8px;">
-        <label for="pengumumanJudul" style="font-size: 11px; font-weight: bold;">Judul Kegiatan / Event:</label>
-        <input type="text" id="pengumumanJudul" placeholder="Contoh: Kerja Bakti / Arisan RT" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-      </div>
-
-      <div class="form-group" style="margin-bottom: 8px;">
-        <label for="pengumumanDetail" style="font-size: 11px; font-weight: bold;">Detail & Catatan Informasi:</label>
-        <textarea id="pengumumanDetail" rows="3" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
-      </div>
-
-   <div class="form-group" style="margin-bottom: 8px; position: relative;">
-    <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Ketik Nama Warga / Pilih):</label>
-  
-  <!-- Input teks dengan event oninput untuk memicu pencarian -->
-  <input type="text" id="pengumumanLokasi" placeholder="Ketik nama warga (misal: Bejo)..." autocomplete="off" oninput="cariLokasiPengumuman(this.value)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-  
-  <!-- Kotak Dropdown Rekomendasi Hasil Pencarian -->
-  <div id="hasilPencarianLokasi" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 140px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
-
-  <!-- Input tersembunyi untuk menyimpan koordinat presisi yang akan dikirim ke database -->
-  <input type="hidden" id="pengumumanLat" value="">
-  <input type="hidden" id="pengumumanLng" value="">
-  </div>
-
-      <div class="form-group" style="margin-bottom: 10px;">
-        <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
-        <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-      </div>
-
-      <button type="button" onclick="simpanPengumumanAdmin()" id="btnSimpanPengumuman" style="width: 100%; padding: 8px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">
-        💾 Terbitkan Pengumuman
-      </button>
-    </form>
-
-    <!-- Daftar Pengumuman & Toggle Arsip -->
-    <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151;">📋 Daftar Pengumuman & Status Arsip:</h4>
-    <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
-      <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
-        <thead>
-          <tr style="background: #111827; color: white;">
-            <th style="padding: 6px;">Kegiatan</th>
-            <th style="padding: 6px; text-align: center;">Status</th>
-            <th style="padding: 6px; text-align: center;">Aksi</th>
-          </tr>
-        </thead>
-        <tbody id="tabel-pengumuman-admin">
-          <tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat data...</td></tr>
-        </tbody>
-      </table>
     </div>
 
-    <button type="button" onclick="tutupModalPengumumanAdmin()" style="width: 100%; margin-top: 12px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
+    <!-- Tombol Tutup di Bawah (Tetap menempel di bawah modal) -->
+    <button type="button" onclick="tutupModalPengumumanAdmin()" style="width: 100%; margin-top: 8px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; flex-shrink: 0;">Tutup</button>
+  
   </div>
 </div>
     
@@ -2278,24 +2293,28 @@ document.addEventListener("click", function(e) {
             const status = String(item.status || 'AKTIF').toUpperCase().trim();
             const isAktif = status === 'AKTIF';
 
-            html += `
-              <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
-                <td style="padding: 6px;">
-                  <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
-                  <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(tanggal)}</div>
-                </td>
-                <td style="padding: 6px; text-align: center;">
-                  <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
-                    ${isAktif ? 'AKTIF' : 'ARSIP'}
-                  </span>
-                </td>
-                <td style="padding: 6px; text-align: center;">
-                  <button onclick="toggleStatusPengumuman('${key}', '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
-                    ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
-                  </button>
-                </td>
-              </tr>
-            `;
+        // KODE BARU (DITAMBAHKAN TOMBOL EDIT):
+html += `
+  <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
+    <td style="padding: 6px;">
+      <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
+      <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(tanggal)}</div>
+    </td>
+    <td style="padding: 6px; text-align: center;">
+      <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
+        ${isAktif ? 'AKTIF' : 'ARSIP'}
+      </span>
+    </td>
+    <td style="padding: 6px; text-align: center; white-space: nowrap;">
+      <button onclick="editPengumuman('${key}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; background: #3b82f6; color: white; margin-right: 4px;">
+        ✏️ Edit
+      </button>
+      <button onclick="toggleStatusPengumuman('${key}', '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
+        ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
+      </button>
+    </td>
+  </tr>
+`;
           }
         });
 
@@ -2306,62 +2325,200 @@ document.addEventListener("click", function(e) {
       });
     }
 
-    async function simpanPengumumanAdmin() {
-      const tglInput = document.getElementById('pengumumanTanggal').value;
-      const judul = document.getElementById('pengumumanJudul').value.trim();
-      const detail = document.getElementById('pengumumanDetail').value.trim();
-      const lokasi = document.getElementById('pengumumanLokasi').value.trim();
+    // 1. Simpan ID yang sedang diedit dalam variabel global
+let currentEditPengumumanId = null;
+
+function editPengumuman(id) {
+  const pengumumanRef = window.firebaseRef(window.db, 'pengumuman/' + id);
+  window.firebaseGet(pengumumanRef).then((snapshot) => {
+    if (snapshot.exists()) {
+      const val = snapshot.val();
       
-      const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
-      const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
-      const foto = document.getElementById('pengumumanFoto').value.trim();
+      // Simpan ID yang sedang diedit
+      currentEditPengumumanId = id;
 
-      if (!judul || !tglInput) {
-        alert("Mohon isi tanggal dan judul pengumuman!");
-        return;
+      // Konversi format tanggal kembali ke YYYY-MM-DD untuk input date HTML
+      if (val.tanggal) {
+        const p = val.tanggal.split('/');
+        if (p.length === 3) {
+          document.getElementById('pengumumanTanggal').value = `${p[2]}-${p[1]}-${p[0]}`;
+        }
       }
+      document.getElementById('pengumumanJudul').value = val.judul || '';
+      document.getElementById('pengumumanDetail').value = val.detail || '';
+      document.getElementById('pengumumanLokasi').value = val.lokasi || '';
+      if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = val.lat || '';
+      if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = val.lng || '';
+      document.getElementById('pengumumanFoto').value = val.foto || '';
 
-      const parts = tglInput.split('-');
-      const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
+      // Ubah teks tombol simpan agar admin tahu sedang dalam mode edit
+      const btnSimpan = document.getElementById('btnSimpanPengumuman');
+      if (btnSimpan) btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
 
-      const btn = document.getElementById('btnSimpanPengumuman');
-      btn.disabled = true;
-      btn.innerText = "⏳ Menyimpan ke Firebase...";
+      alert("Mode Edit Aktif: Silakan ubah data di form lalu klik 'Simpan Perubahan'.");
+    }
+  });
+}
 
-      const pengumumanId = 'info_' + Date.now();
-      const payload = {
-        id: pengumumanId,
-        tanggal: tglRapi,
-        judul: judul,
-        detail: detail,
-        lokasi: lokasi,
-        lat: lat,
-        lng: lng,
-        foto: foto,
-        status: 'AKTIF',
-        timestamp: Date.now()
-      };
+    async function uploadDanSimpanMedia() {
+  const fileInput = document.getElementById('inputFileMedia');
+  const statusDiv = document.getElementById('statusUpload');
+  
+  if (!fileInput.files || fileInput.files.length === 0) {
+    alert("Pilih file gambar atau video terlebih dahulu!");
+    return;
+  }
 
-      try {
-        const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
-        await window.firebaseSet(targetRef, payload);
+  // Ambil data dari form input pengumuman yang sedang diisi
+  const tglInput = document.getElementById('pengumumanTanggal').value;
+  const judul = document.getElementById('pengumumanJudul').value.trim();
+  const detail = document.getElementById('pengumumanDetail').value.trim();
+  const lokasi = document.getElementById('pengumumanLokasi').value.trim();
+  const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
+  const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
 
-        btn.disabled = false;
-        btn.innerText = "💾 Terbitkan Pengumuman";
+  if (!judul || !tglInput) {
+    alert("Mohon isi Judul dan Tanggal Acara terlebih dahulu sebelum upload media!");
+    return;
+  }
 
-        alert("✅ Pengumuman berhasil diterbitkan ke Firebase!");
-        document.getElementById('formInputPengumuman').reset();
-        
-        if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
-        if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
-        
-        tutupModalPengumumanAdmin();
-      } catch (err) {
-        btn.disabled = false;
-        btn.innerText = "💾 Terbitkan Pengumuman";
-        alert("❌ Gagal menyimpan ke Firebase: " + err.message);
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  const isVideo = file.type.startsWith('video');
+  statusDiv.innerText = "⏳ Sedang mengunggah file ke server...";
+
+  let publicUrl = "";
+
+  try {
+    if (isVideo) {
+      // Opsi A: Upload Video ke Catbox.moe API (Catatan: pastikan jaringan mendukung atau ganti layanan jika diblokir operator)
+      formData.append('reqtype', 'fileupload');
+      formData.append('fileToUpload', file);
+
+      const response = await fetch('https://catbox.moe/user/api.php', {
+        method: 'POST',
+        body: formData
+      });
+      publicUrl = await response.text(); 
+
+    } else {
+      // Opsi B: Upload Gambar ke ImgBB API
+      // Ganti 'YOUR_IMGBB_API_KEY' dengan API key gratis dari id.imgbb.com jika ingin pakai key sendiri
+      formData.append('image', file);
+      
+      const response = await fetch('https://api.imgbb.com/1/upload?key=YOUR_IMGBB_API_KEY', {
+        method: 'POST',
+        body: formData
+      });
+      const result = await response.json();
+      if (result.success) {
+        publicUrl = result.data.url; 
+      } else {
+        throw new Error("Gagal upload gambar ke ImgBB");
       }
     }
+
+    if (!publicUrl) {
+      throw new Error("Gagal mendapatkan URL publik dari file yang diunggah.");
+    }
+
+    statusDiv.innerText = "✅ Berhasil upload! Menyimpan ke Firebase...";
+
+    // Format tanggal agar sesuai dengan sistem pengumuman (DD/MM/YYYY)
+    const parts = tglInput.split('-');
+    const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
+    const pengumumanId = 'info_' + Date.now();
+
+    // Simpan ke node Firebase 'pengumuman'
+    const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
+    await window.firebaseSet(targetRef, {
+      id: pengumumanId,
+      tanggal: tglRapi,
+      judul: judul,
+      detail: detail,
+      lokasi: lokasi,
+      lat: lat,
+      lng: lng,
+      foto: publicUrl.trim(), // Link hasil upload otomatis masuk ke sini
+      status: "AKTIF",
+      timestamp: Date.now()
+    });
+
+    statusDiv.innerText = "🎉 Data dan media berhasil diterbitkan!";
+    fileInput.value = ""; // Reset file input
+    document.getElementById('formInputPengumuman').reset(); // Reset form
+    
+    // Tutup modal atau muat ulang daftar pengumuman
+    if (typeof muatDaftarPengumumanAdmin === 'function') {
+      muatDaftarPengumumanAdmin();
+    }
+
+  } catch (err) {
+    console.error(err);
+    statusDiv.innerText = "❌ Terjadi kesalahan: " + err.message;
+  }
+}
+
+  async function simpanPengumumanAdmin() {
+  const tglInput = document.getElementById('pengumumanTanggal').value;
+  const judul = document.getElementById('pengumumanJudul').value.trim();
+  const detail = document.getElementById('pengumumanDetail').value.trim();
+  const lokasi = document.getElementById('pengumumanLokasi').value.trim();
+  
+  const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
+  const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
+  const foto = document.getElementById('pengumumanFoto').value.trim();
+
+  if (!judul || !tglInput) {
+    alert("Mohon isi tanggal dan judul pengumuman!");
+    return;
+  }
+
+  const parts = tglInput.split('-');
+  const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+  const btn = document.getElementById('btnSimpanPengumuman');
+  btn.disabled = true;
+  btn.innerText = "⏳ Menyimpan ke Firebase...";
+
+  // Jika currentEditPengumumanId ada isinya, berarti pakai ID lama (Update). Jika null, buat ID baru.
+  const pengumumanId = currentEditPengumumanId ? currentEditPengumumanId : ('info_' + Date.now());
+  
+  const payload = {
+    id: pengumumanId,
+    tanggal: tglRapi,
+    judul: judul,
+    detail: detail,
+    lokasi: lokasi,
+    lat: lat,
+    lng: lng,
+    foto: foto,
+    status: 'AKTIF',
+    timestamp: Date.now()
+  };
+
+  try {
+    const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
+    await window.firebaseSet(targetRef, payload);
+
+    btn.disabled = false;
+    btn.innerText = "💾 Terbitkan Pengumuman";
+    currentEditPengumumanId = null; // Reset mode edit
+
+    alert("✅ Pengumuman berhasil diperbarui/diterbitkan ke Firebase!");
+    document.getElementById('formInputPengumuman').reset();
+    
+    if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
+    if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
+    
+    tutupModalPengumumanAdmin();
+    muatDaftarPengumumanAdmin();
+  } catch (err) {
+    btn.disabled = false;
+    btn.innerText = "💾 Terbitkan Pengumuman";
+    alert("❌ Gagal menyimpan ke Firebase: " + err.message);
+  }
+}
 
     async function toggleStatusPengumuman(idUnik, statusBaru) {
       try {

@@ -23,70 +23,12 @@
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   
-  <!-- Leaflet JS dengan atribut defer (Aman untuk Peta & Lolos Render-Blocking) -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- 🌟 Leaflet JS dengan atribut defer & event listener onload agar aman terinisialisasi berurutan -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer onload="window.leafletLoaded = true;"></script>
   
-  <!-- Konfigurasi Global & Firebase Utils berikutnya -->
- 
-  
- <script>
- var serviceWorkerMenunggu = null;
-
-  if ('serviceWorker' in navigator) {
-    let sedangRefresh = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!sedangRefresh) {
-        sedangRefresh = true;
-        window.location.reload();
-      }
-    });
-
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      const tangkapSWWaiting = (sw) => {
-        if (!sw) return;
-        serviceWorkerMenunggu = sw;
-        tampilkanLoncengUpdate();
-      };
-
-      if (reg.waiting) {
-        tangkapSWWaiting(reg.waiting);
-      }
-
-      reg.addEventListener('updatefound', () => {
-        const workerBaru = reg.installing;
-        if (workerBaru) {
-          workerBaru.addEventListener('statechange', () => {
-            if (workerBaru.state === 'installed' && navigator.serviceWorker.controller) {
-              tangkapSWWaiting(workerBaru);
-            }
-          });
-        }
-      });
-    }).catch(err => {
-      console.error("Gagal registrasi SW:", err);
-    });
-  }
-
-function tampilkanLoncengUpdate() {
-  var container = document.getElementById('container-update-pwa');
-  if (container) container.style.display = 'flex';
-}
-
-function perbaruiAplikasiSekarang() {
-  var container = document.getElementById('container-update-pwa');
-  if (container) {
-    container.innerHTML = '<span style="font-size: 11px; font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Memasang pembaruan...</span>';
-  }
-
-  if (serviceWorkerMenunggu) {
-    serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
-  } else {
-    setTimeout(() => {
-      window.location.reload(true);
-    }, 500);
-  }
-}
-</script>
+  <!-- Konfigurasi Global & Utils -->
+  <script src="utils.js" defer></script>
+  <script src="setting.js" defer></script>
 
  <style>
   html, body { 
@@ -1168,7 +1110,72 @@ function perbaruiAplikasiSekarang() {
 </div>
   
 </main>
+
 <script>
+  // ==========================================
+  // 1. SCRIPT SERVICE WORKER & MANAJEMEN PWA
+  // ==========================================
+  var serviceWorkerMenunggu = null;
+
+  if ('serviceWorker' in navigator) {
+    let sedangRefresh = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!sedangRefresh) {
+        sedangRefresh = true;
+        window.location.reload();
+      }
+    });
+
+    navigator.serviceWorker.register('./sw.js').then(reg => {
+      const tangkapSWWaiting = (sw) => {
+        if (!sw) return;
+        serviceWorkerMenunggu = sw;
+        tampilkanLoncengUpdate();
+      };
+
+      if (reg.waiting) {
+        tangkapSWWaiting(reg.waiting);
+      }
+
+      reg.addEventListener('updatefound', () => {
+        const workerBaru = reg.installing;
+        if (workerBaru) {
+          workerBaru.addEventListener('statechange', () => {
+            if (workerBaru.state === 'installed' && navigator.serviceWorker.controller) {
+              tangkapSWWaiting(workerBaru);
+            }
+          });
+        }
+      });
+    }).catch(err => {
+      console.error("Gagal registrasi SW:", err);
+    });
+  }
+
+  function tampilkanLoncengUpdate() {
+    var container = document.getElementById('container-update-pwa');
+    if (container) container.style.display = 'flex';
+  }
+
+  function perbaruiAplikasiSekarang() {
+    var container = document.getElementById('container-update-pwa');
+    if (container) {
+      container.innerHTML = '<span style="font-size: 11px; font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Memasang pembaruan...</span>';
+    }
+
+    if (serviceWorkerMenunggu) {
+      serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
+    } else {
+      setTimeout(() => {
+        window.location.reload(true);
+      }, 500);
+    }
+  }
+
+
+  // ==========================================
+  // 2. LOGIKA CHAT & BADGE NOTIFIKASI
+  // ==========================================
   function toggleChatModal() {
     const modal = document.getElementById('chat-overlay-modal');
     const iframe = modal ? modal.querySelector('iframe') : null;
@@ -1242,60 +1249,63 @@ function perbaruiAplikasiSekarang() {
       chatBtn.classList.remove('chat-btn-animated');
     }
   }
-</script>
 
- <script>
-var map; 
-var daftarPin = [];
-var daftarPengumuman = [];
-var dataKeuangan = [];
-var pinRumahAktif = null;
 
-window.addEventListener('utilsSiap', () => {
-  // 1. Pastikan DOM / Kontainer Peta sudah siap sepenuhnya
-  const containerMap = document.getElementById('map');
-  if (!containerMap) return;
+  // ==========================================
+  // 3. INISIALISASI PETA & DATA UTAMA
+  // ==========================================
+  var map; 
+  var daftarPin = [];
+  var daftarPengumuman = [];
+  var dataKeuangan = [];
+  var pinRumahAktif = null;
 
-  // 2. Cek apakah peta sudah pernah diinisialisasi sebelumnya
-  if (typeof map !== 'undefined' && map !== null) {
-    return; // Jika sudah ada, hentikan agar tidak inisialisasi ulang
-  }
+  // Event 'utilsSiap' menjamin Leaflet JS (yang di-defer) sudah siap dan DOM sudah terbentuk
+  window.addEventListener('utilsSiap', () => {
+    // 1. Pastikan DOM / Kontainer Peta sudah siap sepenuhnya
+    const containerMap = document.getElementById('map');
+    if (!containerMap) return;
 
-  // 3. Bersihkan status inisialisasi lama jika ada
-  let container = L.DomUtil.get('map');
-  if (container != null && container._leaflet_id != null) {
-    container._leaflet_id = null;
-  }
+    // 2. Cek apakah peta sudah pernah diinisialisasi sebelumnya
+    if (typeof map !== 'undefined' && map !== null) {
+      return; 
+    }
 
-  // 4. Inisialisasi Peta dijalankan lebih dulu agar objek 'map' sah dan tersedia
-  map = L.map('map').setView([-7.7423, 110.3842], 17);
-  
-  L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-      maxZoom: 20,
-      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-      attribution: '&copy; Google Maps'
-  }).addTo(map);
-  
-  L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+    // 3. Bersihkan status inisialisasi lama jika ada
+    let container = L.DomUtil.get('map');
+    if (container != null && container._leaflet_id != null) {
+      container._leaflet_id = null;
+    }
 
-  // 5. Setelah peta siap, baru tarik data berat di latar belakang menggunakan requestIdleCallback / setTimeout
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(() => {
-      muatDataPetaWarga();
-      muatPengumumanFirebase();
-    }, { timeout: 200 });
-  } else {
-    setTimeout(() => {
-      muatDataPetaWarga();
-      muatPengumumanFirebase();
-    }, 50);
-  }
+    // 4. Inisialisasi Peta Leaflet
+    map = L.map('map').setView([-7.7423, 110.3842], 17);
+    
+    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+        maxZoom: 20,
+        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+        attribution: '&copy; Google Maps'
+    }).addTo(map);
+    
+    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
 
-  perbaruiIndikatorSync();
-  if (navigator.onLine) {
-    kirimDataPendingJimpitan();
-  }
-});
+    // 5. Muat data berat di latar belakang menggunakan requestIdleCallback agar performa tetap ringan
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => {
+        muatDataPetaWarga();
+        muatPengumumanFirebase();
+      }, { timeout: 200 });
+    } else {
+      setTimeout(() => {
+        muatDataPetaWarga();
+        muatPengumumanFirebase();
+      }, 50);
+    }
+
+    perbaruiIndikatorSync();
+    if (navigator.onLine) {
+      kirimDataPendingJimpitan();
+    }
+  });
 
 function muatDataPetaWarga() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
@@ -1365,7 +1375,7 @@ function muatDataPetaWarga() {
           if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
           var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-          var htmlFoto = item.foto ? `<br><img src="${item.foto}" loading="lazy" class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
+          var htmlFoto = item.foto ? `<br><img src="${item.foto}"  class="img-popup" alt="Foto Depan" onclick="bukaFotoBesar('${item.foto}', event)" onError="this.style.display='none'">` : '';
           var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
           
           var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
@@ -1556,7 +1566,7 @@ function bukaModalInfo() {
             align-items: center;
             justify-content: center;
           ">
-          <video src="${info.foto}" preload="metadata" onloadeddata="this.currentTime=3" style="
+          <video src="${info.foto}" preload="metadata" playsinline controls style="..."></video>
             width: 100%; 
             max-height: 200px; 
             object-fit: cover; 
@@ -3426,14 +3436,8 @@ async function simpanWargaBaru() {
 }
   </script>
   
-  <script src="setting.js"></script>
-  
-<!-- 1. Muat skrip konfigurasi & utils terlebih dahulu -->
-  <script src="utils.js"></script>
-
-  <!-- 2. Modul Firebase diinisialisasi secara tertunda (Lazy Load) untuk HP Kentang -->
+<!-- 🌟 MODifikasi Logika Inisialisasi Deferred agar Menunggu Leaflet & DOM Selesai -->
   <script>
-    // Siapkan objek penampung global agar fungsi lain tidak error "undefined"
     window.db = null;
     window.firebaseRef = null;
     window.firebaseOnValue = null;
@@ -3443,7 +3447,6 @@ async function simpanWargaBaru() {
     window.firebaseSet = null;
     window.firebaseGet = null;
 
-    // Muat Firebase di latar belakang setelah halaman selesai dirender secara visual
     window.addEventListener('load', () => {
       setTimeout(async () => {
         try {
@@ -3453,7 +3456,6 @@ async function simpanWargaBaru() {
           const app = initializeApp(RT05_CONFIG.FIREBASE);
           const db = getDatabase(app);
 
-          // EKSPOS KE GLOBAL WINDOW AGAR TIDAK ERROR "is not a function"
           window.db = db;
           window.firebaseRef = ref;
           window.firebaseOnValue = onValue;
@@ -3463,12 +3465,20 @@ async function simpanWargaBaru() {
           window.firebaseSet = set;
           window.firebaseGet = get;
 
-          // 3. Picu event agar peta tahu bahwa Firebase & Utils sudah siap
-          window.dispatchEvent(new Event('utilsSiap'));
+          // Fungsi pengecekan apakah Leaflet sudah benar-benar siap terunduh & ter-parse
+          const cekLeafletDanKirimEvent = () => {
+            if (typeof L !== 'undefined') {
+              window.dispatchEvent(new Event('utilsSiap'));
+            } else {
+              setTimeout(cekLeafletDanKirimEvent, 50);
+            }
+          };
+
+          cekLeafletDanKirimEvent();
         } catch (err) {
           console.error("Gagal memuat modul Firebase secara background:", err);
         }
-      }, 300); // Jeda 300ms agar peta dan UI utama muncul mulus tanpa hambatan
+      }, 300);
     });
   </script>
 </body>
