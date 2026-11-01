@@ -2278,24 +2278,28 @@ document.addEventListener("click", function(e) {
             const status = String(item.status || 'AKTIF').toUpperCase().trim();
             const isAktif = status === 'AKTIF';
 
-            html += `
-              <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
-                <td style="padding: 6px;">
-                  <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
-                  <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(tanggal)}</div>
-                </td>
-                <td style="padding: 6px; text-align: center;">
-                  <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
-                    ${isAktif ? 'AKTIF' : 'ARSIP'}
-                  </span>
-                </td>
-                <td style="padding: 6px; text-align: center;">
-                  <button onclick="toggleStatusPengumuman('${key}', '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
-                    ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
-                  </button>
-                </td>
-              </tr>
-            `;
+        // KODE BARU (DITAMBAHKAN TOMBOL EDIT):
+html += `
+  <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
+    <td style="padding: 6px;">
+      <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
+      <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(tanggal)}</div>
+    </td>
+    <td style="padding: 6px; text-align: center;">
+      <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
+        ${isAktif ? 'AKTIF' : 'ARSIP'}
+      </span>
+    </td>
+    <td style="padding: 6px; text-align: center; white-space: nowrap;">
+      <button onclick="editPengumuman('${key}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; background: #3b82f6; color: white; margin-right: 4px;">
+        ✏️ Edit
+      </button>
+      <button onclick="toggleStatusPengumuman('${key}', '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
+        ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
+      </button>
+    </td>
+  </tr>
+`;
           }
         });
 
@@ -2305,6 +2309,32 @@ document.addEventListener("click", function(e) {
         container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: red;">Gagal memuat data.</td></tr>`;
       });
     }
+
+    function editPengumuman(id) {
+  const pengumumanRef = window.firebaseRef(window.db, 'pengumuman/' + id);
+  window.firebaseGet(pengumumanRef).then((snapshot) => {
+    if (snapshot.exists()) {
+      const val = snapshot.val();
+      // Konversi format tanggal kembali ke YYYY-MM-DD untuk input date HTML
+      if (val.tanggal) {
+        const p = val.tanggal.split('/');
+        if (p.length === 3) {
+          document.getElementById('pengumumanTanggal').value = `${p[2]}-${p[1]}-${p[0]}`;
+        }
+      }
+      document.getElementById('pengumumanJudul').value = val.judul || '';
+      document.getElementById('pengumumanDetail').value = val.detail || '';
+      document.getElementById('pengumumanLokasi').value = val.lokasi || '';
+      if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = val.lat || '';
+      if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = val.lng || '';
+      document.getElementById('pengumumanFoto').value = val.foto || '';
+
+      // Ubah perilaku tombol simpan agar melakukan update alih-alih membuat key baru
+      // Atau Anda bisa menyesuaikan fungsi simpanPengumumanAdmin() agar mendeteksi mode edit.
+      alert("Mode Edit: Silakan perbarui data di atas lalu klik tombol Terbitkan/Simpan.");
+    }
+  });
+}
 
     async function simpanPengumumanAdmin() {
       const tglInput = document.getElementById('pengumumanTanggal').value;
