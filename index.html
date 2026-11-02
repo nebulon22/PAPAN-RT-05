@@ -3450,33 +3450,48 @@ async function simpanWargaBaru() {
 }
   </script>
   
-<!-- 🌟 Optimasi Inisialisasi Cepat (Tanpa Waterfall Timeout) -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+<!-- 🌟 Logika Inisialisasi Cepat Tanpa Jeda Timeout Buatan -->
+  <script>
+    window.db = null;
+    window.firebaseRef = null;
+    window.firebaseOnValue = null;
+    window.firebaseUpdate = null;
+    window.firebaseRemove = null;
+    window.firebasePush = null;
+    window.firebaseSet = null;
+    window.firebaseGet = null;
 
-  // Inisialisasi Firebase secara langsung begitu modul siap dibaca browser
-  const app = initializeApp(RT05_CONFIG.FIREBASE);
-  const db = getDatabase(app);
+    window.addEventListener('load', async () => {
+      try {
+        const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+        const { getDatabase, ref, onValue, update, remove, push, set, get } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
 
-  window.db = db;
-  window.firebaseRef = ref;
-  window.firebaseOnValue = onValue;
-  window.firebaseUpdate = update;
-  window.firebaseRemove = remove;
-  window.firebasePush = push;
-  window.firebaseSet = set;
-  window.firebaseGet = get;
+        const app = initializeApp(RT05_CONFIG.FIREBASE);
+        const db = getDatabase(app);
 
-  // Begitu Leaflet siap, langsung tembak event tanpa jeda buatan
-  const cekLeaflet = () => {
-    if (typeof L !== 'undefined') {
-      window.dispatchEvent(new Event('utilsSiap'));
-    } else {
-      requestAnimationFrame(cekLeaflet);
-    }
-  };
-  cekLeaflet();
-</script>
+        window.db = db;
+        window.firebaseRef = ref;
+        window.firebaseOnValue = onValue;
+        window.firebaseUpdate = update;
+        window.firebaseRemove = remove;
+        window.firebasePush = push;
+        window.firebaseSet = set;
+        window.firebaseGet = get;
+
+        // Cek ketersediaan Leaflet menggunakan requestAnimationFrame agar tidak membebani CPU
+        const cekLeafletDanKirimEvent = () => {
+          if (typeof L !== 'undefined') {
+            window.dispatchEvent(new Event('utilsSiap'));
+          } else {
+            requestAnimationFrame(cekLeafletDanKirimEvent);
+          }
+        };
+
+        cekLeafletDanKirimEvent();
+      } catch (err) {
+        console.error("Gagal memuat modul Firebase secara background:", err);
+      }
+    });
+  </script>
 </body>
 </html>
