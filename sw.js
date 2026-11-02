@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.6.0';  
+const CACHE_NAME = 'rt-kayen-v1.6.1';  
 
 // 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker agar background push FCM tidak macet
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
@@ -32,6 +32,8 @@ messaging.onBackgroundMessage((payload) => {
     body: body,
     icon: './kentongan-slit-drum.png',
     badge: './kentongan-slit-drum.png',
+    tag: payload.data?.tag || 'grup-chat-rt05', // 🛠️ FIX: Mencegah notifikasi dibrondong
+    renotify: true,                              // 🛠️ FIX: Update kartu notifikasi yang sama
     data: { url: url }
   };
 
@@ -46,7 +48,6 @@ messaging.onBackgroundMessage((payload) => {
     options.vibrate = [100, 50, 100];
   }
 
-// 🌟 PERBAIKAN: Gunakan optional chaining (?.) agar aman jika belum siap
   if (self.registration && typeof self.registration.waitUntil === 'function') {
     self.registration.waitUntil(
       Promise.all([
@@ -63,7 +64,6 @@ messaging.onBackgroundMessage((payload) => {
       ])
     );
   } else {
-    // Fallback jika registration belum siap, tetap jalankan notifikasinya
     self.registration.showNotification(title, options);
   }
 });
@@ -185,10 +185,12 @@ self.addEventListener('push', (event) => {
 
   const title = data.notification?.title || data.title || "Notifikasi RT 05";
   const options = {
-    body: data.notification?.body || data.body || "Ada pesan atau info baru.",
+    body: body,
     icon: './kentongan-slit-drum.png',
     badge: './kentongan-slit-drum.png',
-    data: data.data || { url: './index.html' }
+    tag: payload.data?.tag || 'grup-chat-rt05', // 🛠️ TAMBAHKAN INI: Agar menimpa notifikasi lama
+    renotify: true,                              // 🛠️ TAMBAHKAN INI: Agar memperbarui isi kartu notifikasi
+    data: { url: url }
   };
 
   event.waitUntil(

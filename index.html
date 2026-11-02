@@ -10,6 +10,12 @@
   <link rel="preconnect" href="https://unpkg.com" crossorigin>
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 
+  <!-- Preconnect ke Server Tile Google Maps agar koneksi server tile siap lebih awal -->
+  <link rel="preconnect" href="https://mt0.google.com" crossorigin>
+  <link rel="preconnect" href="https://mt1.google.com" crossorigin>
+  <link rel="preconnect" href="https://mt2.google.com" crossorigin>
+  <link rel="preconnect" href="https://mt3.google.com" crossorigin>
+
   <!-- Leaflet CSS dengan Non-Blocking Load -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
@@ -19,7 +25,7 @@
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
   
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.6.0">
+  <link rel="manifest" href="manifest.json?v=1.6.1">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   
@@ -777,7 +783,8 @@
       <button class="close-btn" onclick="tutupModalInventaris()">&times;</button>
     </div>
     
-    <iframe src="inventaris.html" style="width: 100%; flex: 1; border: none; background: #f9fafb;"></iframe>
+    <!-- 🌟 Ubah atribut src menjadi data-src dan tambahkan id="iframe-inventaris" -->
+    <iframe id="iframe-inventaris" data-src="inventaris.html" style="width: 100%; flex: 1; border: none; background: #f9fafb;"></iframe>
     
   </div>
 </div>
@@ -1020,7 +1027,7 @@
     </div>
   </div>
 
-  <iframe src="chat.html" style="width: 100%; height: 100%; border: none; background: transparent;" allowtransparency="true"></iframe>
+  <iframe data-src="chat.html" style="width: 100%; height: 100%; border: none; background: transparent;" allowtransparency="true"></iframe>
 
 </div>
 
@@ -1173,8 +1180,8 @@
   }
 
 
-  // ==========================================
-  // 2. LOGIKA CHAT & BADGE NOTIFIKASI
+// ==========================================
+  // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
   function toggleChatModal() {
     const modal = document.getElementById('chat-overlay-modal');
@@ -1182,7 +1189,15 @@
 
     if (!modal) return;
 
-    if (modal.style.display === 'none' || modal.style.display === '') {
+    const isOpening = (modal.style.display === 'none' || modal.style.display === '');
+
+    if (isOpening) {
+      // 🌟 Lazy Load: Isi src dari data-src hanya saat modal pertama kali dibuka warga
+      if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
+        const dataSrc = iframe.getAttribute('data-src');
+        if (dataSrc) iframe.src = dataSrc;
+      }
+
       modal.style.display = 'flex';
       
       const badge = document.getElementById('badge-chat-main');
@@ -1196,6 +1211,14 @@
       }
     } else {
       modal.style.display = 'none';
+    }
+
+    // 🌟 BERITAHU IFRAME CHAT STATUS TERBUKA/TERTUTUP MODAL
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({
+        type: 'CHAT_MODAL_STATUS',
+        isOpen: isOpening
+      }, '*');
     }
   }
 
@@ -1251,7 +1274,7 @@
   }
 
 
-  // ==========================================
+// ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
   var map; 
@@ -1259,53 +1282,51 @@
   var daftarPengumuman = [];
   var dataKeuangan = [];
   var pinRumahAktif = null;
+  var isDataReady = false;
 
-  // Event 'utilsSiap' menjamin Leaflet JS (yang di-defer) sudah siap dan DOM sudah terbentuk
-  window.addEventListener('utilsSiap', () => {
-    // 1. Pastikan DOM / Kontainer Peta sudah siap sepenuhnya
-    const containerMap = document.getElementById('map');
-    if (!containerMap) return;
+  function initPetaDanData() {
+    // 1. Render Peta Leaflet instan begitu DOM & Leaflet siap (Memangkas LCP & FCP)
+    if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
+      let container = L.DomUtil.get('map');
+      if (container && container._leaflet_id) container._leaflet_id = null;
 
-    // 2. Cek apakah peta sudah pernah diinisialisasi sebelumnya
-    if (typeof map !== 'undefined' && map !== null) {
-      return; 
+      map = L.map('map').setView([-7.7423, 110.3842], 17);
+      
+      var tileLayerUtama = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+    maxZoom: 20,
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+    attribution: '&copy; Google Maps'
+});
+
+// 🌟 Berikan Prioritas Tinggi (High Priority Fetch) untuk setiap gambar peta yang diunduh
+tileLayerUtama.on('tileloadstart', function(e) {
+  if (e.tile) {
+    e.tile.setAttribute('fetchpriority', 'high');
+  }
+});
+
+tileLayerUtama.addTo(map);
+      
+      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
+      perbaruiIndikatorSync();
     }
 
-    // 3. Bersihkan status inisialisasi lama jika ada
-    let container = L.DomUtil.get('map');
-    if (container != null && container._leaflet_id != null) {
-      container._leaflet_id = null;
-    }
-
-    // 4. Inisialisasi Peta Leaflet
-    map = L.map('map').setView([-7.7423, 110.3842], 17);
-    
-    L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-        attribution: '&copy; Google Maps'
-    }).addTo(map);
-    
-    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
-
-    // 5. Muat data berat di latar belakang menggunakan requestIdleCallback agar performa tetap ringan
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => {
+    // 2. Pasang Marker Warga & Pengumuman begitu Firebase selesai dimuat di latar belakang
+    if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
+      isDataReady = true;
+      const muatData = () => {
         muatDataPetaWarga();
         muatPengumumanFirebase();
-      }, { timeout: 200 });
-    } else {
-      setTimeout(() => {
-        muatDataPetaWarga();
-        muatPengumumanFirebase();
-      }, 50);
+        if (navigator.onLine) kirimDataPendingJimpitan();
+      };
+      'requestIdleCallback' in window ? requestIdleCallback(muatData, { timeout: 200 }) : setTimeout(muatData, 50);
     }
+  }
 
-    perbaruiIndikatorSync();
-    if (navigator.onLine) {
-      kirimDataPendingJimpitan();
-    }
-  });
+  // Panggil fungsi secepat mungkin di semua event pemuatan
+  document.addEventListener('DOMContentLoaded', initPetaDanData);
+  window.addEventListener('load', initPetaDanData);
+  window.addEventListener('utilsSiap', initPetaDanData);
 
 function muatDataPetaWarga() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
@@ -2311,6 +2332,26 @@ let denahTimer = null;
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
+    // 🌟 Fungsi Buka Modal Inventaris (Lazy-Load)
+function bukaModalInventaris() {
+  const modal = document.getElementById('modal-inventaris');
+  const iframe = document.getElementById('iframe-inventaris');
+
+  // Muat inventaris.html HANYA saat tombol pertama kali diklik warga
+  if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
+    const dataSrc = iframe.getAttribute('data-src');
+    if (dataSrc) iframe.src = dataSrc;
+  }
+
+  if (modal) modal.style.display = 'flex';
+}
+
+// 🌟 Fungsi Tutup Modal Inventaris
+function tutupModalInventaris() {
+  const modal = document.getElementById('modal-inventaris');
+  if (modal) modal.style.display = 'none';
+}
+  
     function getInfoMalamRonda(dateObj = new Date()) {
       let d = new Date(dateObj);
       let hour = d.getHours();
@@ -3148,7 +3189,7 @@ window.tutupModalCatatanRonda = function() {
 
     const dataChangelog = [
        {
-        versi: "v1.6.0",
+        versi: "v1.6.1",
         tanggal: "31 Okt 2026",
         status: "Terbaru",
         warna: "#4CAF50",
@@ -3450,50 +3491,25 @@ async function simpanWargaBaru() {
 }
   </script>
   
-<!-- 🌟 MODifikasi Logika Inisialisasi Deferred agar Menunggu Leaflet & DOM Selesai -->
-  <script>
-    window.db = null;
-    window.firebaseRef = null;
-    window.firebaseOnValue = null;
-    window.firebaseUpdate = null;
-    window.firebaseRemove = null;
-    window.firebasePush = null;
-    window.firebaseSet = null;
-    window.firebaseGet = null;
+<!-- 🌟 Inisialisasi Firebase Cepat & Ringan (Gantikan blok paling bawah) -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-    window.addEventListener('load', () => {
-      setTimeout(async () => {
-        try {
-          const { initializeApp } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
-          const { getDatabase, ref, onValue, update, remove, push, set, get } = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js");
+  const app = initializeApp(RT05_CONFIG.FIREBASE);
+  const db = getDatabase(app);
 
-          const app = initializeApp(RT05_CONFIG.FIREBASE);
-          const db = getDatabase(app);
+  window.db = db;
+  window.firebaseRef = ref;
+  window.firebaseOnValue = onValue;
+  window.firebaseUpdate = update;
+  window.firebaseRemove = remove;
+  window.firebasePush = push;
+  window.firebaseSet = set;
+  window.firebaseGet = get;
 
-          window.db = db;
-          window.firebaseRef = ref;
-          window.firebaseOnValue = onValue;
-          window.firebaseUpdate = update;
-          window.firebaseRemove = remove;
-          window.firebasePush = push;
-          window.firebaseSet = set;
-          window.firebaseGet = get;
-
-          // Fungsi pengecekan apakah Leaflet sudah benar-benar siap terunduh & ter-parse
-          const cekLeafletDanKirimEvent = () => {
-            if (typeof L !== 'undefined') {
-              window.dispatchEvent(new Event('utilsSiap'));
-            } else {
-              setTimeout(cekLeafletDanKirimEvent, 50);
-            }
-          };
-
-          cekLeafletDanKirimEvent();
-        } catch (err) {
-          console.error("Gagal memuat modul Firebase secara background:", err);
-        }
-      }, 300);
-    });
-  </script>
+  // Sinyal bahwa modul Firebase telah siap disuplai ke peta
+  window.dispatchEvent(new Event('utilsSiap'));
+</script>
 </body>
 </html>
