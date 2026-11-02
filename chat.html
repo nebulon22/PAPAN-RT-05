@@ -618,6 +618,29 @@ console.log("🚀 Script chat.html berhasil dimuat.");
     window.currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
     let currentUser = window.currentUser;
 
+    // 🌟 Pengaman Global: Cek apakah Modal Chat sedang dibuka di halaman utama (index.html)
+window.isChatModalOpen = function() {
+  try {
+    const modal = (window.parent && window.parent.document) 
+      ? window.parent.document.getElementById('chat-overlay-modal') 
+      : document.getElementById('chat-overlay-modal');
+    if (modal) {
+      const display = window.getComputedStyle(modal).display;
+      return display !== 'none' && display !== '';
+    }
+  } catch (e) {}
+  return true; 
+};
+
+// 🌟 Cek apakah user sedang aktif melihat obrolan di layar
+window.isUserViewingChat = function() {
+  const modalOpen = window.isChatModalOpen();
+  const isFocused = (window.parent && window.parent.document) 
+    ? window.parent.document.hasFocus() 
+    : document.hasFocus();
+  return modalOpen && isFocused && !document.hidden;
+};
+    
     window.allUsersCache = {};
     let allUsersCache = window.allUsersCache;
     
@@ -1323,7 +1346,8 @@ function listenAllPrivateChats() {
           // b. Pesan dikirim oleh orang lain
           // c. Pesan ini BELUM PERNAH membunyikan notifikasi sebelumnya (lastNotifiedMsgKeys)
           // d. User sedang tidak membuka obrolan dengan orang tersebut secara aktif
-          const isCurrentlyViewingThisChat = (activeChatType === 'private' && activePrivateUID === targetUID && document.hasFocus());
+          // 🛡️ Cek presisi apakah user sedang membuka room private dengan orang ini
+          const isCurrentlyViewingThisChat = (activeChatType === 'private' && activePrivateUID === targetUID && window.isUserViewingChat());
 
           if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid && isChatReady) {
             if (lastNotifiedMsgKeys[targetUID] !== lastMsgKey && !isCurrentlyViewingThisChat) {
@@ -1557,28 +1581,28 @@ function listenPublicGroupUnread() {
       });
     }
 
-    // 🌟 LOGIKA NOTIFIKASI MELAYANG (Hanya 1x untuk Pesan Terakhir)
+// 🌟 LOGIKA NOTIFIKASI MELAYANG (Hanya 1x untuk Pesan Terakhir)
     if (!isFirstPublicLoad && isChatReady && latestUnreadMsg && latestUnreadKey) {
       const notifId = 'notif_pub_' + latestUnreadKey;
 
       if (!sessionStorage.getItem(notifId)) {
         sessionStorage.setItem(notifId, 'true');
 
-        // Hanya tampilkan jika layar chat sedang tidak aktif / tersembunyi
-        if (!isChatVisible || document.hidden) {
+        // 🛡️ Hanya tampilkan jika user sedang TIDAK aktif melihat chat
+        if (!window.isUserViewingChat()) {
           const senderName = latestUnreadMsg.sender || (allUsersCache[latestUnreadMsg.uid]?.username || allUsersCache[latestUnreadMsg.uid]?.nama) || "Warga";
           const title = "Grup RT 05 - " + senderName;
           const options = {
             body: latestUnreadMsg.text || 'Mengirim pesan...',
             icon: '/logo.png',
             badge: '/logo.png',
-            tag: 'grup-rt05', // 🌟 Menimpa notifikasi lama agar tidak menumpuk
+            tag: 'grup-rt05', // 🌟 Menimpa notifikasi lama
+            renotify: true,
             silent: true
           };
 
           if ('Notification' in window && Notification.permission === 'granted') {
             try {
-              // 🛡️ Gunakan Service Worker jika ada, jika tidak ada fallback ke Notification biasa
               if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, options));
               } else {
@@ -1961,25 +1985,30 @@ function listenPublicGroupUnread() {
       }
     }
 
-// 2. Tangkap pesan saat aplikasi SEDANG DIBUKA (Foreground)
-    onMessage(messaging, (payload) => {
-        console.log('Pesan FCM diterima:', payload);
-        
-        // 🛑 Tambahkan pengaman isChatReady agar tidak membunyikan notifikasi saat awal buka chat
-        if (isChatReady && (!window.isChatModalOpen || !window.isChatModalOpen() || document.hidden)) {
-            if (Notification.permission === 'granted') {
-                new Notification(
-                    payload.notification?.title || "Pesan Baru RT 05", 
-                    {
-                        body: payload.notification?.body || "Anda menerima pesan baru.",
-                        icon: '/kentongan-slit-drum.png',
-                        badge: '/kentongan-slit-drum.png',
-                        silent: true // 🛑 Mencegah suara bell bawaan sistem
-                    }
-                );
-            }
-        }
-    });
+// 2. Tangkap pesan FCM saat aplikasi SEDANG DIBUKA (Foreground)
+onMessage(messaging, (payload) => {
+  console.log('Pesan FCM diterima:', payload);
+  
+  // 🛡️ PENGAMAN UTAMA: Jika modal chat sedang terbuka & layar fokus, BATALKAN notifikasi melayang!
+  if (window.isUserViewingChat()) {
+    return;
+  }
+
+  // 🛑 Hanya bunyikan/tampilkan notifikasi jika layar chat sedang tersembunyi/background
+  if (isChatReady && Notification.permission === 'granted') {
+    new Notification(
+      payload.notification?.title || "Pesan Baru RT 05", 
+      {
+        body: payload.notification?.body || "Anda menerima pesan baru.",
+        icon: '/kentongan-slit-drum.png',
+        badge: '/kentongan-slit-drum.png',
+        tag: 'rt05-fcm-notif', // 🌟 Menimpa notifikasi lama agar 10 pesan tidak bermunculan 10x
+        renotify: true,
+        silent: true // Mencegah suara bell ganda bawaan OS
+      }
+    );
+  }
+});
 
     async function checkUserStatus() {
         const chatContainer = document.getElementById('chat-container');
