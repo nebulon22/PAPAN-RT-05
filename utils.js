@@ -186,7 +186,28 @@ function tutupModalInventaris() {
 }
 
 
+// ==========================================
+// EVENT DELEGATION GLOBAL (Pengganti inline onclick untuk Strict CSP)
+// ==========================================
+document.addEventListener('click', function(e) {
+    const target = e.target.closest('[data-click]');
+    if (!target) return;
 
+    const fnName = target.getAttribute('data-click');
+    const arg = target.getAttribute('data-arg'); // Untuk mengirim argumen sederhana (misal: nominal, jenis filter, dll)
+
+    if (typeof window[fnName] === 'function') {
+        if (arg !== null) {
+            // Jika ada data-arg, kirim nilainya ke fungsi
+            window[fnName](arg, target, e);
+        } else {
+            // Jika tidak ada argumen, kirim event / elemen target
+            window[fnName](e, target);
+        }
+    } else {
+        console.warn(`[CSP Event Delegation] Fungsi window.${fnName} tidak ditemukan.`);
+    }
+});
 
 // ==========================================
 // DAFTARKAN KE GLOBAL WINDOW
