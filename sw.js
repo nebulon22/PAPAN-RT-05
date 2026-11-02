@@ -1,6 +1,6 @@
-const CACHE_NAME = 'rt-kayen-v1.6.1';  
+const CACHE_NAME = 'rt-kayen-v1.6.1';   
 
-// 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker agar background push FCM tidak macet
+// 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
@@ -32,8 +32,8 @@ messaging.onBackgroundMessage((payload) => {
     body: body,
     icon: './kentongan-slit-drum.png',
     badge: './kentongan-slit-drum.png',
-    tag: payload.data?.tag || 'grup-chat-rt05', // 🛠️ FIX: Mencegah notifikasi dibrondong
-    renotify: true,                              // 🛠️ FIX: Update kartu notifikasi yang sama
+    tag: payload.data?.tag || 'grup-chat-rt05',
+    renotify: true,
     data: { url: url }
   };
 
@@ -77,8 +77,8 @@ self.addEventListener('install', (e) => {
         './admin.html',
         './inventaris.html',
         './cetak-qr.html',
-        './kentongan192.png',           // 🌟 Tambahkan ikon 192
-        './kentongan-slit-drum.png',   // 🌟 Pertahankan ikon 512
+        './kentongan192.png',
+        './kentongan-slit-drum.png',
         './html5-qrcode.min.js'
       ]);
     })
@@ -106,24 +106,22 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // 🌟 PERBAIKAN 1: Bypass Request Video/Audio (Range Requests)
-  // Biarkan OS HP/Browser menangani unduhan video sepotong-sepotong secara langsung (tanpa campur tangan Service Worker)
+  // Bypass Request Video/Audio (Range Requests)
   if (event.request.headers.has('range')) {
     return; 
   }
 
-  // 🌟 PERBAIKAN 2: Longgarkan tangkapan untuk API dan Media Eksternal
+  // Longgarkan tangkapan untuk API dan Media Eksternal
   if (
     event.request.mode === 'navigate' || 
     url.origin.includes('firebase') || 
     url.origin.includes('gstatic') ||
-    url.origin.includes('firebasestorage') || // Pastikan storage firebase juga ter-bypass
+    url.origin.includes('firebasestorage') ||
     url.origin.includes('catbox.moe') ||
-    url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif)$/i) // Termasuk gambar eksternal
+    url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif)$/i)
   ) {
     event.respondWith(
       fetch(event.request).catch((err) => {
-        // Jika jaringan seluler putus, coba cari di cache
         return caches.match(event.request).then((cached) => {
           return cached || new Response(null, { status: 404, statusText: 'Not Found' });
         });
@@ -132,7 +130,7 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache First untuk aset statis UI PWA (HTML lokal, CSS, JS, Icon)
+  // Cache First untuk aset statis UI PWA
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
@@ -146,7 +144,6 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-
 // Perintah skipWaiting dari lonceng
 self.addEventListener('message', (event) => {
   if (event.data && event.data.action === 'skipWaiting') {
@@ -157,6 +154,8 @@ self.addEventListener('message', (event) => {
 // Klik pada notifikasi akan membuka/fokus kembali ke aplikasi
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+  const targetUrl = event.notification.data?.url || './index.html';
+
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clientList) => {
       for (let i = 0; i < clientList.length; i++) {
@@ -166,13 +165,13 @@ self.addEventListener('notificationclick', (event) => {
         }
       }
       if (clients.openWindow) {
-        return clients.openWindow('./index.html');
+        return clients.openWindow(targetUrl);
       }
     })
   );
 });
 
-// Tangkap pesan push dari Firebase Cloud Messaging saat aplikasi di latar belakang / ditutup
+// Tangkap pesan push fallback FCM saat aplikasi di latar belakang / ditutup
 self.addEventListener('push', (event) => {
   let data = {};
   if (event.data) {
@@ -183,13 +182,17 @@ self.addEventListener('push', (event) => {
     }
   }
 
-  const title = data.notification?.title || data.title || "Notifikasi RT 05";
+  const title = data.notification?.title || data.data?.title || "Notifikasi RT 05";
+  const body = data.notification?.body || data.data?.body || "Anda menerima pesan baru.";
+  const url = data.notification?.click_action || data.data?.url || './index.html';
+  const tag = data.data?.tag || 'grup-chat-rt05';
+
   const options = {
     body: body,
     icon: './kentongan-slit-drum.png',
     badge: './kentongan-slit-drum.png',
-    tag: payload.data?.tag || 'grup-chat-rt05', // 🛠️ TAMBAHKAN INI: Agar menimpa notifikasi lama
-    renotify: true,                              // 🛠️ TAMBAHKAN INI: Agar memperbarui isi kartu notifikasi
+    tag: tag,
+    renotify: true,
     data: { url: url }
   };
 
