@@ -1023,7 +1023,7 @@
       <span style="font-weight: bold; font-size: 13px; color: #ffffff;">Live Chat RT 05</span>
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
-      <button data-click="toggleChatModal()" style="background: transparent; border: none; color: #f87171; font-size: 16px; cursor: pointer; font-weight: bold;">✕</button>
+      <button data-click="toggleChatModal" style="background: transparent; border: none; color: #f87171; font-size: 16px; cursor: pointer; font-weight: bold;">✕</button>
     </div>
   </div>
 
@@ -1159,25 +1159,25 @@
     });
   }
 
-  function tampilkanLoncengUpdate() {
-    var container = document.getElementById('container-update-pwa');
-    if (container) container.style.display = 'flex';
+window.tampilkanLoncengUpdate = function() {
+  var container = document.getElementById('container-update-pwa');
+  if (container) container.style.display = 'flex';
+};
+
+window.perbaruiAplikasiSekarang = function() {
+  var container = document.getElementById('container-update-pwa');
+  if (container) {
+    container.innerHTML = '<span style="font-size: 11px; font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Memasang pembaruan...</span>';
   }
 
-  function perbaruiAplikasiSekarang() {
-    var container = document.getElementById('container-update-pwa');
-    if (container) {
-      container.innerHTML = '<span style="font-size: 11px; font-weight: bold; color: #38bdf8;"><i class="fa-solid fa-spinner fa-spin"></i> Memasang pembaruan...</span>';
-    }
-
-    if (serviceWorkerMenunggu) {
-      serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
-    } else {
-      setTimeout(() => {
-        window.location.reload(true);
-      }, 500);
-    }
+  if (typeof serviceWorkerMenunggu !== 'undefined' && serviceWorkerMenunggu) {
+    serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
+  } else {
+    setTimeout(() => {
+      window.location.reload(true);
+    }, 500);
   }
+};
 
 
 // ==========================================
@@ -1449,15 +1449,14 @@ function muatDataPetaWarga() {
   });
 }
 
-function jalankanPencarianPeta() {
+
+window.jalankanPencarianPeta = function() {
   var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
   if (!kataKunci) return;
 
   // Memanggil fungsi cariLokasi universal yang ada di utils.js
-  // Kita passing daftarPin sebagai sumber datanya
   cariLokasi(kataKunci, daftarPin, function(hasilPencarian) {
     if (hasilPencarian && hasilPencarian.length > 0) {
-      // Ambil hasil pertama yang cocok dari pencarian universal
       var hasil = hasilPencarian[0]; 
       
       if (hasil.marker) {
@@ -1483,7 +1482,7 @@ function jalankanPencarianPeta() {
       alert("Nomor atau nama tempat tidak ditemukan.");
     }
   });
-}
+};
    
 function muatPengumumanFirebase() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
@@ -1915,9 +1914,15 @@ window.tutupModalSettingLuar = function(e) {
   }
 };
     
-function sorotLokasi(lokasiEncoded) {
+
+window.sorotLokasi = function(target) {
+  // Ambil data argumen dari string langsung atau dari data-arg elemen yang diklik
+  var lokasiEncoded = (typeof target === 'string') ? target : target?.dataset?.arg;
   var namaLokasi = decodeURIComponent(lokasiEncoded || '').trim();
-  tutupModalInfo();
+  
+  if (typeof window.tutupModalInfo === 'function') {
+    window.tutupModalInfo();
+  }
 
   if (!namaLokasi) return;
 
@@ -1941,7 +1946,7 @@ function sorotLokasi(lokasiEncoded) {
       hasil.marker.openPopup();
     });
   }
-}
+};
 
 
 
@@ -2018,13 +2023,21 @@ function filterKategori(kat, btnElement) {
   });
 }
 
-    function bukaFotoBesar(src, e) {
-      if (e) e.stopPropagation();
-      document.getElementById('foto-preview').src = src;
-      document.getElementById('modal-foto').style.display = 'flex';
-    }
 
-    window.tutupFotoBesar = function(e) {
+window.bukaFotoBesar = function(target, e) {
+  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+  
+  // Ambil URL gambar dari parameter langsung ATAU dari atribut data-arg milik elemen
+  var src = (typeof target === 'string') ? target : target?.dataset?.arg;
+
+  const preview = document.getElementById('foto-preview');
+  const modal = document.getElementById('modal-foto');
+
+  if (preview && src) preview.src = src;
+  if (modal) modal.style.display = 'flex';
+};
+
+window.tutupFotoBesar = function(e) {
   if (e) {
     if (typeof e.stopPropagation === 'function') e.stopPropagation();
     if (typeof e.preventDefault === 'function') e.preventDefault();
@@ -2035,9 +2048,10 @@ function filterKategori(kat, btnElement) {
   }
 };
 
-function muatDataKeuangan() {
+
+window.muatDataKeuangan = function() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
-    setTimeout(muatDataKeuangan, 50);
+    setTimeout(window.muatDataKeuangan, 50);
     return;
   }
 
@@ -2104,64 +2118,72 @@ function muatDataKeuangan() {
       selectDivisi.value = 'semua';
     }
 
-    tampilkanRekeningKoran();
+    if (typeof tampilkanRekeningKoran === 'function') {
+      tampilkanRekeningKoran();
+    }
   }, (error) => {
     console.error("Gagal memuat data keuangan dari Firebase:", error);
   });
-}
+};
 
 
 
-  function tampilkanRekeningKoran() {
-    var selectDivisi = document.getElementById('filterDivisi');
-    var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+window.tampilkanRekeningKoran = function() {
+  var selectDivisi = document.getElementById('filterDivisi');
+  var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
 
-    var dataFilter = (divisiTerpilih === 'semua')
-      ? dataKeuangan
-      : dataKeuangan.filter(item => item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
+  var dataFilter = (divisiTerpilih === 'semua')
+    ? dataKeuangan
+    : dataKeuangan.filter(item => item.divisi && item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
 
-    var totMasuk = 0;
-    var totKeluar = 0;
+  var totMasuk = 0;
+  var totKeluar = 0;
 
-    dataFilter.forEach(item => {
-      if (item.tipe === 'MASUK') totMasuk += item.nominal;
-      if (item.tipe === 'KELUAR') totKeluar += item.nominal;
-    });
+  dataFilter.forEach(item => {
+    if (item.tipe === 'MASUK') totMasuk += item.nominal;
+    if (item.tipe === 'KELUAR') totKeluar += item.nominal;
+  });
 
-    var saldoAkhir = totMasuk - totKeluar;
-    document.getElementById('saldo-kas').innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
-
-    var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
-    renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
-
-    var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
-    renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
+  var saldoAkhir = totMasuk - totKeluar;
+  const saldoEl = document.getElementById('saldo-kas');
+  if (saldoEl) {
+    saldoEl.innerText = 'Rp ' + saldoAkhir.toLocaleString('id-ID');
   }
+
+  var listMasuk = dataFilter.filter(item => item.tipe === 'MASUK').slice(-5).reverse();
+  renderTabelKeuangan('list-pemasukan', listMasuk, '#2e7d32', '+');
+
+  var listKeluar = dataFilter.filter(item => item.tipe === 'KELUAR').slice(-5).reverse();
+  renderTabelKeuangan('list-pengeluaran', listKeluar, '#c62828', '-');
+};
     
-  function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
-    var tbody = document.getElementById(elementId);
-    tbody.innerHTML = '';
 
-    if (dataset.length === 0) {
-      tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
-      return;
-    }
+window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
+  var tbody = document.getElementById(elementId);
+  if (!tbody) return;
 
-    dataset.forEach(item => {
-      var tr = document.createElement('tr');
-      tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
-      tr.innerHTML = `
-        <td style="padding:6px 0;">
-          <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHTML(item.tgl)}</span><br>
-          <b>${escapeHTML(item.ket)}</b>
-        </td>
-        <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
-          ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
-        </td>
-      `;
-      tbody.appendChild(tr);
-    });
+  tbody.innerHTML = '';
+
+  if (!dataset || dataset.length === 0) {
+    tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
+    return;
   }
+
+  dataset.forEach(item => {
+    var tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+    tr.innerHTML = `
+      <td style="padding:6px 0;">
+        <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHTML(item.tgl)}</span><br>
+        <b>${escapeHTML(item.ket)}</b>
+      </td>
+      <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
+        ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+};
 
 // 1. Fungsi Unduh Excel (CSV) Rekening Koran (Dengan Baris Total di Bawah)
 window.unduhExcelRekeningKoran = () => {
@@ -2310,59 +2332,73 @@ window.cetakPDFRekeningKoran = () => {
 };
 
 let isDenahOpen = false;
+let denahTimer = null;
 
-  function toggleDenahMenu() {
-    isDenahOpen = !isDenahOpen;
-    const popup = document.getElementById('denah-filter-popup');
-    const mainBtn = document.getElementById('btn-toggle-denah');
 
-    if (isDenahOpen) {
-      popup.style.display = 'grid'; 
+window.toggleDenahMenu = function() {
+  isDenahOpen = !isDenahOpen;
+  const popup = document.getElementById('denah-filter-popup');
+  const mainBtn = document.getElementById('btn-toggle-denah');
+
+  if (isDenahOpen) {
+    if (popup) popup.style.display = 'grid'; 
+    if (mainBtn) {
       mainBtn.style.background = '#111827'; 
       mainBtn.style.borderColor = '#111827';
-    } else {
-      popup.style.display = 'none'; 
+    }
+  } else {
+    if (popup) popup.style.display = 'none'; 
+    if (mainBtn) {
       mainBtn.style.background = '#10b981'; 
       mainBtn.style.borderColor = '#059669';
     }
   }
+};
 
-  document.addEventListener('click', function(event) {
-    const container = document.getElementById('btn-toggle-denah');
-    const popup = document.getElementById('denah-filter-popup');
-    if (container && popup && !container.contains(event.target) && !popup.contains(event.target)) {
-      if (isDenahOpen) {
-        toggleDenahMenu();
-      }
-    }
-  });
 
-let denahTimer = null; 
+window.pilihFilterDenah = function(target, element) {
+  // Ambil nama kategori (string biasa atau dari atribut data-arg)
+  const kategori = (typeof target === 'string') ? target : target?.dataset?.arg;
+  
+  // Ambil elemen tombol yang diklik untuk pewarnaan class active
+  const btnElement = element || (target?.dataset ? target : null);
 
-  function pilihFilterDenah(kategori, element) {
-    filterKategori(kategori, element);
-
-    const popup = document.getElementById('denah-filter-popup');
-    if (popup) {
-      const buttons = popup.querySelectorAll('.btn-filter');
-      buttons.forEach(btn => btn.classList.remove('active'));
-    }
-
-    if (element) {
-      element.classList.add('active');
-    }
-
-    if (denahTimer) {
-      clearTimeout(denahTimer);
-    }
-
-    denahTimer = setTimeout(() => {
-      const popupEl = document.getElementById('denah-filter-popup');
-      if (popupEl && popupEl.style.display === 'grid') {
-        toggleDenahMenu();
-      }
-    }, 2000);
+  if (typeof filterKategori === 'function') {
+    filterKategori(kategori, btnElement);
   }
+
+  const popup = document.getElementById('denah-filter-popup');
+  if (popup) {
+    const buttons = popup.querySelectorAll('.btn-filter');
+    buttons.forEach(btn => btn.classList.remove('active'));
+  }
+
+  if (btnElement) {
+    btnElement.classList.add('active');
+  }
+
+  if (denahTimer) {
+    clearTimeout(denahTimer);
+  }
+
+  denahTimer = setTimeout(() => {
+    const popupEl = document.getElementById('denah-filter-popup');
+    if (popupEl && popupEl.style.display === 'grid') {
+      window.toggleDenahMenu();
+    }
+  }, 2000);
+};
+
+// Event listener klik di luar menu denah
+document.addEventListener('click', function(event) {
+  const container = document.getElementById('btn-toggle-denah');
+  const popup = document.getElementById('denah-filter-popup');
+  if (container && popup && !container.contains(event.target) && !popup.contains(event.target)) {
+    if (isDenahOpen) {
+      window.toggleDenahMenu();
+    }
+  }
+});
     
 window.bukaModalKeuangan = function() {
   const modal = document.getElementById('modal-keuangan');
@@ -2384,8 +2420,8 @@ window.tutupModalKeuanganLuar = function(e) {
   }
 };
 
-    // 🌟 Fungsi Buka Modal Inventaris (Lazy-Load)
-function bukaModalInventaris() {
+// 🌟 Fungsi Buka Modal Inventaris (Lazy-Load)
+window.bukaModalInventaris = function() {
   const modal = document.getElementById('modal-inventaris');
   const iframe = document.getElementById('iframe-inventaris');
 
@@ -2396,15 +2432,18 @@ function bukaModalInventaris() {
   }
 
   if (modal) modal.style.display = 'flex';
-}
+};
 
 // 🌟 Fungsi Tutup Modal Inventaris
-function tutupModalInventaris() {
+window.tutupModalInventaris = function() {
   const modal = document.getElementById('modal-inventaris');
   if (modal) modal.style.display = 'none';
-}
-  window.tutupModalInventarisLuar = function(e) {
-  if (e && e.target && e.target.id === 'modal-inventaris') tutupModalInventaris();
+};
+
+window.tutupModalInventarisLuar = function(e) {
+  if (e && e.target && e.target.id === 'modal-inventaris') {
+    window.tutupModalInventaris();
+  }
 };
   
     function getInfoMalamRonda(dateObj = new Date()) {
@@ -2437,9 +2476,17 @@ function tutupModalInventaris() {
     let sedangScanning = false;
     let sedangMengirim = false;
 
-    function setNominal(nilai) {
-      document.getElementById('jimpitanNominal').value = nilai;
-    }
+   window.setNominal = function(target) {
+  // Ambil nilai dari parameter langsung ATAU dari atribut data-arg milik elemen yang diklik
+  var nilai = (typeof target === 'string' || typeof target === 'number') 
+    ? target 
+    : target?.dataset?.arg;
+
+  const inputEl = document.getElementById('jimpitanNominal');
+  if (inputEl) {
+    inputEl.value = nilai !== undefined ? nilai : '';
+  }
+};
 
     function mainkanSuaraBeep() {
       try {
@@ -2476,21 +2523,21 @@ function tutupModalInventaris() {
       }
     }
 
-    function mulaiScanJimpitan() {
-      if (typeof Html5Qrcode === 'undefined' && typeof Html5QrcodeScanner === 'undefined') {
-        let script = document.createElement('script');
-        script.src = 'html5-qrcode.min.js';
-        script.onload = () => {
-          eksekusiMulaiScanJimpitan(); 
-        };
-        script.onerror = () => {
-          alert("Gagal memuat modul kamera. Periksa koneksi internet Anda.");
-        };
-        document.head.appendChild(script);
-      } else {
-        eksekusiMulaiScanJimpitan();
-      }
-    }
+window.mulaiScanJimpitan = function() {
+  if (typeof Html5Qrcode === 'undefined' && typeof Html5QrcodeScanner === 'undefined') {
+    let script = document.createElement('script');
+    script.src = 'html5-qrcode.min.js';
+    script.onload = () => {
+      eksekusiMulaiScanJimpitan(); 
+    };
+    script.onerror = () => {
+      alert("Gagal memuat modul kamera. Periksa koneksi internet Anda.");
+    };
+    document.head.appendChild(script);
+  } else {
+    eksekusiMulaiScanJimpitan();
+  }
+};
 
     function eksekusiMulaiScanJimpitan() {
       if (!audioCtx) {
@@ -2577,20 +2624,20 @@ function tutupModalInventaris() {
       document.getElementById('modal-jimpitan').style.display = 'flex';
     }
 
-    function stopScanQR() {
-      document.getElementById('modal-qr-scanner').style.display = 'none';
+window.stopScanQR = function() {
+  document.getElementById('modal-qr-scanner').style.display = 'none';
 
-      if (html5QrcodeScanner && sedangScanning) {
-        sedangScanning = false;
-        html5QrcodeScanner.stop().then(() => {
-          bersihkanScanner();
-        }).catch(err => {
-          bersihkanScanner();
-        });
-      } else {
-        bersihkanScanner();
-      }
-    }
+  if (html5QrcodeScanner && sedangScanning) {
+    sedangScanning = false;
+    html5QrcodeScanner.stop().then(() => {
+      bersihkanScanner();
+    }).catch(err => {
+      bersihkanScanner();
+    });
+  } else {
+    bersihkanScanner();
+  }
+};
 
     function tutupModalDanBersihkan() {
       document.getElementById('modal-qr-scanner').style.display = 'none';
@@ -2681,73 +2728,74 @@ function tutupModalInventaris() {
       perbaruiIndikatorSync();
     }
 
-    function simpanJimpitan(dataInput) {
-      let rawWarga = '';
-      let rawNominal = 0;
+window.simpanJimpitan = function(dataInput) {
+  let rawWarga = '';
+  let rawNominal = 0;
 
-      if (dataInput && typeof dataInput === 'object') {
-        // Mendukung berbagai variasi properti nama dari objek input/scan QR
-        rawWarga = dataInput.warga || dataInput.nama || dataInput.nama_warga || '';
-        rawNominal = parseInt(dataInput.nominal, 10) || 0;
-      } else {
-        let elNama = document.getElementById('jimpitanNamaWarga');
-        let elNominal = document.getElementById('jimpitanNominal');
+  // Cek apakah dataInput adalah objek data langsung atau event dari element/UI
+  if (dataInput && typeof dataInput === 'object' && !dataInput.target) {
+    rawWarga = dataInput.warga || dataInput.nama || dataInput.nama_warga || '';
+    rawNominal = parseInt(dataInput.nominal, 10) || 0;
+  } else {
+    let elNama = document.getElementById('jimpitanNamaWarga');
+    let elNominal = document.getElementById('jimpitanNominal');
 
-        rawWarga = elNama ? elNama.value.trim() : '';
-        rawNominal = parseInt(elNominal ? elNominal.value : 0, 10);
-      }
+    rawWarga = elNama ? elNama.value.trim() : '';
+    rawNominal = parseInt(elNominal ? elNominal.value : 0, 10);
+  }
 
-      // Validasi dipindah ke luar agar berlaku untuk objek maupun input manual
-      if (!rawWarga) {
-        alert("Nama warga / rumah belum terisi!");
-        return;
-      }
+  if (!rawWarga) {
+    alert("Nama warga / rumah belum terisi!");
+    return;
+  }
 
-      let infoMalam = getInfoMalamRonda(new Date());
-      let targetNode = infoMalam.masukTabel ? 'jimpitan' : 'catatan_ronda';
+  let infoMalam = getInfoMalamRonda(new Date());
+  let targetNode = infoMalam.masukTabel ? 'jimpitan' : 'catatan_ronda';
 
-      // Sertakan properti ganda (warga & nama_warga) agar aman dan kompatibel dengan semua modul tampilan
-      let dataBaru = {
-        targetNode: targetNode,
-        kelompokMalam: infoMalam.kelompokMalam,
-        tanggal: new Date().toLocaleString('id-ID'),
-        warga: rawWarga,
-        nama_warga: rawWarga, // Kompatibilitas dengan catatan lama
-        nominal: rawNominal
-      };
+  let dataBaru = {
+    targetNode: targetNode,
+    kelompokMalam: infoMalam.kelompokMalam,
+    tanggal: new Date().toLocaleString('id-ID'),
+    warga: rawWarga,
+    nama_warga: rawWarga,
+    nominal: rawNominal
+  };
 
-      let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-      antrean.push(dataBaru);
-      localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
+  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
+  antrean.push(dataBaru);
+  localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
 
-      let infoTeks = infoMalam.masukTabel ? `masuk ${infoMalam.kelompokMalam}` : 'Masuk Catatan Ronda (Malam Minggu)';
-      alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + ` berhasil dicatat (${infoTeks})!`);
+  let infoTeks = infoMalam.masukTabel ? `masuk ${infoMalam.kelompokMalam}` : 'Masuk Catatan Ronda (Malam Minggu)';
+  alert("Jimpitan " + dataBaru.warga + " sebesar Rp " + dataBaru.nominal.toLocaleString('id-ID') + ` berhasil dicatat (${infoTeks})!`);
 
-      let modal = document.getElementById('modal-jimpitan');
-      if (modal) modal.style.display = 'none';
-      
-      let elNama = document.getElementById('jimpitanNamaWarga');
-      let elNominal = document.getElementById('jimpitanNominal');
-      if (elNama) elNama.value = '';
-      if (elNominal) elNominal.value = '';
+  let modal = document.getElementById('modal-jimpitan');
+  if (modal) modal.style.display = 'none';
+  
+  let elNama = document.getElementById('jimpitanNamaWarga');
+  let elNominal = document.getElementById('jimpitanNominal');
+  if (elNama) elNama.value = '';
+  if (elNominal) elNominal.value = '';
 
-      perbaruiIndikatorSync();
-      kirimDataPendingJimpitan();
-    }
+  perbaruiIndikatorSync();
+  kirimDataPendingJimpitan();
+};
 
-    window.addEventListener('online', () => {
-      perbaruiIndikatorSync();
-      kirimDataPendingJimpitan();
-    });
+window.addEventListener('online', () => {
+  perbaruiIndikatorSync();
+  kirimDataPendingJimpitan();
+});
 
-    window.addEventListener('offline', () => {
-      perbaruiIndikatorSync();
-    });
+window.addEventListener('offline', () => {
+  perbaruiIndikatorSync();
+});
 
-  window.tutupModalJimpitan = function() {
+window.tutupModalJimpitan = function() {
   const modal = document.getElementById('modal-jimpitan');
   if (modal) modal.style.display = 'none';
 };
+
+ 
+
 
 var cacheDataHarian = {};
 var cacheDataBulanan = {};
@@ -3142,60 +3190,59 @@ window.tutupModalCatatanRonda = function() {
   });
 };
 
-   // 1. Fungsi Unduh ke Excel (Format CSV)
-function exportJimpitanToCSV() {
-    const selectPeriode = document.getElementById('select-bulan-jimpitan');
-    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap_Jimpitan";
-    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
-    const gridJimpitan = document.getElementById('grid-jimpitan');
 
-    if (!gridJimpitan) {
-        alert("Data rekap tidak ditemukan!");
-        return;
-    }
+window.exportJimpitanToCSV = function() {
+    const selectPeriode = document.getElementById('select-bulan-jimpitan');
+    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap_Jimpitan";
+    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
+    const gridJimpitan = document.getElementById('grid-jimpitan');
 
-    let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
+    if (!gridJimpitan) {
+        alert("Data rekap tidak ditemukan!");
+        return;
+    }
 
-    if (rawTextLines.length === 0) {
-        alert("Tidak ada data untuk diunduh pada periode ini.");
-        return;
-    }
+    let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
 
-    // Menggunakan BOM (\uFEFF) agar karakter khusus/Rupiah terbaca sempurna di Excel
-    let csvContent = "\uFEFF";
-    csvContent += `"LAPORAN REKAP JIMPITAN RT 05 KAYEN"\n`;
-    csvContent += `"Periode: ${namaPeriode}"\n`;
-    csvContent += `"Total Keseluruhan: ${totalNominal}"\n\n`;
-    
-    // Header Kolom (Menggunakan titik koma ';' sebagai pemisah kolom agar otomatis rapi di Excel Indonesia)
-    csvContent += `"Nama Warga / Keterangan";"Nominal Jimpitan"\n`;
+    if (rawTextLines.length === 0) {
+        alert("Tidak ada data untuk diunduh pada periode ini.");
+        return;
+    }
 
-    // Masukkan data baris per baris
-    for (let i = 0; i < rawTextLines.length; i += 2) {
-        let col1 = rawTextLines[i] ? rawTextLines[i].replace(/"/g, '""') : '';
-        let col2 = rawTextLines[i+1] ? rawTextLines[i+1].replace(/"/g, '""') : '';
-        if (col1) {
-            csvContent += `"${col1}";"${col2}"\n`;
-        }
-    }
+    // Menggunakan BOM (\uFEFF) agar karakter khusus/Rupiah terbaca sempurna di Excel
+    let csvContent = "\uFEFF";
+    csvContent += `"LAPORAN REKAP JIMPITAN RT 05 KAYEN"\n`;
+    csvContent += `"Periode: ${namaPeriode}"\n`;
+    csvContent += `"Total Keseluruhan: ${totalNominal}"\n\n`;
+    
+    // Header Kolom (Menggunakan titik koma ';' sebagai pemisah kolom agar otomatis rapi di Excel Indonesia)
+    csvContent += `"Nama Warga / Keterangan";"Nominal Jimpitan"\n`;
 
-    // Tambahkan baris total di bagian bawah
-    csvContent += `"TOTAL KESELURUHAN";"${totalNominal}"\n`;
+    // Masukkan data baris per baris
+    for (let i = 0; i < rawTextLines.length; i += 2) {
+        let col1 = rawTextLines[i] ? rawTextLines[i].replace(/"/g, '""') : '';
+        let col2 = rawTextLines[i+1] ? rawTextLines[i+1].replace(/"/g, '""') : '';
+        if (col1) {
+            csvContent += `"${col1}";"${col2}"\n`;
+        }
+    }
 
-    // Unduh sebagai file .csv
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-}
+    // Tambahkan baris total di bagian bawah
+    csvContent += `"TOTAL KESELURUHAN";"${totalNominal}"\n`;
 
-   
-// 2. Fungsi Cetak / Simpan ke PDF via Print Dialog Browser
-function cetakLaporanJimpitan() {
+    // Unduh sebagai file .csv
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+
+window.cetakLaporanJimpitan = function() {
     const selectPeriode = document.getElementById('select-bulan-jimpitan');
     const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap Jimpitan";
     const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
@@ -3259,7 +3306,7 @@ function cetakLaporanJimpitan() {
         printWindow.print();
         printWindow.close();
     }, 600);
-}
+};
 
 window.refreshDataJimpitan = function() {
   isJimpitanLoaded = false; 
