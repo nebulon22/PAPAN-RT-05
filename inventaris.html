@@ -74,17 +74,17 @@
     }
   }
 
-  function inisialisasiFirebaseDanMuatData() {
+function inisialisasiFirebaseDanMuatData() {
     const container = document.getElementById("daftar-inventaris");  
     if (!container) return;
 
     container.innerHTML = `<div style="text-align:center; padding: 20px; color: #666;">⏳ Memuat inventaris dari Firebase...</div>`;
 
     try {
-      // Pastikan Firebase app belum diinisialisasi ganda di halaman ini
       let app;
       if (!firebase.apps.length) {
         if (typeof RT05_CONFIG === 'undefined' || !RT05_CONFIG.FIREBASE) {
+          console.error("RT05_CONFIG tidak ditemukan!");
           container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Konfigurasi Firebase (setting.js) tidak ditemukan.</div>`;
           return;
         }
@@ -97,11 +97,22 @@
       const inventarisRef = db.ref('inventaris');
       const peminjamanRef = db.ref('peminjaman');
 
-      // Ambil data inventaris dan peminjaman secara bersamaan
+      console.log("Mulai mengambil data dari Firebase...");
+
+      // Mengambil data dengan batas waktu (timeout) 8 detik agar tidak menggantung terus
+      const fetchWithTimeout = (promise, ms) => {
+        let timeoutId;
+        const timeoutPromise = new Promise((_, reject) => {
+          timeoutId = setTimeout(() => reject(new Error("Timeout koneksi Firebase")), ms);
+        });
+        return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+      };
+
       Promise.all([
-        inventarisRef.once('value'),
-        peminjamanRef.once('value')
+        fetchWithTimeout(inventarisRef.once('value'), 8000),
+        fetchWithTimeout(peminjamanRef.once('value'), 8000)
       ]).then(([snapInv, snapPem]) => {
+        console.log("Data berhasil diambil dari Firebase!");
         let daftarPerkakas = [];
         let daftarPinjaman = [];
 
@@ -114,13 +125,13 @@
 
         renderHTML({ perkakas: daftarPerkakas, peminjaman: daftarPinjaman });
       }).catch(error => {
-        console.error("Gagal memuat data:", error);
-        container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data inventaris dari database.</div>`;
+        console.error("Gagal atau timeout saat memuat data:", error);
+        container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data. Periksa aturan database Firebase Anda.</div>`;
       });
 
     } catch (err) {
       console.error("Error inisialisasi inventaris:", err);
-      container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Terjadi kesalahan koneksi sistem.</div>`;
+      container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Terjadi kesalahan sistem.</div>`;
     }
   }
 
