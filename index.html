@@ -1020,7 +1020,7 @@
     </div>
   </div>
 
-  <iframe src="chat.html" style="width: 100%; height: 100%; border: none; background: transparent;" allowtransparency="true"></iframe>
+  <iframe data-src="chat.html" style="width: 100%; height: 100%; border: none; background: transparent;" allowtransparency="true"></iframe>
 
 </div>
 
@@ -1173,8 +1173,8 @@
   }
 
 
-  // ==========================================
-  // 2. LOGIKA CHAT & BADGE NOTIFIKASI
+// ==========================================
+  // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
   function toggleChatModal() {
     const modal = document.getElementById('chat-overlay-modal');
@@ -1183,6 +1183,12 @@
     if (!modal) return;
 
     if (modal.style.display === 'none' || modal.style.display === '') {
+      // 🌟 Lazy Load: Isi src dari data-src hanya saat modal pertama kali dibuka warga
+      if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
+        const dataSrc = iframe.getAttribute('data-src');
+        if (dataSrc) iframe.src = dataSrc;
+      }
+
       modal.style.display = 'flex';
       
       const badge = document.getElementById('badge-chat-main');
