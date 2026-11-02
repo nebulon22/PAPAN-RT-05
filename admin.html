@@ -2325,7 +2325,7 @@ html += `
       });
     }
 
-    // 1. Simpan ID yang sedang diedit dalam variabel global
+ // 1. Variabel global untuk menampung ID yang sedang diedit
 let currentEditPengumumanId = null;
 
 function editPengumuman(id) {
@@ -2334,10 +2334,10 @@ function editPengumuman(id) {
     if (snapshot.exists()) {
       const val = snapshot.val();
       
-      // Simpan ID yang sedang diedit
+      // Simpan ID asli yang sedang diedit ke variabel global
       currentEditPengumumanId = id;
 
-      // Konversi format tanggal kembali ke YYYY-MM-DD untuk input date HTML
+      // Masukkan data lama ke form
       if (val.tanggal) {
         const p = val.tanggal.split('/');
         if (p.length === 3) {
@@ -2347,15 +2347,15 @@ function editPengumuman(id) {
       document.getElementById('pengumumanJudul').value = val.judul || '';
       document.getElementById('pengumumanDetail').value = val.detail || '';
       document.getElementById('pengumumanLokasi').value = val.lokasi || '';
-      if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = val.lat || '';
-      if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = val.lng || '';
-      document.getElementById('pengumumanFoto').value = val.foto || '';
+      if(document.getElementById('pengumumanFoto')) {
+        document.getElementById('pengumumanFoto').value = val.foto || '';
+      }
 
-      // Ubah teks tombol simpan agar admin tahu sedang dalam mode edit
+      // Ubah teks tombol agar jelas sedang mode edit
       const btnSimpan = document.getElementById('btnSimpanPengumuman');
       if (btnSimpan) btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
 
-      alert("Mode Edit Aktif: Silakan ubah data di form lalu klik 'Simpan Perubahan'.");
+      alert("Mode Edit Aktif: Silakan ubah data lalu klik Simpan Perubahan.");
     }
   });
 }
@@ -2511,6 +2511,14 @@ function editPengumuman(id) {
     if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
     if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
     
+    // === TAMBAHKAN PERINTAH SCROLL KE ATAS DI SINI ===
+    const modalBody = document.querySelector('.modal-body') || document.getElementById('formInputPengumuman');
+    if (modalBody && modalBody.scrollTo) {
+      modalBody.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
     tutupModalPengumumanAdmin();
     muatDaftarPengumumanAdmin();
   } catch (err) {
