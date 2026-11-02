@@ -219,6 +219,21 @@ document.addEventListener('change', function(e) {
     window[fnName](e, target);
   }
 });
+
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        this.blur(); // Hilangkan fokus keyboard HP
+        if (typeof jalankanPencarianPeta === 'function') {
+          jalankanPencarianPeta();
+        }
+      }
+    });
+  }
+});
+
 // ==========================================
 // DAFTARKAN KE GLOBAL WINDOW
 // ==========================================
