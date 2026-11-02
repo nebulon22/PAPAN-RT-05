@@ -209,6 +209,16 @@ document.addEventListener('click', function(e) {
     }
 });
 
+// Listener Global untuk Dropdown Select (data-change)
+document.addEventListener('change', function(e) {
+  const target = e.target.closest('[data-change]');
+  if (!target) return;
+
+  const fnName = target.getAttribute('data-change');
+  if (typeof window[fnName] === 'function') {
+    window[fnName](e, target);
+  }
+});
 // ==========================================
 // DAFTARKAN KE GLOBAL WINDOW
 // ==========================================
