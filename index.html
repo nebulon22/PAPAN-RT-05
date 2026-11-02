@@ -2831,12 +2831,15 @@ window.muatDataJimpitan = function() {
       Object.keys(dataObj).forEach(key => {
         var kolom = dataObj[key];
         if (kolom) {
-          // Logika persis seperti fungsi lama Anda
-          var tglStr = String(kolom.tanggal_waktu || kolom.tanggal || ''); 
-          var malamManual = String(kolom.kelompok_malam || '');
-          var warga = String(kolom.nama_warga || kolom.warga || '-'); 
-          var nominal = parseInt(kolom.nominal, 10) || 0;
+          // 🌟 Toleransi maksimal berbagai variasi nama properti di database
+          var tglStr = String(kolom.tanggal_waktu || kolom.tanggal || kolom.tgl || kolom.Tanggal || ''); 
+          var malamManual = String(kolom.kelompok_malam || kolom.kelompokMalam || kolom.malam || '');
+          var warga = String(kolom.nama_warga || kolom.warga || kolom.nama || kolom.Nama || '-'); 
+          var nominal = parseInt(kolom.nominal || kolom.jumlah || kolom.Nominal || 0, 10) || 0;
 
+          var dateObj = null;
+
+          // 1. Coba baca jika formatnya string berangka (tanggal/bulan/tahun)
           var angkaTanggal = tglStr.match(/\d+/g); 
           if (angkaTanggal && angkaTanggal.length >= 3) {
             var tgl = parseInt(angkaTanggal[0], 10);
@@ -2844,50 +2847,64 @@ window.muatDataJimpitan = function() {
             var thn = parseInt(angkaTanggal[2], 10);
             var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
             var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
-
-            var dateObj = new Date(thn, bln, tgl, jam, menit);
-            var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
-            var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-            
-            var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
-
-            var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
-            var isoTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
-            
-            var keyTanggal = (namaMalam + '_' + isoTanggal).replace(/\s+/g, '_');
-
-            if (!cacheDataHarian[keyTanggal]) {
-              cacheDataHarian[keyTanggal] = { 
-                label: namaMalam + ' (' + labelTanggal + ')', 
-                subtotal: 0, 
-                items: [],
-                isoDate: isoTanggal 
-              };
-              arrayTanggal.push(keyTanggal);
-            }
-            cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
-            cacheDataHarian[keyTanggal].subtotal += nominal;
-
-            var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
-            var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
-
-            if (!cacheDataBulanan[keyBulan]) {
-              cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
-              if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
-            }
-            
-            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
-              cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
-            }
-            
-            if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
-              cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
-            }
-
-            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
-            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
-            cacheDataBulanan[keyBulan].total += nominal;
+            dateObj = new Date(thn, bln, tgl, jam, menit);
           }
+
+          // 2. Jika gagal, coba baca dari timestamp angka atau string standar
+          if (!dateObj || isNaN(dateObj.getTime())) {
+            if (kolom.timestamp) {
+              dateObj = new Date(Number(kolom.timestamp));
+            } else if (tglStr && !isNaN(new Date(tglStr).getTime())) {
+              dateObj = new Date(tglStr);
+            }
+          }
+
+          // 3. Jika masih gagal juga, gunakan waktu saat ini sebagai pengaman agar data tidak hilang
+          if (!dateObj || isNaN(dateObj.getTime())) {
+            dateObj = new Date();
+          }
+
+          var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
+          var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+          
+          var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
+
+          var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
+          var isoTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
+          
+          var keyTanggal = (namaMalam + '_' + isoTanggal).replace(/\s+/g, '_');
+
+          if (!cacheDataHarian[keyTanggal]) {
+            cacheDataHarian[keyTanggal] = { 
+              label: namaMalam + ' (' + labelTanggal + ')', 
+              subtotal: 0, 
+              items: [],
+              isoDate: isoTanggal 
+            };
+            arrayTanggal.push(keyTanggal);
+          }
+          cacheDataHarian[keyTanggal].items.push({ warga: warga, nominal: nominal });
+          cacheDataHarian[keyTanggal].subtotal += nominal;
+
+          var keyBulan = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0');
+          var labelBulan = strBulan[shiftDate.getMonth()] + ' ' + shiftDate.getFullYear();
+
+          if (!cacheDataBulanan[keyBulan]) {
+            cacheDataBulanan[keyBulan] = { label: labelBulan, total: 0, rekapMalam: {} };
+            if (!arrayBulan.includes(keyBulan)) arrayBulan.push(keyBulan);
+          }
+          
+          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam]) {
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam] = { subtotal: 0, rekapWarga: {} };
+          }
+          
+          if (!cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga]) {
+            cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] = 0;
+          }
+
+          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
+          cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
+          cacheDataBulanan[keyBulan].total += nominal;
         }
       });
     }
