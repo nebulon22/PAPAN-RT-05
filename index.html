@@ -2539,90 +2539,100 @@ window.mulaiScanJimpitan = function() {
   }
 };
 
-    function eksekusiMulaiScanJimpitan() {
-      if (!audioCtx) {
-        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+function eksekusiMulaiScanJimpitan() {
+  if (!audioCtx) {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
 
-      try {
-        if ('vibrate' in navigator) {
-          navigator.vibrate(10);
-        }
-      } catch (e) {}
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(10);
+    }
+  } catch (e) {}
 
-      document.getElementById('modal-qr-scanner').style.display = 'flex';
+  document.getElementById('modal-qr-scanner').style.display = 'flex';
 
-      let qrElement = document.getElementById('qr-reader');
-      if (qrElement) qrElement.innerHTML = '';
+  let qrElement = document.getElementById('qr-reader');
+  if (qrElement) qrElement.innerHTML = '';
 
-      const jalankanKamera = () => {
-        try {
-          html5QrcodeScanner = new Html5Qrcode("qr-reader");
-          let config = { fps: 10, qrbox: { width: 220, height: 220 } };
+  const jalankanKamera = () => {
+    try {
+      html5QrcodeScanner = new Html5Qrcode("qr-reader");
+      let config = { fps: 10, qrbox: { width: 220, height: 220 } };
 
-          html5QrcodeScanner.start(
-            { facingMode: "environment" },
-            config,
-            onScanJimpitanSuccess
-          ).then(() => {
-            sedangScanning = true;
-          }).catch(err => {
-            Html5Qrcode.getCameras().then(devices => {
-              if (devices && devices.length > 0) {
-                let selectedId = devices[devices.length - 1].id;
+      html5QrcodeScanner.start(
+        { facingMode: "environment" },
+        config,
+        onScanJimpitanSuccess
+      ).then(() => {
+        sedangScanning = true;
+      }).catch(err => {
+        Html5Qrcode.getCameras().then(devices => {
+          if (devices && devices.length > 0) {
+            let selectedId = devices[devices.length - 1].id;
 
-                html5QrcodeScanner.start(
-                  selectedId,
-                  config,
-                  onScanJimpitanSuccess
-                ).then(() => {
-                  sedangScanning = true;
-                }).catch(err2 => {
-                  alert("Gagal membuka kamera: " + err2);
-                  tutupModalDanBersihkan();
-                });
-              } else {
-                alert("Tidak ada kamera yang terdeteksi.");
-                tutupModalDanBersihkan();
-              }
-            }).catch(err3 => {
-              alert("Izin kamera ditolak atau perangkat tidak mendukung: " + err3);
+            html5QrcodeScanner.start(
+              selectedId,
+              config,
+              onScanJimpitanSuccess
+            ).then(() => {
+              sedangScanning = true;
+            }).catch(err2 => {
+              alert("Gagal membuka kamera: " + err2);
               tutupModalDanBersihkan();
             });
-          });
-        } catch (e) {
-          alert("Gagal inisialisasi scanner: " + e.message);
+          } else {
+            alert("Tidak ada kamera yang terdeteksi.");
+            tutupModalDanBersihkan();
+          }
+        }).catch(err3 => {
+          alert("Izin kamera ditolak atau perangkat tidak mendukung: " + err3);
           tutupModalDanBersihkan();
-        }
-      };
-
-      if (html5QrcodeScanner && sedangScanning) {
-        sedangScanning = false;
-        html5QrcodeScanner.stop().then(jalankanKamera).catch(jalankanKamera);
-      } else {
-        jalankanKamera();
-      }
+        });
+      });
+    } catch (e) {
+      alert("Gagal inisialisasi scanner: " + e.message);
+      tutupModalDanBersihkan();
     }
+  };
 
-    function onScanJimpitanSuccess(decodedText) {
-      if (!sedangScanning) return;
+  if (html5QrcodeScanner && sedangScanning) {
+    sedangScanning = false;
+    html5QrcodeScanner.stop().then(jalankanKamera).catch(jalankanKamera);
+  } else {
+    jalankanKamera();
+  }
+}
 
-      mainkanSuaraBeep();
+function onScanJimpitanSuccess(decodedText) {
+  if (!sedangScanning) return;
 
-      try {
-        if ('vibrate' in navigator) {
-          navigator.vibrate(200);
-        }
-      } catch (e) {}
+  mainkanSuaraBeep();
 
-      stopScanQR();
-      document.getElementById('jimpitanNamaWarga').value = decodedText;
-      document.getElementById('jimpitanNominal').value = ''; 
-      document.getElementById('modal-jimpitan').style.display = 'flex';
+  try {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(200);
     }
+  } catch (e) {}
+
+  // 🌟 Panggil via window.stopScanQR()
+  if (typeof window.stopScanQR === 'function') {
+    window.stopScanQR();
+  } else {
+    tutupModalDanBersihkan();
+  }
+
+  const inputNama = document.getElementById('jimpitanNamaWarga');
+  const inputNominal = document.getElementById('jimpitanNominal');
+  const modalJimpitan = document.getElementById('modal-jimpitan');
+
+  if (inputNama) inputNama.value = decodedText;
+  if (inputNominal) inputNominal.value = ''; 
+  if (modalJimpitan) modalJimpitan.style.display = 'flex';
+}
 
 window.stopScanQR = function() {
   document.getElementById('modal-qr-scanner').style.display = 'none';
@@ -2640,94 +2650,96 @@ window.stopScanQR = function() {
 };
 
     function tutupModalDanBersihkan() {
-      document.getElementById('modal-qr-scanner').style.display = 'none';
-      bersihkanScanner();
+  const modal = document.getElementById('modal-qr-scanner');
+  if (modal) modal.style.display = 'none';
+  bersihkanScanner();
+}
+
+function bersihkanScanner() {
+  html5QrcodeScanner = null;
+  sedangScanning = false;
+  let qrElement = document.getElementById('qr-reader');
+  if (qrElement) qrElement.innerHTML = '';
+}
+
+function perbaruiIndikatorSync() {
+  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
+  let badge = document.getElementById('status-sync');
+  
+  if (!badge) return;
+
+  if (sedangMengirim) {
+    badge.innerHTML = `🔵 Sedang Menyinkronkan...`;
+    badge.style.backgroundColor = 'rgba(219, 234, 254, 0.9)';
+    badge.style.color = '#1e40af';
+  } else if (!navigator.onLine) {
+    if (antrean.length > 0) {
+      badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
+      badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
+      badge.style.color = '#92400e';
+    } else {
+      badge.innerHTML = '🔴 Anda Sedang Offline';
+      badge.style.backgroundColor = 'rgba(254, 226, 226, 0.9)';
+      badge.style.color = '#991b1b';
     }
-
-    function bersihkanScanner() {
-      html5QrcodeScanner = null;
-      sedangScanning = false;
-      let qrElement = document.getElementById('qr-reader');
-      if (qrElement) qrElement.innerHTML = '';
+  } else {
+    if (antrean.length === 0) {
+      badge.innerHTML = '🟢 Online';
+      badge.style.backgroundColor = 'rgba(209, 250, 229, 0.9)';
+      badge.style.color = '#065f46';
+    } else {
+      badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
+      badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
+      badge.style.color = '#92400e';
     }
+  }
 
-    function perbaruiIndikatorSync() {
-      let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-      let badge = document.getElementById('status-sync');
-      
-      if (!badge) return;
-
-      if (sedangMengirim) {
-        badge.innerHTML = `🔵 Sedang Menyinkronkan...`;
-        badge.style.backgroundColor = 'rgba(219, 234, 254, 0.9)';
-        badge.style.color = '#1e40af';
-      } else if (!navigator.onLine) {
-        if (antrean.length > 0) {
-          badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-          badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
-          badge.style.color = '#92400e';
-        } else {
-          badge.innerHTML = '🔴 Anda Sedang Offline';
-          badge.style.backgroundColor = 'rgba(254, 226, 226, 0.9)';
-          badge.style.color = '#991b1b';
-        }
-      } else {
-        if (antrean.length === 0) {
-          badge.innerHTML = '🟢 Online';
-          badge.style.backgroundColor = 'rgba(209, 250, 229, 0.9)';
-          badge.style.color = '#065f46';
-        } else {
-          badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-          badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
-          badge.style.color = '#92400e';
-        }
-      }
-
-      let elNotif = document.getElementById('notif-pending');
-      if (elNotif) {
-        if (antrean.length > 0) {
-          elNotif.innerText = `${antrean.length} Data menunggu sinyal`;
-          elNotif.style.display = 'block';
-        } else {
-          elNotif.style.display = 'none';
-        }
-      }
+  let elNotif = document.getElementById('notif-pending');
+  if (elNotif) {
+    if (antrean.length > 0) {
+      elNotif.innerText = `${antrean.length} Data menunggu sinyal`;
+      elNotif.style.display = 'block';
+    } else {
+      elNotif.style.display = 'none';
     }
-    
-    async function kirimDataPendingJimpitan() {
-      if (sedangMengirim) return;
+  }
+}
 
-      let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
-      if (antrean.length === 0) {
-        perbaruiIndikatorSync();
-        return;
-      }
+async function kirimDataPendingJimpitan() {
+  if (sedangMengirim) return;
 
-      sedangMengirim = true;
-      perbaruiIndikatorSync();
+  let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
+  if (antrean.length === 0) {
+    perbaruiIndikatorSync();
+    return;
+  }
 
-      let sisaAntrean = [];
+  sedangMengirim = true;
+  perbaruiIndikatorSync();
 
-      for (let item of antrean) {
-        try {
-          const dbRef = window.firebaseRef(window.db, item.targetNode);
-          await window.firebasePush(dbRef, {
-            tanggal: item.tanggal,
-            kelompokMalam: item.kelompokMalam,
-            warga: item.warga,
-            nominal: item.nominal,
-            timestamp: Date.now()
-          });
-        } catch (err) {
-          sisaAntrean.push(item);
-        }
-      }
+  let sisaAntrean = [];
 
-      localStorage.setItem('antrean_jimpitan', JSON.stringify(sisaAntrean));
-      sedangMengirim = false;
-      perbaruiIndikatorSync();
+  for (let item of antrean) {
+    try {
+      const dbRef = window.firebaseRef(window.db, item.targetNode);
+      await window.firebasePush(dbRef, {
+        tanggal: item.tanggal,
+        kelompokMalam: item.kelompokMalam,
+        warga: item.warga,
+        nominal: item.nominal,
+        timestamp: Date.now()
+      });
+    } catch (err) {
+      sisaAntrean.push(item);
     }
+  }
 
+  localStorage.setItem('antrean_jimpitan', JSON.stringify(sisaAntrean));
+  sedangMengirim = false;
+  perbaruiIndikatorSync();
+}
+
+  
 window.simpanJimpitan = function(dataInput) {
   let rawWarga = '';
   let rawNominal = 0;
