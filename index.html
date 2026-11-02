@@ -799,7 +799,8 @@
      <!-- 🌟 PERBAIKAN: Gunakan flex-direction: column atau flex-wrap agar aman di HP -->
 <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; background: #f9fafb; padding: 10px 12px; border-radius: 8px; border: 1px solid #e5e7eb;">
   <label for="select-bulan-jimpitan" style="font-size: 12px; font-weight: bold; color: #374151;">📅 Pilih Periode:</label>
-  <select id="select-bulan-jimpitan" onchange="muatDataJimpitan()" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; box-sizing: border-box; background: white;">
+ <select id="select-bulan-jimpitan" data-change="muatDataJimpitan" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #d1d5db; font-size: 13px; font-weight: 500; outline: none; cursor: pointer; box-sizing: border-box; background: white;">
+</select>
   </select>
 </div>
 
@@ -2858,12 +2859,20 @@ function renderDropdownTanggal() {
   if (!select) return;
   select.innerHTML = ''; 
 
+  // =========================================================================
+  // BERSIHKAN EVENT LISTENER LAMA (Mencegah listener tertumpuk saat dipanggil ulang)
+  // =========================================================================
+  if (select._jimpitanChangeHandler) {
+    select.removeEventListener('change', select._jimpitanChangeHandler);
+  }
+
   if (modeJimpitan === 'harian') {
     if (arrayTanggal.length === 0) {
       select.innerHTML = '<option>Belum ada data harian</option>';
       renderCardHarian(null);
       return;
     }
+
     var limitData = arrayTanggal.slice(0, 30); 
     limitData.forEach((key, index) => {
       var opt = document.createElement('option');
@@ -2871,7 +2880,13 @@ function renderDropdownTanggal() {
       opt.text = (index === 0 ? "Terkini: " : "") + cacheDataHarian[key].label;
       select.appendChild(opt);
     });
-    select.onchange = function() { renderCardHarian(this.value); };
+
+    // 🌟 PENGGUNAAN addEventListener UNTUK HARIAN
+    select._jimpitanChangeHandler = function() {
+      renderCardHarian(this.value);
+    };
+    select.addEventListener('change', select._jimpitanChangeHandler);
+
     renderCardHarian(limitData[0]);
 
   } else {
@@ -2880,13 +2895,20 @@ function renderDropdownTanggal() {
       renderCardBulanan(null);
       return;
     }
+
     arrayBulan.forEach((key, index) => {
       var opt = document.createElement('option');
       opt.value = key;
       opt.text = (index === 0 ? "Bulan Ini: " : "") + cacheDataBulanan[key].label;
       select.appendChild(opt);
     });
-    select.onchange = function() { renderCardBulanan(this.value); };
+
+    // 🌟 PENGGUNAAN addEventListener UNTUK BULANAN
+    select._jimpitanChangeHandler = function() {
+      renderCardBulanan(this.value);
+    };
+    select.addEventListener('change', select._jimpitanChangeHandler);
+
     renderCardBulanan(arrayBulan[0]);
   }
 }
