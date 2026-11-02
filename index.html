@@ -2821,6 +2821,7 @@ window.muatDataJimpitan = function() {
   
   window.firebaseOnValue(jimpitanRef, (snapshot) => {
     const dataObj = snapshot.val();
+    console.log("1. Raw Data dari RTDB Firebase:", dataObj); // 🔍 CEK 1: Apakah data masuk dari Firebase?
     
     cacheDataHarian = {};
     cacheDataBulanan = {};
@@ -2831,13 +2832,14 @@ window.muatDataJimpitan = function() {
       Object.keys(dataObj).forEach(key => {
         var kolom = dataObj[key];
         if (kolom) {
-          // 🌟 Toleransi aman untuk berbagai variasi properti di database
-          var tglStr = String(kolom.tanggal_waktu || kolom.tanggal || kolom.tgl || ''); 
-          var malamManual = String(kolom.kelompok_malam || kolom.kelompokMalam || '');
-          var warga = String(kolom.nama_warga || kolom.warga || kolom.nama || '-'); 
-          var nominal = parseInt(kolom.nominal || kolom.jumlah || 0, 10) || 0;
+          var tglStr = String(kolom.tanggal_waktu || kolom.tanggal || ''); 
+          var malamManual = String(kolom.kelompok_malam || '');
+          var warga = String(kolom.nama_warga || kolom.warga || '-'); 
+          var nominal = parseInt(kolom.nominal, 10) || 0;
 
           var angkaTanggal = tglStr.match(/\d+/g); 
+          console.log(`2. Proses Node [${key}] -> tglStr: "${tglStr}", Match Angka:`, angkaTanggal); // 🔍 CEK 2: Apakah regex angka tanggal terbaca?
+
           if (angkaTanggal && angkaTanggal.length >= 3) {
             var tgl = parseInt(angkaTanggal[0], 10);
             var bln = parseInt(angkaTanggal[1], 10) - 1;
@@ -2849,12 +2851,14 @@ window.muatDataJimpitan = function() {
             var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
             var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
             
-            var namaMalam = malamManual && malamManual !== '-' ? malamManual : (typeof getInfoMalamRonda === 'function' ? getInfoMalamRonda(shiftDate).kelompokMalam : 'Malam Ronda');
+            var namaMalam = malamManual && malamManual !== '-' ? malamManual : getInfoMalamRonda(shiftDate).kelompokMalam;
 
             var labelTanggal = shiftDate.getDate() + ' ' + strBulan[shiftDate.getMonth()].substring(0,3) + ' ' + shiftDate.getFullYear();
             var isoTanggal = shiftDate.getFullYear() + '-' + String(shiftDate.getMonth()+1).padStart(2, '0') + '-' + String(shiftDate.getDate()).padStart(2, '0');
             
             var keyTanggal = (namaMalam + '_' + isoTanggal).replace(/\s+/g, '_');
+
+            console.log(`3. Berhasil Parsing -> keyTanggal: ${keyTanggal}, Nominal: ${nominal}, Warga: ${warga}`); // 🔍 CEK 3: Apakah berhasil dipetakan ke harian?
 
             if (!cacheDataHarian[keyTanggal]) {
               cacheDataHarian[keyTanggal] = { 
@@ -2887,10 +2891,17 @@ window.muatDataJimpitan = function() {
             cacheDataBulanan[keyBulan].rekapMalam[namaMalam].rekapWarga[warga] += nominal;
             cacheDataBulanan[keyBulan].rekapMalam[namaMalam].subtotal += nominal;
             cacheDataBulanan[keyBulan].total += nominal;
+          } else {
+            console.warn(`⚠️ Gagal mencocokkan tanggal pada node [${key}] dengan teks: "${tglStr}"`); // 🔍 CEK 4: Apakah ada format tanggal yang tidak lolos regex?
           }
         }
       });
     }
+
+    console.log("4. Hasil Akhir cacheDataHarian:", cacheDataHarian);
+    console.log("5. Hasil Akhir arrayTanggal:", arrayTanggal);
+    console.log("6. Hasil Akhir cacheDataBulanan:", cacheDataBulanan);
+    console.log("7. Hasil Akhir arrayBulan:", arrayBulan);
 
     Object.keys(cacheDataHarian).forEach(key => {
       cacheDataHarian[key].items.reverse();
