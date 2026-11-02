@@ -2831,35 +2831,26 @@ window.muatDataJimpitan = function() {
       Object.keys(dataObj).forEach(key => {
         var kolom = dataObj[key];
         if (kolom) {
-          // 🌟 Toleransi maksimal berbagai variasi nama properti di database
-          var tglStr = String(kolom.tanggal_waktu || kolom.tanggal || kolom.tgl || kolom.Tanggal || ''); 
-          var malamManual = String(kolom.kelompok_malam || kolom.kelompokMalam || kolom.malam || '');
-          var warga = String(kolom.nama_warga || kolom.warga || kolom.nama || kolom.Nama || '-'); 
-          var nominal = parseInt(kolom.nominal || kolom.jumlah || kolom.Nominal || 0, 10) || 0;
+          var tglStr = String(kolom.tanggal_waktu || kolom.tanggal || ''); 
+          var malamManual = String(kolom.kelompok_malam || '');
+          var warga = String(kolom.nama_warga || kolom.warga || '-'); 
+          var nominal = parseInt(kolom.nominal, 10) || 0;
 
           var dateObj = null;
-
-          // 1. Coba baca jika formatnya string berangka (tanggal/bulan/tahun)
           var angkaTanggal = tglStr.match(/\d+/g); 
+
+          // 🌟 Parsing presisi khusus format: "18/9/2026, 11.37.54"
           if (angkaTanggal && angkaTanggal.length >= 3) {
             var tgl = parseInt(angkaTanggal[0], 10);
-            var bln = parseInt(angkaTanggal[1], 10) - 1;
+            var bln = parseInt(angkaTanggal[1], 10) - 1; // Bulan di JS dimulai dari 0 (Januari = 0)
             var thn = parseInt(angkaTanggal[2], 10);
             var jam = angkaTanggal[3] ? parseInt(angkaTanggal[3], 10) : 19;
             var menit = angkaTanggal[4] ? parseInt(angkaTanggal[4], 10) : 0;
+
             dateObj = new Date(thn, bln, tgl, jam, menit);
           }
 
-          // 2. Jika gagal, coba baca dari timestamp angka atau string standar
-          if (!dateObj || isNaN(dateObj.getTime())) {
-            if (kolom.timestamp) {
-              dateObj = new Date(Number(kolom.timestamp));
-            } else if (tglStr && !isNaN(new Date(tglStr).getTime())) {
-              dateObj = new Date(tglStr);
-            }
-          }
-
-          // 3. Jika masih gagal juga, gunakan waktu saat ini sebagai pengaman agar data tidak hilang
+          // Fallback pengaman jika format gagal
           if (!dateObj || isNaN(dateObj.getTime())) {
             dateObj = new Date();
           }
