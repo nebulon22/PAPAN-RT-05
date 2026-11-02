@@ -1566,10 +1566,13 @@ function escapeHTML(text) {
 
 
   
-function bukaModalInfo() {
+window.bukaModalInfo = function() {
   var container = document.getElementById('list-pengumuman');
+  var modal = document.getElementById('modal-info');
   
-  document.getElementById('modal-info').style.display = 'flex';
+  if (modal) modal.style.display = 'flex';
+  if (!container) return;
+  
   container.innerHTML = '';
 
   if (!daftarPengumuman || daftarPengumuman.length === 0) {
@@ -1578,15 +1581,16 @@ function bukaModalInfo() {
   }
 
   daftarPengumuman.forEach(function(info) {
-    var lokasiParam = encodeURIComponent(info.lokasi);
+    var lokasiParam = encodeURIComponent(info.lokasi || '');
     var htmlFoto = '';
     
     if (info.foto) {
       var urlFoto = info.foto.toLowerCase();
       
       if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+        // 🛠️ Dipisah ke data-arg agar event delegation utils.js membacanya dengan sempurna
         htmlFoto = `
-          <div data-click="bukaModalVideo('${info.foto}')" style="
+          <div data-click="bukaModalVideo" data-arg="${info.foto}" style="
             position: relative; 
             width: 100%; 
             max-height: 200px; 
@@ -1618,8 +1622,9 @@ function bukaModalInfo() {
             ">▶</div>
           </div>`;
       } else {
+        // 🛠️ Dipisah ke data-arg (tanpa passing parameter event langsung di string HTML)
         htmlFoto = `
-          <img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" data-click="bukaFotoBesar('${info.foto}', event)" onError="this.style.display='none'">`;
+          <img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" data-click="bukaFotoBesar" data-arg="${info.foto}" onError="this.style.display='none'">`;
       }
     }
 
@@ -1629,13 +1634,25 @@ function bukaModalInfo() {
         <div class="judul">${escapeHTML(info.judul)}</div>
         <div class="detail">${escapeHTML(info.detail)}</div>
         ${htmlFoto}
-        ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" data-click="sorotLokasi('${lokasiParam}')">📍 Lihat Lokasi (${escapeHTML(info.lokasi)})</button>` : ''}
+        ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" data-click="sorotLokasi" data-arg="${lokasiParam}">📍 Lihat Lokasi (${escapeHTML(info.lokasi)})</button>` : ''}
       </div>
     `;
     container.innerHTML += html;
   });
-}
+};
 
+window.tutupModalInfo = function() {  
+  var modal = document.getElementById('modal-info');
+  if (modal) modal.style.display = 'none';  
+};
+
+window.bukaTutupLuar = function(e) {  
+  if (e && e.target && e.target.id === 'modal-info') {
+    window.tutupModalInfo(); 
+  } 
+};
+
+  
 var isVideoRotated = false;
 
 window.toggleRotasiVideo = function() {
@@ -2347,18 +2364,23 @@ let denahTimer = null;
     }, 2000);
   }
     
-    function bukaModalKeuangan() {
-      document.getElementById('modal-keuangan').style.display = 'flex';
-      muatDataKeuangan();
-    }
+window.bukaModalKeuangan = function() {
+  const modal = document.getElementById('modal-keuangan');
+  if (modal) modal.style.display = 'flex';
+  if (typeof window.muatDataKeuangan === 'function') {
+    window.muatDataKeuangan();
+  }
+};
 
-    function tutupModalKeuangan() {
-      document.getElementById('modal-keuangan').style.display = 'none';
-    }
-  window.tutupModalKeuanganLuar = function(e) {
+window.tutupModalKeuangan = function() {
+  const modal = document.getElementById('modal-keuangan');
+  if (modal) modal.style.display = 'none';
+};
+
+window.tutupModalKeuanganLuar = function(e) {
   // Hanya tutup jika yang diklik adalah background hitam/transparan (modal-bg)
   if (e && e.target && e.target.id === 'modal-keuangan') {
-    tutupModalKeuangan();
+    window.tutupModalKeuangan();
   }
 };
 
@@ -3046,74 +3068,79 @@ window.tutupModalRiwayatJimpitanLuar = function(e) {
   }
 };
 
-function bukaModalCatatanRonda() {
-      const modal = document.getElementById('modal-catatan-ronda');
-      if (modal) modal.style.display = 'flex';
-      muatDataCatatanRonda();
+window.bukaModalCatatanRonda = function() {
+  const modal = document.getElementById('modal-catatan-ronda');
+  if (modal) modal.style.display = 'flex';
+  if (typeof window.muatDataCatatanRonda === 'function') {
+    window.muatDataCatatanRonda();
+  }
+};
+
+window.tutupModalCatatanRonda = function() {
+  const modal = document.getElementById('modal-catatan-ronda');
+  if (modal) modal.style.display = 'none';
+};
+
+    window.muatDataCatatanRonda = function() {
+  const gridContainer = document.getElementById('grid-catatan-ronda');
+  if (!gridContainer) return;
+
+  gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat catatan malam minggu...</div>';
+
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(window.muatDataCatatanRonda, 50);
+    return;
+  }
+
+  const catatanRef = window.firebaseRef(window.db, 'catatan_ronda');
+
+  window.firebaseOnValue(catatanRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    gridContainer.innerHTML = '';
+
+    if (!dataObj) {
+      gridContainer.innerHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada catatan ronda malam minggu</div>';
+      return;
     }
 
-    function tutupModalCatatanRonda() {
-      const modal = document.getElementById('modal-catatan-ronda');
-      if (modal) modal.style.display = 'none';
-    }
+    let htmlList = '';
+    let totalNominalMalamMinggu = 0;
 
-    function muatDataCatatanRonda() {
-      const gridContainer = document.getElementById('grid-catatan-ronda');
-      if (!gridContainer) return;
+    let items = Object.values(dataObj).reverse();
 
-      gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat catatan malam minggu...</div>';
+    items.forEach(item => {
+      let warga = item.warga || item.nama_warga || item.nama || '-';
+      let nominal = parseInt(item.nominal, 10) || 0;
+      let waktu = item.tanggal || item.tanggal_waktu || '-';
+      let ket = item.keterangan || item.kelompokMalam || 'Catatan Malam Minggu';
 
-      const catatanRef = window.firebaseRef(window.db, 'catatan_ronda');
+      totalNominalMalamMinggu += nominal;
 
-      window.firebaseOnValue(catatanRef, (snapshot) => {
-        const dataObj = snapshot.val();
-        gridContainer.innerHTML = '';
-
-        if (!dataObj) {
-          gridContainer.innerHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada catatan ronda malam minggu</div>';
-          return;
-        }
-
-        let htmlList = '';
-        let totalNominalMalamMinggu = 0;
-
-        let items = Object.values(dataObj).reverse();
-
-        items.forEach(item => {
-          // 🌟 Pengecekan ganda untuk membaca properti 'warga' atau 'nama_warga'
-          let warga = item.warga || item.nama_warga || item.nama || '-';
-          let nominal = parseInt(item.nominal, 10) || 0;
-          // 🌟 Pengecekan ganda untuk membaca format tanggal lama & baru
-          let waktu = item.tanggal || item.tanggal_waktu || '-';
-          let ket = item.keterangan || item.kelompokMalam || 'Catatan Malam Minggu';
-
-          totalNominalMalamMinggu += nominal;
-
-          htmlList += `
-            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; border-bottom: 1px dashed #e5e7eb; padding: 6px 0;">
-              <div>
-                <strong style="color: #374151; display: block;">${warga}</strong>
-                <span style="color: #9ca3af; font-size: 10px;">${waktu} (${ket})</span>
-              </div>
-              <span style="color: #b45309; font-weight: bold;">Rp ${nominal.toLocaleString('id-ID')}</span>
-            </div>
-          `;
-        });
-
-        gridContainer.innerHTML = `
-          <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:6px; padding:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; font-size:11px;">
-            <span style="font-weight:bold; color:#92400e;">Total Catatan:</span>
-            <span style="font-weight:bold; color:#b45309;">Rp ${totalNominalMalamMinggu.toLocaleString('id-ID')}</span>
+      htmlList += `
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px; border-bottom: 1px dashed #e5e7eb; padding: 6px 0;">
+          <div>
+            <strong style="color: #374151; display: block;">${warga}</strong>
+            <span style="color: #9ca3af; font-size: 10px;">${waktu} (${ket})</span>
           </div>
-          <div style="max-height: 250px; overflow-y: auto;">
-            ${htmlList}
-          </div>
-        `;
-      }, (error) => {
-        console.error("Gagal memuat catatan ronda:", error);
-        gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data dari Firebase.</div>';
-      });
-    }
+          <span style="color: #b45309; font-weight: bold;">Rp ${nominal.toLocaleString('id-ID')}</span>
+        </div>
+      `;
+    });
+
+    gridContainer.innerHTML = `
+      <div style="background:#fef3c7; border:1px solid #fde68a; border-radius:6px; padding:8px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; font-size:11px;">
+        <span style="font-weight:bold; color:#92400e;">Total Catatan:</span>
+        <span style="font-weight:bold; color:#b45309;">Rp ${totalNominalMalamMinggu.toLocaleString('id-ID')}</span>
+      </div>
+      <div style="max-height: 250px; overflow-y: auto;">
+        ${htmlList}
+      </div>
+    `;
+  }, (error) => {
+    console.error("Gagal memuat catatan ronda:", error);
+    gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data dari Firebase.</div>';
+  });
+};
 
    // 1. Fungsi Unduh ke Excel (Format CSV)
 function exportJimpitanToCSV() {
