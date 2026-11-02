@@ -1239,121 +1239,142 @@ const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompar
 
 
 let globalPrivateListener = null;
+// 🌟 Simpan history ID pesan terakhir yang sudah pernah membunyikan notifikasi
+const lastNotifiedMsgKeys = {};
 
-    function listenAllPrivateChats() {
-      const activeUser = currentUser;
-      if (!activeUser || !activeUser.uid) return;
+function listenAllPrivateChats() {
+  const activeUser = currentUser;
+  if (!activeUser || !activeUser.uid) return;
 
-      if (globalPrivateListener) {
-        globalPrivateListener();
-        globalPrivateListener = null;
-      }
+  if (globalPrivateListener) {
+    globalPrivateListener();
+    globalPrivateListener = null;
+  }
 
-      const allPrivateRef = ref(db, 'private_chats');
-      let isFirstLoad = true;
+  const allPrivateRef = ref(db, 'private_chats');
+  let isFirstLoad = true;
 
-      globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
-        if (!activeUser || !activeUser.uid) return;
+  globalPrivateListener = onValue(allPrivateRef, (snapshot) => {
+    if (!activeUser || !activeUser.uid) return;
 
-        if (!snapshot.exists()) {
-          isFirstLoad = false;
-          sendTotalUnreadToParent(); 
-          return;
-        }
+    if (!snapshot.exists()) {
+      isFirstLoad = false;
+      sendTotalUnreadToParent(); 
+      return;
+    }
 
-        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
-        let updated = false;
+    const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+    let updated = false;
 
-        snapshot.forEach((roomSnap) => {
-          const roomID = roomSnap.key; // Contoh: UID_A__UID_B
-          
-          if (roomID && roomID.includes(activeUser.uid)) {
-            const parts = roomID.split('_');
-            if (parts.length < 2) return;
-            
-            const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
-            if (!targetUID) return;
-
-            let unreadTotalCount = 0;
-            let lastMsg = null;
-            const lastReadKey = lastReadKeyMap[targetUID];
-
-            let countAfterKey = !lastReadKey;
-
-            roomSnap.forEach((msgSnap) => {
-              const msgKey = msgSnap.key;
-              const msgData = msgSnap.val();
-              if (msgData && typeof msgData === 'object' && msgData.text) {
-                lastMsg = msgData;
-
-                if (msgKey === lastReadKey) {
-                  countAfterKey = true;
-                  unreadTotalCount = 0;
-                } else if (countAfterKey && msgData.uid !== activeUser.uid) {
-                  unreadTotalCount++;
-                }
-              }
-            });
-
-            if (lastMsg && lastMsg.uid === activeUser.uid) {
-              unreadTotalCount = 0;
-            }
-
-            // 1. Selalu daftarkan tab private di atas agar muncul jika ada pesan masuk
-            if (lastMsg) {
-              const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
-
-              if (!openPrivateRooms[targetUID]) {
-                openPrivateRooms[targetUID] = senderName;
-                updated = true;
-              }
-            }
-
-            // 2. Kelola unread count & suara notifikasi
-            if (unreadTotalCount > 0) {
-              // Jika kita sedang tidak membuka chat private dengan orang ini
-              if (activeChatType !== 'private' || activePrivateUID !== targetUID) {
-                unreadCounts[targetUID] = unreadTotalCount;
-           if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid) {
-        // 🛑 Pastikan chat sudah siap (lewat 3 detik) baru boleh bunyi
-        if (isChatReady) {
-            // 🌟 UBAH INI: Sambungkan ke pengaturan suara private di induk (setting.js)
-            try {
-                if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-                    window.parent.picuNotifikasiMedia('private'); // 👈 Memanggil pengaturan khusus Private
-                } else {
-                    playKlingSound(); // Fallback jika parent tidak ada
-                }
-            } catch (e) {
-                playKlingSound();
-            }
-        }
+    snapshot.forEach((roomSnap) => {
+      const roomID = roomSnap.key; // Contoh: UID_A__UID_B
+      
+      if (roomID && roomID.includes(activeUser.uid)) {
+        const parts = roomID.split('_');
+        if (parts.length < 2) return;
         
-        // 🛑 UBAH ATURAN PINDAH OTOMATIS:
-        // Sistem HANYA akan memindahkan layar secara otomatis JIKA Anda sedang 
-        // berada di dalam tab private orang yang sama (misal sedang baca-baca riwayat atas).
-        // Jika Anda sedang di tab Publik, layar TIDAK AKAN dipaksa pindah, 
-        // melainkan hanya memunculkan badge angka merah dan suara saja.
-        if (activeChatType === 'private' && activePrivateUID === targetUID) {
-            switchChatRoom('private', targetUID);
-                  }
-                }
-              }
-            } else {
-              unreadCounts[targetUID] = 0;
+        const targetUID = parts[0] === activeUser.uid ? parts[1] : parts[0];
+        if (!targetUID) return;
+
+        let unreadTotalCount = 0;
+        let lastMsg = null;
+        let lastMsgKey = null;
+        const lastReadKey = lastReadKeyMap[targetUID];
+
+        let countAfterKey = !lastReadKey;
+
+        roomSnap.forEach((msgSnap) => {
+          const msgKey = msgSnap.key;
+          const msgData = msgSnap.val();
+          if (msgData && typeof msgData === 'object' && msgData.text) {
+            lastMsg = msgData;
+            lastMsgKey = msgKey; // 🌟 Simpan ID pesan paling akhir
+
+            if (msgKey === lastReadKey) {
+              countAfterKey = true;
+              unreadTotalCount = 0;
+            } else if (countAfterKey && msgData.uid !== activeUser.uid) {
+              unreadTotalCount++;
             }
           }
         });
 
-        if (updated) {
-          localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+        if (lastMsg && lastMsg.uid === activeUser.uid) {
+          unreadTotalCount = 0;
         }
 
-        renderPrivateTabsUI();
-        sendTotalUnreadToParent(); 
-        isFirstLoad = false;
-      });
+        // 1. Daftarkan room ke daftar tab private
+        if (lastMsg) {
+          const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
+
+          if (!openPrivateRooms[targetUID]) {
+            openPrivateRooms[targetUID] = senderName;
+            updated = true;
+          }
+        }
+
+        // 2. Kelola unread count & trigger notifikasi
+        if (unreadTotalCount > 0) {
+          unreadCounts[targetUID] = unreadTotalCount;
+
+          // 🛡️ PENGAMAN UTAMA:
+          // Hanya picu notifikasi JIKA:
+          // a. Bukan pemuatan awal (isFirstLoad = false)
+          // b. Pesan dikirim oleh orang lain
+          // c. Pesan ini BELUM PERNAH membunyikan notifikasi sebelumnya (lastNotifiedMsgKeys)
+          // d. User sedang tidak membuka obrolan dengan orang tersebut secara aktif
+          const isCurrentlyViewingThisChat = (activeChatType === 'private' && activePrivateUID === targetUID && document.hasFocus());
+
+          if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid && isChatReady) {
+            if (lastNotifiedMsgKeys[targetUID] !== lastMsgKey && !isCurrentlyViewingThisChat) {
+              
+              // Tandai pesan ini sudah dibunyikan
+              lastNotifiedMsgKeys[targetUID] = lastMsgKey;
+
+              // 🌟 A. Bunyikan suara notifikasi
+              try {
+                if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                  window.parent.picuNotifikasiMedia('private');
+                } else if (typeof playKlingSound === 'function') {
+                  playKlingSound();
+                }
+              } catch (e) {
+                if (typeof playKlingSound === 'function') playKlingSound();
+              }
+
+              // 🌟 B. Tampilkan Notifikasi Melayang OS Desktop JIKA tab sedang di-minimize/background
+              if (Notification.permission === 'granted' && (!document.hasFocus() || !isCurrentlyViewingThisChat)) {
+                const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
+                new Notification(`Pesan Private dari ${senderName}`, {
+                  body: lastMsg.text || 'Mengirim pesan...',
+                  icon: 'kentongan-slit-drum.png',
+                  tag: `private-${targetUID}`, // Menimpa notifikasi lama dari orang yang sama agar tidak menumpuk
+                  renotify: true
+                });
+              }
+            }
+          }
+
+          // Otomatis scroll ke bawah jika obrolan aktif sedang terbuka
+          if (activeChatType === 'private' && activePrivateUID === targetUID) {
+            switchChatRoom('private', targetUID);
+          }
+
+        } else {
+          unreadCounts[targetUID] = 0;
+        }
+      }
+    });
+
+    if (updated) {
+      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
     }
+
+    renderPrivateTabsUI();
+    sendTotalUnreadToParent(); 
+    isFirstLoad = false;
+  });
+}
     
 
 function executeSendMessage(e) {
