@@ -1478,129 +1478,132 @@ function triggerGasNotification(title, bodyText, specificTargetUID = null) {
 }
 
     
-// Pemantau Pesan Unread Grup Chat Publik yang Lebih Stabil
-    let publicGroupListener = null;
-    let isFirstPublicLoad = true;
+// Pemantau Pesan Unread Grup Chat Publik yang Lebih Stabil & Aman
+let publicGroupListener = null;
+let isFirstPublicLoad = true;
 
-    function listenPublicGroupUnread() {
-      if (!currentUser?.uid || currentUser.status !== 'aktif') return;
+function listenPublicGroupUnread() {
+  if (!currentUser?.uid || currentUser.status !== 'aktif') return;
 
-      if (publicGroupListener) {
-        publicGroupListener();
-        publicGroupListener = null;
+  if (publicGroupListener) {
+    publicGroupListener();
+    publicGroupListener = null;
+  }
+
+  const chatsRef = query(ref(db, 'chats'), limitToLast(50));
+
+  publicGroupListener = onValue(chatsRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      updatePublicTabBadge(0);
+      sendUnreadCountToParent(0);
+      isFirstPublicLoad = false;
+      return;
+    }
+
+    const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+    let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+
+    // Inisialisasi key awal jika belum ada
+    if (!lastReadPublicMapKey) {
+      let latestKey = null;
+      snapshot.forEach((msgSnap) => {
+        if (msgSnap.key !== 'pinned_poll') {
+          latestKey = msgSnap.key; 
+        }
+      });
+      if (latestKey) {
+        lastReadPublicMap[currentUser.uid] = latestKey;
+        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+        lastReadPublicMapKey = latestKey;
+      }
+    }
+
+    let unreadPublicCount = 0;
+    let countAfterKey = false; 
+    let latestUnreadMsg = null;
+    let latestUnreadKey = null;
+
+    snapshot.forEach((msgSnap) => {
+      const msgKey = msgSnap.key;
+      const msgData = msgSnap.val();
+
+      if (msgKey === 'pinned_poll') return;
+
+      if (msgKey === lastReadPublicMapKey) {
+        countAfterKey = true;
+        unreadPublicCount = 0; 
+        return;
       }
 
-      const chatsRef = query(ref(db, 'chats'), limitToLast(50));
-
-      publicGroupListener = onValue(chatsRef, (snapshot) => {
-        if (!snapshot.exists()) {
-          updatePublicTabBadge(0);
-          sendUnreadCountToParent(0);
-          isFirstPublicLoad = false;
-          return;
+      if (countAfterKey) {
+        if (msgData && msgData.uid !== currentUser.uid) {
+          unreadPublicCount++;
+          // Simpan pesan unread terakhir untuk dinotifikasikan (mencegah spam loop)
+          latestUnreadMsg = msgData;
+          latestUnreadKey = msgKey;
         }
+      }
+    });
 
-        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
-
-        // Jika belum ada key baca tersimpan, inisialisasi ke pesan terakhir agar tidak meledak jadi unread palsu
-        if (!lastReadPublicMapKey) {
-          let latestKey = null;
-          snapshot.forEach((msgSnap) => {
-            if (msgSnap.key !== 'pinned_poll') {
-              latestKey = msgSnap.key; 
-            }
-          });
-          if (latestKey) {
-            lastReadPublicMap[currentUser.uid] = latestKey;
-            localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
-            lastReadPublicMapKey = latestKey;
-          }
+    // Fallback jika pesan terakhir dibaca tertimbun >50 pesan
+    if (!countAfterKey && lastReadPublicMapKey) {
+      snapshot.forEach((msgSnap) => {
+        const msgData = msgSnap.val();
+        if (msgSnap.key !== 'pinned_poll' && msgData && msgData.uid !== currentUser.uid) {
+          unreadPublicCount++;
+          latestUnreadMsg = msgData;
+          latestUnreadKey = msgSnap.key;
         }
-
-        let unreadPublicCount = 0;
-        let countAfterKey = false; 
-
-        snapshot.forEach((msgSnap) => {
-          const msgKey = msgSnap.key;
-          const msgData = msgSnap.val();
-
-          if (msgKey === 'pinned_poll') return;
-
-          // Jika kita menemukan posisi pesan terakhir yang dibaca
-          if (msgKey === lastReadPublicMapKey) {
-            countAfterKey = true;
-            unreadPublicCount = 0; 
-            return;
-          }
-
-          // Jika pesan berada setelah key terakhir yang dibaca
-          if (countAfterKey) {
-            if (msgData && msgData.uid !== currentUser.uid) {
-              unreadPublicCount++;
-              
-              // 🛠️ Mengambil nama pengirim agar tidak undefined
-              const senderName = msgData.sender || (allUsersCache[msgData.uid]?.username || allUsersCache[msgData.uid]?.nama) || "Warga";
-              
-           // 🌟 Notifikasi melayang hanya jika chat sudah siap (lewat 3 detik) & bukan load awal
-              if (!isFirstPublicLoad && isChatReady) {
-                const notifId = 'notif_pub_' + msgKey;
-                if (!sessionStorage.getItem(notifId)) {
-                    sessionStorage.setItem(notifId, 'true');
-                    
-                    if (!isChatVisible || document.hidden) {
-                        if ('Notification' in window && Notification.permission === 'granted') {
-                            try {
-                                // Tambahkan silent: true agar tidak membunyikan bell bawaan sistem
-                                new Notification("Grup RT 05 - " + senderName, {
-                                    body: msgData.text || '',
-                                    icon: '/logo.png',
-                                    silent: true 
-                                });
-                                
-                                if ('serviceWorker' in navigator) {
-                                    navigator.serviceWorker.ready.then(function(registration) {
-                                        registration.showNotification("Grup RT 05 - " + senderName, {
-                                            body: msgData.text || '',
-                                            icon: '/logo.png',
-                                            badge: '/logo.png',
-                                            silent: true 
-                                        });
-                                    });
-                                }
-                            } catch(e) {
-                                console.error("GAGAL memanggil notifikasi:", e);
-                            }
-                        }
-                    }
-                }
-              }
-            }
-          }
-        });
-
-        // Pengaman jika key baca terakhir tertimbun lebih dari 50 pesan ke bawah
-        if (!countAfterKey && lastReadPublicMapKey) {
-          snapshot.forEach((msgSnap) => {
-            const msgData = msgSnap.val();
-            if (msgSnap.key !== 'pinned_poll' && msgData && msgData.uid !== currentUser.uid) {
-              unreadPublicCount++;
-            }
-          });
-        }
-
-        isFirstPublicLoad = false;
-
-        // Badge merah HANYA akan dibersihkan jika sedang di tab publik DAN layar terlihat aktif
-        if (activeChatType === 'public' && isChatVisible) {
-          unreadPublicCount = 0;
-          markPublicGroupAsRead(); 
-        }
-
-        updatePublicTabBadge(unreadPublicCount);
-        sendUnreadCountToParent(unreadPublicCount);
-      }); 
+      });
     }
+
+    // 🌟 LOGIKA NOTIFIKASI MELAYANG (Hanya 1x untuk Pesan Terakhir)
+    if (!isFirstPublicLoad && isChatReady && latestUnreadMsg && latestUnreadKey) {
+      const notifId = 'notif_pub_' + latestUnreadKey;
+
+      if (!sessionStorage.getItem(notifId)) {
+        sessionStorage.setItem(notifId, 'true');
+
+        // Hanya tampilkan jika layar chat sedang tidak aktif / tersembunyi
+        if (!isChatVisible || document.hidden) {
+          const senderName = latestUnreadMsg.sender || (allUsersCache[latestUnreadMsg.uid]?.username || allUsersCache[latestUnreadMsg.uid]?.nama) || "Warga";
+          const title = "Grup RT 05 - " + senderName;
+          const options = {
+            body: latestUnreadMsg.text || 'Mengirim pesan...',
+            icon: '/logo.png',
+            badge: '/logo.png',
+            tag: 'grup-rt05', // 🌟 Menimpa notifikasi lama agar tidak menumpuk
+            silent: true
+          };
+
+          if ('Notification' in window && Notification.permission === 'granted') {
+            try {
+              // 🛡️ Gunakan Service Worker jika ada, jika tidak ada fallback ke Notification biasa
+              if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, options));
+              } else {
+                new Notification(title, options);
+              }
+            } catch (e) {
+              console.error("Gagal memanggil notifikasi:", e);
+            }
+          }
+        }
+      }
+    }
+
+    isFirstPublicLoad = false;
+
+    // Bersihkan badge jika user sedang aktif melihat tab publik
+    if (activeChatType === 'public' && isChatVisible) {
+      unreadPublicCount = 0;
+      markPublicGroupAsRead(); 
+    }
+
+    updatePublicTabBadge(unreadPublicCount);
+    sendUnreadCountToParent(unreadPublicCount);
+  }); 
+}
 
     
     
