@@ -627,20 +627,20 @@
     </div>
 
     <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
-      <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
-        <thead>
-          <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1;">
-            <th style="padding: 8px;">Kegiatan / Divisi</th>
-            <th style="padding: 8px;">Rencana vs Realisasi</th>
-            <th style="padding: 8px; text-align: center;">Status Dana</th>
-            <th style="padding: 8px; text-align: center;">Status Progker</th>
-          </tr>
-        </thead>
-        <tbody id="tabel-progker-warga">
-          <tr><td colspan="4" style="text-align: center; padding: 10px; color: #888;">Memuat data RAB...</td></tr>
-        </tbody>
-      </table>
-    </div>
+  <table style="width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 10px; text-align: left;">
+    <thead>
+      <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1;">
+        <th style="padding: 6px 4px; width: 28%;">Kegiatan / Divisi</th>
+        <th style="padding: 6px 4px; width: 28%;">Rencana vs Realisasi</th>
+        <th style="padding: 6px 4px; width: 22%; text-align: center;">Status Dana</th>
+        <th style="padding: 6px 4px; width: 22%; text-align: center;">Status Progker</th>
+      </tr>
+    </thead>
+    <tbody id="tabel-progker-warga">
+      <!-- Data dari Firebase akan masuk ke sini -->
+    </tbody>
+  </table>
+</div>
   </div>
 
 </div> 
@@ -1524,6 +1524,16 @@ function muatPengumumanFirebase() {
         badge.style.display = 'none';
       }
     }
+
+    // =========================================================================
+    // TAMBAHKAN BARIS INI: 
+    // Jika modal info sedang terbuka saat admin melakukan update data, 
+    // layar warga akan otomatis memperbarui isinya secara real-time.
+    // =========================================================================
+    const modalInfo = document.getElementById('modal-info');
+    if (modalInfo && modalInfo.style.display === 'flex') {
+      bukaModalInfo();
+    }
   });
 }
 
@@ -1566,13 +1576,13 @@ function bukaModalInfo() {
             align-items: center;
             justify-content: center;
           ">
-          <video src="${info.foto}" preload="metadata" playsinline controls style="..."></video>
-            width: 100%; 
-            max-height: 200px; 
-            object-fit: cover; 
-            opacity: 0.8;
-            pointer-events: none;
-          "></video>
+            <video src="${info.foto}" preload="metadata" playsinline style="
+              width: 100%; 
+              max-height: 200px; 
+              object-fit: cover; 
+              opacity: 0.8;
+              pointer-events: none;
+            "></video>
             <div style="
               position: absolute; 
               background: rgba(239, 68, 68, 0.9); 
@@ -1784,21 +1794,25 @@ function muatProgkerWarga() {
         badgeColor = '#f59e0b';
       }
 
-      var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9.5px; font-weight:bold;">${escapeHTML(statusRaw)}</span>`;
+      var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:bold; white-space: nowrap;">${escapeHTML(statusRaw)}</span>`;
 
       html += `
         <tr style="border-bottom: 1px solid #f1f5f9;">
-          <td style="padding: 8px;">
-            <strong style="color:#1e293b; display:block;">${escapeHTML(namaKegiatan)}</strong>
-            <span style="font-size:10px; color:#64748b; display:block;">🏷️ ${escapeHTML(namaDivisi)}</span>
-            ${detailProg ? `<span style="font-size:9.5px; color:#475569; font-style:italic; display:block; margin-top:2px;">📝 ${escapeHTML(detailProg)}</span>` : ''}
+          <td style="padding: 6px 4px; vertical-align: top; word-break: break-word; width: 28%;">
+            <strong style="color:#1e293b; display:block; font-size: 10px;">${escapeHTML(namaKegiatan)}</strong>
+            <span style="font-size:9px; color:#64748b; display:block;">🏷️ ${escapeHTML(namaDivisi)}</span>
+            ${detailProg ? `<span style="font-size:8.5px; color:#475569; font-style:italic; display:block; margin-top:2px;">📝 ${escapeHTML(detailProg)}</span>` : ''}
           </td>
-          <td style="padding: 8px;">
-            <div style="font-size:11px; font-weight:bold; color:#0f172a;">Rp ${angPlan.toLocaleString('id-ID')}</div>
+          <td style="padding: 6px 4px; vertical-align: top; word-break: break-word; width: 28%;">
+            <div style="font-size: 10px; font-weight: bold; color:#0f172a;">Rp ${angPlan.toLocaleString('id-ID')}</div>
             ${infoTambahanHTML}
           </td>
-          <td style="padding: 8px; text-align: center;">${badgeDana}</td>
-          <td style="padding: 8px; text-align: center;">${badgeProgker}</td>
+          <td style="padding: 6px 4px; text-align: center; vertical-align: top; width: 22%;">
+            ${badgeDana}
+          </td>
+          <td style="padding: 6px 4px; text-align: center; vertical-align: top; width: 22%;">
+            ${badgeProgker}
+          </td>
         </tr>
       `;
     });
