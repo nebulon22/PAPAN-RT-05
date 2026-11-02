@@ -777,7 +777,8 @@
       <button class="close-btn" onclick="tutupModalInventaris()">&times;</button>
     </div>
     
-    <iframe src="inventaris.html" style="width: 100%; flex: 1; border: none; background: #f9fafb;"></iframe>
+    <!-- 🌟 Ubah atribut src menjadi data-src dan tambahkan id="iframe-inventaris" -->
+    <iframe id="iframe-inventaris" data-src="inventaris.html" style="width: 100%; flex: 1; border: none; background: #f9fafb;"></iframe>
     
   </div>
 </div>
@@ -2306,6 +2307,26 @@ let denahTimer = null;
       document.getElementById('modal-keuangan').style.display = 'none';
     }
 
+    // 🌟 Fungsi Buka Modal Inventaris (Lazy-Load)
+function bukaModalInventaris() {
+  const modal = document.getElementById('modal-inventaris');
+  const iframe = document.getElementById('iframe-inventaris');
+
+  // Muat inventaris.html HANYA saat tombol pertama kali diklik warga
+  if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
+    const dataSrc = iframe.getAttribute('data-src');
+    if (dataSrc) iframe.src = dataSrc;
+  }
+
+  if (modal) modal.style.display = 'flex';
+}
+
+// 🌟 Fungsi Tutup Modal Inventaris
+function tutupModalInventaris() {
+  const modal = document.getElementById('modal-inventaris');
+  if (modal) modal.style.display = 'none';
+}
+  
     function getInfoMalamRonda(dateObj = new Date()) {
       let d = new Date(dateObj);
       let hour = d.getHours();
