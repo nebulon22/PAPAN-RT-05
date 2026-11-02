@@ -775,7 +775,7 @@
   </div>
 </div>
 
-<div id="modal-inventaris" class="modal-bg" ... data-click="tutupModalInventarisLuar">
+<div id="modal-inventaris" class="modal-bg" data-click="tutupModalInventarisLuar">
   <div class="modal-content" style="max-width: 600px; width: 95%; height: 85vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
     
     <div class="modal-header" style="padding: 12px 16px; margin: 0; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center;">
@@ -919,7 +919,7 @@
     </div>
   </div>
 
- <div id="modal-warga-baru" class="modal-bg" ... data-click="tutupModalWargaBaruLuar">
+ <div id="modal-warga-baru" class="modal-bg" data-click="tutupModalWargaBaruLuar">
     <div class="modal-content" style="max-width: 400px; width: 90%;">
       <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
         <h3 style="margin: 0; font-size: 15px; color: #111;">📝 Pendataan Warga Baru dan Lapor Tamu lebih dari 3x24 jam</h3>
@@ -1007,7 +1007,7 @@
   }
 </style>
 
-<button id="floating-chat-btn" data-click="toggleChatModal()" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #22c55e; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer;" title="Buka Live Chat RT">
+<button id="floating-chat-btn" data-click="toggleChatModal" style="position: fixed; bottom: 20px; left: 16px; z-index: 999; background: #22c55e; color: white; border: none; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 8px rgba(0,0,0,0.3); cursor: pointer;" title="Buka Live Chat RT">
   <i class="fa-solid fa-comments" style="font-size: 20px;"></i>
   
   <span id="badge-chat-main" style="display: none; position: absolute; top: -3px; right: -3px; background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 2px 6px; border-radius: 12px; border: 2px solid #ffffff; box-shadow: 0 2px 6px rgba(0,0,0,0.4); min-width: 18px; text-align: center; line-height: 1;">
@@ -1031,7 +1031,7 @@
 
 </div>
 
-<div id="modal-setting" class="modal-bg" ... data-click="tutupModalSettingLuar">
+<div id="modal-setting" class="modal-bg" data-click="tutupModalSettingLuar">
   <div class="modal-content" style="max-width: 380px; display: flex; flex-direction: column; text-align: left;">
     
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
@@ -1183,44 +1183,44 @@
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
-  function toggleChatModal() {
-    const modal = document.getElementById('chat-overlay-modal');
-    const iframe = modal ? modal.querySelector('iframe') : null;
+window.toggleChatModal = function() {
+  const modal = document.getElementById('chat-overlay-modal');
+  const iframe = modal ? modal.querySelector('iframe') : null;
 
-    if (!modal) return;
+  if (!modal) return;
 
-    const isOpening = (modal.style.display === 'none' || modal.style.display === '');
+  const isOpening = (modal.style.display === 'none' || modal.style.display === '');
 
-    if (isOpening) {
-      // 🌟 Lazy Load: Isi src dari data-src hanya saat modal pertama kali dibuka warga
-      if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
-        const dataSrc = iframe.getAttribute('data-src');
-        if (dataSrc) iframe.src = dataSrc;
-      }
-
-      modal.style.display = 'flex';
-      
-      const badge = document.getElementById('badge-chat-main');
-      if (badge) badge.style.display = 'none';
-
-      const chatBtn = document.getElementById('floating-chat-btn');
-      if (chatBtn) chatBtn.classList.remove('chat-btn-animated');
-
-      if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
-        iframe.contentWindow.switchChatRoom('public');
-      }
-    } else {
-      modal.style.display = 'none';
+  if (isOpening) {
+    // 🌟 Lazy Load: Isi src dari data-src hanya saat modal pertama kali dibuka warga
+    if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
+      const dataSrc = iframe.getAttribute('data-src');
+      if (dataSrc) iframe.src = dataSrc;
     }
 
-    // 🌟 BERITAHU IFRAME CHAT STATUS TERBUKA/TERTUTUP MODAL
-    if (iframe && iframe.contentWindow) {
-      iframe.contentWindow.postMessage({
-        type: 'CHAT_MODAL_STATUS',
-        isOpen: isOpening
-      }, '*');
+    modal.style.display = 'flex';
+    
+    const badge = document.getElementById('badge-chat-main');
+    if (badge) badge.style.display = 'none';
+
+    const chatBtn = document.getElementById('floating-chat-btn');
+    if (chatBtn) chatBtn.classList.remove('chat-btn-animated');
+
+    if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
+      iframe.contentWindow.switchChatRoom('public');
     }
+  } else {
+    modal.style.display = 'none';
   }
+
+  // 🌟 BERITAHU IFRAME CHAT STATUS TERBUKA/TERTUTUP MODAL
+  if (iframe && iframe.contentWindow) {
+    iframe.contentWindow.postMessage({
+      type: 'CHAT_MODAL_STATUS',
+      isOpen: isOpening
+    }, '*');
+  }
+};
 
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
