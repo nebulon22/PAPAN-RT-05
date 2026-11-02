@@ -65,7 +65,8 @@ function cariLokasi(keyword, daftarData, callbackHasil) {
     }
     const query = keyword.toLowerCase().trim();
     const hasil = daftarData.filter(item => {
-        const nama = (item.nama || item.namaWarga || item.namaBarang || '').toLowerCase();
+        // Ambil nama dari item.nama, item.namaRaw, item.namaWarga, atau item.nameAsli
+        const nama = (item.nama || item.namaRaw || item.namaWarga || item.nameAsli || item.namaBarang || '').toLowerCase();
         const keterangan = (item.keterangan || item.kategori || '').toLowerCase();
         return nama.includes(query) || keterangan.includes(query);
     });
