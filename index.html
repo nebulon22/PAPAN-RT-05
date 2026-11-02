@@ -512,20 +512,20 @@
             🗺️ Denah RT 05
           </button>
 
-          <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: -100%; width: 220px; margin-top: 6px; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(2px); padding: 10px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15); z-index: 100;">
-            <button class="btn-filter active" data-click="pilihFilterDenah('semua', this)" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
-            <button class="btn-filter" data-click="pilihFilterDenah('minimarket', this)" style="width: 100%;">🏪 Minimarket</button>
-            <button class="btn-filter" data-click="pilihFilterDenah('kost', this)" style="width: 100%;">🛏️ Kost</button>
-            <button class="btn-filter" data-click="pilihFilterDenah('fasum', this)" style="width: 100%;">🏛️ Fasum</button>
-            <button class="btn-filter" data-click="pilihFilterDenah('kuliner', this)" style="width: 100%;">🍽️ Kuliner</button>
-          </div>
+         <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: -100%; width: 220px; margin-top: 6px; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(2px); padding: 10px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15); z-index: 100;">
+  <button class="btn-filter active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
+  <button class="btn-filter" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%;">🏪 Minimarket</button>
+  <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%;">🛏️ Kost</button>
+  <button class="btn-filter" data-click="pilihFilterDenah" data-arg="fasum" style="width: 100%;">🏛️ Fasum</button>
+  <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kuliner" style="width: 100%;">🍽️ Kuliner</button>
+      </div>
         </div>
       </div>
       
     </div>
   </div>
 
-  <div id="modal-keuangan" class="modal-bg" data-click="if(event.target.id==='modal-keuangan') tutupModalKeuangan()">
+<div id="modal-keuangan" class="modal-bg" data-click="tutupModalKeuanganLuar">
     <div class="modal-content" style="max-width: 650px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;">
       <div class="modal-header">
         <h3>📜 Rekening Koran Divisi</h3>
@@ -893,7 +893,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <h3>🪙 Catat Jimpitan Ronda</h3>
-        <button class="close-btn" data-click="document.getElementById('modal-jimpitan').style.display='none'">&times;</button>
+       <button class="close-btn" data-click="tutupModalJimpitan">&times;</button>
       </div>
       
       <form id="formJimpitan">
@@ -907,10 +907,10 @@
           <input type="number" id="jimpitanNominal" placeholder="Isi nominal atau pilih..." style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px;">
           
           <div style="display: flex; gap: 6px; margin-top: 8px;">
-            <button type="button" data-click="setNominal(500)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">500</button>
-            <button type="button" data-click="setNominal(1000)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">1.000</button>
-            <button type="button" data-click="setNominal(2000)" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">2.000</button>
-            <button type="button" data-click="setNominal(0)" style="flex:1; padding:6px; font-size:11px; background:#ffebee; color:#c62828; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">0 (Absen)</button>
+            <button type="button" data-click="setNominal" data-arg="500" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">500</button>
+            <button type="button" data-click="setNominal" data-arg="1000" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">1.000</button>
+            <button type="button" data-click="setNominal" data-arg="2000" style="flex:1; padding:6px; font-size:11px; background:#e0e0e0; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">2.000</button>
+           <button type="button" data-click="setNominal" data-arg="0" style="flex:1; padding:6px; font-size:11px; background:#ffebee; color:#c62828; border:none; border-radius:4px; font-weight:bold; cursor:pointer;">0 (Absen)</button>
           </div>
         </div>
 
@@ -2331,6 +2331,12 @@ let denahTimer = null;
     function tutupModalKeuangan() {
       document.getElementById('modal-keuangan').style.display = 'none';
     }
+  window.tutupModalKeuanganLuar = function(e) {
+  // Hanya tutup jika yang diklik adalah background hitam/transparan (modal-bg)
+  if (e && e.target && e.target.id === 'modal-keuangan') {
+    tutupModalKeuangan();
+  }
+};
 
     // 🌟 Fungsi Buka Modal Inventaris (Lazy-Load)
 function bukaModalInventaris() {
@@ -2688,6 +2694,11 @@ function tutupModalInventaris() {
     window.addEventListener('offline', () => {
       perbaruiIndikatorSync();
     });
+
+  window.tutupModalJimpitan = function() {
+  const modal = document.getElementById('modal-jimpitan');
+  if (modal) modal.style.display = 'none';
+};
 
 var cacheDataHarian = {};
 var cacheDataBulanan = {};
