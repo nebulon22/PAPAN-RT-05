@@ -2113,21 +2113,56 @@ function tutupModalEditWarga() {
 }
 
 // 3. Menyimpan perubahan data warga ke database (Firebase)
-function simpanPerubahanWarga(e) {
+async function simpanPerubahanWarga(e) {
   if (e) e.preventDefault();
   
   const namaBaru = document.getElementById("editWargaNama").value.trim();
   const anggotaBaru = document.getElementById("editWargaAnggota").value.trim();
   const rumahBaru = document.getElementById("editWargaRumah").value.trim();
+  const btn = document.getElementById("btnSimpanEditWarga");
 
   if (!namaBaru || !rumahBaru) {
     alert("Nama Kepala Keluarga dan Rumah wajib diisi!");
     return;
   }
 
-  // Proses update ke Firebase (node 'sensus_warga') bisa disesuaikan di sini
-  alert("✅ Data untuk " + namaBaru + " berhasil diperbarui!");
-  tutupModalEditWarga();
+  if (btn) { btn.disabled = true; btn.innerText = "⏳ Menyimpan..."; }
+
+  try {
+    // Cari key data warga berdasarkan nama kepala keluarga / nama rumah di Firebase
+    const sensusRef = window.firebaseRef(window.db, 'sensus_warga');
+    const snapshot = await window.firebaseGet(sensusRef);
+    let targetKey = null;
+
+    if (snapshot.exists()) {
+      snapshot.forEach(child => {
+        const val = child.val();
+        if (val && (val.kepalaKeluarga === namaBaru || val.namaRumah === rumahBaru)) {
+          targetKey = child.key;
+        }
+      });
+    }
+
+    if (!targetKey) {
+      targetKey = 'sensus_' + Date.now();
+    }
+
+    const updateRef = window.firebaseRef(window.db, 'sensus_warga/' + targetKey);
+    await window.firebaseSet(updateRef, {
+      kepalaKeluarga: namaBaru,
+      anggotaKeluarga: anggotaBaru,
+      namaRumah: rumahBaru,
+      timestamp: Date.now()
+    });
+
+    alert("✅ Data untuk " + namaBaru + " berhasil diperbarui di database!");
+    tutupModalEditWarga();
+    muatSemuaDataAdmin(); // Refresh data sensus
+  } catch (err) {
+    alert("❌ Gagal memperbarui data: " + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerText = "💾 Simpan Perubahan"; }
+  }
 }
 
     // 1. Fitur Autocomplete saat admin mengetik (Menyesuaikan globalDataWarga)
@@ -2720,7 +2755,7 @@ function editPengumuman(id) {
   import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const app = initializeApp(RT05_CONFIG.FIREBASE);
-  const db = getDatabase(app);
+  const db = getDatabase(app, RT05_CONFIG.FIREBASE.databaseURL);
 
   // EKSPOS KE GLOBAL window AGAR BISA DIAKSES OLEH SEMUA FUNGSI DI ATASNYA
   window.db = db;
