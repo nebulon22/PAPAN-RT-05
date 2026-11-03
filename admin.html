@@ -727,7 +727,7 @@
     </div>
   </div>
 
-  <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
+<div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
   <div class="modal-content" style="max-width: 400px; width: 90%;">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
       <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Keluarga / Warga</h3>
@@ -735,6 +735,9 @@
     </div>
 
     <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
+      <!-- Input ID Warga tersembunyi (jika diperlukan untuk acuan update database) -->
+      <input type="hidden" id="editWargaId">
+
       <div class="form-group" style="margin-bottom: 10px;">
         <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
         <input type="text" id="editWargaNama" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
@@ -745,9 +748,20 @@
         <textarea id="editWargaAnggota" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
       </div>
 
-      <div class="form-group" style="margin-bottom: 15px;">
+      <div class="form-group" style="margin-bottom: 10px;">
         <label style="font-size: 12px; font-weight: bold; color: #374151;">Titik Denah / Nama Rumah:</label>
         <input type="text" id="editWargaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+      </div>
+
+      <!-- TAMBAHAN BARU: Input URL Foto Rumah -->
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">URL Foto Rumah:</label>
+        <input type="url" id="editWargaFoto" placeholder="https://uguu.se/... atau link gambar" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+        
+        <!-- Preview Gambar Kecil -->
+        <div style="margin-top: 6px; text-align: center;">
+          <img id="previewFotoRumah" src="" alt="Preview Foto" style="max-height: 80px; max-width: 100%; border-radius: 4px; display: none; object-fit: cover; border: 1px solid #ddd;">
+        </div>
       </div>
 
       <div style="display: flex; gap: 8px;">
@@ -1213,20 +1227,34 @@ function formatRupiahInput(el) {
             var urlFoto = String(rawFoto).trim();
             var namaAsli = String(rawNama).trim();
 
-            var item = {
-              name: namaAsli,
-              nameAsli: namaAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
-              hidden: statusHidden,
-              foto: urlFoto
-            };
+            // Di dalam snapshot.forEach((childSnap) => { ... })
+var item = {
+    id: childSnap.key, // Simpan key Firebase agar mudah saat update data
+    name: namaAsli,
+    nameAsli: namaAsli,
+    lat: parseFloat(latClean),
+    lng: parseFloat(lngClean),
+    hidden: statusHidden,
+    foto: urlFoto,
+    anggota: val.Anggota || val.anggota || '', // Ambil data anggota keluarga jika ada
+};
 
-            if (isNaN(item.lat) || isNaN(item.lng)) return;
+if (isNaN(item.lat) || isNaN(item.lng)) return;
 
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
-            var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+
+// TAMBAHKAN TOMBOL EDIT DI SINI:
+var popupContent = `
+    <div style="text-align: center; min-width: 180px;">
+        <b>${item.name}</b>
+        ${htmlFoto}
+        <div style="display: flex; gap: 4px; margin-top: 8px;">
+            <a href="${urlRute}" target="_blank" class="btn-rute" style="flex: 1; padding: 4px; font-size: 11px; text-decoration: none; background: #22c55e; color: white; border-radius: 4px; display: inline-block;">📍 Rute</a>
+            <button onclick="bukaModalEditWargaDariPeta('${item.id}', '${item.nameAsli.replace(/'/g, "\\'")}', '${(item.anggota || '').replace(/'/g, "\\'")}', '${item.foto}')" style="flex: 1; padding: 4px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">✏️ Edit</button>
+        </div>
+    </div>
+`;
             
             let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
 
@@ -2293,6 +2321,62 @@ async function simpanPerubahanWarga(e) {
   }
 }
 
+function bukaModalEditWargaDariPeta(id, nama, anggota, foto) {
+    // Tutup popup peta yang sedang terbuka
+    if (map) map.closePopup();
+
+    // Masukkan data ke input modal edit warga
+    const inputId = document.getElementById('editWargaId');
+    if (inputId) inputId.value = id; // Pastikan input hidden ID ada di form
+
+    document.getElementById('editWargaNama').value = nama || '';
+    document.getElementById('editWargaAnggota').value = anggota || '';
+    document.getElementById('editWargaRumah').value = nama || ''; // Atau sesuaikan dengan field nama rumah
+    
+    const inputFoto = document.getElementById('editWargaFoto');
+    const preview = document.getElementById('previewFotoRumah');
+    
+    if (inputFoto) inputFoto.value = foto || '';
+    if (preview) {
+        if (foto) {
+            preview.src = foto;
+            preview.style.display = 'inline-block';
+        } else {
+            preview.style.display = 'none';
+        }
+    }
+
+    // Tampilkan modal edit warga
+    const modal = document.getElementById('modal-edit-warga');
+    if (modal) modal.style.display = 'flex';
+}
+
+function simpanPerubahanKeluarga() {
+    const idWarga = document.getElementById('editIdWarga').value;
+    const dataUpdate = {
+        namaKepala: document.getElementById('editNamaKepala').value,
+        anggota: document.getElementById('editAnggotaKeluarga').value,
+        namaRumah: document.getElementById('editTitikDenah').value,
+        fotoRumah: document.getElementById('editFotoRumah').value // Menyimpan URL foto rumah
+    };
+
+
+    // Update ke Firebase Realtime Database
+    firebase.database().ref('warga/' + idWarga).update(dataUpdate)
+        .then(() => {
+            alert('Data keluarga dan foto rumah berhasil diperbarui!');
+            // Tutup modal & refresh data/peta
+            var modalEl = document.getElementById('modalEditKeluarga');
+            var modal = bootstrap.Modal.getInstance(modalEl);
+            modal.hide();
+            loadDataWargaDanPeta(); // Fungsi reload peta/tabel Anda
+        })
+        .catch((error) => {
+            console.error("Gagal menyimpan: ", error);
+            alert('Terjadi kesalahan saat menyimpan data.');
+        });
+}
+
     // 1. Fitur Autocomplete saat admin mengetik (Menyesuaikan globalDataWarga)
 function prosesAutocompleteAdmin(keyword) {
   // Pastikan ID sesuai dengan yang ada di HTML Anda (misal: 'dropdown-autocomplete-admin' atau 'listDropdownWargaAdmin')
@@ -2403,6 +2487,20 @@ document.addEventListener("click", function(e) {
 
       if (navigator.onLine) kirimDataPendingAdmin();
     });
+
+    document.getElementById('editWargaFoto').addEventListener('input', function(e) {
+    const url = e.target.value.trim();
+    const preview = document.getElementById('previewFotoRumah');
+    if (url) {
+        preview.src = url;
+        preview.style.display = 'inline-block';
+        preview.onerror = function() {
+            preview.style.display = 'none'; // Sembunyikan jika link gambar rusak/tidak valid
+        };
+    } else {
+        preview.style.display = 'none';
+    }
+});
 
     // ==========================================
     // PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
