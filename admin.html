@@ -666,11 +666,20 @@
 
         
 
-       <!-- PANEL 1: CARI & CONNECT KOORDINAT -->
+<!-- PANEL 1: CARI & CONNECT KOORDINAT -->
 <div id="panel-cari-warga" style="position: relative;">
-  <div style="display: flex; gap: 6px; margin-bottom: 12px;">
-    <!-- Tambahkan oninput untuk memicu autocomplete secara real-time -->
-    <input type="text" id="inputCariWargaAdmin" aria-label="Cari Nama Warga" placeholder="Ketik Nama Kepala / Anggota / No Rumah..." oninput="prosesAutocompleteAdmin(this.value)" style="flex: 1; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none;">
+  <div style="display: flex; gap: 6px; margin-bottom: 12px; position: relative; align-items: center;">
+    
+    <!-- Wadah input agar tombol silang (✕) bisa menempel di dalam kolom -->
+    <div style="position: relative; flex: 1;">
+      <input type="text" id="inputCariWargaAdmin" aria-label="Cari Nama Warga" placeholder="Ketik Nama Kepala / Anggota / No Rumah..." oninput="prosesAutocompleteAdmin(this.value); toggleBtnClearWarga(this.value);" style="width: 100%; padding: 8px 32px 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; outline: none; box-sizing: border-box;">
+      
+      <!-- Tombol Clear (✕) - Default Disembunyikan -->
+      <button type="button" id="btnClearWarga" onclick="clearInputCariWarga()" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; font-size: 14px; color: #94a3b8; cursor: pointer; padding: 2px;">
+        ✕
+      </button>
+    </div>
+
     <button type="button" onclick="cariDetailKeluargaAdmin()" style="padding: 8px 14px; background: #0f172a; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
       Cari
     </button>
@@ -684,6 +693,7 @@
     <!-- Isi dinamis via JS -->
   </div>
 </div>
+        
 </div>
 
     </div>
@@ -2280,6 +2290,34 @@ if (editFotoInput) {
             preview.style.display = 'none';
         }
     });
+}
+
+// Memunculkan atau menyembunyikan tombol ✕ berdasarkan isi input
+function toggleBtnClearWarga(val) {
+    const btnClear = document.getElementById('btnClearWarga');
+    if (btnClear) {
+        btnClear.style.display = val.trim().length > 0 ? 'block' : 'none';
+    }
+}
+
+// Fungsi untuk menghapus teks pencarian dan menyembunyikan hasil
+function clearInputCariWarga() {
+    const inputEl = document.getElementById('inputCariWargaAdmin');
+    const container = document.getElementById('hasil-cari-warga');
+    const btnClear = document.getElementById('btnClearWarga');
+    const containerAutocomplete = document.getElementById("dropdown-autocomplete-admin");
+
+    if (inputEl) inputEl.value = '';
+    if (btnClear) btnClear.style.display = 'none';
+    if (container) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+    }
+    if (containerAutocomplete) {
+        containerAutocomplete.style.display = 'none';
+        containerAutocomplete.innerHTML = '';
+    }
+    if (inputEl) inputEl.focus();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
