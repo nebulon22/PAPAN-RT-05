@@ -1690,7 +1690,7 @@ window.bukaModalVideo = function(videoUrl, event) {
   if (modal && player) {
     let finalVideoUrl = videoUrl;
 
-    // 🌟 Konversi otomatis link halaman Archive.org ke link file langsung (.webm/.mp4)
+    // Konversi otomatis link halaman Archive.org ke link file langsung (.webm/.mp4)
     if (videoUrl && videoUrl.includes('archive.org') && !videoUrl.includes('/download/')) {
       let parts = videoUrl.split('/');
       let detailsIndex = parts.indexOf('details');
@@ -1702,9 +1702,22 @@ window.bukaModalVideo = function(videoUrl, event) {
 
     player.src = finalVideoUrl;
     modal.style.display = 'flex';
-    
-    // Tampilkan tombol rotasi jika diperlukan
-    if (btnRotate) btnRotate.style.display = 'block';
+
+    // 🌟 Deteksi otomatis orientasi video setelah metadata dimuat
+    player.onloadedmetadata = function() {
+      var lebarVideo = player.videoWidth;
+      var tinggiVideo = player.videoHeight;
+
+      // Jika lebar lebih besar dari tinggi (Lanskap), tampilkan tombol Putar Layar
+      // Jika tinggi lebih besar atau sama dengan lebar (Potret/Kotak), sembunyikan tombol Putar Layar
+      if (btnRotate) {
+        if (lebarVideo > tinggiVideo) {
+          btnRotate.style.display = 'block';
+        } else {
+          btnRotate.style.display = 'none';
+        }
+      }
+    };
 
     player.load();
     var playPromise = player.play();
