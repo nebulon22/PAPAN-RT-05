@@ -651,12 +651,16 @@
     <div id="stat-total-jiwa" style="font-size: 16px; font-weight: bold; color: #10b981;">0</div>
   </div>
 </div>
-        <!-- 🚨 TOMBOL AKSES LAPORAN WARGA BARU / TAMU -->
-        <div style="margin-bottom: 12px;">
-          <button type="button" onclick="bukaModalWargaBaruAdmin()" style="width: 100%; padding: 10px; background: #d97706; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-              <i class="fa-solid fa-user-plus"></i> 🚨 Cek Laporan Warga Baru / Tamu
-          </button>
-        </div>
+  
+<!-- 🚨 TOMBOL AKSES LAPORAN WARGA BARU / TAMU -->
+<div style="margin-bottom: 12px;">
+  <button type="button" onclick="bukaModalWargaBaruAdmin()" style="width: 100%; padding: 10px; background: #d97706; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+      <i class="fa-solid fa-user-plus"></i> 🚨 Cek Laporan Warga Baru / Tamu
+  </button>
+</div>
+
+<!-- WADAH / CONTAINER DAFTAR WARGA BARU -->
+<div id="containerDaftarWargaBaru" style="margin-bottom: 14px;"></div>
 
         <!-- 🌟 TOMBOL EXPORT & CETAK LAPORAN DATA WARGA -->
 <div style="display: flex; gap: 8px; margin-bottom: 14px;">
@@ -1819,10 +1823,14 @@ window.simpanSemuaPeminjamanAdmin = async function() {
       }
     }
 
+
 // 📋 Fungsi untuk Memuat & Menampilkan Daftar Warga Baru di Menu Admin Kelola Keluarga
 window.bukaModalWargaBaruAdmin = function() {
   const container = document.getElementById('containerDaftarWargaBaru');
-  if (!container) return;
+  if (!container) {
+    console.warn("Elemen containerDaftarWargaBaru tidak ditemukan!");
+    return;
+  }
 
   // Tampilkan loading sementara
   container.innerHTML = '<div style="text-align: center; font-size: 11px; color: #64748b; padding: 10px;">⏳ Memuat data laporan warga baru...</div>';
@@ -1830,7 +1838,6 @@ window.bukaModalWargaBaruAdmin = function() {
   // Ambil data dari node warga_baru
   const dbRef = window.firebaseRef(window.db, 'warga_baru');
   
-  // Menggunakan onValue atau get sekali muat
   window.firebaseOnValue(dbRef, (snapshot) => {
     const data = snapshot.val();
     let html = '';
@@ -1847,15 +1854,15 @@ window.bukaModalWargaBaruAdmin = function() {
       html += `
         <div style="background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 11px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-            <strong style="color: #0f172a; font-size: 12px;">👤 ${item.nama || '-'}</strong>
-            <span style="color: #64748b; font-size: 9px;">${item.tanggal || '-'}</span>
+            <strong style="color: #0f172a; font-size: 12px;">👤 ${escapeHTML(item.nama || '-')}</strong>
+            <span style="color: #64748b; font-size: 9px;">${escapeHTML(item.tanggal || '-')}</span>
           </div>
-          <div style="margin-bottom: 2px;">🏠 <strong>Tempat:</strong> ${item.noRumah || '-'} (${item.status || '-'})</div>
-          <div style="margin-bottom: 2px;">📱 <strong>HP:</strong> <a href="https://wa.me/${item.hp}" target="_blank" style="color: #0288d1;">${item.hp || '-'}</a></div>
-          <div style="margin-bottom: 6px; color: #475569;">💬 <strong>Cerita:</strong> ${item.cerita || '-'}</div>
+          <div style="margin-bottom: 2px;">🏠 <strong>Tempat:</strong> ${escapeHTML(item.noRumah || '-')} (${escapeHTML(item.status || '-')})</div>
+          <div style="margin-bottom: 2px;">📱 <strong>HP:</strong> <a href="https://wa.me/${escapeHTML(item.hp)}" target="_blank" style="color: #0288d1;">${escapeHTML(item.hp || '-')}</a></div>
+          <div style="margin-bottom: 6px; color: #475569;">💬 <strong>Cerita:</strong> ${escapeHTML(item.cerita || '-')}</div>
           
           <div style="display: flex; justify-content: flex-end; gap: 4px;">
-            <button type="button" onclick="editWargaBaruAdmin('${key}', '${item.nama || ''}', '${item.noRumah || ''}', '${item.hp || ''}', '${item.status || ''}', '${item.cerita || ''}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
+            <button type="button" onclick="editWargaBaruAdmin('${key}', '${escapeHTML(item.nama || '')}', '${escapeHTML(item.noRumah || '')}', '${escapeHTML(item.hp || '')}', '${escapeHTML(item.status || '')}', '${escapeHTML(item.cerita || '')}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
             <button type="button" onclick="hapusWargaBaruAdmin('${key}')" style="padding: 3px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">🗑️ Hapus</button>
           </div>
         </div>
