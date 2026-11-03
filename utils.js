@@ -289,5 +289,7 @@ window.formatTanggalIndo = formatTanggalIndo;
 window.tampilkanToast = tampilkanToast;
 window.bukaModalInventaris = bukaModalInventaris;
 window.tutupModalInventaris = tutupModalInventaris;
+window.bukaFotoBesar = bukaFotoBesar;
+window.tutupFotoBesar = tutupFotoBesar;
 
 window.dispatchEvent(new Event('utilsSiap'));
