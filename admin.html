@@ -662,15 +662,7 @@
   </button>
 </div>
 
-        <!-- TAB TOMBOL AKSI -->
-        <div style="display: flex; gap: 8px; margin-bottom: 14px;">
-          <button type="button" onclick="switchTabAdminWarga('cari')" id="btn-tab-cari" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; cursor: pointer; font-size: 12px;">
-            🔍 Cari Data Warga
-          </button>
-          <button type="button" onclick="switchTabAdminWarga('tambah')" id="btn-tab-tambah" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: bold; cursor: pointer; font-size: 12px;">
-            ➕ Tambah Keluarga Baru
-          </button>
-        </div>
+
 
         
 
@@ -692,37 +684,7 @@
     <!-- Isi dinamis via JS -->
   </div>
 </div>
-
-  <!-- PANEL 2: FORM TAMBAH DATA KELUARGA -->
-        <div id="panel-tambah-warga" style="display: none;">
-          <form id="formTambahKeluargaAdmin">
-            
-            <div style="margin-bottom: 10px;">
-              <label for="addKepalaKeluarga" style="font-size: 11px; font-weight: bold; color: #475569;">Nama Lengkap Kepala Keluarga:</label>
-              <input type="text" id="addKepalaKeluarga" placeholder="Contoh: Bejo Nurcahyono" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
-            </div>
-
-            <div style="margin-bottom: 10px; position: relative;">
-              <label for="inputCariRumahPeta" style="font-size: 11px; font-weight: bold; color: #475569;">Pilih Lokasi Rumah (Integrasi Peta):</label>
-              <input type="text" id="inputCariRumahPeta" placeholder="🔍 Ketik untuk mencari rumah..." autocomplete="off" oninput="filterDropdownRumah(this.value)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box;" required>
-              
-              <!-- Kotak Daftar Hasil Pencarian Melayang -->
-              <div id="listDropdownRumah" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; max-height: 150px; overflow-y: auto; background: white; border: 1px solid #cbd5e1; border-radius: 6px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); z-index: 9999;"></div>
-            </div>
-
-            <div style="margin-bottom: 12px;">
-              <label for="addAnggotaKeluarga" style="font-size: 11px; font-weight: bold; color: #475569;">Daftar Nama Anggota Keluarga (Pisahkan koma):</label>
-              <textarea id="addAnggotaKeluarga" rows="3" placeholder="Contoh: Supartinah (Istri), Budi (Anak), Ani (Anak)" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; margin-top: 4px; box-sizing: border-box; resize: vertical;" required></textarea>
-            </div>
-
-            <button type="button" onclick="simpanKeluargaAdmin()" id="btnSimpanKeluarga" style="width: 100%; padding: 10px; background: #10b981; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
-              💾 Simpan ke Google Sheets
-            </button>
-            
-          </form>
-        </div>
-        
-      </div>
+</div>
 
     </div>
   </div>
@@ -2098,24 +2060,6 @@ function tutupModalEditWarga() {
     }
 }
 
-function switchTabAdminWarga(tab) {
-    const pCari = document.getElementById("panel-cari-warga");
-    const pTambah = document.getElementById("panel-tambah-warga");
-    const btnCari = document.getElementById("btn-tab-cari");
-    const btnTambah = document.getElementById("btn-tab-tambah");
-
-    if (tab === 'cari') {
-        pCari.style.display = "block";
-        pTambah.style.display = "none";
-        if(btnCari) { btnCari.style.background = "#0288d1"; btnCari.style.color = "#fff"; }
-        if(btnTambah) { btnTambah.style.background = "#f1f5f9"; btnTambah.style.color = "#64748b"; }
-    } else {
-        pCari.style.display = "none";
-        pTambah.style.display = "block";
-        if(btnTambah) { btnTambah.style.background = "#0288d1"; btnTambah.style.color = "#fff"; }
-        if(btnCari) { btnCari.style.background = "#f1f5f9"; btnCari.style.color = "#64748b"; }
-    }
-}
 
 // ==========================================
 // 3. PENCARIAN & EDIT DATA WARGA (TERPADU)
@@ -2244,87 +2188,9 @@ async function simpanPerubahanWarga(e) {
     }
 }
     
-async function simpanKeluargaAdmin() {
-    const kepala = document.getElementById("addKepalaKeluarga").value.trim();
-    const rumahPilih = document.getElementById("inputCariRumahPeta").value.trim();
-    const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
-
-    if (!kepala || !rumahPilih || !anggota) {
-        alert("Mohon lengkapi semua isian form dan pilih lokasi rumah!");
-        return;
-    }
-
-    const btn = document.getElementById("btnSimpanKeluarga");
-    if (btn) { btn.disabled = true; btn.innerText = "⏳ Menyimpan..."; }
-
-    try {
-        // Cari data rumah di globalDataWarga berdasarkan nama rumah yang dipilih dari dropdown peta
-        const targetItem = globalDataWarga.find(item => item.nama.toLowerCase() === rumahPilih.toLowerCase());
-
-        if (!targetItem) {
-            alert("❌ Titik lokasi rumah tersebut tidak ditemukan di database peta! Pastikan memilih dari daftar dropdown.");
-            if (btn) { btn.disabled = false; btn.innerText = "💾 Simpan ke Database"; }
-            return;
-        }
-
-        // Update data kependudukan langsung ke node peta_warga berdasarkan ID uniknya
-        const updateRef = window.firebaseRef(window.db, 'peta_warga/' + targetItem.id);
-        await window.firebaseUpdate(updateRef, {
-            kepalaKeluarga: kepala,
-            anggotaKeluarga: anggota
-        });
-
-        alert("✅ Data Keluarga berhasil ditambahkan ke " + rumahPilih + "!");
-        
-        // Reset form & kembali ke tab cari
-        document.getElementById("formTambahKeluargaAdmin").reset();
-        document.getElementById("inputCariRumahPeta").value = ""; 
-        switchTabAdminWarga('cari');
-        muatSemuaDataAdmin();
-    } catch (err) {
-        alert("❌ Gagal menyimpan: " + err.message);
-    } finally {
-        if (btn) { btn.disabled = false; btn.innerText = "💾 Simpan ke Database"; }
-    }
-}
-
 // ==========================================
 // 4. AUTOCOMPLETE & PENCARIAN RUMAH PETA
 // ==========================================
-function filterDropdownRumah(keyword) {
-    const container = document.getElementById("listDropdownRumah");
-    const textCari = keyword.toLowerCase().trim();
-
-    if (!container) return;
-
-    if (!textCari) {
-        container.style.display = "none";
-        return;
-    }
-
-    const hasilFilter = listSemuaRumahAdmin.filter(nama => nama.toLowerCase().includes(textCari));
-
-    if (hasilFilter.length === 0) {
-        container.innerHTML = `<div style="padding: 8px; font-size: 11px; color: #94a3b8; text-align: center;">Tidak ditemukan</div>`;
-        container.style.display = "block";
-        return;
-    }
-
-    container.innerHTML = hasilFilter.map(nama => `
-        <div onclick="pilihRumahPeta('${nama.replace(/'/g, "\\'")}')" style="padding: 8px 10px; font-size: 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#fff'">
-            🏠 ${nama}
-        </div>
-    `).join('');
-
-    container.style.display = "block";
-}
-
-function pilihRumahPeta(namaRumah) {
-    const inputRumah = document.getElementById("inputCariRumahPeta");
-    const container = document.getElementById("listDropdownRumah");
-    if (inputRumah) inputRumah.value = namaRumah;
-    if (container) container.style.display = "none";
-}
 
 function prosesAutocompleteAdmin(keyword) {
     const container = document.getElementById("dropdown-autocomplete-admin") || document.getElementById("listDropdownWargaAdmin");
