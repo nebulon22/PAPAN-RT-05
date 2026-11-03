@@ -1673,9 +1673,11 @@ window.toggleRotasiVideo = function() {
 };
 
 window.bukaModalVideo = function(videoUrl, event) {
-  if (event) {
+  if (event && typeof event.stopPropagation === 'function') {
     event.stopPropagation();
-    if (event.preventDefault) event.preventDefault();
+  }
+  if (event && typeof event.preventDefault === 'function') {
+    event.preventDefault();
   }
 
   var modalInfo = document.getElementById('modal-info');
@@ -1685,31 +1687,30 @@ window.bukaModalVideo = function(videoUrl, event) {
   var player = document.getElementById('player-video-modal');
   var btnRotate = document.getElementById('btn-rotate-video');
 
-  isVideoRotated = false;
-  if (player) player.classList.remove('video-rotated');
-  if (btnRotate) {
-    btnRotate.innerHTML = '🔄 Putar Layar';
-    btnRotate.style.display = 'none';
-  }
-
   if (modal && player) {
-    player.src = videoUrl;
+    let finalVideoUrl = videoUrl;
+
+    // 🌟 Konversi otomatis link halaman Archive.org ke link file langsung (.webm/.mp4)
+    if (videoUrl && videoUrl.includes('archive.org') && !videoUrl.includes('/download/')) {
+      let parts = videoUrl.split('/');
+      let detailsIndex = parts.indexOf('details');
+      if (detailsIndex !== -1 && parts[detailsIndex + 1]) {
+        let identifier = parts[detailsIndex + 1];
+        finalVideoUrl = `https://archive.org/download/${identifier}/${identifier}.webm`;
+      }
+    }
+
+    player.src = finalVideoUrl;
     modal.style.display = 'flex';
     
-    player.load();
-    
-    player.onloadedmetadata = function() {
-      if (player.videoWidth > player.videoHeight) {
-        if (btnRotate) btnRotate.style.display = 'block';
-      } else {
-        if (btnRotate) btnRotate.style.display = 'none';
-      }
-    };
+    // Tampilkan tombol rotasi jika diperlukan
+    if (btnRotate) btnRotate.style.display = 'block';
 
+    player.load();
     var playPromise = player.play();
     if (playPromise !== undefined) {
       playPromise.catch(function(error) {
-        console.log("Autoplay tercegah:", error);
+        console.log("Autoplay dicegah oleh browser:", error);
       });
     }
   }
@@ -1720,7 +1721,10 @@ window.tutupModalVideo = function() {
   var player = document.getElementById('player-video-modal');
   var btnRotate = document.getElementById('btn-rotate-video');
 
-  isVideoRotated = false;
+  if (typeof isVideoRotated !== 'undefined') {
+    isVideoRotated = false;
+  }
+  
   if (player) {
     player.classList.remove('video-rotated');
     player.pause();
