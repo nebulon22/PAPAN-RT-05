@@ -2243,6 +2243,50 @@ async function simpanPerubahanWarga(e) {
         if (btn) { btn.disabled = false; btn.innerText = "💾 Simpan Perubahan"; }
     }
 }
+    
+async function simpanKeluargaAdmin() {
+    const kepala = document.getElementById("addKepalaKeluarga").value.trim();
+    const rumahPilih = document.getElementById("inputCariRumahPeta").value.trim();
+    const anggota = document.getElementById("addAnggotaKeluarga").value.trim();
+
+    if (!kepala || !rumahPilih || !anggota) {
+        alert("Mohon lengkapi semua isian form dan pilih lokasi rumah!");
+        return;
+    }
+
+    const btn = document.getElementById("btnSimpanKeluarga");
+    if (btn) { btn.disabled = true; btn.innerText = "⏳ Menyimpan..."; }
+
+    try {
+        // Cari data rumah di globalDataWarga berdasarkan nama rumah yang dipilih dari dropdown peta
+        const targetItem = globalDataWarga.find(item => item.nama.toLowerCase() === rumahPilih.toLowerCase());
+
+        if (!targetItem) {
+            alert("❌ Titik lokasi rumah tersebut tidak ditemukan di database peta! Pastikan memilih dari daftar dropdown.");
+            if (btn) { btn.disabled = false; btn.innerText = "💾 Simpan ke Database"; }
+            return;
+        }
+
+        // Update data kependudukan langsung ke node peta_warga berdasarkan ID uniknya
+        const updateRef = window.firebaseRef(window.db, 'peta_warga/' + targetItem.id);
+        await window.firebaseUpdate(updateRef, {
+            kepalaKeluarga: kepala,
+            anggotaKeluarga: anggota
+        });
+
+        alert("✅ Data Keluarga berhasil ditambahkan ke " + rumahPilih + "!");
+        
+        // Reset form & kembali ke tab cari
+        document.getElementById("formTambahKeluargaAdmin").reset();
+        document.getElementById("inputCariRumahPeta").value = ""; 
+        switchTabAdminWarga('cari');
+        muatSemuaDataAdmin();
+    } catch (err) {
+        alert("❌ Gagal menyimpan: " + err.message);
+    } finally {
+        if (btn) { btn.disabled = false; btn.innerText = "💾 Simpan ke Database"; }
+    }
+}
 
 // ==========================================
 // 4. AUTOCOMPLETE & PENCARIAN RUMAH PETA
