@@ -651,6 +651,12 @@
     <div id="stat-total-jiwa" style="font-size: 16px; font-weight: bold; color: #10b981;">0</div>
   </div>
 </div>
+        <!-- 🚨 TOMBOL AKSES LAPORAN WARGA BARU / TAMU -->
+        <div style="margin-bottom: 12px;">
+          <button type="button" onclick="bukaModalWargaBaru()" style="width: 100%; padding: 10px; background: #d97706; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <i class="fa-solid fa-user-plus"></i> 🚨 Cek Laporan Warga Baru / Tamu
+          </button>
+        </div>
 
         <!-- 🌟 TOMBOL EXPORT & CETAK LAPORAN DATA WARGA -->
 <div style="display: flex; gap: 8px; margin-bottom: 14px;">
@@ -1812,6 +1818,82 @@ window.simpanSemuaPeminjamanAdmin = async function() {
         modal.style.display = 'none';
       }
     }
+
+    // Fungsi untuk membuka dan memuat data dari node warga_baru
+function bukaModalWargaBaru() {
+  // Tutup modal keluarga atau tampilkan modal warga baru
+  const dbRef = ref(db, 'warga_baru');
+  onValue(dbRef, (snapshot) => {
+    const data = snapshot.val();
+    let html = '';
+    
+    if (!data) {
+      html = '<p class="text-center text-muted">Belum ada laporan warga baru atau tamu.</p>';
+    } else {
+      html = '<div class="list-group">';
+      Object.keys(data).forEach((key) => {
+        const item = data[key];
+        html += `
+          <div class="list-group-item list-group-item-action mb-2 shadow-sm rounded">
+            <div class="d-flex w-100 justify-content-between">
+              <h5 class="mb-1 text-primary fw-bold">${item.nama || '-'}</h5>
+              <small class="text-muted">${item.tanggal || '-'}</small>
+            </div>
+            <p class="mb-1"><strong>Tempat/No. Rumah:</strong> ${item.noRumah || '-'}</p>
+            <p class="mb-1"><strong>Status Hunian:</strong> <span class="badge bg-info text-dark">${item.status || '-'}</span></p>
+            <p class="mb-1"><strong>No. HP/WA:</strong> <a href="https://wa.me/${item.hp}" target="_blank">${item.hp || '-'}</a></p>
+            <p class="mb-2"><strong>Cerita/Aktivitas:</strong> ${item.cerita || '-'}</p>
+            <div class="d-flex justify-content-end gap-2">
+              <button class="btn btn-sm btn-outline-primary" onclick="editWargaBaru('${key}', '${item.nama}', '${item.noRumah}', '${item.hp}', '${item.status}', '${item.cerita}')">✏️ Edit</button>
+              <button class="btn btn-sm btn-outline-danger" onclick="hapusWargaBaru('${key}')">🗑️ Hapus</button>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+    }
+    
+    // Tampilkan ke dalam container atau modal khusus di halaman admin
+    document.getElementById('containerDaftarWargaBaru').innerHTML = html;
+  }, { onlyOnce: true });
+}
+
+// Fungsi Edit Data Warga Baru
+window.editWargaBaru = function(id, nama, noRumah, hp, status, cerita) {
+  // Masukkan data ke form edit atau prompt sederhana untuk pembaruan data
+  const rNama = prompt("Edit Nama Lengkap:", nama);
+  if (rNama === null) return;
+  const rNoRumah = prompt("Edit No Rumah/Kost:", noRumah);
+  const rHp = prompt("Edit No HP/WA:", hp);
+  const rStatus = prompt("Edit Status (Kontrakan/Warga Tetap):", status);
+  const rCerita = prompt("Edit Cerita/Pekerjaan:", cerita);
+
+  const updates = {};
+  updates[`warga_baru/${id}/nama`] = rNama;
+  updates[`warga_baru/${id}/noRumah`] = rNoRumah;
+  updates[`warga_baru/${id}/hp`] = rHp;
+  updates[`warga_baru/${id}/status`] = rStatus;
+  updates[`warga_baru/${id}/cerita`] = rCerita;
+
+  update(ref(db), updates).then(() => {
+    alert("Data warga baru berhasil diperbarui!");
+    bukaModalWargaBaru(); // Refresh tampilan
+  }).catch((error) => {
+    alert("Gagal memperbarui data: " + error.message);
+  });
+};
+
+// Fungsi Hapus Data Warga Baru
+window.hapusWargaBaru = function(id) {
+  if (confirm("Yakin ingin menghapus laporan warga/tamu ini?")) {
+    remove(ref(db, `warga_baru/${id}`)).then(() => {
+      alert("Laporan berhasil dihapus.");
+      bukaModalWargaBaru(); // Refresh tampilan
+    }).catch((error) => {
+      alert("Gagal menghapus: " + error.message);
+    });
+  }
+};
 
   // 1. Fungsi Unduh Data Sensus ke Excel (CSV) dengan Ringkasan Total (1 Node: peta_warga)
 async function exportSensusToCSV() {
