@@ -3119,6 +3119,111 @@ window.switchModeJimpitan = function(mode) {
   renderDropdownTanggal();
 };
 
+// 1. Fungsi Unduh ke Excel (Format CSV)
+window.exportJimpitanToCSV = function() {
+    const selectPeriode = document.getElementById('select-bulan-jimpitan');
+    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap_Jimpitan";
+    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
+    const gridJimpitan = document.getElementById('grid-jimpitan');
+
+    if (!gridJimpitan) {
+        alert("Data rekap tidak ditemukan!");
+        return;
+    }
+
+    let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
+
+    if (rawTextLines.length === 0) {
+        alert("Tidak ada data untuk diunduh pada periode ini.");
+        return;
+    }
+
+    let csvContent = "\uFEFF";
+    csvContent += `"LAPORAN REKAP JIMPITAN RT 05 KAYEN"\n`;
+    csvContent += `"Periode: ${namaPeriode}"\n`;
+    csvContent += `"Total Keseluruhan: ${totalNominal}"\n\n`;
+    csvContent += `"Nama Warga / Keterangan";"Nominal Jimpitan"\n`;
+
+    for (let i = 0; i < rawTextLines.length; i += 2) {
+        let col1 = rawTextLines[i] ? rawTextLines[i].replace(/"/g, '""') : '';
+        let col2 = rawTextLines[i+1] ? rawTextLines[i+1].replace(/"/g, '""') : '';
+        if (col1) {
+            csvContent += `"${col1}";"${col2}"\n`;
+        }
+    }
+
+    csvContent += `"TOTAL KESELURUHAN";"${totalNominal}"\n`;
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+// 2. Fungsi Cetak / Simpan ke PDF via Print Dialog Browser
+window.cetakLaporanJimpitan = function() {
+    const selectPeriode = document.getElementById('select-bulan-jimpitan');
+    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap Jimpitan";
+    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
+    const gridJimpitan = document.getElementById('grid-jimpitan');
+
+    if (!gridJimpitan) {
+        alert("Data rekap tidak ditemukan!");
+        return;
+    }
+
+    let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
+
+    if (rawTextLines.length === 0) {
+        alert("Tidak ada data untuk dicetak pada periode ini.");
+        return;
+    }
+
+    const printWindow = window.open('', '_blank', 'height=700,width=900');
+    printWindow.document.write('<html><head><title>Laporan Rekap Jimpitan RT 05 Kayen</title>');
+    printWindow.document.write('<style>');
+    printWindow.document.write('body { font-family: Arial, sans-serif; padding: 30px; color: #111; }');
+    printWindow.document.write('h2 { text-align: center; color: #0288d1; margin-bottom: 5px; font-size: 18px; }');
+    printWindow.document.write('.subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 20px; }');
+    printWindow.document.write('.total-box { background: #10b981; color: white; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; font-size: 15px; }');
+    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; }');
+    printWindow.document.write('th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: left; }');
+    printWindow.document.write('th { background-color: #f1f5f9; color: #1e293b; font-weight: bold; }');
+    printWindow.document.write('tr:nth-child(even) { background-color: #f8fafc; }');
+    printWindow.document.write('.text-right { text-align: right; }');
+    printWindow.document.write('</style>');
+    printWindow.document.write('</head><body>');
+    
+    printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN REKAP JIMPITAN</h2>');
+    printWindow.document.write(`<div class="subtitle">Periode Laporan: ${namaPeriode}</div>`);
+    printWindow.document.write(`<div class="total-box">TOTAL KESELURUHAN: ${totalNominal}</div>`);
+    
+    printWindow.document.write('<table>');
+    printWindow.document.write('<thead><tr><th>Nama Warga / Keterangan / Malam</th><th class="text-right">Nominal (Rp)</th></tr></thead>');
+    printWindow.document.write('<tbody>');
+
+    for (let i = 0; i < rawTextLines.length; i += 2) {
+        let col1 = rawTextLines[i] ? rawTextLines[i] : '';
+        let col2 = rawTextLines[i+1] ? rawTextLines[i+1] : '';
+        if (col1) {
+            printWindow.document.write(`<tr><td>${col1}</td><td class="text-right">${col2}</td></tr>`);
+        }
+    }
+
+    printWindow.document.write('</tbody></table>');
+    printWindow.document.write('</body></html>');
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+        printWindow.print();
+        printWindow.close();
+    }, 600);
+};
 
     const dataChangelog = [
        {
