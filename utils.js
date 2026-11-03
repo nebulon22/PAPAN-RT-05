@@ -236,6 +236,47 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ==========================================
+// PENGELOLA MODAL FOTO BESAR GLOBAL
+// ==========================================
+window.bukaFotoBesar = function(urlFoto, event) {
+  if (event && typeof event.stopPropagation === 'function') {
+    event.stopPropagation();
+  }
+  
+  let modalFoto = document.getElementById('modal-foto-besar');
+  if (!modalFoto) {
+    modalFoto = document.createElement('div');
+    modalFoto.id = 'modal-foto-besar';
+    modalFoto.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:999999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box;';
+    modalFoto.innerHTML = `
+      <div style="position:relative; max-width:90%; max-height:90%;">
+        <button type="button" data-click="tutupFotoBesar" style="position:absolute; top:-40px; right:0; background:#ef4444; color:#fff; border:none; border-radius:50%; width:32px; height:32px; font-size:16px; cursor:pointer; font-weight:bold; z-index:1000000;">✕</button>
+        <img id="img-tampil-besar" src="" style="max-width:100%; max-height:85vh; border-radius:8px; object-fit:contain; display:block; margin:0 auto;" />
+      </div>
+    `;
+    modalFoto.onclick = function(e) {
+      if (e.target.id === 'modal-foto-besar') {
+        window.tutupFotoBesar();
+      }
+    };
+    document.body.appendChild(modalFoto);
+  }
+
+  const imgElem = document.getElementById('img-tampil-besar');
+  if (imgElem) {
+    imgElem.src = urlFoto;
+  }
+  modalFoto.style.display = 'flex';
+};
+
+window.tutupFotoBesar = function() {
+  const modalFoto = document.getElementById('modal-foto-besar');
+  if (modalFoto) {
+    modalFoto.style.display = 'none';
+  }
+};
+
+// ==========================================
 // DAFTARKAN KE GLOBAL WINDOW
 // ==========================================
 window.RT05_CONFIG = RT05_CONFIG;
