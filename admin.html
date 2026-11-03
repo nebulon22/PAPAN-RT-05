@@ -653,14 +653,19 @@
 </div>
   
 <!-- 🚨 TOMBOL AKSES LAPORAN WARGA BARU / TAMU -->
-<div style="margin-bottom: 12px;">
-  <button type="button" onclick="bukaModalWargaBaruAdmin()" style="width: 100%; padding: 10px; background: #d97706; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-      <i class="fa-solid fa-user-plus"></i> 🚨 Cek Laporan Warga Baru / Tamu
-  </button>
-</div>
+        <div style="margin-bottom: 8px;">
+          <button type="button" onclick="togglePanelWargaBaruAdmin()" style="width: 100%; padding: 10px; background: #d97706; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <span style="display: flex; align-items: center; gap: 6px;">
+              <i class="fa-solid fa-user-plus"></i> 🚨 Cek Laporan Warga Baru / Tamu
+            </span>
+            <span id="badge-warga-baru-count" style="background: rgba(255,255,255,0.3); padding: 2px 6px; border-radius: 10px; font-size: 10px;">Buka ▾</span>
+          </button>
+        </div>
 
-<!-- WADAH / CONTAINER DAFTAR WARGA BARU -->
-<div id="containerDaftarWargaBaru" style="margin-bottom: 14px;"></div>
+        <!-- WADAH / CONTAINER DAFTAR WARGA BARU (Default Disembunyikan/Tutup) -->
+        <div id="containerDaftarWargaBaru" style="display: none; max-height: 220px; overflow-y: auto; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; margin-bottom: 12px;">
+          <!-- Isi data akan dimuat di sini via JavaScript -->
+        </div>
 
         <!-- 🌟 TOMBOL EXPORT & CETAK LAPORAN DATA WARGA -->
 <div style="display: flex; gap: 8px; margin-bottom: 14px;">
@@ -1824,18 +1829,25 @@ window.simpanSemuaPeminjamanAdmin = async function() {
     }
 
 
-// 📋 Fungsi untuk Memuat & Menampilkan Daftar Warga Baru di Menu Admin Kelola Keluarga
+// 📋 Fungsi Toggle Buka/Tutup Panel Daftar Warga Baru di Admin
+window.togglePanelWargaBaruAdmin = function() {
+  const container = document.getElementById('containerDaftarWargaBaru');
+  if (!container) return;
+
+  if (container.style.display === 'none' || !container.style.display) {
+    container.style.display = 'block';
+    bukaModalWargaBaruAdmin(); // Ambil dan muat data saat dibuka
+  } else {
+    container.style.display = 'none';
+  }
+};
+
 window.bukaModalWargaBaruAdmin = function() {
   const container = document.getElementById('containerDaftarWargaBaru');
-  if (!container) {
-    console.warn("Elemen containerDaftarWargaBaru tidak ditemukan!");
-    return;
-  }
+  if (!container) return;
 
-  // Tampilkan loading sementara
   container.innerHTML = '<div style="text-align: center; font-size: 11px; color: #64748b; padding: 10px;">⏳ Memuat data laporan warga baru...</div>';
 
-  // Ambil data dari node warga_baru
   const dbRef = window.firebaseRef(window.db, 'warga_baru');
   
   window.firebaseOnValue(dbRef, (snapshot) => {
@@ -1843,12 +1855,14 @@ window.bukaModalWargaBaruAdmin = function() {
     let html = '';
 
     if (!data) {
-      container.innerHTML = '<div style="text-align: center; font-size: 11px; color: #94a3b8; padding: 10px; background: #f8fafc; border-radius: 6px;">Belum ada laporan warga baru / tamu masuk.</div>';
+      container.innerHTML = '<div style="text-align: center; font-size: 11px; color: #94a3b8; padding: 10px;">Belum ada laporan warga baru / tamu masuk.</div>';
       return;
     }
 
-    html = '<div style="max-height: 220px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 8px; background: #f8fafc; margin-bottom: 10px;">';
-    
+    let totalLaporan = Object.keys(data).length;
+    const badgeCount = document.getElementById('badge-warga-baru-count');
+    if (badgeCount) badgeCount.innerText = `${totalLaporan} Laporan ▴`;
+
     Object.keys(data).forEach((key) => {
       const item = data[key];
       html += `
@@ -1868,7 +1882,6 @@ window.bukaModalWargaBaruAdmin = function() {
         </div>
       `;
     });
-    html += '</div>';
 
     container.innerHTML = html;
   }, { onlyOnce: true });
@@ -1893,7 +1906,7 @@ window.editWargaBaruAdmin = async function(id, nama, noRumah, hp, status, cerita
 
     await window.firebaseUpdate(window.firebaseRef(window.db), updates);
     alert('✅ Data warga baru berhasil diperbarui!');
-    window.bukaModalWargaBaruAdmin(); // Refresh tampilan daftar
+    window.bukaModalWargaBaruAdmin();
   } catch (err) {
     alert('❌ Gagal memperbarui: ' + err);
   }
@@ -1905,7 +1918,7 @@ window.hapusWargaBaruAdmin = async function(id) {
     try {
       await window.firebaseRemove(window.firebaseRef(window.db, `warga_baru/${id}`));
       alert('🗑️ Laporan berhasil dihapus.');
-      window.bukaModalWargaBaruAdmin(); // Refresh tampilan daftar
+      window.bukaModalWargaBaruAdmin();
     } catch (err) {
       alert('❌ Gagal menghapus: ' + err);
     }
