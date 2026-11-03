@@ -508,7 +508,7 @@
     </div>
   </div>
    
-  <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
+<!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
   <div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
     <div class="modal-content" style="max-width: 550px; width: 92%;">
       
@@ -559,30 +559,50 @@
         </button>
       </form>
 
-      <form id="formPinjamBarang" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 8px; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
-        <div>
-          <label for="pinjamNamaWarga" style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah:</label>
-          <input type="text" id="pinjamNamaWarga" placeholder="Contoh: Pak Budi (A-12)" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+      <!-- 🌟 FORM PEMINJAMAN DENGAN SISTEM KERANJANG (MULTI-ITEM) -->
+      <div style="background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+        
+        <div style="margin-bottom: 8px;">
+          <label for="pinjamNamaWarga" style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah Peminjam:</label>
+          <input type="text" id="pinjamNamaWarga" placeholder="Contoh: Pak Budi (A-12)" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
         </div>
 
-        <div>
-          <label for="pinjamPilihBarang" style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
-          <select id="pinjamPilihBarang" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-            <option value="">-- Pilih Barang --</option>
-          </select>
+        <div style="display: grid; grid-template-columns: 2fr 1fr auto; gap: 8px; align-items: flex-end; margin-bottom: 8px;">
+          <div>
+            <label for="pinjamPilihBarang" style="font-size: 11px; font-weight: bold; color: #374151;">Pilih Barang:</label>
+            <select id="pinjamPilihBarang" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+              <option value="">-- Pilih Barang --</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="pinjamJumlah" style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah:</label>
+            <input type="number" id="pinjamJumlah" min="1" value="1" placeholder="Jumlah" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+          </div>
+
+          <div>
+            <button type="button" onclick="tambahKeKeranjangPinjam()" style="padding: 7px 12px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px; white-space: nowrap;">
+              ➕ Tambah
+            </button>
+          </div>
         </div>
 
-        <div>
-          <label for="pinjamJumlah" style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Dipinjam:</label>
-          <input type="number" id="pinjamJumlah" min="1" placeholder="Masukkan angka" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+        <!-- 🛒 Tabel Preview Keranjang Sementara -->
+        <div style="background: #fff; border: 1px solid #cbd5e1; border-radius: 4px; padding: 6px; margin-top: 8px;">
+          <div style="font-size: 11px; font-weight: bold; color: #1e293b; margin-bottom: 4px;">🛒 Daftar Barang yang Akan Dipinjam:</div>
+          <div style="max-height: 100px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+              <tbody id="tabel-keranjang-sementara">
+                <tr><td colspan="3" style="text-align: center; color: #94a3b8; padding: 6px;">Belum ada barang ditambahkan ke keranjang.</td></tr>
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div style="display: flex; align-items: flex-end;">
-          <button type="button" onclick="simpanPeminjamanAdmin()" style="width: 100%; padding: 8px; background: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
-            ➕ Catat Pinjam
-          </button>
-        </div>
-      </form>
+        <button type="button" onclick="simpanSemuaPeminjamanAdmin()" style="width: 100%; margin-top: 10px; padding: 9px; background: #10b981; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          💾 Simpan Semua Peminjaman Sekaligus
+        </button>
+      </div>
 
       <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151;">📋 Daftar Belum Dikembalikan:</h4>
       <div style="overflow-x: auto;">
@@ -1518,129 +1538,89 @@ function formatRupiahInput(el) {
       `).join('');
     }
     
-    async function simpanPeminjamanAdmin() {
-      const peminjam = document.getElementById("pinjamNamaWarga").value.trim();
-      const barang = document.getElementById("pinjamPilihBarang").value;
-      const jumlah = document.getElementById("pinjamJumlah").value;
-      
-      if (!peminjam || !barang || !jumlah) {
-        alert("Mohon lengkapi semua data!");
-        return;
-      }
+   
 
-      const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanPeminjamanAdmin']");
-      if(btn) { btn.innerText = "⏳ Menyimpan..."; btn.disabled = true; }
+   async function simpanBarangStokAdmin() {
+    const pilihPilihan = document.getElementById('stokPilihBarang').value;
+    const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
+    const jenisAksi = document.getElementById('stokJenisAksi').value;
+    const jumlahUnit = parseInt(document.getElementById('stokJumlahTotal').value, 10);
+    
+    let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
 
-      const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-      const pinjamId = "pinjam_" + Date.now();
-      
-      const payload = {
-        id: pinjamId,
-        peminjam: peminjam,
-        barang: barang,
-        namaBarang: barang,
-        jumlah: parseInt(jumlah, 10),
-        tgl: hariIni,
-        status: "Dipinjam"
-      };
-
-      try {
-        const targetRef = window.firebaseRef(window.db, 'peminjaman/' + pinjamId);
-        await window.firebaseSet(targetRef, payload);
-
-        if(btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-        alert("✅ Peminjaman berhasil dicatat ke database!");
-        
-        document.getElementById("pinjamNamaWarga").value = "";
-        document.getElementById("pinjamPilihBarang").value = "";
-        document.getElementById("pinjamJumlah").value = "";
-        
-        if (typeof muatPeminjamanAdmin === 'function') {
-          muatPeminjamanAdmin();
-        }
-      } catch (err) {
-        if(btn) { btn.innerText = "➕ Catat Pinjam"; btn.disabled = false; }
-        alert("❌ Gagal menyimpan ke database: " + err.message);
-      }
+    if (!namaBarang || isNaN(jumlahUnit) || jumlahUnit <= 0) {
+      alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
+      return;
     }
 
-    async function simpanBarangStokAdmin() {
-      const pilihPilihan = document.getElementById('stokPilihBarang').value;
-      const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
-      const jenisAksi = document.getElementById('stokJenisAksi').value;
-      const jumlahUnit = parseInt(document.getElementById('stokJumlahTotal').value, 10);
+    const btn = document.querySelector('#formStokBarang button');
+    if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
+
+    try {
+      const inventarisRef = window.firebaseRef(window.db, 'inventaris');
+      const snapshot = await window.firebaseGet(inventarisRef);
       
-      let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
+      let targetKey = null;
+      let dataBarangLama = null;
 
-      if (!namaBarang || isNaN(jumlahUnit) || jumlahUnit <= 0) {
-        alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
-        return;
-      }
-
-      const btn = document.querySelector('#formStokBarang button');
-      if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
-
-      try {
-        const inventarisRef = window.firebaseRef(window.db, 'inventaris');
-        const snapshot = await window.firebaseGet(inventarisRef);
-        
-        let targetKey = null;
-        let dataBarangLama = null;
-
-        if (snapshot.exists()) {
-          snapshot.forEach(child => {
-            const val = child.val();
-            const namaDb = val.namaBarang || val.nama || '';
-            if (namaDb.toLowerCase() === namaBarang.toLowerCase()) {
-              targetKey = child.key;
-              dataBarangLama = val;
-            }
-          });
-        }
-
-        let stokAkhir = jumlahUnit;
-        if (targetKey && dataBarangLama) {
-          const stokLama = parseInt(dataBarangLama.totalStok !== undefined ? dataBarangLama.totalStok : (dataBarangLama.total || 0), 10);
-          if (jenisAksi.toLowerCase().includes('kurangi') || jenisAksi.toLowerCase().includes('kurang')) {
-            stokAkhir = Math.max(0, stokLama - jumlahUnit);
-          } else {
-            stokAkhir = stokLama + jumlahUnit;
+      if (snapshot.exists()) {
+        snapshot.forEach(child => {
+          const val = child.val();
+          const namaDb = val.namaBarang || val.nama || '';
+          if (namaDb.toLowerCase() === namaBarang.toLowerCase()) {
+            targetKey = child.key;
+            dataBarangLama = val;
           }
+        });
+      }
 
-          const updateRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
-          await window.firebaseSet(updateRef, {
-            ...dataBarangLama,
-            namaBarang: namaBarang,
-            totalStok: stokAkhir
-          });
+      let stokAkhir = jumlahUnit;
+      if (targetKey && dataBarangLama) {
+        const stokLama = parseInt(dataBarangLama.totalStok !== undefined ? dataBarangLama.totalStok : (dataBarangLama.total || 0), 10);
+        
+        // 🌟 Logika pendukung untuk Tambah, Kurang, dan Set Total Stok
+        if (jenisAksi === 'kurang') {
+          stokAkhir = Math.max(0, stokLama - jumlahUnit);
+        } else if (jenisAksi === 'set') {
+          stokAkhir = jumlahUnit; // Mengatur stok secara langsung sesuai input
         } else {
-          targetKey = 'item_' + Date.now();
-          const newRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
-          await window.firebaseSet(newRef, {
-            id: targetKey,
-            namaBarang: namaBarang,
-            totalStok: jumlahUnit,
-            kategori: 'Umum',
-            kondisi: 'Baik',
-            peminjam: ''
-          });
+          stokAkhir = stokLama + jumlahUnit; // Default tambah
         }
 
-        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-        alert('✅ Data stok barang berhasil diperbarui ke database!');
-        
-        document.getElementById('stokPilihBarang').value = '';
-        document.getElementById('stokNamaBarangBaru').value = '';
-        document.getElementById('stokNamaBarangBaru').style.display = 'none';
-        document.getElementById('stokJumlahTotal').value = '';
-        if (typeof toggleFormStok === 'function') toggleFormStok();
-        if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
-
-      } catch (err) {
-        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-        alert('❌ Gagal menyimpan ke database: ' + err.message);
+        const updateRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
+        await window.firebaseSet(updateRef, {
+          ...dataBarangLama,
+          namaBarang: namaBarang,
+          totalStok: stokAkhir
+        });
+      } else {
+        targetKey = 'item_' + Date.now();
+        const newRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
+        await window.firebaseSet(newRef, {
+          id: targetKey,
+          namaBarang: namaBarang,
+          totalStok: jumlahUnit,
+          kategori: 'Umum',
+          kondisi: 'Baik',
+          peminjam: ''
+        });
       }
+
+      if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+      alert('✅ Data stok barang berhasil diperbarui ke database!');
+      
+      document.getElementById('stokPilihBarang').value = '';
+      document.getElementById('stokNamaBarangBaru').value = '';
+      document.getElementById('stokNamaBarangBaru').style.display = 'none';
+      document.getElementById('stokJumlahTotal').value = '';
+      if (typeof toggleFormStok === 'function') toggleFormStok();
+      if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
+
+    } catch (err) {
+      if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+      alert('❌ Gagal menyimpan ke database: ' + err.message);
     }
+}
 
    async function prosesPengembalian(id) {
   if (confirm("Apakah barang ini sudah dikembalikan?")) {
@@ -1671,6 +1651,132 @@ function formatRupiahInput(el) {
     }
   }
 }
+
+// ==========================================
+// SISTEM KERANJANG PEMINJAMAN (MULTI-ITEM)
+// ==========================================
+let keranjangPinjam = [];
+
+// 1. Tambah item ke keranjang sementara
+window.tambahKeKeranjangPinjam = function() {
+  const selectBarang = document.getElementById('pinjamPilihBarang');
+  const idBarang = selectBarang.value;
+  // Ambil teks bersih tanpa tulisan "(Sisa: ...)" di dropdown
+  let namaBarang = selectBarang.options[selectBarang.selectedIndex]?.text || '';
+  if (namaBarang.includes('(')) {
+    namaBarang = namaBarang.split('(')[0].trim();
+  }
+  
+  const jumlah = parseInt(document.getElementById('pinjamJumlah').value) || 0;
+
+  if (!idBarang) {
+    alert("Silakan pilih barang terlebih dahulu!");
+    return;
+  }
+  if (jumlah <= 0) {
+    alert("Jumlah pinjam minimal 1!");
+    return;
+  }
+
+  // Masukkan ke array keranjang
+  keranjangPinjam.push({ idBarang, namaBarang, jumlah });
+  
+  // Reset input jumlah & render ulang tabel keranjang
+  document.getElementById('pinjamJumlah').value = '1';
+  renderTabelKeranjangSementara();
+};
+
+// 2. Hapus item dari keranjang sementara berdasarkan indeks
+window.hapusItemKeranjang = function(index) {
+  keranjangPinjam.splice(index, 1);
+  renderTabelKeranjangSementara();
+};
+
+// 3. Render HTML tabel keranjang sementara
+function renderTabelKeranjangSementara() {
+  const tbody = document.getElementById('tabel-keranjang-sementara');
+  if (!tbody) return;
+
+  if (keranjangPinjam.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8; padding: 6px;">Belum ada barang ditambahkan ke keranjang.</td></tr>';
+    return;
+  }
+
+  let html = '';
+  keranjangPinjam.forEach((item, index) => {
+    html += `
+      <tr style="border-bottom: 1px solid #f1f5f9;">
+        <td style="padding: 4px 6px;">${escapeHTML(item.namaBarang)}</td>
+        <td style="padding: 4px 6px; text-align: center; font-weight: bold;">${item.jumlah} unit</td>
+        <td style="padding: 4px 6px; text-align: right;">
+          <button type="button" onclick="hapusItemKeranjang(${index})" style="background: #ef4444; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">✕ Hapus</button>
+        </td>
+      </tr>
+    `;
+  });
+  tbody.innerHTML = html;
+}
+
+// 4. Simpan seluruh isi keranjang ke Firebase secara massal (Sekaligus)
+window.simpanSemuaPeminjamanAdmin = async function() {
+  const peminjam = document.getElementById('pinjamNamaWarga').value.trim();
+
+  if (!peminjam) {
+    alert("Mohon isi Nama / No. Rumah peminjam terlebih dahulu!");
+    return;
+  }
+
+  if (keranjangPinjam.length === 0) {
+    alert("Keranjang peminjaman masih kosong! Tambahkan minimal 1 barang.");
+    return;
+  }
+
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    alert("Koneksi database belum siap.");
+    return;
+  }
+
+  const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanSemuaPeminjamanAdmin']");
+  if(btn) { btn.innerText = "⏳ Menyimpan Semua..."; btn.disabled = true; }
+
+  const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
+  try {
+    // Gunakan node 'peminjaman' agar langsung sinkron dengan tabel daftar aktif Anda
+    for (let item of keranjangPinjam) {
+      const pinjamId = "pinjam_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+      const targetRef = window.firebaseRef(window.db, 'peminjaman/' + pinjamId);
+      
+      await window.firebaseSet(targetRef, {
+        id: pinjamId,
+        peminjam: peminjam,
+        barang: item.namaBarang,
+        namaBarang: item.namaBarang,
+        jumlah: item.jumlah,
+        tgl: hariIni,
+        status: "Dipinjam",
+        timestamp: Date.now()
+      });
+    }
+
+    if(btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
+    alert("✅ Semua peminjaman berhasil dicatat sekaligus!");
+    
+    // Bersihkan form & keranjang
+    keranjangPinjam = [];
+    document.getElementById('pinjamNamaWarga').value = '';
+    renderTabelKeranjangSementara();
+
+    // Muat ulang tabel daftar peminjaman admin
+    if (typeof muatPeminjamanAdmin === 'function') {
+      muatPeminjamanAdmin();
+    }
+
+  } catch (err) {
+    if(btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
+    alert("❌ Gagal menyimpan peminjaman: " + err.message);
+  }
+};
 
     function bukaModalKelolaWarga() {
       const modal = document.getElementById('modal-kelola-warga');
