@@ -662,9 +662,20 @@
           </button>
         </div>
 
-        <!-- WADAH / CONTAINER DAFTAR WARGA BARU (Default Disembunyikan/Tutup) -->
-        <div id="containerDaftarWargaBaru" style="display: none; max-height: 220px; overflow-y: auto; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px; margin-bottom: 12px;">
-          <!-- Isi data akan dimuat di sini via JavaScript -->
+        <!-- WADAH / CONTAINER DAFTAR WARGA BARU (Bisa di-scroll & ada tombol download CSV khusus) -->
+        <div id="containerDaftarWargaBaru" style="display: none; margin-bottom: 12px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; padding: 8px;">
+          
+          <!-- Tombol Unduh CSV khusus Warga Baru di dalam panel -->
+          <div style="margin-bottom: 8px; display: flex; justify-content: flex-end;">
+            <button type="button" onclick="exportWargaBaruToCSV()" style="padding: 5px 10px; background: #059669; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 10.5px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+              <i class="fa-solid fa-file-excel"></i> Unduh CSV Warga Baru
+            </button>
+          </div>
+
+          <!-- Daftar list laporan yang bisa di-scroll -->
+          <div id="listWargaBaruContent" style="max-height: 180px; overflow-y: auto; padding-right: 2px;">
+            <!-- Data dimuat lewat JavaScript -->
+          </div>
         </div>
 
         <!-- 🌟 TOMBOL EXPORT & CETAK LAPORAN DATA WARGA -->
@@ -1829,24 +1840,24 @@ window.simpanSemuaPeminjamanAdmin = async function() {
     }
 
 
-// 📋 Fungsi Toggle Buka/Tutup Panel Daftar Warga Baru di Admin
+// 📋 Fungsi Toggle Panel Warga Baru
 window.togglePanelWargaBaruAdmin = function() {
   const container = document.getElementById('containerDaftarWargaBaru');
   if (!container) return;
 
   if (container.style.display === 'none' || !container.style.display) {
     container.style.display = 'block';
-    bukaModalWargaBaruAdmin(); // Ambil dan muat data saat dibuka
+    bukaModalWargaBaruAdmin();
   } else {
     container.style.display = 'none';
   }
 };
 
 window.bukaModalWargaBaruAdmin = function() {
-  const container = document.getElementById('containerDaftarWargaBaru');
-  if (!container) return;
+  const listContainer = document.getElementById('listWargaBaruContent');
+  if (!listContainer) return;
 
-  container.innerHTML = '<div style="text-align: center; font-size: 11px; color: #64748b; padding: 10px;">⏳ Memuat data laporan warga baru...</div>';
+  listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #64748b; padding: 10px;">⏳ Memuat data...</div>';
 
   const dbRef = window.firebaseRef(window.db, 'warga_baru');
   
@@ -1855,7 +1866,7 @@ window.bukaModalWargaBaruAdmin = function() {
     let html = '';
 
     if (!data) {
-      container.innerHTML = '<div style="text-align: center; font-size: 11px; color: #94a3b8; padding: 10px;">Belum ada laporan warga baru / tamu masuk.</div>';
+      listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #94a3b8; padding: 10px;">Belum ada laporan warga baru / tamu masuk.</div>';
       return;
     }
 
@@ -1883,7 +1894,7 @@ window.bukaModalWargaBaruAdmin = function() {
       `;
     });
 
-    container.innerHTML = html;
+    listContainer.innerHTML = html;
   }, { onlyOnce: true });
 };
 
@@ -1922,6 +1933,57 @@ window.hapusWargaBaruAdmin = async function(id) {
     } catch (err) {
       alert('❌ Gagal menghapus: ' + err);
     }
+  }
+};
+
+// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV)
+window.exportWargaBaruToCSV = async function() {
+  try {
+    const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'warga_baru'));
+    if (!snapshot.exists()) {
+      alert("Tidak ada data laporan warga baru di database.");
+      return;
+    }
+
+    let rowsData = [];
+    let total = 0;
+
+    snapshot.forEach(child => {
+      const data = child.val();
+      if (!data) return;
+      total++;
+
+      const nama = (data.nama || '-').replace(/"/g, '""');
+      const noRumah = (data.noRumah || '-').replace(/"/g, '""');
+      const hp = (data.hp || '-').replace(/"/g, '""');
+      const status = (data.status || '-').replace(/"/g, '""');
+      const cerita = (data.cerita || '-').replace(/"/g, '""');
+      const tanggal = (data.tanggal || '-').replace(/"/g, '""');
+
+      rowsData.push(`"${nama}";"${noRumah}";"${hp}";"${status}";"${cerita}";"${tanggal}"`);
+    });
+
+    if (total === 0) {
+      alert("Belum ada data untuk diunduh.");
+      return;
+    }
+
+    let csvContent = "\uFEFF";
+    csvContent += `"LAPORAN WARGA BARU & TAMU RT 05 KAYEN"\n`;
+    csvContent += `"Total Laporan: ${total} Orang"\n\n`;
+    csvContent += `"Nama Lengkap";"Tempat / No Rumah";"No HP / WhatsApp";"Status Hunian";"Cerita / Kegiatan";"Tanggal Laporan"\n`;
+    csvContent += rowsData.join("\n") + "\n";
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Laporan_Warga_Baru_RT05_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (err) {
+    alert("Gagal mengunduh data warga baru: " + err.message);
   }
 };
 
