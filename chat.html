@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  
   <title>Obrolan Warga - RT 05 Kayen</title>
   <!-- Import Google Font VT323 (Retro Pixel Chat) -->
 <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
@@ -610,7 +611,7 @@ console.log("🚀 Script chat.html berhasil dimuat.");
     };
 
     const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
+    const db = getDatabase(app, firebaseConfig.databaseURL);
     const messaging = getMessaging(app);
     const auth = getAuth(app);
 
@@ -2625,7 +2626,9 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
       ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
       : '';
 
-  let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" ? msg.text : escapeHTML(msg.text);
+  let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" 
+  ? msg.text 
+  : escapeHTML(msg.text).replace(/\n/g, '<br>');
 
   let waktuFormatted = "";
   if (msg.timestamp) {

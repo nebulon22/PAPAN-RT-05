@@ -65,7 +65,8 @@ function cariLokasi(keyword, daftarData, callbackHasil) {
     }
     const query = keyword.toLowerCase().trim();
     const hasil = daftarData.filter(item => {
-        const nama = (item.nama || item.namaWarga || item.namaBarang || '').toLowerCase();
+        // Ambil nama dari item.nama, item.namaRaw, item.namaWarga, atau item.nameAsli
+        const nama = (item.nama || item.namaRaw || item.namaWarga || item.nameAsli || item.namaBarang || '').toLowerCase();
         const keterangan = (item.keterangan || item.kategori || '').toLowerCase();
         return nama.includes(query) || keterangan.includes(query);
     });
@@ -186,7 +187,94 @@ function tutupModalInventaris() {
 }
 
 
+// ==========================================
+// EVENT DELEGATION GLOBAL (Pengganti inline onclick untuk Strict CSP)
+// ==========================================
+document.addEventListener('click', function(e) {
+    const target = e.target.closest('[data-click]');
+    if (!target) return;
 
+    const fnName = target.getAttribute('data-click');
+    const arg = target.getAttribute('data-arg'); // Untuk mengirim argumen sederhana (misal: nominal, jenis filter, dll)
+
+    if (typeof window[fnName] === 'function') {
+        if (arg !== null) {
+            // Jika ada data-arg, kirim nilainya ke fungsi
+            window[fnName](arg, target, e);
+        } else {
+            // Jika tidak ada argumen, kirim event / elemen target
+            window[fnName](e, target);
+        }
+    } else {
+        console.warn(`[CSP Event Delegation] Fungsi window.${fnName} tidak ditemukan.`);
+    }
+});
+
+// Listener Global untuk Dropdown Select (data-change)
+document.addEventListener('change', function(e) {
+  const target = e.target.closest('[data-change]');
+  if (!target) return;
+
+  const fnName = target.getAttribute('data-change');
+  if (typeof window[fnName] === 'function') {
+    window[fnName](e, target);
+  }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        this.blur(); // Hilangkan fokus keyboard HP
+        if (typeof jalankanPencarianPeta === 'function') {
+          jalankanPencarianPeta();
+        }
+      }
+    });
+  }
+});
+
+// ==========================================
+// PENGELOLA MODAL FOTO BESAR GLOBAL
+// ==========================================
+window.bukaFotoBesar = function(urlFoto, event) {
+  if (event && typeof event.stopPropagation === 'function') {
+    event.stopPropagation();
+  }
+  
+  let modalFoto = document.getElementById('modal-foto-besar');
+  if (!modalFoto) {
+    modalFoto = document.createElement('div');
+    modalFoto.id = 'modal-foto-besar';
+    modalFoto.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:999999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box;';
+    modalFoto.innerHTML = `
+      <div style="position:relative; max-width:90%; max-height:90%;">
+        <button type="button" data-click="tutupFotoBesar" style="position:absolute; top:-40px; right:0; background:#ef4444; color:#fff; border:none; border-radius:50%; width:32px; height:32px; font-size:16px; cursor:pointer; font-weight:bold; z-index:1000000;">✕</button>
+        <img id="img-tampil-besar" src="" style="max-width:100%; max-height:85vh; border-radius:8px; object-fit:contain; display:block; margin:0 auto;" />
+      </div>
+    `;
+    modalFoto.onclick = function(e) {
+      if (e.target.id === 'modal-foto-besar') {
+        window.tutupFotoBesar();
+      }
+    };
+    document.body.appendChild(modalFoto);
+  }
+
+  const imgElem = document.getElementById('img-tampil-besar');
+  if (imgElem) {
+    imgElem.src = urlFoto;
+  }
+  modalFoto.style.display = 'flex';
+};
+
+window.tutupFotoBesar = function() {
+  const modalFoto = document.getElementById('modal-foto-besar');
+  if (modalFoto) {
+    modalFoto.style.display = 'none';
+  }
+};
 
 // ==========================================
 // DAFTARKAN KE GLOBAL WINDOW
@@ -201,5 +289,7 @@ window.formatTanggalIndo = formatTanggalIndo;
 window.tampilkanToast = tampilkanToast;
 window.bukaModalInventaris = bukaModalInventaris;
 window.tutupModalInventaris = tutupModalInventaris;
+window.bukaFotoBesar = bukaFotoBesar;
+window.tutupFotoBesar = tutupFotoBesar;
 
 window.dispatchEvent(new Event('utilsSiap'));
