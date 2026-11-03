@@ -756,6 +756,63 @@
   </div>
 </div>
 
+  <!-- MODAL EDIT WARGA BARU -->
+<div id="modal-edit-warga-baru" class="modal-bg" style="display: none; z-index: 3100;" onclick="if(event.target.id==='modal-edit-warga-baru') tutupModalEditWargaBaru()">
+  <div class="modal-content" style="max-width: 400px; width: 90%; max-height: 85vh; display: flex; flex-direction: column;">
+    
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; flex-shrink: 0;">
+      <h3 style="margin: 0; font-size: 15px;">✏️ Edit Laporan Warga Baru</h3>
+      <button type="button" class="close-btn" onclick="tutupModalEditWargaBaru()">&times;</button>
+    </div>
+
+    <form id="formEditWargaBaru" onsubmit="simpanPerubahanWargaBaru(event)" style="display: flex; flex-direction: column; flex: 1; overflow: hidden;">
+      <div style="overflow-y: auto; flex: 1; padding-right: 4px;">
+        <input type="hidden" id="editWargaBaruId">
+
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label style="font-size: 11px; font-weight: bold; color: #475569;">Nama Lengkap:</label>
+          <input type="text" id="editWargaBaruNama" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label style="font-size: 11px; font-weight: bold; color: #475569;">Tempat / No. Rumah:</label>
+          <input type="text" id="editWargaBaruNoRumah" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label style="font-size: 11px; font-weight: bold; color: #475569;">No. HP / WhatsApp:</label>
+          <input type="text" id="editWargaBaruHp" required style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label style="font-size: 11px; font-weight: bold; color: #475569;">Status Hunian:</label>
+          <select id="editWargaBaruStatus" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
+            <option value="Warga Tetap (Pemilik)">Warga Tetap (Pemilik)</option>
+            <option value="Kontrakan">Kontrakan</option>
+            <option value="Kost">Kost</option>
+            <option value="Tamu">Tamu</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 10px;">
+          <label style="font-size: 11px; font-weight: bold; color: #475569;">Cerita Singkat / Kegiatan:</label>
+          <textarea id="editWargaBaruCerita" rows="3" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px; resize: vertical;"></textarea>
+        </div>
+      </div>
+
+      <div style="padding-top: 10px; margin-top: 5px; border-top: 1px solid #eee; flex-shrink: 0; display: flex; gap: 8px;">
+        <button type="submit" id="btnSimpanEditWargaBaru" style="flex: 1; padding: 10px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+          💾 Simpan Perubahan
+        </button>
+        <button type="button" onclick="tutupModalEditWargaBaru()" style="padding: 10px 14px; background: #94a3b8; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 12px; cursor: pointer;">
+          Batal
+        </button>
+      </div>
+    </form>
+
+  </div>
+</div>
+
 <!-- SECTION: PROGRAM KERJA & RAB (MODAL OVERLAY) -->
   <div id="tab-progker" class="modal-bg content-tab-admin" style="display: none; z-index: 3000;" onclick="if(event.target.id==='tab-progker') tutupTabProgker()">
     <!-- 🛠️ 1. Atur tinggi modal di sini (height: 82vh) agar proporsional dan tidak menggantung -->
@@ -1886,28 +1943,75 @@ window.bukaModalWargaBaruAdmin = function() {
   }, { onlyOnce: true });
 };
 
-// ✏️ Fungsi Edit Data Warga Baru oleh Admin
-window.editWargaBaruAdmin = async function(id, nama, noRumah, hp, status, cerita) {
-  const rNama = prompt("Edit Nama Lengkap:", nama);
-  if (rNama === null) return;
-  const rNoRumah = prompt("Edit No Rumah/Kost:", noRumah);
-  const rHp = prompt("Edit No HP/WA:", hp);
-  const rStatus = prompt("Edit Status Hunian:", status);
-  const rCerita = prompt("Edit Cerita/Pekerjaan:", cerita);
+// ✏️ Buka Modal Edit Warga Baru
+window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita) {
+  document.getElementById('editWargaBaruId').value = id;
+  document.getElementById('editWargaBaruNama').value = nama || '';
+  document.getElementById('editWargaBaruNoRumah').value = noRumah || '';
+  document.getElementById('editWargaBaruHp').value = hp || '';
+  document.getElementById('editWargaBaruStatus').value = status || 'Kontrakan';
+  document.getElementById('editWargaBaruCerita').value = cerita || '';
+
+  const modal = document.getElementById('modal-edit-warga-baru');
+  if (modal) modal.style.display = 'flex';
+};
+
+// ❌ Tutup Modal Edit Warga Baru
+window.tutupModalEditWargaBaru = function() {
+  const modal = document.getElementById('modal-edit-warga-baru');
+  if (modal) modal.style.display = 'none';
+};
+
+// 💾 Simpan Perubahan Data Warga Baru ke Firebase
+window.simpanPerubahanWargaBaru = async function(e) {
+  e.preventDefault();
+
+  const id = document.getElementById('editWargaBaruId').value;
+  const nama = document.getElementById('editWargaBaruNama').value.trim();
+  const noRumah = document.getElementById('editWargaBaruNoRumah').value.trim();
+  const hp = document.getElementById('editWargaBaruHp').value.trim();
+  const status = document.getElementById('editWargaBaruStatus').value;
+  const cerita = document.getElementById('editWargaBaruCerita').value.trim();
+  const btn = document.getElementById('btnSimpanEditWargaBaru');
+
+  if (!id || !nama || !noRumah || !hp) {
+    alert("Mohon lengkapi kolom yang wajib diisi!");
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Menyimpan...";
+  }
 
   try {
     const updates = {};
-    updates[`warga_baru/${id}/nama`] = rNama;
-    updates[`warga_baru/${id}/noRumah`] = rNoRumah;
-    updates[`warga_baru/${id}/hp`] = rHp;
-    updates[`warga_baru/${id}/status`] = rStatus;
-    updates[`warga_baru/${id}/cerita`] = rCerita;
+    updates[`warga_baru/${id}/nama`] = nama;
+    updates[`warga_baru/${id}/noRumah`] = noRumah;
+    updates[`warga_baru/${id}/hp`] = hp;
+    updates[`warga_baru/${id}/status`] = status;
+    updates[`warga_baru/${id}/cerita`] = cerita;
 
     await window.firebaseUpdate(window.firebaseRef(window.db), updates);
+    
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "💾 Simpan Perubahan";
+    }
+
     alert('✅ Data warga baru berhasil diperbarui!');
-    window.bukaModalWargaBaruAdmin();
+    tutupModalEditWargaBaru();
+    
+    // Refresh daftar data di panel admin
+    if (typeof bukaModalWargaBaruAdmin === 'function') {
+      bukaModalWargaBaruAdmin();
+    }
   } catch (err) {
-    alert('❌ Gagal memperbarui: ' + err);
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "💾 Simpan Perubahan";
+    }
+    alert('❌ Gagal memperbarui data: ' + err.message);
   }
 };
 
