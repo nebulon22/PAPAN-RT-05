@@ -2130,6 +2130,9 @@ window.muatDataKeuangan = function() {
             ? nominalRaw 
             : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
 
+          // 🌟 Ambil URL foto bukti dari database Firebase (mendukung berbagai variasi penulisan key)
+          var fotoUrl = item.foto || item.Foto || '';
+
           var tgl = String(tglRaw);
           if (tgl.includes('T')) {
             var parts = tgl.split('T')[0].split('-');
@@ -2145,7 +2148,8 @@ window.muatDataKeuangan = function() {
             }
           }
 
-          dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
+          // 🌟 Sertakan properti foto ke dalam objek array dataKeuangan
+          dataKeuangan.push({ tgl, divisi, ket, tipe, nominal, foto: fotoUrl });
         }
       });
     }
@@ -2225,10 +2229,10 @@ window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
     var tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
 
-    // 🌟 1. Siapkan logika link bukti nota di sebelah kanan
+    // 🌟 1. Logika link bukti nota dengan inline style langsung (tanpa file CSS tambahan)
     let htmlBukti = '';
     if (item.foto && item.foto.trim() !== '') {
-      htmlBukti = `<br><a href="${item.foto}" target="_blank" class="badge-bukti">📄 Lihat Nota</a>`;
+      htmlBukti = `<br><a href="${item.foto}" target="_blank" style="font-size: 9.5px; background: #e0f2fe; color: #0288d1; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 3px; margin-top: 2px; border: 1px solid #bae6fd;">📄 Lihat Nota</a>`;
     }
 
     // 🌟 2. Gabungkan di kolom sebelah kanan (di bawah nominal)
@@ -2239,7 +2243,7 @@ window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
       </td>
       <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
         ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
-        ${htmlBukti} <!-- Link bukti nota akan tampil rapi di sebelah kanan bawah nominal -->
+        ${htmlBukti}
       </td>
     `;
     tbody.appendChild(tr);
