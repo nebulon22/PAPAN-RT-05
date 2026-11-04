@@ -2221,7 +2221,7 @@ window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
   tbody.innerHTML = '';
 
   if (!dataset || dataset.length === 0) {
-    tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
     return;
   }
 
@@ -2229,21 +2229,23 @@ window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
     var tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
 
-    // 🌟 1. Logika link bukti nota dengan inline style langsung (tanpa file CSS tambahan)
+    // 🌟 1. Kolom Tengah: Tombol Lihat Nota (hanya muncul jika ada foto)
     let htmlBukti = '';
     if (item.foto && item.foto.trim() !== '') {
-      htmlBukti = `<br><a href="${item.foto}" target="_blank" style="font-size: 9.5px; background: #e0f2fe; color: #0288d1; padding: 1px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 3px; margin-top: 2px; border: 1px solid #bae6fd;">📄 Lihat Nota</a>`;
+      htmlBukti = `<a href="${item.foto}" target="_blank" style="font-size: 9.5px; background: #e0f2fe; color: #0288d1; padding: 2px 6px; border-radius: 4px; text-decoration: none; font-weight: bold; display: inline-flex; align-items: center; gap: 3px; border: 1px solid #bae6fd; white-space: nowrap;">📄 Lihat Nota</a>`;
     }
 
-    // 🌟 2. Gabungkan di kolom sebelah kanan (di bawah nominal)
+    // 🌟 2. Bagi menjadi 3 kolom: Kiri (Keterangan), Tengah (Tombol Nota), Kanan (Nominal)
     tr.innerHTML = `
-      <td style="padding:6px 0;">
+      <td style="padding:6px 0; width: 50%;">
         <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHTML(item.tgl)}</span><br>
         <b>${escapeHTML(item.ket)}</b>
       </td>
-      <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
-        ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
+      <td style="padding:6px 0; text-align:center; vertical-align:middle; width: 25%;">
         ${htmlBukti}
+      </td>
+      <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top; width: 25%;">
+        ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
       </td>
     `;
     tbody.appendChild(tr);
