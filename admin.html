@@ -2491,6 +2491,8 @@ async function prosesUploadKeR2Warga() {
 }
 
 async function prosesUploadSemiManual() {
+  console.log("1. Tombol Upload diklik"); // Cek apakah fungsi terpanggil
+  
   const fileInput = document.getElementById('inputUploadSemiManual');
   const statusDiv = document.getElementById('statusSemiManual');
   const inputUrlTarget = document.getElementById('editWargaFoto');
@@ -2508,34 +2510,31 @@ async function prosesUploadSemiManual() {
   formData.append("file", file);
 
   try {
-    // ⚠️ Ganti dengan URL Cloudflare Worker Anda yang aktif
     const workerUrl = "https://rt05-uploader.deny220291.workers.dev/"; 
+    console.log("2. Mengirim fetch ke:", workerUrl);
 
     const response = await fetch(workerUrl, {
       method: "POST",
       body: formData
     });
 
+    console.log("3. Respon diterima dari server:", response.status);
+
     const textResult = await response.text();
-    let result;
-    try {
-      result = JSON.parse(textResult);
-    } catch (e) {
-      throw new Error("Respon server bukan JSON valid: " + textResult);
-    }
+    console.log("4. Teks mentah dari server:", textResult);
+
+    let result = JSON.parse(textResult);
 
     if (result.success && result.url) {
-      // Masukkan otomatis ke kolom target DAN tampilkan link agar mudah disalin
       inputUrlTarget.value = result.url;
-      
-      statusDiv.innerHTML = `✅ Berhasil! Link R2:<br><a href="${result.url}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${result.url}</b></a> (Sudah dimasukkan otomatis ke kolom di bawah)`;
+      statusDiv.innerHTML = `✅ Berhasil! Link R2:<br><a href="${result.url}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${result.url}</b></a>`;
       statusDiv.style.color = "#10b981";
     } else {
       throw new Error(result.error || "Gagal mendapatkan URL dari server.");
     }
 
   } catch (err) {
-    console.error(err);
+    console.error("❌ Terjadi Error:", err);
     statusDiv.innerHTML = `❌ Gagal: ${err.message}`;
     statusDiv.style.color = "#dc2626";
   }
