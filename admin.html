@@ -2460,24 +2460,41 @@ async function prosesUploadKeR2Warga() {
   const fileInput = document.getElementById('inputUploadFotoWarga');
   if (!fileInput || fileInput.files.length === 0) return;
 
-  // Berikan indikator loading kecil jika perlu
-  alert("⏳ Sedang mengunggah file ke Cloudflare R2...");
+  const labelStatus = document.getElementById('statusUploadInfo') || buatLabelStatus();
+  labelStatus.innerText = "⏳ Sedang mengunggah ke Cloudflare R2...";
+  labelStatus.style.color = "#d97706";
 
   const url = await uploadKeCloudflareR2('inputUploadFotoWarga');
+  
   if (url) {
-    // Masukkan URL hasil upload otomatis ke kolom input URL Media
+    // Masukkan URL otomatis ke input teks foto
     document.getElementById('editWargaFoto').value = url;
     
-    // Tampilkan preview foto
+    // Tampilkan preview gambar
     const preview = document.getElementById('previewFotoRumah');
     if (preview) {
       preview.src = url;
       preview.style.display = 'inline-block';
     }
-    alert("✅ Berhasil! File sudah diunggah dan URL terisi otomatis.");
+    
+    labelStatus.innerText = "✅ Berhasil diunggah ke R2!";
+    labelStatus.style.color = "#10b981";
   } else {
-    alert("❌ Gagal mengunggah file ke Cloudflare R2. Periksa kembali koneksi atau Worker Anda.");
+    labelStatus.innerText = "❌ Gagal mengunggah. Cek koneksi / Worker.";
+    labelStatus.style.color = "#dc2626";
   }
+}
+
+// Fungsi pembantu kecil untuk membuat teks status di bawah input file
+function buatLabelStatus() {
+  const inputEl = document.getElementById('inputUploadFotoWarga');
+  const div = document.createElement('div');
+  div.id = 'statusUploadInfo';
+  div.style.fontSize = '11px';
+  div.style.marginTop = '4px';
+  div.style.fontWeight = 'bold';
+  inputEl.parentNode.appendChild(div);
+  return div;
 }
 
 // Menyimpan Perubahan Data Warga & Foto ke 1 Node (peta_warga/{id})
