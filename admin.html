@@ -294,6 +294,16 @@
         </div>
 
         <div class="form-group" style="margin-bottom: 8px;">
+          <label for="inputUploadPengumuman" style="font-size: 11px; font-weight: bold;">📁 Upload Poster / Foto / Video (Cloudflare R2):</label>
+          <input type="file" id="inputUploadPengumuman" accept="image/*,video/*" style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 4px;" onchange="prosesUploadKeR2Pengumuman()">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Otomatis / Manual):</label>
+          <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
           <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
           <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
         </div>
@@ -743,6 +753,17 @@
       <img id="previewFotoRumah" src="" alt="Preview" style="max-height: 80px; max-width: 100%; border-radius: 4px; display: none; object-fit: cover; border: 1px solid #ddd;">
     </div>
   </div>
+
+  <div class="form-group" style="margin-bottom: 12px;">
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">Upload Foto Rumah (Cloudflare R2):</label>
+    <input type="file" id="inputUploadFotoWarga" accept="image/*,video/*" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 11px; box-sizing: border-box; margin-bottom: 6px;" onchange="prosesUploadKeR2Warga()">
+    
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">Atau URL Foto Rumah:</label>
+    <input type="url" id="editWargaFoto" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+    <div style="margin-top: 6px; text-align: center;">
+      <img id="previewFotoRumah" src="" alt="Preview" style="max-height: 80px; max-width: 100%; border-radius: 4px; display: none; object-fit: cover; border: 1px solid #ddd;">
+    </div>
+ </div>
 
   <div style="display: flex; gap: 8px;">
     <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
@@ -2428,6 +2449,19 @@ function bukaModalEditWargaDariPeta(id) {
     bukaModalEditWargaAdminById(id);
 }
 
+async function prosesUploadKeR2Warga() {
+  const url = await uploadKeCloudflareR2('inputUploadFotoWarga');
+  if (url) {
+    document.getElementById('editWargaFoto').value = url;
+    const preview = document.getElementById('previewFotoRumah');
+    if (preview) {
+      preview.src = url;
+      preview.style.display = 'inline-block';
+    }
+    alert("✅ File berhasil diunggah ke Cloudflare R2!");
+  }
+}
+
 // Menyimpan Perubahan Data Warga & Foto ke 1 Node (peta_warga/{id})
 async function simpanPerubahanWarga(e) {
     if (e) e.preventDefault();
@@ -2812,6 +2846,14 @@ function editPengumuman(id) {
       alert("Mode Edit Aktif: Silakan ubah data lalu klik Simpan Perubahan.");
     }
   });
+}
+
+  async function prosesUploadKeR2Pengumuman() {
+  const url = await uploadKeCloudflareR2('inputUploadPengumuman');
+  if (url) {
+    document.getElementById('pengumumanFoto').value = url;
+    alert("✅ Media pengumuman berhasil diunggah ke Cloudflare R2!");
+  }
 }
 
   async function simpanPengumumanAdmin() {
