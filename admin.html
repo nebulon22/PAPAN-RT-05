@@ -139,6 +139,31 @@
       margin: auto;
     }
 
+    /* Sesuaikan tinggi modal keuangan agar seragam dan stabil */
+#modal-laporan .modal-content {
+  background: white;
+  width: 90%;
+  max-width: 500px;
+  height: 520px !important;       /* <--- Kunci tinggi konsisten untuk kedua tab */
+  max-height: 85vh !important;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;               /* Sembunyikan overflow utama */
+  margin: auto;
+}
+
+/* Area konten di dalam tab agar flex & bisa digulir secara mandiri jika melebihi tinggi */
+#panel-tab-input, #panel-tab-edit {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+    
     /* Tambahkan kelas ini untuk membungkus area isi tab di dalam modal */
     .modal-body-scroll {
       flex: 1;
@@ -448,94 +473,93 @@
 
 <!-- MODAL 2: Form & Kelola Keuangan Divisi (Tabbed Modal) -->
 <div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
-  <div class="modal-content" style="max-width: 500px; max-height: 96vh !important; height: auto !important; overflow-y: auto !important; padding: 12px 16px; box-sizing: border-box;">
+  <div class="modal-content">
     
     <!-- Header Modal -->
-    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+    <div class="modal-header" style="flex-shrink: 0;">
       <h3 style="margin: 0; font-size: 16px;">💰 Pengelolaan Keuangan Divisi</h3>
-      <button class="close-btn" onclick="tutupModalLaporan()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+      <button class="close-btn" onclick="tutupModalLaporan()">&times;</button>
     </div>
 
-<!-- Tombol Navigasi Tab (Perbaikan Kontras Warna & Keterbacaan) -->
-    <div style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px;">
-      <button type="button" id="btn-tab-input" onclick="switchTabKeuangan('input')" style="flex: 1; padding: 10px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+    <!-- Tombol Navigasi Tab -->
+    <div style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; flex-shrink: 0;">
+      <button type="button" id="btn-tab-input" onclick="switchTabKeuangan('input')" style="flex: 1; padding: 10px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">
         ➕ Input Laporan Baru
       </button>
-      <button type="button" id="btn-tab-edit" onclick="switchTabKeuangan('edit')" style="flex: 1; padding: 10px; border: none; border-radius: 6px; background: #e2e8f0; color: #475569; font-weight: bold; font-size: 12px; cursor: pointer; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+      <button type="button" id="btn-tab-edit" onclick="switchTabKeuangan('edit')" style="flex: 1; padding: 10px; border: none; border-radius: 6px; background: #e2e8f0; color: #475569; font-weight: bold; font-size: 12px; cursor: pointer;">
         ✏️ Edit & Daftar Laporan
       </button>
     </div>
 
     <!-- ================= TAB 1: FORM INPUT LAPORAN ================= -->
-    <div id="panel-tab-input">
-      <form id="formLaporanDivisi">
-        <div class="form-group">
-          <label for="laporanTanggal" style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
-          <input type="date" id="laporanTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+    <div id="panel-tab-input" style="display: block;">
+      <form id="formLaporanDivisi" style="display: flex; flex-direction: column; height: 100%;">
+        <div style="flex: 1; overflow-y: auto; padding-right: 4px;">
+          <!-- Semua form-group input laporan taruh di sini -->
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
+            <input type="date" id="laporanTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
+            <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+              <option value="">-- Pilih Divisi / Pos --</option>
+              <option value="sosial">Sosial</option>
+              <option value="tenda">Tenda</option>
+              <option value="sound system">Sound System</option>
+              <option value="pondokan rt 05">Pondokan RT 05</option>
+              <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
+              <option value="pekerjaan umum & kelistrikan">Pekerjaan Umum & Kelistrikan</option>
+              <option value="ronda harian & keamanan">Ronda Harian & Keamanan</option>
+              <option value="bendahara umum">Bendahara Umum</option>
+              <option value="tata ruang">Tata Ruang</option>
+              <option value="transportasi">Transportasi</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
+            <select id="laporanJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+              <option value="Pemasukan">🟢 Pemasukan</option>
+              <option value="Pengeluaran">🔴 Pengeluaran</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
+            <input type="text" id="laporanKeterangan" placeholder="Contoh: Arisan / Bayar kost" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
+            <input type="text" id="laporanNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 11px; font-weight: bold; color: #475569;">📁 Upload Bukti Transaksi / Nota (Opsional):</label>
+            <input type="file" id="laporanInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="prosesUploadBuktiKeR2()">
+            <input type="hidden" id="laporanFotoUrl" value="">
+            <div id="statusUploadBukti" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
+          </div>
+          
+          <div style="margin-top: 10px;">
+            <label style="font-size: 11px; font-weight: bold; color: #475569;">🔒 PIN Khusus Divisi:</label>
+            <input type="password" id="laporanPinDivisi" maxlength="6" inputmode="numeric" placeholder="Masukkan PIN Divisi Anda" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+          </div>
         </div>
 
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanNamaDivisi" style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
-          <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
-            <option value="">-- Pilih Divisi / Pos --</option>
-            <option value="sosial">Sosial</option>
-            <option value="tenda">Tenda</option>
-            <option value="sound system">Sound System</option>
-            <option value="pondokan rt 05">Pondokan RT 05</option>
-            <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
-            <option value="pekerjaan umum & kelistrikan">Pekerjaan Umum & Kelistrikan</option>
-            <option value="ronda harian & keamanan">Ronda Harian & Keamanan</option>
-            <option value="bendahara umum">Bendahara Umum</option>
-            <option value="tata ruang">Tata Ruang</option>
-            <option value="transportasi">Transportasi</option>
-          </select>
+        <!-- Tombol Simpan Fixed di Bawah -->
+        <div style="margin-top: 10px; flex-shrink: 0;">
+          <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+            📤 Kirim Laporan Keuangan
+          </button>
         </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanJenis" style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
-          <select id="laporanJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
-            <option value="Pemasukan">🟢 Pemasukan</option>
-            <option value="Pengeluaran">🔴 Pengeluaran</option>
-          </select>
-        </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanKeterangan" style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
-          <input type="text" id="laporanKeterangan" placeholder="Contoh: Arisan / Bayar kost kamar A" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
-        </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanNominal" style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
-          <input type="text" id="laporanNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
-        </div>
-
-        <!-- Upload Bukti Transaksi -->
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanInputFoto" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
-            📁 Upload Bukti Transaksi / Nota (Opsional):
-          </label>
-          <input type="file" id="laporanInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; box-sizing: border-box;" onchange="prosesUploadBuktiKeR2()">
-          <input type="hidden" id="laporanFotoUrl" value="">
-          <div id="statusUploadBukti" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
-        </div>
-        
-        <!-- PIN Khusus Divisi -->
-        <div style="margin-top: 10px;">
-          <label for="laporanPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
-            🔒 PIN Khusus Divisi:
-          </label>
-          <input type="password" id="laporanPinDivisi" maxlength="6" inputmode="numeric" placeholder="Masukkan PIN Divisi Anda" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
-          <span style="font-size: 10px; color: #64748b; margin-top: 2px; display: block;">*Setiap divisi memiliki PIN tersendiri.</span>
-        </div>
-
-        <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; margin-top: 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
-          📤 Kirim Laporan Keuangan
-        </button>
       </form>
     </div>
 
-<!-- ================= TAB 2: EDIT & KELOLA LAPORAN ================= -->
-    <div id="panel-tab-edit" style="display: none; flex: 1; flex-direction: column; overflow: hidden; min-height: 0;">
+    <!-- ================= TAB 2: EDIT & KELOLA LAPORAN ================= -->
+    <div id="panel-tab-edit" style="display: none; flex-direction: column; height: 100%;">
       <div style="margin-bottom: 8px; flex-shrink: 0;">
         <input type="text" id="pencarianKelolaAdmin" placeholder="🔍 Cari keterangan atau divisi..." onkeyup="filterTabelKelolaAdmin()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; box-sizing: border-box;">
       </div>
