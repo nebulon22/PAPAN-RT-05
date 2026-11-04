@@ -446,23 +446,37 @@
   </div>
 </div>
 
-  <!-- MODAL 2: Form Laporan Keuangan Divisi -->
-  <div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
-   <div class="modal-content" style="max-height: 96vh !important; height: auto !important; overflow-y: auto !important;">
-      <div class="modal-header">
-        <h3>💰 Laporan Keuangan Divisi</h3>
-        <button class="close-btn" onclick="tutupModalLaporan()">&times;</button>
-      </div>
-      
+<!-- MODAL 2: Form & Kelola Keuangan Divisi (Tabbed Modal) -->
+<div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
+  <div class="modal-content" style="max-width: 500px; max-height: 96vh !important; height: auto !important; overflow-y: auto !important; padding: 12px 16px; box-sizing: border-box;">
+    
+    <!-- Header Modal -->
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+      <h3 style="margin: 0; font-size: 16px;">💰 Pengelolaan Keuangan Divisi</h3>
+      <button class="close-btn" onclick="tutupModalLaporan()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+    </div>
+
+    <!-- Tombol Navigasi Tab -->
+    <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
+      <button type="button" id="btn-tab-input" onclick="switchTabKeuangan('input')" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #8b5cf6; color: white; font-weight: bold; font-size: 11.5px; cursor: pointer;">
+        ➕ Input Laporan Baru
+      </button>
+      <button type="button" id="btn-tab-edit" onclick="switchTabKeuangan('edit')" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: bold; font-size: 11.5px; cursor: pointer;">
+        ✏️ Edit & Daftar Laporan
+      </button>
+    </div>
+
+    <!-- ================= TAB 1: FORM INPUT LAPORAN ================= -->
+    <div id="panel-tab-input">
       <form id="formLaporanDivisi">
         <div class="form-group">
           <label for="laporanTanggal" style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
-          <input type="date" id="laporanTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+          <input type="date" id="laporanTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
         </div>
 
         <div class="form-group" style="margin-top: 10px;">
           <label for="laporanNamaDivisi" style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
-          <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+          <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
             <option value="">-- Pilih Divisi / Pos --</option>
             <option value="sosial">Sosial</option>
             <option value="tenda">Tenda</option>
@@ -479,7 +493,7 @@
 
         <div class="form-group" style="margin-top: 10px;">
           <label for="laporanJenis" style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
-          <select id="laporanJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+          <select id="laporanJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
             <option value="Pemasukan">🟢 Pemasukan</option>
             <option value="Pengeluaran">🔴 Pengeluaran</option>
           </select>
@@ -487,48 +501,64 @@
 
         <div class="form-group" style="margin-top: 10px;">
           <label for="laporanKeterangan" style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
-          <input type="text" id="laporanKeterangan" placeholder="Contoh: Arisan / Bayar kost kamar A" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+          <input type="text" id="laporanKeterangan" placeholder="Contoh: Arisan / Bayar kost kamar A" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
         </div>
 
-<div class="form-group" style="margin-top: 10px;">
-  <label for="laporanNominal" style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
-  <input type="text" id="laporanNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" oninput="formatRupiahInput(this)" required>
-</div>
+        <div class="form-group" style="margin-top: 10px;">
+          <label for="laporanNominal" style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
+          <input type="text" id="laporanNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
+        </div>
 
-        <!-- 📁 Tambahan Input Upload Bukti Transaksi (Opsional) -->
-<div class="form-group" style="margin-top: 10px;">
-  <label for="laporanInputFoto" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
-    📁 Upload Bukti Transaksi / Nota (Opsional):
-  </label>
-  <div style="display: flex; gap: 6px; align-items: center;">
-    <input type="file" id="laporanInputFoto" accept="image/*" style="font-size: 11px; flex: 1; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;" onchange="prosesUploadBuktiKeR2()">
-  </div>
-  <input type="hidden" id="laporanFotoUrl" value="">
-  <div id="statusUploadBukti" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
-</div>
+        <!-- Upload Bukti Transaksi -->
+        <div class="form-group" style="margin-top: 10px;">
+          <label for="laporanInputFoto" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+            📁 Upload Bukti Transaksi / Nota (Opsional):
+          </label>
+          <input type="file" id="laporanInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; box-sizing: border-box;" onchange="prosesUploadBuktiKeR2()">
+          <input type="hidden" id="laporanFotoUrl" value="">
+          <div id="statusUploadBukti" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
+        </div>
         
-        <!-- Input Tambahan: PIN Khusus Divisi -->
-<div style="margin-top: 10px;">
-  <label for="laporanPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
-    🔒 PIN Khusus Divisi:
-  </label>
-  <input type="password" id="laporanPinDivisi" maxlength="6" 
-       inputmode="numeric" 
-       autocomplete="current-password" 
-       data-lpignore="true" 
-       placeholder="Masukkan PIN Divisi Anda"
-         style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
-  <span style="font-size: 10px; color: #64748b; margin-top: 2px; display: block;">
-    *Setiap divisi memiliki PIN tersendiri.
-  </span>
-</div>
+        <!-- PIN Khusus Divisi -->
+        <div style="margin-top: 10px;">
+          <label for="laporanPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+            🔒 PIN Khusus Divisi:
+          </label>
+          <input type="password" id="laporanPinDivisi" maxlength="6" inputmode="numeric" placeholder="Masukkan PIN Divisi Anda" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+          <span style="font-size: 10px; color: #64748b; margin-top: 2px; display: block;">*Setiap divisi memiliki PIN tersendiri.</span>
+        </div>
 
         <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; margin-top: 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
           📤 Kirim Laporan Keuangan
         </button>
       </form>
     </div>
+
+    <!-- ================= TAB 2: EDIT & KELOLA LAPORAN ================= -->
+    <div id="panel-tab-edit" style="display: none;">
+      <div style="margin-bottom: 10px;">
+        <input type="text" id="pencarianKelolaAdmin" placeholder="🔍 Cari keterangan atau divisi..." onkeyup="filterTabelKelolaAdmin()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; box-sizing: border-box;">
+      </div>
+
+      <div style="max-height: 380px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <thead>
+            <tr style="background: #f1f5f9; color: #334155; border-bottom: 2px solid #cbd5e1; position: sticky; top: 0;">
+              <th style="padding: 6px; text-align: left;">Tanggal & Divisi</th>
+              <th style="padding: 6px; text-align: left;">Keterangan & Nominal</th>
+              <th style="padding: 6px; text-align: center;">Nota</th>
+              <th style="padding: 6px; text-align: center;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-kelola-keuangan-admin">
+            <tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
+</div>
    
 <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
   <div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
@@ -2958,6 +2988,143 @@ function tutupModalLaporan() {
       const statusBukti = document.getElementById('statusUploadBukti');
       if (statusBukti) statusBukti.innerHTML = '';
     }
+
+    // ===================================================
+    // FORM EDIT DATA KEUANGAN ADMIN/KELOLA KEUANGAN ADMIN
+    // ===================================================
+    
+let cacheDataKeuanganAdmin = [];
+
+// Fungsi untuk beralih antar Tab di dalam Modal Laporan
+window.switchTabKeuangan = function(targetTab) {
+  const panelInput = document.getElementById('panel-tab-input');
+  const panelEdit = document.getElementById('panel-tab-edit');
+  const btnInput = document.getElementById('btn-tab-input');
+  const btnEdit = document.getElementById('btn-tab-edit');
+
+  if (targetTab === 'input') {
+    panelInput.style.display = 'block';
+    panelEdit.style.display = 'none';
+    btnInput.style.background = '#8b5cf6';
+    btnInput.style.color = '#white';
+    btnEdit.style.background = '#f1f5f9';
+    btnEdit.style.color = '#64748b';
+  } else {
+    panelInput.style.display = 'none';
+    panelEdit.style.display = 'block';
+    btnEdit.style.background = '#8b5cf6';
+    btnEdit.style.color = '#white';
+    btnInput.style.background = '#f1f5f9';
+    btnInput.style.color = '#64748b';
+    muatDataKelolaKeuanganAdmin();
+  }
+};
+
+// Ambil seluruh data dari node "keuangan" Firebase untuk diedit
+window.muatDataKelolaKeuanganAdmin = function() {
+  if (!window.db || typeof window.firebaseRef !== 'function') return;
+
+  const refKeuangan = window.firebaseRef(window.db, 'keuangan');
+  window.firebaseOnValue(refKeuangan, (snapshot) => {
+    const dataObj = snapshot.val();
+    cacheDataKeuanganAdmin = [];
+
+    if (!dataObj) {
+      document.getElementById('tabel-kelola-keuangan-admin').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Belum ada data laporan.</td></tr>';
+      return;
+    }
+
+    Object.keys(dataObj).forEach(key => {
+      cacheDataKeuanganAdmin.push({ id: key, ...dataObj[key] });
+    });
+
+    renderTabelKelolaAdmin(cacheDataKeuanganAdmin);
+  }, { onlyOnce: true });
+};
+
+// Render baris tabel daftar keuangan
+window.renderTabelKelolaAdmin = function(dataArray) {
+  const tbody = document.getElementById('tabel-kelola-keuangan-admin');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (dataArray.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Data tidak ditemukan.</td></tr>';
+    return;
+  }
+
+  dataArray.forEach(item => {
+    let tipe = String(item.tipe || '').toUpperCase();
+    let warnaTeks = (tipe === 'MASUK') ? '#16a34a' : '#dc2626';
+    let tgl = item.tanggal || item.tgl || '-';
+    let divisi = item.divisi || item.Divisi || '-';
+    let ket = item.keterangan || item.ket || '-';
+    let nominal = Number(item.nominal || 0).toLocaleString('id-ID');
+    let tanda = (tipe === 'MASUK') ? '+ Rp ' : '- Rp ';
+
+    let badgeNota = item.foto ? `<a href="${item.foto}" target="_blank" style="background:#e0f2fe; color:#0288d1; padding:2px 6px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:9.5px;">📄 Lihat</a>` : `<span style="color:#aaa;">-</span>`;
+
+    let tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #e2e8f0';
+    tr.innerHTML = `
+      <td style="padding: 6px; vertical-align: middle;">
+        <div style="font-weight: bold; color: #1e293b;">${tgl}</div>
+        <div style="color: #64748b; font-size: 9.5px; text-transform: capitalize;">🏷️ ${divisi}</div>
+      </td>
+      <td style="padding: 6px; vertical-align: middle;">
+        <div style="font-weight: bold; color: #334155;">${escapeHTML(ket)}</div>
+        <div style="color: ${warnaTeks}; font-weight: bold; margin-top: 2px;">${tanda}${nominal}</div>
+      </td>
+      <td style="padding: 6px; text-align: center; vertical-align: middle;">
+        ${badgeNota}
+      </td>
+      <td style="padding: 6px; text-align: center; vertical-align: middle;">
+        <button type="button" onclick="mulaiEditKeuanganAdmin('${item.id}')" style="background: #f59e0b; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 10px;">
+          ✏️ Edit
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+};
+
+// Fungsi pencarian cepat di tab edit
+window.filterTabelKelolaAdmin = function() {
+  const keyword = document.getElementById('pencarianKelolaAdmin').value.toLowerCase();
+  const filtered = cacheDataKeuanganAdmin.filter(item => {
+    let ket = String(item.keterangan || item.ket || '').toLowerCase();
+    let div = String(item.divisi || item.Divisi || '').toLowerCase();
+    return ket.includes(keyword) || div.includes(keyword);
+  });
+  renderTabelKelolaAdmin(filtered);
+};
+
+// Fungsi ketika tombol Edit diklik (memperbarui keterangan atau nominal transaksi)
+window.mulaiEditKeuanganAdmin = async function(id) {
+  let target = cacheDataKeuanganAdmin.find(x => x.id === id);
+  if (!target) return;
+
+  let ketBaru = prompt("Ubah Keterangan Transaksi:", target.keterangan || target.ket || '');
+  if (ketBaru === null) return;
+
+  let nominalBaruStr = prompt("Ubah Nominal (Angka Saja):", target.nominal || 0);
+  if (nominalBaruStr === null) return;
+  let nominalBaru = parseInt(nominalBaruStr.replace(/[^0-9]/g, ''), 10) || 0;
+
+  try {
+    const refItem = window.firebaseRef(window.db, `keuangan/${id}`);
+    await window.firebaseUpdate(refItem, {
+      keterangan: ketBaru,
+      ket: ketBaru,
+      nominal: nominalBaru
+    });
+    alert("✅ Data keuangan berhasil diperbarui!");
+    muatDataKelolaKeuanganAdmin();
+  } catch (err) {
+    alert("❌ Gagal memperbarui data: " + err);
+  }
+};
     
     // ==========================================
     // PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
