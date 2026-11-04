@@ -2457,15 +2457,26 @@ function bukaModalEditWargaDariPeta(id) {
 }
 
 async function prosesUploadKeR2Warga() {
+  const fileInput = document.getElementById('inputUploadFotoWarga');
+  if (!fileInput || fileInput.files.length === 0) return;
+
+  // Berikan indikator loading kecil jika perlu
+  alert("⏳ Sedang mengunggah file ke Cloudflare R2...");
+
   const url = await uploadKeCloudflareR2('inputUploadFotoWarga');
   if (url) {
+    // Masukkan URL hasil upload otomatis ke kolom input URL Media
     document.getElementById('editWargaFoto').value = url;
+    
+    // Tampilkan preview foto
     const preview = document.getElementById('previewFotoRumah');
     if (preview) {
       preview.src = url;
       preview.style.display = 'inline-block';
     }
-    alert("✅ File berhasil diunggah ke Cloudflare R2!");
+    alert("✅ Berhasil! File sudah diunggah dan URL terisi otomatis.");
+  } else {
+    alert("❌ Gagal mengunggah file ke Cloudflare R2. Periksa kembali koneksi atau Worker Anda.");
   }
 }
 
@@ -2474,14 +2485,19 @@ async function simpanPerubahanWarga(e) {
     if (e) e.preventDefault();
     
     const idWarga = document.getElementById("editWargaId").value;
-    const namaBaru = document.getElementById("editWargaNama").value.trim();
-    const anggotaBaru = document.getElementById("editWargaAnggota").value.trim();
     const rumahBaru = document.getElementById("editWargaRumah").value.trim();
     const fotoBaru = document.getElementById("editWargaFoto").value.trim();
+    
+    // Ambil nilai kepala & anggota keluarga (jika elemennya disembunyikan, biarkan kosong)
+    const groupKeluarga = document.getElementById("groupFieldKeluarga");
+    const isKeluargaVisible = groupKeluarga && groupKeluarga.style.display !== 'none';
+    
+    const namaBaru = isKeluargaVisible ? document.getElementById("editWargaNama").value.trim() : '';
+    const anggotaBaru = isKeluargaVisible ? document.getElementById("editWargaAnggota").value.trim() : '';
     const btn = document.getElementById("btnSimpanEditWarga");
 
-    if (!namaBaru || !rumahBaru || !idWarga) {
-        alert("Data tidak lengkap atau ID tidak ditemukan!");
+    if (!rumahBaru || !idWarga) {
+        alert("Nama tempat / Titik denah atau ID tidak ditemukan!");
         return;
     }
 
@@ -2496,8 +2512,9 @@ async function simpanPerubahanWarga(e) {
             foto: fotoBaru
         });
 
-        alert("✅ Data keluarga dan foto rumah berhasil diperbarui!");
+        alert("✅ Data lokasi berhasil diperbarui!");
         tutupModalEditWarga();
+        // muatSemuaDataAdmin(); // aktifkan jika ingin langsung refresh data di background
     } catch (err) {
         alert("❌ Gagal memperbarui data: " + err.message);
     } finally {
