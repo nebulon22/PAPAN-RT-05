@@ -2507,13 +2507,14 @@ async function prosesUploadSemiManual() {
   try {
     const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
 
-    // 🌟 PERBAIKAN: Bungkus file ke dalam FormData agar sesuai dengan request.formData() di Worker
-    const formData = new FormData();
-    formData.append("file", file);
-
+    // 🌟 PERBAIKAN: Kirim biner mentah langsung agar stabil dan anti-timeout
     const response = await fetch(workerUrl, {
       method: "POST",
-      body: formData // Kirim sebagai FormData, bukan biner mentah
+      headers: {
+        "X-File-Name": file.name,
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file
     });
 
     const textResult = await response.text();
@@ -2732,21 +2733,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
-    async function uploadKeCloudflareR2(fileInputId) {
+async function uploadKeCloudflareR2(fileInputId) {
   const fileInput = document.getElementById(fileInputId);
   if (!fileInput || fileInput.files.length === 0) return null;
 
   const file = fileInput.files[0];
-  const formData = new FormData();
-  formData.append("file", file);
-
-  // 🌟 Perbaikan: Gunakan URL lengkap dengan /upload dan subdomain yang benar (deny220291)
   const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
 
   try {
     const response = await fetch(workerUrl, {
       method: "POST",
-      body: formData
+      headers: {
+        "X-File-Name": file.name,
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file // Kirim file mentah langsung (Binary Stream)
     });
     
     const textResult = await response.text();
@@ -2758,7 +2759,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (result.success) {
-      return result.url; // URL publik R2 yang siap disimpan ke Firebase!
+      return result.url; 
     } else {
       throw new Error(result.error);
     }
