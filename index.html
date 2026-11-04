@@ -1388,7 +1388,7 @@ function muatDataPetaWarga() {
     var index = 0;
     var chunkSize = 20;
 
-    function prosesChunk() {
+function prosesChunk() {
       var batas = Math.min(index + chunkSize, baris.length);
       
       for (let i = index; i < batas; i++) {
@@ -1408,8 +1408,9 @@ function muatDataPetaWarga() {
             : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
 
           var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
-          const val = childSnap.val();
-          var urlFoto = String(val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '').trim();
+          
+          // Diambil langsung dari variabel 'kolom' (bukan childSnap)
+          var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
           
           var item = {
             name: namaAsli,
@@ -1436,7 +1437,6 @@ function muatDataPetaWarga() {
           
           var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-          // Cukup simpan penanda ke array daftarPin (penampilan ke peta diserahkan ke filterKategori)
           daftarPin.push({ 
             namaRaw: item.nameAsli,
             nama: item.nameAsli.toLowerCase(), 
@@ -1458,8 +1458,6 @@ function muatDataPetaWarga() {
           setTimeout(prosesChunk, 4);
         }
       } else {
-        // SETELAH SELURUH DATA SELESAI DIMUAT:
-        // Panggil filter 'awal' agar HANYA FASUM, Rumah Pak RT, dan Rumah Pak RW yang tampil di awal.
         if (typeof filterKategori === 'function') {
           filterKategori('awal');
         }
