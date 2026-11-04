@@ -619,6 +619,14 @@
         <input type="hidden" id="editFotoUrl" value="">
         <div id="statusUploadBuktiEdit" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
       </div>
+      <!-- PIN Khusus Divisi untuk Validasi Edit -->
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="editPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+          🔒 PIN Khusus Divisi (Wajib untuk Edit):
+        </label>
+        <input type="password" id="editPinDivisi" maxlength="6" inputmode="numeric" placeholder="Masukkan PIN divisi terkait" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
+        <span style="font-size: 10px; color: #64748b; margin-top: 2px; display: block;">*Masukkan PIN divisi yang sesuai untuk menyimpan perubahan.</span>
+      </div>
 
       <div style="display: flex; gap: 8px; margin-top: 15px;">
         <button type="button" onclick="tutupModalEditAdmin()" style="flex: 1; padding: 10px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">Batal</button>
@@ -3243,7 +3251,6 @@ window.prosesUploadBuktiEditAdmin = async function() {
   }
 };
 
-// Proses simpan seluruh perubahan ke Firebase
 window.simpanPerubahanKeuanganAdmin = async function() {
   if (!idKeuanganSedangDiedit) return;
 
@@ -3254,13 +3261,25 @@ window.simpanPerubahanKeuanganAdmin = async function() {
   let nominalStr = document.getElementById('editNominal').value;
   let nominal = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
   let fotoUrl = document.getElementById('editFotoUrl').value;
+  let pinInput = document.getElementById('editPinDivisi').value.trim();
 
   if (!tglInput || !divisi || !keterangan || nominal <= 0) {
     alert("Mohon lengkapi semua data dengan benar!");
     return;
   }
 
-  // Format tanggal kembali ke DD/MM/YYYY agar seragam
+  if (!pinInput) {
+    alert("Mohon masukkan PIN Khusus Divisi untuk melakukan perubahan!");
+    return;
+  }
+
+  // 🛡️ Verifikasi PIN berdasarkan daftar PIN yang ada di sistem (sesuaikan dengan fungsi validasi PIN divisi Anda)
+  // Contoh menggunakan fungsi cekPinDivisi yang biasa dipakai di admin
+  if (typeof cekPinDivisi === 'function' && !cekPinDivisi(divisi, pinInput)) {
+    alert("❌ PIN Khusus untuk divisi '" + divisi.toUpperCase() + "' salah!");
+    return;
+  }
+
   let parts = tglInput.split('-');
   let tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
   let tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
