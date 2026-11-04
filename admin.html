@@ -2491,8 +2491,6 @@ async function prosesUploadKeR2Warga() {
 }
 
 async function prosesUploadSemiManual() {
-  console.log("1. Tombol Upload diklik"); // Cek apakah fungsi terpanggil
-  
   const fileInput = document.getElementById('inputUploadSemiManual');
   const statusDiv = document.getElementById('statusSemiManual');
   const inputUrlTarget = document.getElementById('editWargaFoto');
@@ -2506,25 +2504,26 @@ async function prosesUploadSemiManual() {
   statusDiv.innerHTML = "⏳ Sedang mengunggah file ke Cloudflare R2...";
   statusDiv.style.color = "#d97706";
 
-  const formData = new FormData();
-  formData.append("file", file);
-
   try {
-    // 🌟 Tambahkan /upload di akhir URL
+    // 🌟 Perhatikan penambahan /upload di belakang URL Worker Anda
     const workerUrl = "https://rt05-uploader.deny220291.workers.dev/upload"; 
-    console.log("2. Mengirim fetch ke:", workerUrl);
 
     const response = await fetch(workerUrl, {
       method: "POST",
-      body: formData
+      headers: {
+        "X-File-Name": file.name,
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file // Kirim file mentah (ArrayBuffer/Blob) langsung
     });
 
-    console.log("3. Respon diterima dari server:", response.status);
-
     const textResult = await response.text();
-    console.log("4. Teks mentah dari server:", textResult);
-
-    let result = JSON.parse(textResult);
+    let result;
+    try {
+      result = JSON.parse(textResult);
+    } catch (e) {
+      throw new Error("Respon server bukan JSON valid: " + textResult);
+    }
 
     if (result.success && result.url) {
       inputUrlTarget.value = result.url;
@@ -2535,7 +2534,7 @@ async function prosesUploadSemiManual() {
     }
 
   } catch (err) {
-    console.error("❌ Terjadi Error:", err);
+    console.error(err);
     statusDiv.innerHTML = `❌ Gagal: ${err.message}`;
     statusDiv.style.color = "#dc2626";
   }
@@ -2742,8 +2741,8 @@ document.addEventListener("DOMContentLoaded", () => {
   const formData = new FormData();
   formData.append("file", file);
 
-  // Ganti dengan URL Worker Anda yang asli
-  const workerUrl = "https://rt05-uploader.deny20291.workers.dev";
+  // 🌟 Perbaikan: Gunakan URL lengkap dengan /upload dan subdomain yang benar (deny220291)
+  const workerUrl = "https://rt05-uploader.deny220291.workers.dev/upload";
 
   try {
     const response = await fetch(workerUrl, {
@@ -2751,7 +2750,14 @@ document.addEventListener("DOMContentLoaded", () => {
       body: formData
     });
     
-    const result = await response.json();
+    const textResult = await response.text();
+    let result;
+    try {
+      result = JSON.parse(textResult);
+    } catch (e) {
+      throw new Error("Respon server bukan JSON valid: " + textResult);
+    }
+
     if (result.success) {
       return result.url; // URL publik R2 yang siap disimpan ke Firebase!
     } else {
