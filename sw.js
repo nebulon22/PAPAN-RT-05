@@ -111,14 +111,15 @@ self.addEventListener('fetch', (event) => {
     return; 
   }
 
-  // Longgarkan tangkapan untuk API, Cloudflare R2, dan Media Eksternal
+  // Longgarkan tangkapan untuk API, Cloudflare Workers, dan Media Eksternal
   if (
     event.request.mode === 'navigate' || 
     url.origin.includes('firebase') || 
     url.origin.includes('gstatic') ||
     url.origin.includes('firebasestorage') ||
-    url.origin.includes('catbox.moe' ) ||
-    url.origin.includes('r2.dev') || // 🌟 TAMBAHKAN BARIS INI UNTUK CLOUDFLARE R2
+    url.origin.includes('catbox.moe') ||
+    url.origin.includes('workers.dev') || // 🌟 TAMBAHKAN BARIS INI
+    url.origin.includes('r2.dev') ||     // 🌟 TAMBAHKAN BARIS INI JUGA
     url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif|webp)$/i)
   ) {
     event.respondWith(
