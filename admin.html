@@ -559,6 +559,34 @@
 
   </div>
 </div>
+  <!-- MODAL FORM EDIT KEUANGAN ADMIN -->
+<div id="modal-edit-keuangan" class="modal-bg" style="display: none; z-index: 3100;" onclick="if(event.target.id==='modal-edit-keuangan') tutupModalEditAdmin()">
+  <div class="modal-content" style="max-width: 400px; max-height: 90vh; overflow-y: auto; padding: 16px; box-sizing: border-box;">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+      <h3 style="margin: 0; font-size: 15px;">✏️ Edit Data Keuangan</h3>
+      <button class="close-btn" onclick="tutupModalEditAdmin()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+    </div>
+
+    <form id="formEditKeuanganAdmin" onsubmit="event.preventDefault(); simpanPerubahanKeuanganAdmin();">
+      <input type="hidden" id="editIdKeuangan">
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 11.5px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
+        <input type="text" id="editKeterangan" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; box-sizing: border-box;" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 11.5px; font-weight: bold; color: #333;">Nominal (Rp):</label>
+        <input type="text" id="editNominal" inputmode="numeric" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 15px;">
+        <button type="button" onclick="tutupModalEditAdmin()" style="flex: 1; padding: 8px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px;">Batal</button>
+        <button type="submit" id="btnSimpanEditAdmin" style="flex: 1; padding: 8px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px;">💾 Simpan Perubahan</button>
+      </div>
+    </form>
+  </div>
+</div>
    
 <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
   <div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
@@ -3101,28 +3129,68 @@ window.filterTabelKelolaAdmin = function() {
 };
 
 // Fungsi ketika tombol Edit diklik (memperbarui keterangan atau nominal transaksi)
-window.mulaiEditKeuanganAdmin = async function(id) {
+let idKeuanganSedangDiedit = null;
+
+// Membuka modal edit khusus saat tombol Edit diklik
+window.mulaiEditKeuanganAdmin = function(id) {
   let target = cacheDataKeuanganAdmin.find(x => x.id === id);
   if (!target) return;
 
-  let ketBaru = prompt("Ubah Keterangan Transaksi:", target.keterangan || target.ket || '');
-  if (ketBaru === null) return;
+  idKeuanganSedangDiedit = id;
 
-  let nominalBaruStr = prompt("Ubah Nominal (Angka Saja):", target.nominal || 0);
-  if (nominalBaruStr === null) return;
-  let nominalBaru = parseInt(nominalBaruStr.replace(/[^0-9]/g, ''), 10) || 0;
+  // Isi data ke dalam input modal edit
+  document.getElementById('editIdKeuangan').value = id;
+  document.getElementById('editKeterangan').value = target.keterangan || target.ket || '';
+  document.getElementById('editNominal.value').value = Number(target.nominal || 0).toLocaleString('id-ID');
+
+  // Munculkan modal edit
+  const modal = document.getElementById('modal-edit-keuangan');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.tutupModalEditAdmin = function() {
+  const modal = document.getElementById('modal-edit-keuangan');
+  if (modal) modal.style.display = 'none';
+  idKeuanganSedangDiedit = null;
+};
+
+// Proses simpan perubahan ke Firebase
+window.simpanPerubahanKeuanganAdmin = async function() {
+  if (!idKeuanganSedangDiedit) return;
+
+  let ketBaru = document.getElementById('editKeterangan').value.trim();
+  let nominalStr = document.getElementById('editNominal').value;
+  let nominalBaru = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
+
+  if (!ketBaru) {
+    alert("Keterangan tidak boleh kosong!");
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanEditAdmin');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = '⏳ Menyimpan...';
+  }
 
   try {
-    const refItem = window.firebaseRef(window.db, `keuangan/${id}`);
+    const refItem = window.firebaseRef(window.db, `keuangan/${idKeuanganSedangDiedit}`);
     await window.firebaseUpdate(refItem, {
       keterangan: ketBaru,
       ket: ketBaru,
       nominal: nominalBaru
     });
+
     alert("✅ Data keuangan berhasil diperbarui!");
-    muatDataKelolaKeuanganAdmin();
+    window.tutupModalEditAdmin();
+    muatDataKelolaKeuanganAdmin(); // Refresh tabel admin
   } catch (err) {
     alert("❌ Gagal memperbarui data: " + err);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = '💾 Simpan Perubahan';
+    }
   }
 };
     
