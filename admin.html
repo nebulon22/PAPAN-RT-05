@@ -753,7 +753,7 @@
   <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Upload Foto ke Cloudflare R2 (Semi-Manual):</label>
   <div style="display: flex; gap: 8px; margin-top: 4px; align-items: center;">
     <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; flex: 1;">
-    <button type="button" onclick="prosesUploadSemiManual()" style="background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">Upload</button>
+    <button type="button" onclick="()" style="background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">Upload</button>
   </div>
   <!-- Tempat teks status & link hasil upload muncul -->
   <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
@@ -2505,16 +2505,15 @@ async function prosesUploadSemiManual() {
   statusDiv.style.color = "#d97706";
 
   try {
-    // 🌟 Perhatikan penambahan /upload di belakang URL Worker Anda
     const workerUrl = "https://rt05-uploader.deny220291.workers.dev/upload"; 
+
+    // 🌟 PERBAIKAN: Bungkus file ke dalam FormData agar sesuai dengan request.formData() di Worker
+    const formData = new FormData();
+    formData.append("file", file);
 
     const response = await fetch(workerUrl, {
       method: "POST",
-      headers: {
-        "X-File-Name": file.name,
-        "Content-Type": file.type || "application/octet-stream"
-      },
-      body: file // Kirim file mentah (ArrayBuffer/Blob) langsung
+      body: formData // Kirim sebagai FormData, bukan biner mentah
     });
 
     const textResult = await response.text();
