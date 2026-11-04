@@ -2500,14 +2500,16 @@ async function prosesUploadSemiManual() {
     return;
   }
 
-  const file = fileInput.files[0];
-  statusDiv.innerHTML = "⏳ Sedang mengunggah file ke Cloudflare R2...";
+  let file = fileInput.files[0];
+  statusDiv.innerHTML = "⏳ Sedang mengkompres & mengunggah file ke R2...";
   statusDiv.style.color = "#d97706";
 
   try {
     const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
 
-    // 🌟 PERBAIKAN: Kirim biner mentah langsung agar stabil dan anti-timeout
+    // 🌟 Jalankan kompresi otomatis untuk upload semi-manual
+    file = await kompresGambar(file, 1200, 0.8);
+
     const response = await fetch(workerUrl, {
       method: "POST",
       headers: {
@@ -2527,7 +2529,7 @@ async function prosesUploadSemiManual() {
 
     if (result.success && result.url) {
       inputUrlTarget.value = result.url;
-      statusDiv.innerHTML = `✅ Berhasil! Link R2:<br><a href="${result.url}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${result.url}</b></a>`;
+      statusDiv.innerHTML = `✅ Berhasil dikompres & diunggah! Link R2:<br><a href="${result.url}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${result.url}</b></a>`;
       statusDiv.style.color = "#10b981";
     } else {
       throw new Error(result.error || "Gagal mendapatkan URL dari server.");
@@ -2538,6 +2540,46 @@ async function prosesUploadSemiManual() {
     statusDiv.innerHTML = `❌ Gagal: ${err.message}`;
     statusDiv.style.color = "#dc2626";
   }
+}
+
+// 🌟 Fungsi Kompresi Gambar Otomatis (Menggantikan peran Squoosh secara instan)
+async function kompresGambar(file, maxWidth = 1200, quality = 0.8) {
+  // Jika file yang diunggah adalah video atau bukan gambar, lewati kompresi
+  if (!file || !file.type.startsWith('image/')) return file;
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Batasi lebar maksimal (default 1200px agar ringan dan tetap tajam)
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          // Buat objek File baru yang ukurannya sudah terkompresi
+          const compressedFile = new File([blob], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(compressedFile);
+        }, 'image/jpeg', quality);
+      };
+    };
+  });
 }
 
 // Fungsi pembantu kecil untuk membuat teks status di bawah input file
@@ -2737,17 +2779,20 @@ async function uploadKeCloudflareR2(fileInputId) {
   const fileInput = document.getElementById(fileInputId);
   if (!fileInput || fileInput.files.length === 0) return null;
 
-  const file = fileInput.files[0];
+  let file = fileInput.files[0];
   const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
 
   try {
+    // 🌟 Jalankan kompresi otomatis sebelum di-upload ke R2
+    file = await kompresGambar(file, 1200, 0.8);
+
     const response = await fetch(workerUrl, {
       method: "POST",
       headers: {
         "X-File-Name": file.name,
         "Content-Type": file.type || "application/octet-stream"
       },
-      body: file // Kirim file mentah langsung (Binary Stream)
+      body: file // Kirim file biner mentah yang sudah terkompresi
     });
     
     const textResult = await response.text();
