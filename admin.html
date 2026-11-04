@@ -748,17 +748,22 @@
     <input type="text" id="editWargaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
   </div>
 
-  <!-- BAGIAN FOTO YANG SUDAH DIBERSIHKAN (TIDAK DUPLIKAT) -->
-  <div class="form-group" style="margin-bottom: 12px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">📁 Upload Foto/Video (Cloudflare R2):</label>
-    <input type="file" id="inputUploadFotoWarga" accept="image/*,video/*" style="width: 100%; padding: 6px; border: 1px solid #ccc; border-radius: 6px; font-size: 11px; box-sizing: border-box; margin-bottom: 6px;" onchange="prosesUploadKeR2Warga()">
-
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Atau URL Media:</label>
-    <input type="url" id="editWargaFoto" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-    <div style="margin-top: 6px; text-align: center;">
-      <img id="previewFotoRumah" src="" alt="Preview" style="max-height: 80px; max-width: 100%; border-radius: 4px; display: none; object-fit: cover; border: 1px solid #ddd;">
-    </div>
+<!-- Tombol Upload & Kotak Munculnya Link URL -->
+<div class="form-group" style="margin-bottom: 12px;">
+  <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Upload Foto ke Cloudflare R2 (Semi-Manual):</label>
+  <div style="display: flex; gap: 8px; margin-top: 4px; align-items: center;">
+    <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; flex: 1;">
+    <button type="button" onclick="prosesUploadSemiManual()" style="background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">Upload</button>
   </div>
+  <!-- Tempat teks status & link hasil upload muncul -->
+  <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
+</div>
+
+<!-- Kolom URL Foto (Tempat Anda paste link / link otomatis terisi) -->
+<div class="form-group" style="margin-bottom: 10px;">
+  <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media (Hasil Copy-Paste):</label>
+  <input type="text" id="editWargaFoto" placeholder="https://pub-xxxx.r2.dev/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+</div>
 
   <div style="display: flex; gap: 8px;">
     <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
@@ -2482,6 +2487,57 @@ async function prosesUploadKeR2Warga() {
   } else {
     labelStatus.innerText = "❌ Gagal mengunggah. Cek koneksi / Worker.";
     labelStatus.style.color = "#dc2626";
+  }
+}
+
+async function prosesUploadSemiManual() {
+  const fileInput = document.getElementById('inputUploadSemiManual');
+  const statusDiv = document.getElementById('statusSemiManual');
+  const inputUrlTarget = document.getElementById('editWargaFoto');
+
+  if (!fileInput || fileInput.files.length === 0) {
+    alert("Silakan pilih file foto/video terlebih dahulu!");
+    return;
+  }
+
+  const file = fileInput.files[0];
+  statusDiv.innerHTML = "⏳ Sedang mengunggah file ke Cloudflare R2...";
+  statusDiv.style.color = "#d97706";
+
+  const formData = new FormData();
+  formData.append("file", file);
+
+  try {
+    // ⚠️ Ganti dengan URL Cloudflare Worker Anda yang aktif
+    const workerUrl = "https://rt05-uploader.deny220291.workers.dev/"; 
+
+    const response = await fetch(workerUrl, {
+      method: "POST",
+      body: formData
+    });
+
+    const textResult = await response.text();
+    let result;
+    try {
+      result = JSON.parse(textResult);
+    } catch (e) {
+      throw new Error("Respon server bukan JSON valid: " + textResult);
+    }
+
+    if (result.success && result.url) {
+      // Masukkan otomatis ke kolom target DAN tampilkan link agar mudah disalin
+      inputUrlTarget.value = result.url;
+      
+      statusDiv.innerHTML = `✅ Berhasil! Link R2:<br><a href="${result.url}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${result.url}</b></a> (Sudah dimasukkan otomatis ke kolom di bawah)`;
+      statusDiv.style.color = "#10b981";
+    } else {
+      throw new Error(result.error || "Gagal mendapatkan URL dari server.");
+    }
+
+  } catch (err) {
+    console.error(err);
+    statusDiv.innerHTML = `❌ Gagal: ${err.message}`;
+    statusDiv.style.color = "#dc2626";
   }
 }
 
