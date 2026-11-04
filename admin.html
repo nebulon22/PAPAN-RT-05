@@ -2603,6 +2603,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+    async function uploadKeCloudflareR2(fileInputId) {
+  const fileInput = document.getElementById(fileInputId);
+  if (!fileInput || fileInput.files.length === 0) return null;
+
+  const file = fileInput.files[0];
+  const formData = new FormData();
+  formData.append("file", file);
+
+  // Ganti dengan URL Worker Anda yang asli
+  const workerUrl = "https://rt05-uploader.deny20291.workers.dev";
+
+  try {
+    const response = await fetch(workerUrl, {
+      method: "POST",
+      body: formData
+    });
+    
+    const result = await response.json();
+    if (result.success) {
+      return result.url; // URL publik R2 yang siap disimpan ke Firebase!
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (err) {
+    alert("Gagal mengupload file: " + err.message);
+    return null;
+  }
+}
+
    function bukaModalLaporan() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('laporanTanggal').value = today;
