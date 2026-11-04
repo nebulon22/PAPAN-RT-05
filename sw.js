@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.6.2';   
+const CACHE_NAME = 'rt-kayen-v1.6.5';   
 
 // 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
@@ -102,7 +102,7 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Izinkan navigasi halaman HTML, Firebase, dan Video Streaming berjalan langsung tanpa lewat Cache
+// Izinkan navigasi halaman HTML, Firebase, Cloudflare R2, dan Video Streaming berjalan langsung tanpa lewat Cache
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
@@ -111,14 +111,16 @@ self.addEventListener('fetch', (event) => {
     return; 
   }
 
-  // Longgarkan tangkapan untuk API dan Media Eksternal
+  // Longgarkan tangkapan untuk API, Cloudflare Workers, dan Media Eksternal
   if (
     event.request.mode === 'navigate' || 
     url.origin.includes('firebase') || 
     url.origin.includes('gstatic') ||
     url.origin.includes('firebasestorage') ||
     url.origin.includes('catbox.moe') ||
-    url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif)$/i)
+    url.origin.includes('workers.dev') || // 🌟 TAMBAHKAN BARIS INI
+    url.origin.includes('r2.dev') ||     // 🌟 TAMBAHKAN BARIS INI JUGA
+    url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif|webp)$/i)
   ) {
     event.respondWith(
       fetch(event.request).catch((err) => {

@@ -26,7 +26,7 @@
   <noscript><link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"></noscript>
   
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.6.2">
+  <link rel="manifest" href="manifest.json?v=1.6.5">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   
@@ -1057,20 +1057,23 @@
 
 </div>
 
-<div id="modal-setting" class="modal-bg" data-click="tutupModalSettingLuar">
+        <!-- Modal Setting -->
+<div id="modal-setting" class="modal-bg" style="display: none; z-index: 3000;" onclick="window.tutupModalSettingLuar(event)">
   <div class="modal-content" style="max-width: 380px; display: flex; flex-direction: column; text-align: left;">
     
+    <!-- Header Modal -->
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
       <h3 style="margin: 0; font-size: 16px; color: #333;">⚙️ Pengaturan Notifikasi</h3>
-      <span data-click="tutupModalSetting()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
+      <button type="button" onclick="window.tutupModalSetting()" style="background: none; border: none; cursor: pointer; font-weight: bold; font-size: 20px; color: #888; padding: 0;">&times;</button>
     </div>
 
+    <!-- Konten Modal (Bisa Di-scroll) -->
     <div style="font-size: 13px; color: #444; display: flex; flex-direction: column; gap: 12px; overflow-y: auto; max-height: 60vh;">
       
       <!-- Mode Notifikasi Global -->
       <div style="background: #f8fafb; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
         <label for="setting-mode-notif" style="font-weight: bold; display: block; margin-bottom: 6px; color: #1e293b;">Mode Notifikasi (Chat, Update, & Info):</label>
-        <select id="setting-mode-notif" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 500; outline: none;">
+        <select id="setting-mode-notif" style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; font-weight: 500; outline: none; background: #fff;">
           <option value="normal">🔔 Suara & Getar (Normal)</option>
           <option value="suara">🔊 Hanya Suara</option>
           <option value="getar">📳 Hanya Getar</option>
@@ -1097,7 +1100,7 @@
           <option value="audio/ping2.mp3">💬 Ping 2</option>
         </select>
         
-        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; pt-2; margin-top: 6px; padding-top: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid #e2e8f0; margin-top: 6px; padding-top: 6px;">
           <div>
             <span style="font-weight: bold; display: block; color: #1e293b; font-size: 12px;">Aktifkan Chat Grup</span>
             <span style="font-size: 10px; color: #64748b;">Putar suara saat pesan grup masuk</span>
@@ -1136,7 +1139,8 @@
 
     </div>
 
-    <button type="button" data-click="simpanPengaturanApp()" style="width: 100%; margin-top: 15px; padding: 10px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+    <!-- Tombol Simpan -->
+    <button type="button" onclick="window.simpanPengaturanApp()" style="width: 100%; margin-top: 15px; padding: 10px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
       💾 Simpan Pengaturan
     </button>
   </div>
@@ -1388,7 +1392,7 @@ function muatDataPetaWarga() {
     var index = 0;
     var chunkSize = 20;
 
-    function prosesChunk() {
+function prosesChunk() {
       var batas = Math.min(index + chunkSize, baris.length);
       
       for (let i = index; i < batas; i++) {
@@ -1408,8 +1412,10 @@ function muatDataPetaWarga() {
             : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
 
           var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
+          
+          // Diambil langsung dari variabel 'kolom' (bukan childSnap)
           var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
-
+          
           var item = {
             name: namaAsli,
             nameAsli: namaAsli,
@@ -1435,7 +1441,6 @@ function muatDataPetaWarga() {
           
           var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-          // Cukup simpan penanda ke array daftarPin (penampilan ke peta diserahkan ke filterKategori)
           daftarPin.push({ 
             namaRaw: item.nameAsli,
             nama: item.nameAsli.toLowerCase(), 
@@ -1457,8 +1462,6 @@ function muatDataPetaWarga() {
           setTimeout(prosesChunk, 4);
         }
       } else {
-        // SETELAH SELURUH DATA SELESAI DIMUAT:
-        // Panggil filter 'awal' agar HANYA FASUM, Rumah Pak RT, dan Rumah Pak RW yang tampil di awal.
         if (typeof filterKategori === 'function') {
           filterKategori('awal');
         }
@@ -2131,6 +2134,9 @@ window.muatDataKeuangan = function() {
             ? nominalRaw 
             : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
 
+          // 🌟 Ambil URL foto bukti dari database Firebase (mendukung berbagai variasi penulisan key)
+          var fotoUrl = item.foto || item.Foto || '';
+
           var tgl = String(tglRaw);
           if (tgl.includes('T')) {
             var parts = tgl.split('T')[0].split('-');
@@ -2146,7 +2152,8 @@ window.muatDataKeuangan = function() {
             }
           }
 
-          dataKeuangan.push({ tgl, divisi, ket, tipe, nominal });
+          // 🌟 Sertakan properti foto ke dalam objek array dataKeuangan
+          dataKeuangan.push({ tgl, divisi, ket, tipe, nominal, foto: fotoUrl });
         }
       });
     }
@@ -2218,19 +2225,30 @@ window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
   tbody.innerHTML = '';
 
   if (!dataset || dataset.length === 0) {
-    tbody.innerHTML = '<tr><td style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Belum ada catatan.</td></tr>';
     return;
   }
 
   dataset.forEach(item => {
     var tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
+
+   // 🌟 Menggunakan tombol pop-up modal agar gambar tampil full screen di tempat
+    let htmlBukti = '';
+    if (item.foto && item.foto.trim() !== '') {
+      htmlBukti = `<button type="button" data-click="bukaFotoBesar" data-arg="${item.foto}" style="font-size: 9.5px; background: #e0f2fe; color: #0288d1; padding: 2px 6px; border-radius: 4px; border: 1px solid #bae6fd; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">📄 Lihat Nota</button>`;
+    }
+
+    // 🌟 2. Bagi menjadi 3 kolom: Kiri (Keterangan), Tengah (Tombol Nota), Kanan (Nominal)
     tr.innerHTML = `
-      <td style="padding:6px 0;">
+      <td style="padding:6px 0; width: 50%;">
         <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHTML(item.tgl)}</span><br>
         <b>${escapeHTML(item.ket)}</b>
       </td>
-      <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top;">
+      <td style="padding:6px 0; text-align:center; vertical-align:middle; width: 25%;">
+        ${htmlBukti}
+      </td>
+      <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top; width: 25%;">
         ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
       </td>
     `;
@@ -3268,10 +3286,22 @@ window.cetakLaporanJimpitan = function() {
 
     const dataChangelog = [
        {
-        versi: "v1.6.2",
-        tanggal: "3 Nov 2026",
+        versi: "v1.6.5",
+        tanggal: "4 Nov 2026",
         status: "Terbaru",
         warna: "#4CAF50",
+        fitur: [
+          "Perbaikan fitur Laporan Divisi",
+          "Perbaikan Major pada halaman admin",
+          "Kini bisa edit laporan dan upload bukti nota",
+          "Penambahan fitur upload foto pengumuman dan foto rumah warga"
+        ]
+      },
+       {
+        versi: "v1.6.4",
+        tanggal: "3 Nov 2026",
+        status: "",
+        warna: "#888",
         fitur: [
           "Perbaikan fitur kelola data warga",
           "Penambahan fitur edit inventaris dan pinjam inventaris/perkakas",

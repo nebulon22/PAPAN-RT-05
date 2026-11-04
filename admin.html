@@ -139,6 +139,31 @@
       margin: auto;
     }
 
+    /* Sesuaikan tinggi modal keuangan agar seragam dan stabil */
+#modal-laporan .modal-content {
+  background: white;
+  width: 90%;
+  max-width: 500px;
+  height: 590px !important;       /* <--- Kunci tinggi konsisten untuk kedua tab */
+  max-height: 85vh !important;
+  border-radius: 12px;
+  padding: 16px;
+  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;               /* Sembunyikan overflow utama */
+  margin: auto;
+}
+
+/* Area konten di dalam tab agar flex & bisa digulir secara mandiri jika melebihi tinggi */
+#panel-tab-input, #panel-tab-edit {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  min-height: 0;
+}
+    
     /* Tambahkan kelas ini untuk membungkus area isi tab di dalam modal */
     .modal-body-scroll {
       flex: 1;
@@ -294,6 +319,16 @@
         </div>
 
         <div class="form-group" style="margin-bottom: 8px;">
+          <label for="inputUploadPengumuman" style="font-size: 11px; font-weight: bold;">📁 Upload Poster / Foto / Video (Cloudflare R2):</label>
+          <input type="file" id="inputUploadPengumuman" accept="image/*,video/*" style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 4px;" onchange="prosesUploadKeR2Pengumuman()">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Otomatis / Manual):</label>
+          <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
           <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
           <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
         </div>
@@ -436,77 +471,194 @@
   </div>
 </div>
 
-  <!-- MODAL 2: Form Laporan Keuangan Divisi -->
-  <div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
-    <div class="modal-content" style="max-width: 400px; max-height: 90vh; overflow-y: auto; padding-bottom: 20px;">
-      <div class="modal-header">
-        <h3>💰 Laporan Keuangan Divisi</h3>
-        <button class="close-btn" onclick="tutupModalLaporan()">&times;</button>
-      </div>
-      
-      <form id="formLaporanDivisi">
-        <div class="form-group">
-          <label for="laporanTanggal" style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
-          <input type="date" id="laporanTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
+<!-- MODAL 2: Form & Kelola Keuangan Divisi (Tabbed Modal) -->
+<div id="modal-laporan" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-laporan') tutupModalLaporan()">
+  <div class="modal-content">
+    
+    <!-- Header Modal -->
+    <div class="modal-header" style="flex-shrink: 0;">
+      <h3 style="margin: 0; font-size: 16px;">💰 Pengelolaan Keuangan Divisi</h3>
+      <button class="close-btn" onclick="tutupModalLaporan()">&times;</button>
+    </div>
+
+    <!-- Tombol Navigasi Tab -->
+    <div style="display: flex; gap: 8px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; flex-shrink: 0;">
+      <button type="button" id="btn-tab-input" onclick="switchTabKeuangan('input')" style="flex: 1; padding: 10px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">
+        ➕ Input Laporan Baru
+      </button>
+      <button type="button" id="btn-tab-edit" onclick="switchTabKeuangan('edit')" style="flex: 1; padding: 10px; border: none; border-radius: 6px; background: #e2e8f0; color: #475569; font-weight: bold; font-size: 12px; cursor: pointer;">
+        ✏️ Lihat & Ubah Laporan
+      </button>
+    </div>
+
+    <!-- ================= TAB 1: FORM INPUT LAPORAN ================= -->
+    <div id="panel-tab-input" style="display: block;">
+      <form id="formLaporanDivisi" style="display: flex; flex-direction: column; height: 100%;">
+        <div style="flex: 1; overflow-y: auto; padding-right: 4px;">
+          <!-- Semua form-group input laporan taruh di sini -->
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
+            <input type="date" id="laporanTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
+            <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+              <option value="">-- Pilih Divisi / Pos --</option>
+              <option value="sosial">Sosial</option>
+              <option value="tenda">Tenda</option>
+              <option value="sound system">Sound System</option>
+              <option value="pondokan rt 05">Pondokan RT 05</option>
+              <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
+              <option value="pekerjaan umum & kelistrikan">Pekerjaan Umum & Kelistrikan</option>
+              <option value="ronda harian & keamanan">Ronda Harian & Keamanan</option>
+              <option value="bendahara umum">Bendahara Umum</option>
+              <option value="tata ruang">Tata Ruang</option>
+              <option value="transportasi">Transportasi</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
+            <select id="laporanJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+              <option value="Pemasukan">🟢 Pemasukan</option>
+              <option value="Pengeluaran">🔴 Pengeluaran</option>
+            </select>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
+            <input type="text" id="laporanKeterangan" placeholder="Contoh: Arisan / Bayar kost" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
+            <input type="text" id="laporanNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
+          </div>
+
+          <div class="form-group" style="margin-top: 10px;">
+            <label style="font-size: 11px; font-weight: bold; color: #475569;">📁 Upload Bukti Transaksi / Nota (Opsional):</label>
+            <input type="file" id="laporanInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="prosesUploadBuktiKeR2()">
+            <input type="hidden" id="laporanFotoUrl" value="">
+            <div id="statusUploadBukti" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
+          </div>
+          
+          <div style="margin-top: 10px;">
+            <label style="font-size: 11px; font-weight: bold; color: #475569;">🔒 PIN Khusus Divisi:</label>
+            <input type="password" id="laporanPinDivisi" maxlength="6" inputmode="numeric" placeholder="Masukkan PIN Divisi Anda" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+          </div>
         </div>
 
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanNamaDivisi" style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
-          <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
-            <option value="">-- Pilih Divisi / Pos --</option>
-            <option value="sosial">Sosial</option>
-            <option value="tenda">Tenda</option>
-            <option value="sound system">Sound System</option>
-            <option value="pondokan rt 05">Pondokan RT 05</option>
-            <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
-            <option value="pekerjaan umum & kelistrikan">Pekerjaan Umum & Kelistrikan</option>
-            <option value="ronda harian & keamanan">Ronda Harian & Keamanan</option>
-            <option value="bendahara umum">Bendahara Umum</option>
-            <option value="tata ruang">Tata Ruang</option>
-            <option value="transportasi">Transportasi</option>
-          </select>
+        <!-- Tombol Simpan Fixed di Bawah -->
+        <div style="margin-top: 10px; flex-shrink: 0;">
+          <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
+            📤 Kirim Laporan Keuangan
+          </button>
         </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanJenis" style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
-          <select id="laporanJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
-            <option value="Pemasukan">🟢 Pemasukan</option>
-            <option value="Pengeluaran">🔴 Pengeluaran</option>
-          </select>
-        </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanKeterangan" style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
-          <input type="text" id="laporanKeterangan" placeholder="Contoh: Arisan / Bayar kost kamar A" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" required>
-        </div>
-
-        <div class="form-group" style="margin-top: 10px;">
-          <label for="laporanNominal" style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
-          <input type="text" id="laporanNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" oninput="formatRibuanInput(this)" required>
-        </div>
-
-        <!-- Input Tambahan: PIN Khusus Divisi -->
-<div style="margin-top: 10px;">
-  <label for="laporanPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
-    🔒 PIN Khusus Divisi:
-  </label>
-  <input type="password" id="laporanPinDivisi" maxlength="6" 
-       inputmode="numeric" 
-       autocomplete="current-password" 
-       data-lpignore="true" 
-       placeholder="Masukkan PIN Divisi Anda"
-         style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
-  <span style="font-size: 10px; color: #64748b; margin-top: 2px; display: block;">
-    *Setiap divisi memiliki PIN tersendiri.
-  </span>
-</div>
-
-        <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; margin-top: 15px; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
-          📤 Kirim Laporan Keuangan
-        </button>
       </form>
     </div>
+
+    <!-- ================= TAB 2: EDIT & KELOLA LAPORAN ================= -->
+    <div id="panel-tab-edit" style="display: none; flex-direction: column; height: 100%;">
+      <div style="margin-bottom: 8px; flex-shrink: 0;">
+        <input type="text" id="pencarianKelolaAdmin" placeholder="🔍 Cari keterangan atau divisi..." onkeyup="filterTabelKelolaAdmin()" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; box-sizing: border-box;">
+      </div>
+
+      <div style="flex: 1; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; min-height: 0;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+          <thead>
+            <tr style="background: #f1f5f9; color: #334155; border-bottom: 2px solid #cbd5e1; position: sticky; top: 0; z-index: 5;">
+              <th style="padding: 6px; text-align: left;">Tanggal & Divisi</th>
+              <th style="padding: 6px; text-align: left;">Keterangan & Nominal</th>
+              <th style="padding: 6px; text-align: center;">Nota</th>
+              <th style="padding: 6px; text-align: center;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-kelola-keuangan-admin">
+            <tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
   </div>
+</div>
+<!-- MODAL FORM EDIT KEUANGAN ADMIN (LENGKAP) -->
+<div id="modal-edit-keuangan" class="modal-bg" style="display: none; z-index: 3100;" onclick="if(event.target.id==='modal-edit-keuangan') tutupModalEditAdmin()">
+  <div class="modal-content" style="max-width: 450px; max-height: 96vh !important; height: auto !important; overflow-y: auto !important; padding: 12px 16px; box-sizing: border-box;">
+    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+      <h3 style="margin: 0; font-size: 16px;">✏️ Edit Data Keuangan</h3>
+      <button class="close-btn" onclick="tutupModalEditAdmin()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
+    </div>
+
+    <form id="formEditKeuanganAdmin" onsubmit="event.preventDefault(); simpanPerubahanKeuanganAdmin();">
+      <input type="hidden" id="editIdKeuangan">
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
+        <input type="date" id="editTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
+        <select id="editNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
+          <option value="">-- Pilih Divisi / Pos --</option>
+          <option value="sosial">Sosial</option>
+          <option value="tenda">Tenda</option>
+          <option value="sound system">Sound System</option>
+          <option value="pondokan rt 05">Pondokan RT 05</option>
+          <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
+          <option value="pekerjaan umum & kelistrikan">Pekerjaan Umum & Kelistrikan</option>
+          <option value="ronda harian & keamanan">Ronda Harian & Keamanan</option>
+          <option value="bendahara umum">Bendahara Umum</option>
+          <option value="tata ruang">Tata Ruang</option>
+          <option value="transportasi">Transportasi</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
+        <select id="editJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
+          <option value="Pemasukan">🟢 Pemasukan</option>
+          <option value="Pengeluaran">🔴 Pengeluaran</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
+        <input type="text" id="editKeterangan" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
+        <input type="text" id="editNominal" inputmode="numeric" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
+      </div>
+
+      <!-- Upload Bukti Transaksi / Nota -->
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+          📁 Ganti / Upload Bukti Nota (Opsional):
+        </label>
+        <input type="file" id="editInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; box-sizing: border-box;" onchange="prosesUploadBuktiEditAdmin()">
+        <input type="hidden" id="editFotoUrl" value="">
+        <div id="statusUploadBuktiEdit" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
+      </div>
+      <!-- PIN Khusus Divisi untuk Validasi Edit -->
+      <div class="form-group" style="margin-top: 10px;">
+        <label for="editPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+          🔒 PIN Khusus Divisi (Wajib untuk Edit):
+        </label>
+        <input type="password" id="editPinDivisi" maxlength="6" inputmode="numeric" placeholder="Masukkan PIN divisi terkait" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
+        <span style="font-size: 10px; color: #64748b; margin-top: 2px; display: block;">*Masukkan PIN divisi yang sesuai untuk menyimpan perubahan.</span>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 15px;">
+        <button type="button" onclick="tutupModalEditAdmin()" style="flex: 1; padding: 10px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">Batal</button>
+        <button type="submit" id="btnSimpanEditAdmin" style="flex: 1; padding: 10px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">💾 Simpan Perubahan</button>
+      </div>
+    </form>
+  </div>
+</div>
    
 <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
   <div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
@@ -713,36 +865,47 @@
 <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
   <div class="modal-content" style="max-width: 400px; width: 90%;">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
-      <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Keluarga / Warga</h3>
+      <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Lokasi / Warga</h3>
       <button class="close-btn" onclick="tutupModalEditWarga()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
     </div>
 
 <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
-  <!-- PENTING: Input ID untuk menyimpan key Firebase -->
   <input type="hidden" id="editWargaId">
 
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
-    <input type="text" id="editWargaNama" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+  <!-- Bungkus bagian ini agar otomatis hilang jika Fasum/Kuliner/Minimarket -->
+  <div id="groupFieldKeluarga">
+    <div class="form-group" style="margin-bottom: 10px;">
+      <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
+      <input type="text" id="editWargaNama" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+    </div>
+
+    <div class="form-group" style="margin-bottom: 10px;">
+      <label style="font-size: 12px; font-weight: bold; color: #374151;">Anggota Keluarga (pisahkan dengan koma):</label>
+      <textarea id="editWargaAnggota" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
+    </div>
   </div>
 
   <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Anggota Keluarga (pisahkan dengan koma):</label>
-    <textarea id="editWargaAnggota" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
-  </div>
-
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Titik Denah / Nama Rumah:</label>
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">Titik Denah / Nama Tempat:</label>
     <input type="text" id="editWargaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
   </div>
 
-  <div class="form-group" style="margin-bottom: 12px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">URL Foto Rumah:</label>
-    <input type="url" id="editWargaFoto" placeholder="https://..." style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-    <div style="margin-top: 6px; text-align: center;">
-      <img id="previewFotoRumah" src="" alt="Preview" style="max-height: 80px; max-width: 100%; border-radius: 4px; display: none; object-fit: cover; border: 1px solid #ddd;">
-    </div>
+<!-- Tombol Upload & Kotak Munculnya Link URL -->
+<div class="form-group" style="margin-bottom: 12px;">
+  <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Upload Foto ke Cloudflare R2 (Semi-Manual):</label>
+  <div style="display: flex; gap: 8px; margin-top: 4px; align-items: center;">
+    <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; flex: 1;">
+    <button type="button" onclick="prosesUploadSemiManual()" style="background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">Upload</button>
   </div>
+  <!-- Tempat teks status & link hasil upload muncul -->
+  <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
+</div>
+
+<!-- Kolom URL Foto (Tempat Anda paste link / link otomatis terisi) -->
+<div class="form-group" style="margin-bottom: 10px;">
+  <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media (Hasil Copy-Paste):</label>
+  <input type="text" id="editWargaFoto" placeholder="https://pub-xxxx.r2.dev/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+</div>
 
   <div style="display: flex; gap: 8px;">
     <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
@@ -2402,10 +2565,22 @@ function bukaModalEditWargaAdminById(id) {
     const inputId = document.getElementById('editWargaId');
     if (inputId) inputId.value = data.id;
 
+    // Cek kategori tempat (Fasum, Kuliner, Minimarket, dll)
+    const kategori = String(data.type || '').toLowerCase();
+    const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
+
+    // Sembunyikan atau tampilkan field Keluarga berdasarkan kategori
+    const groupKeluarga = document.getElementById('groupFieldKeluarga');
+    if (groupKeluarga) {
+        groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
+    }
+
+    // Set nilai input
     document.getElementById('editWargaNama').value = data.kepalaKeluarga || '';
     document.getElementById('editWargaAnggota').value = data.anggotaKeluarga || '';
     document.getElementById('editWargaRumah').value = data.nama || '';
     
+    // Gunakan satu input URL foto yang bersih (hapus duplikasi)
     const inputFoto = document.getElementById('editWargaFoto');
     const preview = document.getElementById('previewFotoRumah');
     
@@ -2428,19 +2603,157 @@ function bukaModalEditWargaDariPeta(id) {
     bukaModalEditWargaAdminById(id);
 }
 
+async function prosesUploadKeR2Warga() {
+  const fileInput = document.getElementById('inputUploadFotoWarga');
+  if (!fileInput || fileInput.files.length === 0) return;
+
+  const labelStatus = document.getElementById('statusUploadInfo') || buatLabelStatus();
+  labelStatus.innerText = "⏳ Sedang mengunggah ke Cloudflare R2...";
+  labelStatus.style.color = "#d97706";
+
+  const url = await uploadKeCloudflareR2('inputUploadFotoWarga');
+  
+  if (url) {
+    // Masukkan URL otomatis ke input teks foto
+    document.getElementById('editWargaFoto').value = url;
+    
+    // Tampilkan preview gambar
+    const preview = document.getElementById('previewFotoRumah');
+    if (preview) {
+      preview.src = url;
+      preview.style.display = 'inline-block';
+    }
+    
+    labelStatus.innerText = "✅ Berhasil diunggah ke R2!";
+    labelStatus.style.color = "#10b981";
+  } else {
+    labelStatus.innerText = "❌ Gagal mengunggah. Cek koneksi / Worker.";
+    labelStatus.style.color = "#dc2626";
+  }
+}
+
+async function prosesUploadSemiManual() {
+  const fileInput = document.getElementById('inputUploadSemiManual');
+  const statusDiv = document.getElementById('statusSemiManual');
+  const inputUrlTarget = document.getElementById('editWargaFoto');
+
+  if (!fileInput || fileInput.files.length === 0) {
+    alert("Silakan pilih file foto/video terlebih dahulu!");
+    return;
+  }
+
+  let file = fileInput.files[0];
+  statusDiv.innerHTML = "⏳ Sedang mengkompres & mengunggah file ke R2...";
+  statusDiv.style.color = "#d97706";
+
+  try {
+    const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+
+    // 🌟 Jalankan kompresi otomatis untuk upload semi-manual
+    file = await kompresGambar(file, 1200, 0.8);
+
+    const response = await fetch(workerUrl, {
+      method: "POST",
+      headers: {
+        "X-File-Name": file.name,
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file
+    });
+
+    const textResult = await response.text();
+    let result;
+    try {
+      result = JSON.parse(textResult);
+    } catch (e) {
+      throw new Error("Respon server bukan JSON valid: " + textResult);
+    }
+
+    if (result.success && result.url) {
+      inputUrlTarget.value = result.url;
+      statusDiv.innerHTML = `✅ Berhasil dikompres & diunggah! Link R2:<br><a href="${result.url}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${result.url}</b></a>`;
+      statusDiv.style.color = "#10b981";
+    } else {
+      throw new Error(result.error || "Gagal mendapatkan URL dari server.");
+    }
+
+  } catch (err) {
+    console.error(err);
+    statusDiv.innerHTML = `❌ Gagal: ${err.message}`;
+    statusDiv.style.color = "#dc2626";
+  }
+}
+
+// 🌟 Fungsi Kompresi Gambar Otomatis (Menggantikan peran Squoosh secara instan)
+async function kompresGambar(file, maxWidth = 1200, quality = 0.8) {
+  // Jika file yang diunggah adalah video atau bukan gambar, lewati kompresi
+  if (!file || !file.type.startsWith('image/')) return file;
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = (event) => {
+      const img = new Image();
+      img.src = event.target.result;
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let width = img.width;
+        let height = img.height;
+
+        // Batasi lebar maksimal (default 1200px agar ringan dan tetap tajam)
+        if (width > maxWidth) {
+          height = Math.round((height * maxWidth) / width);
+          width = maxWidth;
+        }
+
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+
+        canvas.toBlob((blob) => {
+          // Buat objek File baru yang ukurannya sudah terkompresi
+          const compressedFile = new File([blob], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(compressedFile);
+        }, 'image/jpeg', quality);
+      };
+    };
+  });
+}
+
+// Fungsi pembantu kecil untuk membuat teks status di bawah input file
+function buatLabelStatus() {
+  const inputEl = document.getElementById('inputUploadFotoWarga');
+  const div = document.createElement('div');
+  div.id = 'statusUploadInfo';
+  div.style.fontSize = '11px';
+  div.style.marginTop = '4px';
+  div.style.fontWeight = 'bold';
+  inputEl.parentNode.appendChild(div);
+  return div;
+}
+
 // Menyimpan Perubahan Data Warga & Foto ke 1 Node (peta_warga/{id})
 async function simpanPerubahanWarga(e) {
     if (e) e.preventDefault();
     
     const idWarga = document.getElementById("editWargaId").value;
-    const namaBaru = document.getElementById("editWargaNama").value.trim();
-    const anggotaBaru = document.getElementById("editWargaAnggota").value.trim();
     const rumahBaru = document.getElementById("editWargaRumah").value.trim();
     const fotoBaru = document.getElementById("editWargaFoto").value.trim();
+    
+    // Ambil nilai kepala & anggota keluarga (jika elemennya disembunyikan, biarkan kosong)
+    const groupKeluarga = document.getElementById("groupFieldKeluarga");
+    const isKeluargaVisible = groupKeluarga && groupKeluarga.style.display !== 'none';
+    
+    const namaBaru = isKeluargaVisible ? document.getElementById("editWargaNama").value.trim() : '';
+    const anggotaBaru = isKeluargaVisible ? document.getElementById("editWargaAnggota").value.trim() : '';
     const btn = document.getElementById("btnSimpanEditWarga");
 
-    if (!namaBaru || !rumahBaru || !idWarga) {
-        alert("Data tidak lengkap atau ID tidak ditemukan!");
+    if (!rumahBaru || !idWarga) {
+        alert("Nama tempat / Titik denah atau ID tidak ditemukan!");
         return;
     }
 
@@ -2455,8 +2768,9 @@ async function simpanPerubahanWarga(e) {
             foto: fotoBaru
         });
 
-        alert("✅ Data keluarga dan foto rumah berhasil diperbarui!");
+        alert("✅ Data lokasi berhasil diperbarui!");
         tutupModalEditWarga();
+        // muatSemuaDataAdmin(); // aktifkan jika ingin langsung refresh data di background
     } catch (err) {
         alert("❌ Gagal memperbarui data: " + err.message);
     } finally {
@@ -2603,18 +2917,61 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 
+async function uploadKeCloudflareR2(fileInputId) {
+  const fileInput = document.getElementById(fileInputId);
+  if (!fileInput || fileInput.files.length === 0) return null;
+
+  let file = fileInput.files[0];
+  const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+
+  try {
+    // 🌟 Jalankan kompresi otomatis sebelum di-upload ke R2
+    file = await kompresGambar(file, 1200, 0.8);
+
+    const response = await fetch(workerUrl, {
+      method: "POST",
+      headers: {
+        "X-File-Name": file.name,
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file // Kirim file biner mentah yang sudah terkompresi
+    });
+    
+    const textResult = await response.text();
+    let result;
+    try {
+      result = JSON.parse(textResult);
+    } catch (e) {
+      throw new Error("Respon server bukan JSON valid: " + textResult);
+    }
+
+    if (result.success) {
+      return result.url; 
+    } else {
+      throw new Error(result.error);
+    }
+  } catch (err) {
+    alert("Gagal mengupload file: " + err.message);
+    return null;
+  }
+}
+
    function bukaModalLaporan() {
       const today = new Date().toISOString().split('T')[0];
       document.getElementById('laporanTanggal').value = today;
       document.getElementById('modal-laporan').style.display = 'flex';
     }
 
-    function simpanLaporanDivisi() {
+function simpanLaporanDivisi() {
       const tglInput = document.getElementById('laporanTanggal').value;
       const divisi = document.getElementById('laporanNamaDivisi').value;
       const jenis = document.getElementById('laporanJenis').value;
       const ket = document.getElementById('laporanKeterangan').value;
       const pinDivisiInput = document.getElementById('laporanPinDivisi').value.trim();
+      
+      // 🌟 PERBAIKAN: Ambil nilai URL foto bukti dari elemen input dengan aman
+      const fotoBuktiInput = document.getElementById('laporanFotoUrl');
+      const fotoBukti = fotoBuktiInput ? fotoBuktiInput.value.trim() : '';
       
       const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
       const nominal = parseInt(rawNominal, 10);
@@ -2653,7 +3010,8 @@ document.addEventListener("DOMContentLoaded", () => {
         divisi: divisi,
         keterangan: ket,
         tipe: String(jenis).toUpperCase().includes('KELUAR') ? 'KELUAR' : 'MASUK',
-        nominal: parseInt(nominal)
+        nominal: parseInt(nominal),
+        foto: fotoBukti // 🌟 Sekarang variabelnya sudah terdefinisi dan aman disimpan ke database
       };
 
       const newRef = window.firebasePush(window.firebaseRef(window.db, 'keuangan'));
@@ -2669,13 +3027,329 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function tutupModalLaporan() {
-      document.getElementById('modal-laporan').style.display = 'none';
-      document.getElementById('formLaporanDivisi').reset();
-      const inputPinDiv = document.getElementById('laporanPinDivisi');
-      if (inputPinDiv) inputPinDiv.value = '';
+    async function prosesUploadBuktiKeR2() {
+  const fileInput = document.getElementById('laporanInputFoto');
+  const statusDiv = document.getElementById('statusUploadBukti');
+  const urlTarget = document.getElementById('laporanFotoUrl');
+
+  if (!fileInput || fileInput.files.length === 0) return;
+
+  let file = fileInput.files[0];
+  statusDiv.innerHTML = "⏳ Mengompres & mengunggah nota ke R2...";
+  statusDiv.style.color = "#d97706";
+
+  try {
+    // Memanggil fungsi kompresi otomatis yang sudah kita buat sebelumnya
+    if (typeof kompresGambar === 'function') {
+      file = await kompresGambar(file, 1200, 0.8);
     }
 
+    const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+    const response = await fetch(workerUrl, {
+      method: "POST",
+      headers: {
+        "X-File-Name": "nota_" + Date.now() + "_" + file.name,
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file
+    });
+
+    const textResult = await response.text();
+    let result = JSON.parse(textResult);
+
+    if (result.success && result.url) {
+      urlTarget.value = result.url;
+      statusDiv.innerHTML = `✅ Bukti berhasil diunggah! <a href="${result.url}" target="_blank" style="color: #2563eb; text-decoration: underline;">Lihat Nota</a>`;
+      statusDiv.style.color = "#10b981";
+    } else {
+      throw new Error(result.error || "Gagal upload.");
+    }
+  } catch (err) {
+    console.error(err);
+    statusDiv.innerHTML = `❌ Gagal upload bukti: ${err.message}`;
+    statusDiv.style.color = "#dc2626";
+  }
+}
+    
+function tutupModalLaporan() {
+      document.getElementById('modal-laporan').style.display = 'none';
+      document.getElementById('formLaporanDivisi').reset();
+      
+      const inputPinDiv = document.getElementById('laporanPinDivisi');
+      if (inputPinDiv) inputPinDiv.value = '';
+
+      // 🌟 Tambahan untuk mereset form upload bukti transaksi
+      const inputFotoBukti = document.getElementById('laporanInputFoto');
+      if (inputFotoBukti) inputFotoBukti.value = '';
+
+      const urlFotoBukti = document.getElementById('laporanFotoUrl');
+      if (urlFotoBukti) urlFotoBukti.value = '';
+
+      const statusBukti = document.getElementById('statusUploadBukti');
+      if (statusBukti) statusBukti.innerHTML = '';
+    }
+
+    // ===================================================
+    // FORM EDIT DATA KEUANGAN ADMIN/KELOLA KEUANGAN ADMIN
+    // ===================================================
+    
+let cacheDataKeuanganAdmin = [];
+
+window.switchTabKeuangan = function(targetTab) {
+  const panelInput = document.getElementById('panel-tab-input');
+  const panelEdit = document.getElementById('panel-tab-edit');
+  const btnInput = document.getElementById('btn-tab-input');
+  const btnEdit = document.getElementById('btn-tab-edit');
+
+  if (targetTab === 'input') {
+    panelInput.style.display = 'block';
+    panelEdit.style.display = 'none';
+    
+    // Tab Input Aktif (Biru menyala, teks putih)
+    btnInput.style.background = '#0288d1';
+    btnInput.style.color = '#ffffff';
+    
+    // Tab Edit Tidak Aktif (Abu-abu terang, teks gelap)
+    btnEdit.style.background = '#e2e8f0';
+    btnEdit.style.color = '#475569';
+  } else {
+    panelInput.style.display = 'none';
+    // 🌟 Ubah dari 'block' menjadi 'flex' agar tingginya pas dan stabil
+    panelEdit.style.display = 'flex'; 
+    
+    // Tab Edit Aktif (Biru menyala, teks putih)
+    btnEdit.style.background = '#0288d1';
+    btnEdit.style.color = '#ffffff';
+    
+    // Tab Input Tidak Aktif (Abu-abu terang, teks gelap)
+    btnInput.style.background = '#e2e8f0';
+    btnInput.style.color = '#475569';
+    
+    muatDataKelolaKeuanganAdmin();
+  }
+};
+
+// Ambil seluruh data dari node "keuangan" Firebase untuk diedit
+window.muatDataKelolaKeuanganAdmin = function() {
+  if (!window.db || typeof window.firebaseRef !== 'function') return;
+
+  const refKeuangan = window.firebaseRef(window.db, 'keuangan');
+  window.firebaseOnValue(refKeuangan, (snapshot) => {
+    const dataObj = snapshot.val();
+    cacheDataKeuanganAdmin = [];
+
+    if (!dataObj) {
+      document.getElementById('tabel-kelola-keuangan-admin').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Belum ada data laporan.</td></tr>';
+      return;
+    }
+
+    Object.keys(dataObj).forEach(key => {
+      cacheDataKeuanganAdmin.push({ id: key, ...dataObj[key] });
+    });
+
+    renderTabelKelolaAdmin(cacheDataKeuanganAdmin);
+  }, { onlyOnce: true });
+};
+
+// Render baris tabel daftar keuangan
+window.renderTabelKelolaAdmin = function(dataArray) {
+  const tbody = document.getElementById('tabel-kelola-keuangan-admin');
+  if (!tbody) return;
+
+  tbody.innerHTML = '';
+
+  if (dataArray.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Data tidak ditemukan.</td></tr>';
+    return;
+  }
+
+  dataArray.forEach(item => {
+    let tipe = String(item.tipe || '').toUpperCase();
+    let warnaTeks = (tipe === 'MASUK') ? '#16a34a' : '#dc2626';
+    let tgl = item.tanggal || item.tgl || '-';
+    let divisi = item.divisi || item.Divisi || '-';
+    let ket = item.keterangan || item.ket || '-';
+    let nominal = Number(item.nominal || 0).toLocaleString('id-ID');
+    let tanda = (tipe === 'MASUK') ? '+ Rp ' : '- Rp ';
+
+    let badgeNota = item.foto ? `<a href="${item.foto}" target="_blank" style="background:#e0f2fe; color:#0288d1; padding:2px 6px; border-radius:4px; text-decoration:none; font-weight:bold; font-size:9.5px;">📄 Lihat</a>` : `<span style="color:#aaa;">-</span>`;
+
+    let tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #e2e8f0';
+    tr.innerHTML = `
+      <td style="padding: 6px; vertical-align: middle;">
+        <div style="font-weight: bold; color: #1e293b;">${tgl}</div>
+        <div style="color: #64748b; font-size: 9.5px; text-transform: capitalize;">🏷️ ${divisi}</div>
+      </td>
+      <td style="padding: 6px; vertical-align: middle;">
+        <div style="font-weight: bold; color: #334155;">${escapeHTML(ket)}</div>
+        <div style="color: ${warnaTeks}; font-weight: bold; margin-top: 2px;">${tanda}${nominal}</div>
+      </td>
+      <td style="padding: 6px; text-align: center; vertical-align: middle;">
+        ${badgeNota}
+      </td>
+      <td style="padding: 6px; text-align: center; vertical-align: middle;">
+        <button type="button" onclick="mulaiEditKeuanganAdmin('${item.id}')" style="background: #f59e0b; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 10px;">
+          ✏️ Edit
+        </button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+};
+
+// Fungsi pencarian cepat di tab edit
+window.filterTabelKelolaAdmin = function() {
+  const keyword = document.getElementById('pencarianKelolaAdmin').value.toLowerCase();
+  const filtered = cacheDataKeuanganAdmin.filter(item => {
+    let ket = String(item.keterangan || item.ket || '').toLowerCase();
+    let div = String(item.divisi || item.Divisi || '').toLowerCase();
+    return ket.includes(keyword) || div.includes(keyword);
+  });
+  renderTabelKelolaAdmin(filtered);
+};
+
+// Fungsi ketika tombol Edit diklik (memperbarui keterangan atau nominal transaksi)
+let idKeuanganSedangDiedit = null;
+
+// Membuka modal edit dan mengisi form dengan data saat ini
+window.mulaiEditKeuanganAdmin = function(id) {
+  let target = cacheDataKeuanganAdmin.find(x => x.id === id);
+  if (!target) return;
+
+  idKeuanganSedangDiedit = id;
+
+  document.getElementById('editIdKeuangan').value = id;
+  
+  // Format tanggal untuk input type="date" (YYYY-MM-DD)
+  let tglRaw = target.tanggal || target.tgl || '';
+  if (tglRaw.includes('/')) {
+    let p = tglRaw.split('/');
+    if (p.length === 3) tglRaw = `${p[2]}-${p[1]}-${p[0]}`;
+  }
+  document.getElementById('editTanggal').value = tglRaw;
+  document.getElementById('editNamaDivisi').value = target.divisi || target.Divisi || '';
+  document.getElementById('editJenis').value = (String(target.tipe || '').toUpperCase() === 'KELUAR') ? 'Pengeluaran' : 'Pemasukan';
+  document.getElementById('editKeterangan').value = target.keterangan || target.ket || '';
+  document.getElementById('editNominal').value = Number(target.nominal || 0).toLocaleString('id-ID');
+  
+  // Set foto URL yang lama
+  document.getElementById('editFotoUrl').value = target.foto || '';
+  document.getElementById('statusUploadBuktiEdit').innerHTML = target.foto ? `<span style="color:#16a34a;">✓ Nota lama terlampir</span>` : '';
+  document.getElementById('editInputFoto').value = '';
+
+  const modal = document.getElementById('modal-edit-keuangan');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.tutupModalEditAdmin = function() {
+  const modal = document.getElementById('modal-edit-keuangan');
+  if (modal) modal.style.display = 'none';
+  idKeuanganSedangDiedit = null;
+};
+
+// Fungsi khusus upload foto nota saat mode edit
+window.prosesUploadBuktiEditAdmin = async function() {
+  const fileInput = document.getElementById('editInputFoto');
+  const statusDiv = document.getElementById('statusUploadBuktiEdit');
+  const hiddenUrl = document.getElementById('editFotoUrl');
+
+  if (!fileInput.files || fileInput.files.length === 0) return;
+  const file = fileInput.files[0];
+
+  statusDiv.innerHTML = '⏳ Sedang mengompres & mengunggah nota...';
+  statusDiv.style.color = '#d97706';
+
+  try {
+    let base64Data = await konversiFileKeBase64(file);
+    
+    // Kirim ke backend worker Cloudflare R2 Anda
+    let response = await fetch("https://r2-upload.deny-rinawan87.workers.dev/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64Data, filename: "nota_edit_" + Date.now() + "_" + file.name })
+    });
+
+    let result = await response.json();
+    if (result.url) {
+      hiddenUrl.value = result.url;
+      statusDiv.innerHTML = '✅ Nota baru berhasil diunggah!';
+      statusDiv.style.color = '#16a34a';
+    } else {
+      throw new Error(result.error || "Gagal unggah");
+    }
+  } catch (err) {
+    statusDiv.innerHTML = '❌ Gagal mengunggah nota: ' + err.message;
+    statusDiv.style.color = '#dc2626';
+  }
+};
+
+window.simpanPerubahanKeuanganAdmin = async function() {
+  if (!idKeuanganSedangDiedit) return;
+
+  let tglInput = document.getElementById('editTanggal').value;
+  let divisi = document.getElementById('editNamaDivisi').value;
+  let jenis = document.getElementById('editJenis').value;
+  let keterangan = document.getElementById('editKeterangan').value.trim();
+  let nominalStr = document.getElementById('editNominal').value;
+  let nominal = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
+  let fotoUrl = document.getElementById('editFotoUrl').value;
+  let pinInput = document.getElementById('editPinDivisi').value.trim();
+
+  if (!tglInput || !divisi || !keterangan || nominal <= 0) {
+    alert("Mohon lengkapi semua data dengan benar!");
+    return;
+  }
+
+  if (!pinInput) {
+    alert("Mohon masukkan PIN Khusus Divisi untuk melakukan perubahan!");
+    return;
+  }
+
+  // 🛡️ Verifikasi PIN berdasarkan daftar PIN yang ada di sistem (sesuaikan dengan fungsi validasi PIN divisi Anda)
+  // Contoh menggunakan fungsi cekPinDivisi yang biasa dipakai di admin
+  if (typeof cekPinDivisi === 'function' && !cekPinDivisi(divisi, pinInput)) {
+    alert("❌ PIN Khusus untuk divisi '" + divisi.toUpperCase() + "' salah!");
+    return;
+  }
+
+  let parts = tglInput.split('-');
+  let tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
+  let tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
+
+  const btn = document.getElementById('btnSimpanEditAdmin');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = '⏳ Menyimpan...';
+  }
+
+  try {
+    const refItem = window.firebaseRef(window.db, `keuangan/${idKeuanganSedangDiedit}`);
+    await window.firebaseUpdate(refItem, {
+      tanggal: tanggalRapi,
+      tgl: tanggalRapi,
+      divisi: divisi,
+      Divisi: divisi,
+      tipe: tipeTrans,
+      keterangan: keterangan,
+      ket: keterangan,
+      nominal: nominal,
+      foto: fotoUrl
+    });
+
+    alert("✅ Data keuangan & nota berhasil diperbarui!");
+    window.tutupModalEditAdmin();
+    muatDataKelolaKeuanganAdmin();
+  } catch (err) {
+    alert("❌ Gagal memperbarui data: " + err);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = '💾 Simpan Perubahan';
+    }
+  }
+};
+    
     // ==========================================
     // PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
     // ==========================================
@@ -2783,6 +3457,14 @@ function editPengumuman(id) {
       alert("Mode Edit Aktif: Silakan ubah data lalu klik Simpan Perubahan.");
     }
   });
+}
+
+  async function prosesUploadKeR2Pengumuman() {
+  const url = await uploadKeCloudflareR2('inputUploadPengumuman');
+  if (url) {
+    document.getElementById('pengumumanFoto').value = url;
+    alert("✅ Media pengumuman berhasil diunggah ke Cloudflare R2!");
+  }
 }
 
   async function simpanPengumumanAdmin() {
