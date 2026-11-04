@@ -559,11 +559,11 @@
 
   </div>
 </div>
-  <!-- MODAL FORM EDIT KEUANGAN ADMIN -->
+<!-- MODAL FORM EDIT KEUANGAN ADMIN (LENGKAP) -->
 <div id="modal-edit-keuangan" class="modal-bg" style="display: none; z-index: 3100;" onclick="if(event.target.id==='modal-edit-keuangan') tutupModalEditAdmin()">
-  <div class="modal-content" style="max-width: 400px; max-height: 90vh; overflow-y: auto; padding: 16px; box-sizing: border-box;">
+  <div class="modal-content" style="max-width: 450px; max-height: 96vh !important; height: auto !important; overflow-y: auto !important; padding: 12px 16px; box-sizing: border-box;">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
-      <h3 style="margin: 0; font-size: 15px;">✏️ Edit Data Keuangan</h3>
+      <h3 style="margin: 0; font-size: 16px;">✏️ Edit Data Keuangan</h3>
       <button class="close-btn" onclick="tutupModalEditAdmin()" style="background:none; border:none; font-size:20px; cursor:pointer;">&times;</button>
     </div>
 
@@ -571,18 +571,58 @@
       <input type="hidden" id="editIdKeuangan">
 
       <div class="form-group" style="margin-bottom: 10px;">
-        <label style="font-size: 11.5px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
-        <input type="text" id="editKeterangan" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; box-sizing: border-box;" required>
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Tanggal Input:</label>
+        <input type="date" id="editTanggal" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
       </div>
 
       <div class="form-group" style="margin-bottom: 10px;">
-        <label style="font-size: 11.5px; font-weight: bold; color: #333;">Nominal (Rp):</label>
-        <input type="text" id="editNominal" inputmode="numeric" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 6px; font-size: 12px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
+        <select id="editNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
+          <option value="">-- Pilih Divisi / Pos --</option>
+          <option value="sosial">Sosial</option>
+          <option value="tenda">Tenda</option>
+          <option value="sound system">Sound System</option>
+          <option value="pondokan rt 05">Pondokan RT 05</option>
+          <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
+          <option value="pekerjaan umum & kelistrikan">Pekerjaan Umum & Kelistrikan</option>
+          <option value="ronda harian & keamanan">Ronda Harian & Keamanan</option>
+          <option value="bendahara umum">Bendahara Umum</option>
+          <option value="tata ruang">Tata Ruang</option>
+          <option value="transportasi">Transportasi</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Jenis Transaksi:</label>
+        <select id="editJenis" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
+          <option value="Pemasukan">🟢 Pemasukan</option>
+          <option value="Pengeluaran">🔴 Pengeluaran</option>
+        </select>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Keterangan / Keperluan:</label>
+        <input type="text" id="editKeterangan" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
+      </div>
+
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
+        <input type="text" id="editNominal" inputmode="numeric" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
+      </div>
+
+      <!-- Upload Bukti Transaksi / Nota -->
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+          📁 Ganti / Upload Bukti Nota (Opsional):
+        </label>
+        <input type="file" id="editInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; box-sizing: border-box;" onchange="prosesUploadBuktiEditAdmin()">
+        <input type="hidden" id="editFotoUrl" value="">
+        <div id="statusUploadBuktiEdit" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
       </div>
 
       <div style="display: flex; gap: 8px; margin-top: 15px;">
-        <button type="button" onclick="tutupModalEditAdmin()" style="flex: 1; padding: 8px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px;">Batal</button>
-        <button type="submit" id="btnSimpanEditAdmin" style="flex: 1; padding: 8px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 11px;">💾 Simpan Perubahan</button>
+        <button type="button" onclick="tutupModalEditAdmin()" style="flex: 1; padding: 10px; background: #e2e8f0; color: #334155; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">Batal</button>
+        <button type="submit" id="btnSimpanEditAdmin" style="flex: 1; padding: 10px; background: #f59e0b; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">💾 Simpan Perubahan</button>
       </div>
     </form>
   </div>
@@ -3131,19 +3171,32 @@ window.filterTabelKelolaAdmin = function() {
 // Fungsi ketika tombol Edit diklik (memperbarui keterangan atau nominal transaksi)
 let idKeuanganSedangDiedit = null;
 
-// Membuka modal edit khusus saat tombol Edit diklik
+// Membuka modal edit dan mengisi form dengan data saat ini
 window.mulaiEditKeuanganAdmin = function(id) {
   let target = cacheDataKeuanganAdmin.find(x => x.id === id);
   if (!target) return;
 
   idKeuanganSedangDiedit = id;
 
-  // Isi data ke dalam input modal edit
   document.getElementById('editIdKeuangan').value = id;
+  
+  // Format tanggal untuk input type="date" (YYYY-MM-DD)
+  let tglRaw = target.tanggal || target.tgl || '';
+  if (tglRaw.includes('/')) {
+    let p = tglRaw.split('/');
+    if (p.length === 3) tglRaw = `${p[2]}-${p[1]}-${p[0]}`;
+  }
+  document.getElementById('editTanggal').value = tglRaw;
+  document.getElementById('editNamaDivisi').value = target.divisi || target.Divisi || '';
+  document.getElementById('editJenis').value = (String(target.tipe || '').toUpperCase() === 'KELUAR') ? 'Pengeluaran' : 'Pemasukan';
   document.getElementById('editKeterangan').value = target.keterangan || target.ket || '';
   document.getElementById('editNominal').value = Number(target.nominal || 0).toLocaleString('id-ID');
+  
+  // Set foto URL yang lama
+  document.getElementById('editFotoUrl').value = target.foto || '';
+  document.getElementById('statusUploadBuktiEdit').innerHTML = target.foto ? `<span style="color:#16a34a;">✓ Nota lama terlampir</span>` : '';
+  document.getElementById('editInputFoto').value = '';
 
-  // Munculkan modal edit
   const modal = document.getElementById('modal-edit-keuangan');
   if (modal) modal.style.display = 'flex';
 };
@@ -3154,18 +3207,63 @@ window.tutupModalEditAdmin = function() {
   idKeuanganSedangDiedit = null;
 };
 
-// Proses simpan perubahan ke Firebase
+// Fungsi khusus upload foto nota saat mode edit
+window.prosesUploadBuktiEditAdmin = async function() {
+  const fileInput = document.getElementById('editInputFoto');
+  const statusDiv = document.getElementById('statusUploadBuktiEdit');
+  const hiddenUrl = document.getElementById('editFotoUrl');
+
+  if (!fileInput.files || fileInput.files.length === 0) return;
+  const file = fileInput.files[0];
+
+  statusDiv.innerHTML = '⏳ Sedang mengompres & mengunggah nota...';
+  statusDiv.style.color = '#d97706';
+
+  try {
+    let base64Data = await konversiFileKeBase64(file);
+    
+    // Kirim ke backend worker Cloudflare R2 Anda
+    let response = await fetch("https://r2-upload.deny-rinawan87.workers.dev/", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ image: base64Data, filename: "nota_edit_" + Date.now() + "_" + file.name })
+    });
+
+    let result = await response.json();
+    if (result.url) {
+      hiddenUrl.value = result.url;
+      statusDiv.innerHTML = '✅ Nota baru berhasil diunggah!';
+      statusDiv.style.color = '#16a34a';
+    } else {
+      throw new Error(result.error || "Gagal unggah");
+    }
+  } catch (err) {
+    statusDiv.innerHTML = '❌ Gagal mengunggah nota: ' + err.message;
+    statusDiv.style.color = '#dc2626';
+  }
+};
+
+// Proses simpan seluruh perubahan ke Firebase
 window.simpanPerubahanKeuanganAdmin = async function() {
   if (!idKeuanganSedangDiedit) return;
 
-  let ketBaru = document.getElementById('editKeterangan').value.trim();
+  let tglInput = document.getElementById('editTanggal').value;
+  let divisi = document.getElementById('editNamaDivisi').value;
+  let jenis = document.getElementById('editJenis').value;
+  let keterangan = document.getElementById('editKeterangan').value.trim();
   let nominalStr = document.getElementById('editNominal').value;
-  let nominalBaru = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
+  let nominal = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
+  let fotoUrl = document.getElementById('editFotoUrl').value;
 
-  if (!ketBaru) {
-    alert("Keterangan tidak boleh kosong!");
+  if (!tglInput || !divisi || !keterangan || nominal <= 0) {
+    alert("Mohon lengkapi semua data dengan benar!");
     return;
   }
+
+  // Format tanggal kembali ke DD/MM/YYYY agar seragam
+  let parts = tglInput.split('-');
+  let tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
+  let tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
 
   const btn = document.getElementById('btnSimpanEditAdmin');
   if (btn) {
@@ -3176,14 +3274,20 @@ window.simpanPerubahanKeuanganAdmin = async function() {
   try {
     const refItem = window.firebaseRef(window.db, `keuangan/${idKeuanganSedangDiedit}`);
     await window.firebaseUpdate(refItem, {
-      keterangan: ketBaru,
-      ket: ketBaru,
-      nominal: nominalBaru
+      tanggal: tanggalRapi,
+      tgl: tanggalRapi,
+      divisi: divisi,
+      Divisi: divisi,
+      tipe: tipeTrans,
+      keterangan: keterangan,
+      ket: keterangan,
+      nominal: nominal,
+      foto: fotoUrl
     });
 
-    alert("✅ Data keuangan berhasil diperbarui!");
+    alert("✅ Data keuangan & nota berhasil diperbarui!");
     window.tutupModalEditAdmin();
-    muatDataKelolaKeuanganAdmin(); // Refresh tabel admin
+    muatDataKelolaKeuanganAdmin();
   } catch (err) {
     alert("❌ Gagal memperbarui data: " + err);
   } finally {
