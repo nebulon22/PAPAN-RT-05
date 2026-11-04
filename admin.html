@@ -495,6 +495,18 @@
           <input type="text" id="laporanNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px;" oninput="formatRibuanInput(this)" required>
         </div>
 
+        <!-- 📁 Tambahan Input Upload Bukti Transaksi (Opsional) -->
+<div class="form-group" style="margin-top: 10px;">
+  <label for="laporanInputFoto" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
+    📁 Upload Bukti Transaksi / Nota (Opsional):
+  </label>
+  <div style="display: flex; gap: 6px; align-items: center;">
+    <input type="file" id="laporanInputFoto" accept="image/*" style="font-size: 11px; flex: 1; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff;" onchange="prosesUploadBuktiKeR2()">
+  </div>
+  <input type="hidden" id="laporanFotoUrl" value="">
+  <div id="statusUploadBukti" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
+</div>
+        
         <!-- Input Tambahan: PIN Khusus Divisi -->
 <div style="margin-top: 10px;">
   <label for="laporanPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
@@ -2864,7 +2876,8 @@ async function uploadKeCloudflareR2(fileInputId) {
         divisi: divisi,
         keterangan: ket,
         tipe: String(jenis).toUpperCase().includes('KELUAR') ? 'KELUAR' : 'MASUK',
-        nominal: parseInt(nominal)
+        nominal: parseInt(nominal),
+        foto: fotoBukti // 🌟 Menyimpan URL bukti nota/transaksi ke database
       };
 
       const newRef = window.firebasePush(window.firebaseRef(window.db, 'keuangan'));
@@ -2880,13 +2893,68 @@ async function uploadKeCloudflareR2(fileInputId) {
         });
     }
 
-    function tutupModalLaporan() {
-      document.getElementById('modal-laporan').style.display = 'none';
-      document.getElementById('formLaporanDivisi').reset();
-      const inputPinDiv = document.getElementById('laporanPinDivisi');
-      if (inputPinDiv) inputPinDiv.value = '';
+    async function prosesUploadBuktiKeR2() {
+  const fileInput = document.getElementById('laporanInputFoto');
+  const statusDiv = document.getElementById('statusUploadBukti');
+  const urlTarget = document.getElementById('laporanFotoUrl');
+
+  if (!fileInput || fileInput.files.length === 0) return;
+
+  let file = fileInput.files[0];
+  statusDiv.innerHTML = "⏳ Mengompres & mengunggah nota ke R2...";
+  statusDiv.style.color = "#d97706";
+
+  try {
+    // Memanggil fungsi kompresi otomatis yang sudah kita buat sebelumnya
+    if (typeof kompresGambar === 'function') {
+      file = await kompresGambar(file, 1200, 0.8);
     }
 
+    const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+    const response = await fetch(workerUrl, {
+      method: "POST",
+      headers: {
+        "X-File-Name": "nota_" + Date.now() + "_" + file.name,
+        "Content-Type": file.type || "application/octet-stream"
+      },
+      body: file
+    });
+
+    const textResult = await response.text();
+    let result = JSON.parse(textResult);
+
+    if (result.success && result.url) {
+      urlTarget.value = result.url;
+      statusDiv.innerHTML = `✅ Bukti berhasil diunggah! <a href="${result.url}" target="_blank" style="color: #2563eb; text-decoration: underline;">Lihat Nota</a>`;
+      statusDiv.style.color = "#10b981";
+    } else {
+      throw new Error(result.error || "Gagal upload.");
+    }
+  } catch (err) {
+    console.error(err);
+    statusDiv.innerHTML = `❌ Gagal upload bukti: ${err.message}`;
+    statusDiv.style.color = "#dc2626";
+  }
+}
+    
+function tutupModalLaporan() {
+      document.getElementById('modal-laporan').style.display = 'none';
+      document.getElementById('formLaporanDivisi').reset();
+      
+      const inputPinDiv = document.getElementById('laporanPinDivisi');
+      if (inputPinDiv) inputPinDiv.value = '';
+
+      // 🌟 Tambahan untuk mereset form upload bukti transaksi
+      const inputFotoBukti = document.getElementById('laporanInputFoto');
+      if (inputFotoBukti) inputFotoBukti.value = '';
+
+      const urlFotoBukti = document.getElementById('laporanFotoUrl');
+      if (urlFotoBukti) urlFotoBukti.value = '';
+
+      const statusBukti = document.getElementById('statusUploadBukti');
+      if (statusBukti) statusBukti.innerHTML = '';
+    }
+    
     // ==========================================
     // PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
     // ==========================================
