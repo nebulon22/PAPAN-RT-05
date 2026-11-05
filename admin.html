@@ -3598,10 +3598,8 @@ function editPengumuman(id) {
     if (snapshot.exists()) {
       const val = snapshot.val();
       
-      // Simpan ID asli yang sedang diedit ke variabel global
       currentEditPengumumanId = id;
 
-      // Masukkan data lama ke form
       if (val.tanggal) {
         const p = val.tanggal.split('/');
         if (p.length === 3) {
@@ -3615,7 +3613,16 @@ function editPengumuman(id) {
         document.getElementById('pengumumanFoto').value = val.foto || '';
       }
 
-      // Ubah teks tombol agar jelas sedang mode edit
+      // 🌟 TAMBAHKAN INI: Bersihkan input file & sembunyikan teks status saat masuk mode edit
+      const fileInput = document.getElementById('inputUploadPengumuman');
+      if (fileInput) fileInput.value = ''; // Kosongkan pilihan file
+
+      const statusEl = document.getElementById('statusUploadPengumuman');
+      if (statusEl) {
+        statusEl.innerText = ''; // Hapus teks "File baru siap..."
+        statusEl.style.display = 'none'; // Sembunyikan elemen statusnya
+      }
+
       const btnSimpan = document.getElementById('btnSimpanPengumuman');
       if (btnSimpan) btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
 
