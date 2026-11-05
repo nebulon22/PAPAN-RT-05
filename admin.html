@@ -536,11 +536,14 @@
             <input type="text" id="laporanNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
           </div>
 
-          <div class="form-group" style="margin-top: 10px;">
-            <label style="font-size: 11px; font-weight: bold; color: #475569;">📁 Upload Bukti Transaksi / Nota (Opsional):</label>
-            <input type="file" id="laporanInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="prosesUploadBuktiKeR2()">
-            <input type="hidden" id="laporanFotoUrl" value="">
-            <div id="statusUploadBukti" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
+           <div class="form-group" style="margin-top: 10px;">
+        <label style="font-size: 11px; font-weight: bold; color: #475569;">📁 Upload Bukti Transaksi / Nota (Opsional):</label>
+  
+        <!-- onchange lama dihapus, diganti dengan teks notifikasi file siap -->
+        <input type="file" id="laporanInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px;" onchange="document.getElementById('statusUploadBukti').innerHTML = '<i>✓ File siap. Akan diupload saat form dikirim.</i>'; document.getElementById('statusUploadBukti').style.color = '#2563eb';">
+  
+        <input type="hidden" id="laporanFotoUrl" value="">
+        <div id="statusUploadBukti" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
           </div>
           
           <div style="margin-top: 10px;">
@@ -2961,70 +2964,127 @@ async function uploadKeCloudflareR2(fileInputId) {
       document.getElementById('modal-laporan').style.display = 'flex';
     }
 
-function simpanLaporanDivisi() {
-      const tglInput = document.getElementById('laporanTanggal').value;
-      const divisi = document.getElementById('laporanNamaDivisi').value;
-      const jenis = document.getElementById('laporanJenis').value;
-      const ket = document.getElementById('laporanKeterangan').value;
-      const pinDivisiInput = document.getElementById('laporanPinDivisi').value.trim();
-      
-      // 🌟 PERBAIKAN: Ambil nilai URL foto bukti dari elemen input dengan aman
-      const fotoBuktiInput = document.getElementById('laporanFotoUrl');
-      const fotoBukti = fotoBuktiInput ? fotoBuktiInput.value.trim() : '';
-      
-      const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
-      const nominal = parseInt(rawNominal, 10);
+window.simpanLaporanDivisi = async function() {
+  const tglInput = document.getElementById('laporanTanggal').value;
+  const divisi = document.getElementById('laporanNamaDivisi').value;
+  const jenis = document.getElementById('laporanJenis').value;
+  const ket = document.getElementById('laporanKeterangan').value;
+  const pinDivisiInput = document.getElementById('laporanPinDivisi').value.trim();
+  
+  const rawNominal = document.getElementById('laporanNominal').value.replace(/\./g, '');
+  const nominal = parseInt(rawNominal, 10);
 
-      if (!divisi || !ket || isNaN(nominal) || !tglInput || !pinDivisiInput) {
-        alert('Harap isi semua kolom, termasuk PIN Khusus Divisi!');
-        return;
-      }
+  // 1. Validasi Input Dasar
+  if (!divisi || !ket || isNaN(nominal) || !tglInput || !pinDivisiInput) {
+    alert('Harap isi semua kolom, termasuk PIN Khusus Divisi!');
+    return;
+  }
 
-      const daftarPinDivisi = {
-        "sosial": "010101",
-        "tenda": "020202",
-        "sound system": "030303",
-        "pondokan rt 05": "040404",
-        "jimpitan bulanan & pengganti ronda": "050505",
-        "pekerjaan umum & kelistrikan": "060606",
-        "ronda harian & keamanan": "070707",
-        "bendahara umum": "080808",
-        "tata ruang": "090909",
-        "transportasi": "101010"
-      };
+  // 2. Validasi PIN Divisi
+  const daftarPinDivisi = {
+    "sosial": "010101",
+    "tenda": "020202",
+    "sound system": "030303",
+    "pondokan rt 05": "040404",
+    "jimpitan bulanan & pengganti ronda": "050505",
+    "pekerjaan umum & kelistrikan": "060606",
+    "ronda harian & keamanan": "070707",
+    "bendahara umum": "080808",
+    "tata ruang": "090909",
+    "transportasi": "101010"
+  };
 
-      const divisiKey = divisi.toLowerCase().trim();
-      const pinSeharusnya = daftarPinDivisi[divisiKey] || "050505";
+  const divisiKey = divisi.toLowerCase().trim();
+  const pinSeharusnya = daftarPinDivisi[divisiKey] || "050505";
 
-      if (pinDivisiInput !== pinSeharusnya && pinDivisiInput !== "050505") {
-        alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
-        return;
-      }
+  if (pinDivisiInput !== pinSeharusnya && pinDivisiInput !== "050505") {
+    alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
+    return;
+  }
 
-      const parts = tglInput.split('-');
-      const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const btn = document.getElementById('btnSimpanLaporan');
+  if (btn) { btn.disabled = true; btn.innerText = "⏳ Memproses Laporan..."; }
 
-      const payload = {
-        tanggal: tglFormatted,
-        divisi: divisi,
-        keterangan: ket,
-        tipe: String(jenis).toUpperCase().includes('KELUAR') ? 'KELUAR' : 'MASUK',
-        nominal: parseInt(nominal),
-        foto: fotoBukti // 🌟 Sekarang variabelnya sudah terdefinisi dan aman disimpan ke database
-      };
+  let finalUrlFoto = '';
+  const fileInput = document.getElementById('laporanInputFoto');
+  const statusDiv = document.getElementById('statusUploadBukti');
 
-      const newRef = window.firebasePush(window.firebaseRef(window.db, 'keuangan'));
-      
-      window.firebaseSet(newRef, payload)
-        .then(() => {
-          alert('✅ Laporan Keuangan ' + divisi + ' berhasil disimpan ke database!');
-          tutupModalLaporan();
-          if (typeof muatDataKeuangan === 'function') muatDataKeuangan();
-        })
-        .catch((err) => {
-          alert('❌ Gagal menyimpan laporan: ' + err.message);
-        });
+  // 🌟 3. PROSES UPLOAD FOTO DIJALANKAN DI SINI (Hanya saat tombol kirim ditekan)
+  if (fileInput && fileInput.files.length > 0) {
+    if (statusDiv) {
+      statusDiv.innerHTML = "⏳ Mengompres & mengunggah nota ke R2...";
+      statusDiv.style.color = "#d97706";
     }
+
+    let file = fileInput.files[0];
+    try {
+      if (typeof kompresGambar === 'function') {
+        file = await kompresGambar(file, 1200, 0.8);
+      }
+      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+      const response = await fetch(workerUrl, {
+        method: "POST",
+        headers: {
+          "X-File-Name": "nota_" + Date.now() + "_" + file.name,
+          "Content-Type": file.type || "application/octet-stream"
+        },
+        body: file
+      });
+      
+      const textResult = await response.text();
+      let result = JSON.parse(textResult);
+
+      if (result.success && result.url) {
+        let urlAwal = new URL(result.url);
+        finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
+        
+        if (statusDiv) {
+          statusDiv.innerHTML = `✅ Nota berhasil diunggah!`;
+          statusDiv.style.color = "#10b981";
+        }
+      } else {
+        throw new Error(result.error || "Gagal upload server.");
+      }
+    } catch (err) {
+      console.error(err);
+      if (statusDiv) {
+        statusDiv.innerHTML = `❌ Gagal upload bukti: ${err.message}`;
+        statusDiv.style.color = "#dc2626";
+      }
+      alert("Gagal mengunggah foto bukti. Pengiriman laporan dibatalkan.");
+      if (btn) { btn.disabled = false; btn.innerText = "📤 Kirim Laporan Keuangan"; }
+      return; // Hentikan proses jika upload foto gagal
+    }
+  }
+
+  // 🌟 4. SIMPAN DATA KE FIREBASE
+  if (btn) { btn.innerText = "⏳ Menyimpan ke Database..."; }
+
+  const parts = tglInput.split('-');
+  const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+
+  const payload = {
+    tanggal: tglFormatted,
+    divisi: divisi,
+    keterangan: ket,
+    tipe: String(jenis).toUpperCase().includes('KELUAR') ? 'KELUAR' : 'MASUK',
+    nominal: parseInt(nominal),
+    foto: finalUrlFoto
+  };
+
+  try {
+    const newRef = window.firebasePush(window.firebaseRef(window.db, 'keuangan'));
+    await window.firebaseSet(newRef, payload);
+
+    alert('✅ Laporan Keuangan ' + divisi + ' berhasil disimpan ke database!');
+    tutupModalLaporan();
+    if (typeof muatDataKeuangan === 'function') muatDataKeuangan();
+  } catch (err) {
+    alert('❌ Gagal menyimpan laporan: ' + err.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.innerText = "📤 Kirim Laporan Keuangan"; }
+  }
+};
 
 async function prosesUploadBuktiKeR2() {
   const fileInput = document.getElementById('laporanInputFoto');
