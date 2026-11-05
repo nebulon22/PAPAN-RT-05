@@ -1429,10 +1429,15 @@ function muatDataPetaWarga() {
     return;
   }
 
-  // Pastikan markerGroup terpasang di peta menggunakan MarkerCluster
+  // Pastikan markerGroup terpasang di peta menggunakan MarkerCluster dengan aman
   if (typeof markerGroup === 'undefined' || !markerGroup) {
-    window.markerGroup = L.markerClusterGroup();
-    window.markerGroup.addTo(map);
+    if (typeof L.markerClusterGroup === 'function') {
+      window.markerGroup = L.markerClusterGroup();
+      window.markerGroup.addTo(map);
+    } else {
+      // Fallback jika plugin belum siap, gunakan layerGroup biasa sementara
+      window.markerGroup = L.layerGroup().addTo(map);
+    }
   } else if (!map.hasLayer(markerGroup)) {
     markerGroup.addTo(map);
   }
