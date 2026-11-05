@@ -320,12 +320,9 @@
 
         <div class="form-group" style="margin-bottom: 8px;">
           <label for="inputUploadPengumuman" style="font-size: 11px; font-weight: bold;">📁 Upload Poster / Foto / Video (Cloudflare R2):</label>
-          <input type="file" id="inputUploadPengumuman" accept="image/*,video/*" style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 4px;" onchange="prosesUploadKeR2Pengumuman()">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 8px;">
-          <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Otomatis / Manual):</label>
-          <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+          <!-- onchange diubah agar hanya menampilkan teks status, tidak langsung upload -->
+          <input type="file" id="inputUploadPengumuman" accept="image/*,video/*" style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 2px;" onchange="document.getElementById('statusUploadPengumuman').style.display='block'; document.getElementById('statusUploadPengumuman').innerHTML = '<i>✓ File baru siap. Akan diupload saat Terbitkan Pengumuman ditekan.</i>';">
+          <div id="statusUploadPengumuman" style="font-size: 10px; color: #2563eb; display: none; margin-top: 2px;"></div>
         </div>
 
         <div class="form-group" style="margin-bottom: 8px;">
@@ -3628,15 +3625,8 @@ function editPengumuman(id) {
   });
 }
 
-  async function prosesUploadKeR2Pengumuman() {
-  const url = await uploadKeCloudflareR2('inputUploadPengumuman');
-  if (url) {
-    document.getElementById('pengumumanFoto').value = url;
-    alert("✅ Media pengumuman berhasil diunggah ke Cloudflare R2!");
-  }
-}
-
-  async function simpanPengumumanAdmin() {
+// 📢 Simpan / Terbitkan Pengumuman Baru (Upload file & Simpan ke Firebase dilakukan sekaligus)
+async function simpanPengumumanAdmin() {
   const tglInput = document.getElementById('pengumumanTanggal').value;
   const judul = document.getElementById('pengumumanJudul').value.trim();
   const detail = document.getElementById('pengumumanDetail').value.trim();
@@ -3644,7 +3634,9 @@ function editPengumuman(id) {
   
   const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
   const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
-  const foto = document.getElementById('pengumumanFoto').value.trim();
+  
+  let fotoUrl = document.getElementById('pengumumanFoto').value.trim(); // URL lama / manual
+  const fileInput = document.getElementById('inputUploadPengumuman');
 
   if (!judul || !tglInput) {
     alert("Mohon isi tanggal dan judul pengumuman!");
@@ -3655,40 +3647,80 @@ function editPengumuman(id) {
   const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
 
   const btn = document.getElementById('btnSimpanPengumuman');
-  btn.disabled = true;
-  btn.innerText = "⏳ Menyimpan ke Firebase...";
-
-  // Jika currentEditPengumumanId ada isinya, berarti pakai ID lama (Update). Jika null, buat ID baru.
-  const pengumumanId = currentEditPengumumanId ? currentEditPengumumanId : ('info_' + Date.now());
-  
-  const payload = {
-    id: pengumumanId,
-    tanggal: tglRapi,
-    judul: judul,
-    detail: detail,
-    lokasi: lokasi,
-    lat: lat,
-    lng: lng,
-    foto: foto,
-    status: 'AKTIF',
-    timestamp: Date.now()
-  };
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Memproses Pengumuman...";
+  }
 
   try {
+    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG SAAT TOMBOL DIKLIK
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      let file = fileInput.files[0];
+      
+      // Kompres gambar agar ringan sebelum di-upload
+      if (typeof kompresGambar === 'function') {
+        file = await kompresGambar(file, 1200, 0.8);
+      }
+
+      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+      let response = await fetch(workerUrl, {
+        method: "POST",
+        headers: {
+          "X-File-Name": "pengumuman_" + Date.now() + "_" + file.name,
+          "Content-Type": file.type || "application/octet-stream"
+        },
+        body: file
+      });
+
+      let textResult = await response.text();
+      let result = JSON.parse(textResult);
+
+      if (result.success && result.url) {
+        let urlAwal = new URL(result.url);
+        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain baru
+      } else {
+        throw new Error(result.error || "Gagal mengunggah file media.");
+      }
+    }
+
+    // 🌟 2. SIMPAN KE FIREBASE
+    if (btn) { btn.innerText = "⏳ Menyimpan ke Firebase..."; }
+
+    // Jika currentEditPengumumanId ada isinya, berarti pakai ID lama (Update). Jika null, buat ID baru.
+    const pengumumanId = (typeof currentEditPengumumanId !== 'undefined' && currentEditPengumumanId) ? currentEditPengumumanId : ('info_' + Date.now());
+    
+    const payload = {
+      id: pengumumanId,
+      tanggal: tglRapi,
+      judul: judul,
+      detail: detail,
+      lokasi: lokasi,
+      lat: lat,
+      lng: lng,
+      foto: fotoUrl,
+      status: 'AKTIF',
+      timestamp: Date.now()
+    };
+
     const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
     await window.firebaseSet(targetRef, payload);
 
-    btn.disabled = false;
-    btn.innerText = "💾 Terbitkan Pengumuman";
-    currentEditPengumumanId = null; // Reset mode edit
+    if (typeof currentEditPengumumanId !== 'undefined') {
+      currentEditPengumumanId = null; // Reset mode edit
+    }
 
     alert("✅ Pengumuman berhasil diperbarui/diterbitkan ke Firebase!");
+    
+    // Reset form
     document.getElementById('formInputPengumuman').reset();
+    if (document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
+    if (document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
     
-    if(document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
-    if(document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
-    
-    // === TAMBAHKAN PERINTAH SCROLL KE ATAS DI SINI ===
+    // Hilangkan teks status upload jika ada
+    const statusEl = document.getElementById('statusUploadPengumuman');
+    if (statusEl) statusEl.style.display = 'none';
+
+    // Scroll ke atas
     const modalBody = document.querySelector('.modal-body') || document.getElementById('formInputPengumuman');
     if (modalBody && modalBody.scrollTo) {
       modalBody.scrollTo({ top: 0, behavior: 'smooth' });
@@ -3696,12 +3728,16 @@ function editPengumuman(id) {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
-    tutupModalPengumumanAdmin();
-    muatDaftarPengumumanAdmin();
+    if (typeof tutupModalPengumumanAdmin === 'function') tutupModalPengumumanAdmin();
+    if (typeof muatDaftarPengumumanAdmin === 'function') muatDaftarPengumumanAdmin();
+
   } catch (err) {
-    btn.disabled = false;
-    btn.innerText = "💾 Terbitkan Pengumuman";
     alert("❌ Gagal menyimpan ke Firebase: " + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "💾 Terbitkan Pengumuman";
+    }
   }
 }
 
