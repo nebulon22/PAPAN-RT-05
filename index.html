@@ -4,28 +4,29 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="description" content="Papan Informasi Digital, Denah Interaktif, Keuangan, dan Pengumuman Warga RT 05 Kayen.">
- 
+  
   <title>Denah Interaktif & Keuangan RT 05 Kayen</title>
 
-<!-- Preconnect ke CDN yang benar-benar digunakan saja -->
-<link rel="preconnect" href="https://unpkg.com" crossorigin>
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <!-- Preconnect (Hanya ke Gstatic karena peta & marker sudah lokal) -->
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
 
-  <!-- Leaflet CSS dengan Non-Blocking Load -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"></noscript>
+  <!-- 🌟 1. CSS LOKAL (Leaflet & MarkerCluster) -->
+  <link rel="stylesheet" href="leaflet.css">
+  <link rel="stylesheet" href="MarkerCluster.css">
+  <link rel="stylesheet" href="MarkerCluster.Default.css">
 
-<!-- FontAwesome Lokal dari Repositori Sendiri -->
-<link rel="stylesheet" href="all.min.css" media="print" onload="this.media='all'">
-<noscript><link rel="stylesheet" href="all.min.css"></noscript>
+  <!-- FontAwesome Lokal -->
+  <link rel="stylesheet" href="all.min.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="all.min.css"></noscript>
   
   <!-- PWA Settings -->
   <link rel="manifest" href="manifest.json?v=1.6.5">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   
-  <!-- 🌟 Leaflet JS dengan atribut defer & event listener onload agar aman terinisialisasi berurutan -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" defer onload="window.leafletLoaded = true;"></script>
+  <!-- 🌟 2. JAVASCRIPT LOKAL (Urutan harus berurutan: Leaflet -> MarkerCluster -> Utils/Setting) -->
+  <script src="leaflet.js"></script>
+  <script src="leaflet.markercluster.js"></script>
   
   <!-- Konfigurasi Global & Utils -->
   <script src="utils.js" defer></script>
@@ -1363,8 +1364,8 @@ window.toggleChatModal = function() {
   var pinRumahAktif = null;
   var isDataReady = false;
 
-  function initPetaDanData() {
-// 1. Render Peta Leaflet instan begitu DOM & Leaflet siap (Memangkas LCP & FCP)
+function initPetaDanData() {
+    // 1. Render Peta Leaflet secara sinkron dan instan begitu DOM & Leaflet siap
     if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
       let container = L.DomUtil.get('map');
       if (container && container._leaflet_id) container._leaflet_id = null;
@@ -1377,8 +1378,7 @@ window.toggleChatModal = function() {
         attribution: '&copy; Google Maps'
       });
 
-      // 🌟 PERBAIKAN: Batasi High Priority hanya untuk 6 gambar (tile) pertama. 
-      // Lighthouse tetap hijau, tapi jaringan tidak macet.
+      // Batasi High Priority hanya untuk 6 tile pertama agar jaringan tidak macet
       let tileLoadCount = 0;
       tileLayerUtama.on('tileloadstart', function(e) {
         if (e.tile) {
@@ -1395,19 +1395,25 @@ window.toggleChatModal = function() {
       perbaruiIndikatorSync();
     }
     
-    // 2. Pasang Marker Warga & Pengumuman begitu Firebase selesai dimuat di latar belakang
+    // 2. Muat data berat (Firebase marker & pengumuman) secara asinkron di latar belakang
     if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
       isDataReady = true;
-      const muatData = () => {
+      const muatDataLatarBelakang = () => {
         muatDataPetaWarga();
         muatPengumumanFirebase();
         if (navigator.onLine) kirimDataPendingJimpitan();
       };
-      'requestIdleCallback' in window ? requestIdleCallback(muatData, { timeout: 200 }) : setTimeout(muatData, 50);
+      
+      // Menggunakan requestIdleCallback agar CPU fokus merender peta dulu
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(muatDataLatarBelakang, { timeout: 300 });
+      } else {
+        setTimeout(muatDataLatarBelakang, 100);
+      }
     }
   }
 
-// Panggil fungsi secepat mungkin di semua kondisi pemuatan dokumen
+  // Eksekusi secepat mungkin berdasarkan status dokumen saat ini
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initPetaDanData();
   } else {
@@ -1421,9 +1427,14 @@ function muatDataPetaWarga() {
     return;
   }
 
-  // Pastikan markerGroup terpasang di peta
-  if (typeof markerGroup === 'undefined' || !markerGroup) {
-    window.markerGroup = L.layerGroup().addTo(map);
+// Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
+ if (typeof markerGroup === 'undefined' || !markerGroup) {
+    // 🌟 Tambahkan angka radius di dalam kurung (misal: 30 atau 40 pixel)
+    // Semakin kecil angkanya, titik-titik harus benar-benar berdekatan baru digabung.
+    window.markerGroup = L.markerClusterGroup({
+      maxClusterRadius: 40 
+    });
+    window.markerGroup.addTo(map);
   } else if (!map.hasLayer(markerGroup)) {
     markerGroup.addTo(map);
   }
