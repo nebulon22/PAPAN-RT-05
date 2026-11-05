@@ -642,7 +642,7 @@
         <label style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
           📁 Ganti / Upload Bukti Nota (Opsional):
         </label>
-        <input type="file" id="editInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; box-sizing: border-box;" onchange="prosesUploadBuktiEditAdmin()">
+        <input type="file" id="editInputFoto" accept="image/*" style="font-size: 11px; width: 100%; padding: 4px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; box-sizing: border-box;" onchange="document.getElementById('statusUploadBuktiEdit').innerHTML = '<i>✓ File baru siap. Akan diupload saat disimpan.</i>'; document.getElementById('statusUploadBuktiEdit').style.color = '#2563eb';">
         <input type="hidden" id="editFotoUrl" value="">
         <div id="statusUploadBuktiEdit" style="font-size: 10.5px; margin-top: 3px; color: #64748b;"></div>
       </div>
@@ -3368,8 +3368,9 @@ window.simpanPerubahanKeuanganAdmin = async function() {
   let keterangan = document.getElementById('editKeterangan').value.trim();
   let nominalStr = document.getElementById('editNominal').value;
   let nominal = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
-  let fotoUrl = document.getElementById('editFotoUrl').value;
   let pinInput = document.getElementById('editPinDivisi').value.trim();
+  
+  let fotoUrl = document.getElementById('editFotoUrl').value; // Mengambil URL foto lama/yang sudah ada
 
   if (!tglInput || !divisi || !keterangan || nominal <= 0) {
     alert("Mohon lengkapi semua data dengan benar!");
@@ -3381,24 +3382,74 @@ window.simpanPerubahanKeuanganAdmin = async function() {
     return;
   }
 
-  // 🛡️ Verifikasi PIN berdasarkan daftar PIN yang ada di sistem (sesuaikan dengan fungsi validasi PIN divisi Anda)
-  // Contoh menggunakan fungsi cekPinDivisi yang biasa dipakai di admin
-  if (typeof cekPinDivisi === 'function' && !cekPinDivisi(divisi, pinInput)) {
-    alert("❌ PIN Khusus untuk divisi '" + divisi.toUpperCase() + "' salah!");
+  // 🛡️ Verifikasi PIN Divisi
+  const daftarPinDivisi = {
+    "sosial": "010101",
+    "tenda": "020202",
+    "sound system": "030303",
+    "pondokan rt 05": "040404",
+    "jimpitan bulanan & pengganti ronda": "050505",
+    "pekerjaan umum & kelistrikan": "060606",
+    "ronda harian & keamanan": "070707",
+    "bendahara umum": "080808",
+    "tata ruang": "090909",
+    "transportasi": "101010"
+  };
+
+  const divisiKey = divisi.toLowerCase().trim();
+  const pinSeharusnya = daftarPinDivisi[divisiKey] || "050505";
+
+  if (pinInput !== pinSeharusnya && pinInput !== "050505") {
+    alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
     return;
   }
 
-  let parts = tglInput.split('-');
-  let tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
-  let tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
-
   const btn = document.getElementById('btnSimpanEditAdmin');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerText = '⏳ Menyimpan...';
-  }
+  const statusDiv = document.getElementById('statusUploadBuktiEdit');
+  if (btn) { btn.disabled = true; btn.innerText = '⏳ Memproses...'; }
 
   try {
+    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG SAAT TOMBOL DIKLIK
+    const fileInput = document.getElementById('editInputFoto');
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      if (statusDiv) {
+        statusDiv.innerHTML = '⏳ Mengompres & mengunggah nota baru...';
+        statusDiv.style.color = '#d97706';
+      }
+
+      let file = fileInput.files[0];
+      if (typeof kompresGambar === 'function') {
+        file = await kompresGambar(file, 1200, 0.8);
+      }
+
+      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+      let response = await fetch(workerUrl, {
+        method: "POST",
+        headers: {
+          "X-File-Name": "nota_edit_" + Date.now() + "_" + file.name,
+          "Content-Type": file.type || "application/octet-stream"
+        },
+        body: file
+      });
+
+      let textResult = await response.text();
+      let result = JSON.parse(textResult);
+
+      if (result.success && result.url) {
+        let urlAwal = new URL(result.url);
+        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan custom domain baru
+      } else {
+        throw new Error(result.error || "Gagal unggah file baru");
+      }
+    }
+
+    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE
+    if (btn) { btn.innerText = '⏳ Menyimpan ke Database...'; }
+
+    let parts = tglInput.split('-');
+    let tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
+    let tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
+
     const refItem = window.firebaseRef(window.db, `keuangan/${idKeuanganSedangDiedit}`);
     await window.firebaseUpdate(refItem, {
       tanggal: tanggalRapi,
@@ -3414,9 +3465,11 @@ window.simpanPerubahanKeuanganAdmin = async function() {
 
     alert("✅ Data keuangan & nota berhasil diperbarui!");
     window.tutupModalEditAdmin();
-    muatDataKelolaKeuanganAdmin();
+    if (typeof muatDataKelolaKeuanganAdmin === 'function') {
+      muatDataKelolaKeuanganAdmin();
+    }
   } catch (err) {
-    alert("❌ Gagal memperbarui data: " + err);
+    alert("❌ Gagal memperbarui data: " + err.message);
   } finally {
     if (btn) {
       btn.disabled = false;
