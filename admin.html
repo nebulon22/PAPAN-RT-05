@@ -893,15 +893,17 @@
     <input type="text" id="editWargaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
   </div>
 
-<!-- Tombol Upload & Kotak Munculnya Link URL -->
+<!-- Input File Tanpa Tombol Upload Otomatis -->
 <div class="form-group" style="margin-bottom: 12px;">
-  <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Upload Foto ke Cloudflare R2 (Semi-Manual):</label>
-  <div style="display: flex; gap: 8px; margin-top: 4px; align-items: center;">
-    <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; flex: 1;">
-    <button type="button" onclick="prosesUploadSemiManual()" style="background: #2563eb; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold;">Upload</button>
+  <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
+  <div style="margin-top: 4px;">
+    <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; width: 100%;" onchange="document.getElementById('statusSemiManual').innerHTML = '<i>✓ File baru siap. Akan diupload saat tombol Simpan Perubahan ditekan.</i>'; document.getElementById('statusSemiManual').style.color = '#2563eb';">
   </div>
-  <!-- Tempat teks status & link hasil upload muncul -->
+  <!-- Tempat teks status muncul -->
   <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
+  
+  <!-- Kotak URL tetap disembunyikan/dijadikan hidden agar sistem tetap bisa menyimpan link-nya secara otomatis di belakang layar -->
+  <input type="hidden" id="editWargaFoto" value="">
 </div>
 
 <!-- Kolom URL Foto (Tempat Anda paste link / link otomatis terisi) -->
@@ -2130,7 +2132,7 @@ window.tutupModalEditWargaBaru = function() {
 
 // 💾 Simpan Perubahan Data Warga Baru ke Firebase
 window.simpanPerubahanWargaBaru = async function(e) {
-  e.preventDefault();
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
   const id = document.getElementById('editWargaBaruId').value;
   const nama = document.getElementById('editWargaBaruNama').value.trim();
@@ -2147,25 +2149,63 @@ window.simpanPerubahanWargaBaru = async function(e) {
 
   if (btn) {
     btn.disabled = true;
-    btn.innerText = "⏳ Menyimpan...";
+    btn.innerText = "⏳ Memproses...";
   }
 
+  let fotoFinalUrl = document.getElementById('editWargaFoto').value; // Ambil URL foto lama
+  const fileInput = document.getElementById('inputUploadSemiManual');
+  const statusDiv = document.getElementById('statusSemiManual');
+
   try {
+    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG SAAT TOMBOL SIMPAN DIKLIK
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      if (statusDiv) {
+        statusDiv.innerHTML = "⏳ Mengompres & mengunggah foto baru ke R2...";
+        statusDiv.style.color = "#d97706";
+      }
+
+      let file = fileInput.files[0];
+      if (typeof kompresGambar === 'function') {
+        file = await kompresGambar(file, 1200, 0.8);
+      }
+
+      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+      let response = await fetch(workerUrl, {
+        method: "POST",
+        headers: {
+          "X-File-Name": "warga_" + Date.now() + "_" + file.name,
+          "Content-Type": file.type || "application/octet-stream"
+        },
+        body: file
+      });
+
+      let textResult = await response.text();
+      let result = JSON.parse(textResult);
+
+      if (result.success && result.url) {
+        let urlAwal = new URL(result.url);
+        fotoFinalUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan custom domain baru
+      } else {
+        throw new Error(result.error || "Gagal mengunggah foto baru.");
+      }
+    }
+
+    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE
+    if (btn) {
+      btn.innerText = "⏳ Menyimpan ke Database...";
+    }
+
     const updates = {};
     updates[`warga_baru/${id}/nama`] = nama;
     updates[`warga_baru/${id}/noRumah`] = noRumah;
     updates[`warga_baru/${id}/hp`] = hp;
     updates[`warga_baru/${id}/status`] = status;
     updates[`warga_baru/${id}/cerita`] = cerita;
+    updates[`warga_baru/${id}/foto`] = fotoFinalUrl; // Menyimpan URL foto (lama atau hasil upload baru)
 
     await window.firebaseUpdate(window.firebaseRef(window.db), updates);
     
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = "💾 Simpan Perubahan";
-    }
-
-    alert('✅ Data warga baru berhasil diperbarui!');
+    alert('✅ Data warga baru & foto berhasil diperbarui!');
     tutupModalEditWargaBaru();
     
     // Refresh daftar data di panel admin
@@ -2173,11 +2213,12 @@ window.simpanPerubahanWargaBaru = async function(e) {
       bukaModalWargaBaruAdmin();
     }
   } catch (err) {
+    alert('❌ Gagal memperbarui data: ' + err.message);
+  } finally {
     if (btn) {
       btn.disabled = false;
       btn.innerText = "💾 Simpan Perubahan";
     }
-    alert('❌ Gagal memperbarui data: ' + err.message);
   }
 };
 
