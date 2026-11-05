@@ -904,7 +904,7 @@
 <!-- Kolom URL Foto (Tempat Anda paste link / link otomatis terisi) -->
 <div class="form-group" style="margin-bottom: 10px;">
   <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media (Hasil Copy-Paste):</label>
-  <input type="text" id="editWargaFoto" placeholder="https://pub-xxxx.r2.dev/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+ <input type="text" id="editWargaFoto" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
 </div>
 
   <div style="display: flex; gap: 8px;">
@@ -2648,8 +2648,6 @@ async function prosesUploadSemiManual() {
 
   try {
     const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
-
-    // 🌟 Jalankan kompresi otomatis untuk upload semi-manual
     file = await kompresGambar(file, 1200, 0.8);
 
     const response = await fetch(workerUrl, {
@@ -2662,21 +2660,19 @@ async function prosesUploadSemiManual() {
     });
 
     const textResult = await response.text();
-    let result;
-    try {
-      result = JSON.parse(textResult);
-    } catch (e) {
-      throw new Error("Respon server bukan JSON valid: " + textResult);
-    }
+    let result = JSON.parse(textResult);
 
     if (result.success && result.url) {
-      inputUrlTarget.value = result.url;
-      statusDiv.innerHTML = `✅ Berhasil dikompres & diunggah! Link R2:<br><a href="${result.url}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${result.url}</b></a>`;
+      // 🌟 MANIPULASI DOMAIN KE CUSTOM DOMAIN R2
+      let urlAwal = new URL(result.url);
+      let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
+
+      inputUrlTarget.value = urlFinal;
+      statusDiv.innerHTML = `✅ Berhasil dikompres & diunggah! Link R2:<br><a href="${urlFinal}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${urlFinal}</b></a>`;
       statusDiv.style.color = "#10b981";
     } else {
       throw new Error(result.error || "Gagal mendapatkan URL dari server.");
     }
-
   } catch (err) {
     console.error(err);
     statusDiv.innerHTML = `❌ Gagal: ${err.message}`;
@@ -2925,7 +2921,6 @@ async function uploadKeCloudflareR2(fileInputId) {
   const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
 
   try {
-    // 🌟 Jalankan kompresi otomatis sebelum di-upload ke R2
     file = await kompresGambar(file, 1200, 0.8);
 
     const response = await fetch(workerUrl, {
@@ -2934,7 +2929,7 @@ async function uploadKeCloudflareR2(fileInputId) {
         "X-File-Name": file.name,
         "Content-Type": file.type || "application/octet-stream"
       },
-      body: file // Kirim file biner mentah yang sudah terkompresi
+      body: file
     });
     
     const textResult = await response.text();
@@ -2946,7 +2941,11 @@ async function uploadKeCloudflareR2(fileInputId) {
     }
 
     if (result.success) {
-      return result.url; 
+      // 🌟 MANIPULASI DOMAIN: Ubah URL bawaan worker ke custom domain Anda
+      let urlAwal = new URL(result.url);
+      let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
+      
+      return urlFinal; 
     } else {
       throw new Error(result.error);
     }
@@ -3027,7 +3026,7 @@ function simpanLaporanDivisi() {
         });
     }
 
-    async function prosesUploadBuktiKeR2() {
+async function prosesUploadBuktiKeR2() {
   const fileInput = document.getElementById('laporanInputFoto');
   const statusDiv = document.getElementById('statusUploadBukti');
   const urlTarget = document.getElementById('laporanFotoUrl');
@@ -3039,7 +3038,6 @@ function simpanLaporanDivisi() {
   statusDiv.style.color = "#d97706";
 
   try {
-    // Memanggil fungsi kompresi otomatis yang sudah kita buat sebelumnya
     if (typeof kompresGambar === 'function') {
       file = await kompresGambar(file, 1200, 0.8);
     }
@@ -3058,8 +3056,12 @@ function simpanLaporanDivisi() {
     let result = JSON.parse(textResult);
 
     if (result.success && result.url) {
-      urlTarget.value = result.url;
-      statusDiv.innerHTML = `✅ Bukti berhasil diunggah! <a href="${result.url}" target="_blank" style="color: #2563eb; text-decoration: underline;">Lihat Nota</a>`;
+      // 🌟 MANIPULASI DOMAIN KE CUSTOM DOMAIN R2
+      let urlAwal = new URL(result.url);
+      let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
+
+      urlTarget.value = urlFinal;
+      statusDiv.innerHTML = `✅ Bukti berhasil diunggah! <a href="${urlFinal}" target="_blank" style="color: #2563eb; text-decoration: underline;">Lihat Nota</a>`;
       statusDiv.style.color = "#10b981";
     } else {
       throw new Error(result.error || "Gagal upload.");
@@ -3263,7 +3265,7 @@ window.prosesUploadBuktiEditAdmin = async function() {
   try {
     let base64Data = await konversiFileKeBase64(file);
     
-    // Kirim ke backend worker Cloudflare R2 Anda
+    // Kirim ke backend worker Cloudflare R2 yang satunya
     let response = await fetch("https://r2-upload.deny-rinawan87.workers.dev/", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -3272,7 +3274,11 @@ window.prosesUploadBuktiEditAdmin = async function() {
 
     let result = await response.json();
     if (result.url) {
-      hiddenUrl.value = result.url;
+      // 🌟 MANIPULASI DOMAIN KE CUSTOM DOMAIN R2
+      let urlAwal = new URL(result.url);
+      let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
+
+      hiddenUrl.value = urlFinal;
       statusDiv.innerHTML = '✅ Nota baru berhasil diunggah!';
       statusDiv.style.color = '#16a34a';
     } else {
