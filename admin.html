@@ -3519,7 +3519,21 @@ window.simpanPerubahanKeuanganAdmin = async function() {
     // ==========================================
     // PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
     // ==========================================
-    function bukaModalPengumumanAdmin() {
+   function bukaModalPengumumanAdmin() {
+      // 1. Bersihkan form & status terlebih dahulu saat modal dibuka
+      const form = document.getElementById('formInputPengumuman');
+      if (form) form.reset();
+      
+      const fileInput = document.getElementById('inputUploadPengumuman');
+      if (fileInput) fileInput.value = '';
+
+      const statusEl = document.getElementById('statusUploadPengumuman');
+      if (statusEl) {
+        statusEl.innerText = '';
+        statusEl.style.display = 'none'; // Sembunyikan teks status
+      }
+
+      // 2. Set tanggal default & tampilkan modal
       document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
       document.getElementById('modal-admin-pengumuman').style.display = 'flex';
       muatDaftarPengumumanAdmin();
@@ -3527,7 +3541,19 @@ window.simpanPerubahanKeuanganAdmin = async function() {
 
     function tutupModalPengumumanAdmin() {
       document.getElementById('modal-admin-pengumuman').style.display = 'none';
-      document.getElementById('formInputPengumuman').reset();
+      
+      // Reset form dan bersihkan teks status upload saat ditutup
+      const form = document.getElementById('formInputPengumuman');
+      if (form) form.reset();
+
+      const fileInput = document.getElementById('inputUploadPengumuman');
+      if (fileInput) fileInput.value = '';
+
+      const statusEl = document.getElementById('statusUploadPengumuman');
+      if (statusEl) {
+        statusEl.innerText = '';
+        statusEl.style.display = 'none'; // Sembunyikan teks status
+      }
     }
 
     function muatDaftarPengumumanAdmin() {
@@ -3753,6 +3779,27 @@ async function toggleStatusPengumuman(idUnik, statusBaru) {
     alert("❌ Gagal mengubah status: " + err.message);
   }
 }
+// Fungsi untuk mereset form pengumuman secara total
+function resetFormPengumuman() {
+    // 1. Reset elemen form standar jika ada
+    const form = document.getElementById('formPengumuman');
+    if (form) form.reset();
+
+    // 2. Kosongkan input file secara manual
+    const fileInput = document.getElementById('inputUploadPengumuman');
+    if (fileInput) fileInput.value = '';
+
+    // 3. Sembunyikan dan kosongkan teks status upload
+    const statusEl = document.getElementById('statusUploadPengumuman');
+    if (statusEl) {
+        statusEl.innerText = '';
+        statusEl.style.display = 'none'; // Sembunyikan elemen teksnya
+    }
+
+    // 4. Reset variabel ID edit jika diperlukan
+    window.currentEditPengumumanId = null;
+}
+
     // ==========================================
     // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN
     // ==========================================
