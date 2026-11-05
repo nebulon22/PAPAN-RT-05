@@ -330,7 +330,7 @@
           <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
         </div>
 
-        <button type="button" onclick="simpanPengumumanAdmin()" id="btnSimpanPengumuman" style="width: 100%; padding: 7px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">
+        <button type="button" onclick="()" id="btnSimpanPengumuman" style="width: 100%; padding: 7px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">
           💾 Terbitkan Pengumuman
         </button>
       </form>
@@ -3589,8 +3589,7 @@ html += `
         container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: red;">Gagal memuat data.</td></tr>`;
       });
     }
-
- // 1. Variabel global untuk menampung ID yang sedang diedit
+// 1. Variabel global untuk menampung ID yang sedang diedit
 let currentEditPengumumanId = null;
 
 function editPengumuman(id) {
@@ -3612,7 +3611,7 @@ function editPengumuman(id) {
       document.getElementById('pengumumanJudul').value = val.judul || '';
       document.getElementById('pengumumanDetail').value = val.detail || '';
       document.getElementById('pengumumanLokasi').value = val.lokasi || '';
-      if(document.getElementById('pengumumanFoto')) {
+      if (document.getElementById('pengumumanFoto')) {
         document.getElementById('pengumumanFoto').value = val.foto || '';
       }
 
@@ -3705,9 +3704,7 @@ async function simpanPengumumanAdmin() {
     const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
     await window.firebaseSet(targetRef, payload);
 
-    if (typeof currentEditPengumumanId !== 'undefined') {
-      currentEditPengumumanId = null; // Reset mode edit
-    }
+    currentEditPengumumanId = null; // Reset mode edit
 
     alert("✅ Pengumuman berhasil diperbarui/diterbitkan ke Firebase!");
     
@@ -3741,15 +3738,14 @@ async function simpanPengumumanAdmin() {
   }
 }
 
-    async function toggleStatusPengumuman(idUnik, statusBaru) {
-      try {
-        const targetRef = window.firebaseRef(window.db, 'pengumuman/' + idUnik);
-        await window.firebaseUpdate(targetRef, { status: statusBaru });
-      } catch (err) {
-        alert("❌ Gagal mengubah status: " + err.message);
-      }
-    }
-
+async function toggleStatusPengumuman(idUnik, statusBaru) {
+  try {
+    const targetRef = window.firebaseRef(window.db, 'pengumuman/' + idUnik);
+    await window.firebaseUpdate(targetRef, { status: statusBaru });
+  } catch (err) {
+    alert("❌ Gagal mengubah status: " + err.message);
+  }
+}
     // ==========================================
     // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN
     // ==========================================
