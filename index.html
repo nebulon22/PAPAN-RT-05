@@ -1363,8 +1363,8 @@ window.toggleChatModal = function() {
   var pinRumahAktif = null;
   var isDataReady = false;
 
-  function initPetaDanData() {
-// 1. Render Peta Leaflet instan begitu DOM & Leaflet siap (Memangkas LCP & FCP)
+function initPetaDanData() {
+    // 1. Render Peta Leaflet secara sinkron dan instan begitu DOM & Leaflet siap
     if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
       let container = L.DomUtil.get('map');
       if (container && container._leaflet_id) container._leaflet_id = null;
@@ -1377,8 +1377,7 @@ window.toggleChatModal = function() {
         attribution: '&copy; Google Maps'
       });
 
-      // 🌟 PERBAIKAN: Batasi High Priority hanya untuk 6 gambar (tile) pertama. 
-      // Lighthouse tetap hijau, tapi jaringan tidak macet.
+      // Batasi High Priority hanya untuk 6 tile pertama agar jaringan tidak macet
       let tileLoadCount = 0;
       tileLayerUtama.on('tileloadstart', function(e) {
         if (e.tile) {
@@ -1395,19 +1394,25 @@ window.toggleChatModal = function() {
       perbaruiIndikatorSync();
     }
     
-    // 2. Pasang Marker Warga & Pengumuman begitu Firebase selesai dimuat di latar belakang
+    // 2. Muat data berat (Firebase marker & pengumuman) secara asinkron di latar belakang
     if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
       isDataReady = true;
-      const muatData = () => {
+      const muatDataLatarBelakang = () => {
         muatDataPetaWarga();
         muatPengumumanFirebase();
         if (navigator.onLine) kirimDataPendingJimpitan();
       };
-      'requestIdleCallback' in window ? requestIdleCallback(muatData, { timeout: 200 }) : setTimeout(muatData, 50);
+      
+      // Menggunakan requestIdleCallback agar CPU fokus merender peta dulu
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(muatDataLatarBelakang, { timeout: 300 });
+      } else {
+        setTimeout(muatDataLatarBelakang, 100);
+      }
     }
   }
 
-// Panggil fungsi secepat mungkin di semua kondisi pemuatan dokumen
+  // Eksekusi secepat mungkin berdasarkan status dokumen saat ini
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initPetaDanData();
   } else {
