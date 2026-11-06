@@ -1356,36 +1356,74 @@ function formatRupiahInput(el) {
       return false;
     }
 
-    document.getElementById('dataForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnSubmitForm');
-      btn.innerText = '⏳ Menyimpan ke Firebase...';
-      btn.disabled = true;
+document.getElementById('dataForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnSubmitForm');
+  btn.innerText = '⏳ Menyimpan ke Database...';
+  btn.disabled = true;
 
-      const payload = {
-        Nama: document.getElementById('inputNama').value,
-        Lat: document.getElementById('inputLat').value,
-        Lng: document.getElementById('inputLng').value,
-        Type: document.getElementById('inputKategori').value,
-        Hidden: document.getElementById('inputHidden').value === 'TRUE',
-        foto: document.getElementById('inputFoto').value
-      };
+  try {
+    let finalUrlFoto = document.getElementById('inputFoto').value.trim();
 
-      const newRef = window.firebasePush(window.firebaseRef(window.db, 'peta_warga'));
-      window.firebaseSet(newRef, payload)
-        .then(() => {
-          btn.innerText = '💾 Simpan Data';
-          btn.disabled = false;
-          alert('✅ Data berhasil disimpan ke Firebase!');
-          tutupModalForm();
-          document.getElementById('dataForm').reset();
-        })
-        .catch((err) => {
-          btn.innerText = '💾 Simpan Data';
-          btn.disabled = false;
-          alert('❌ Gagal menyimpan: ' + err.message);
-        });
-    });
+    // Jika ada file yang dipilih saat menambah data baru, upload dulu ke R2
+    const fileInput = document.getElementById('inputUploadSemiManual'); // atau sesuaikan id input file tambah data jika ada
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      let file = fileInput.files[0];
+      if (typeof kompresGambar === 'function') {
+        file = await kompresGambar(file, 1200, 0.8);
+      }
+
+      const noRumahVal = document.getElementById('inputNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const ekstensi = file.name.split('.').pop() || 'jpg';
+      const namaFileKustom = `warga_${noRumahVal || 'baru'}_${Date.now()}.${ekstensi}`;
+
+      const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
+        method: 'POST',
+        headers: {
+          "X-File-Name": encodeURIComponent(namaFileKustom),
+          "Content-Type": file.type || "application/octet-stream"
+        },
+        body: file
+      });
+
+      const hasilUpload = await responseUpload.json();
+      if (hasilUpload.success || hasilUpload.url) {
+        let urlAwal = new URL(hasilUpload.url);
+        finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
+      }
+    }
+
+    const noRumahInput = document.getElementById('inputNoRumah').value.trim();
+    const namaWargaInput = document.getElementById('inputNamaWarga') ? document.getElementById('inputNamaWarga').value.trim() : '';
+
+    const payload = {
+      Nama: namaWargaInput || noRumahInput,
+      noRumah: noRumahInput,
+      kepalaKeluarga: namaWargaInput,
+      Lat: document.getElementById('inputLat').value,
+      Lng: document.getElementById('inputLng').value,
+      Type: document.getElementById('inputKategori').value,
+      Hidden: document.getElementById('inputHidden').value === 'TRUE',
+      foto: finalUrlFoto,
+      createdAt: Date.now()
+    };
+
+    const newRef = window.firebasePush(window.firebaseRef(window.db, 'peta_warga'));
+    await window.firebaseSet(newRef, payload);
+
+    btn.innerText = '💾 Simpan Data Lokasi';
+    btn.disabled = false;
+    alert('✅ Data baru berhasil disimpan dengan node & foto R2 otomatis!');
+    tutupModalForm();
+    document.getElementById('dataForm').reset();
+    muatSemuaDataAdmin();
+
+  } catch (err) {
+    btn.innerText = '💾 Simpan Data Lokasi';
+    btn.disabled = false;
+    alert('❌ Gagal menyimpan: ' + err.message);
+  }
+});
 
     function logoutAdmin() {
       localStorage.removeItem('authAdmin');
@@ -2884,10 +2922,9 @@ async function simpanPerubahanWarga(event) {
   btnSimpan.innerText = 'Sedang Memproses...';
 
   try {
-    // Ambil nilai dari input URL teks terlebih dahulu
     let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
 
-    // Jika user memilih file baru di memori, upload dulu ke R2
+    // 1. Proses upload file baru ke Cloudflare R2 jika ada
     if (fileBaruDipilih !== null) {
       document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file baru ke cloud storage...</i>';
       
@@ -2907,33 +2944,38 @@ async function simpanPerubahanWarga(event) {
       const hasilUpload = await responseUpload.json();
       if (hasilUpload.success || hasilUpload.url) {
         let urlAwal = new URL(hasilUpload.url);
-        // Timpa finalUrlFoto dengan URL baru dari Cloudflare R2
         finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
       } else {
         throw new Error('Gagal mengupload file ke cloud storage.');
       }
     }
 
-    // Ambil data form termasuk No. Rumah dan Nama Tempat
+    // 2. Ambil nilai input dari form
     const noRumahInput = document.getElementById('editWargaNoRumah').value.trim();
     const namaTempatInput = document.getElementById('editWargaNamaTempat').value.trim();
+    const kepalaKeluargaInput = document.getElementById('editWargaNama').value.trim();
+    const anggotaKeluargaInput = document.getElementById('editWargaAnggota').value.trim();
+    const kategoriInput = document.getElementById('editWargaKategori').value;
 
+    // 3. Susun data update (Node baru otomatis terbentuk di Firebase jika belum ada)
     const dataUpdate = {
-      Type: document.getElementById('editWargaKategori').value,
-      kepalaKeluarga: document.getElementById('editWargaNama').value,
-      anggotaKeluarga: document.getElementById('editWargaAnggota').value,
-      noRumah: noRumahInput,
-      Nama: namaTempatInput || noRumahInput,
-      foto: finalUrlFoto // URL final (berisi URL R2 baru atau URL manual yang diinput)
+      Type: kategoriInput,
+      kepalaKeluarga: kepalaKeluargaInput,
+      anggotaKeluarga: anggotaKeluargaInput,
+      noRumah: noRumahInput,                              // Node baru nomor rumah otomatis
+      namaTempat: namaTempatInput,                        // Node baru nama tempat otomatis
+      Nama: namaTempatInput || kepalaKeluargaInput || noRumahInput, // Nama utama penanda di peta
+      foto: finalUrlFoto,                                 // URL R2 Cloudflare terbaru
+      updatedAt: Date.now()                               // Timestamp otomatis
     };
 
-    // Simpan pembaruan ke node Firebase yang sesuai
+    // Simpan ke node Firebase peta_warga
     const refItem = window.firebaseRef(window.db, `peta_warga/${idWarga}`);
     await window.firebaseUpdate(refItem, dataUpdate);
 
     fileBaruDipilih = null;
     tutupModalEditWarga();
-    alert('✅ Perubahan data dan foto R2 berhasil disimpan!');
+    alert('✅ Perubahan data, node baru, dan foto R2 berhasil disimpan otomatis!');
     muatSemuaDataAdmin();
 
   } catch (error) {
