@@ -1973,11 +1973,20 @@ onMessage(messaging, (payload) => {
   }
 });
 
-    async function checkUserStatus() {
+async function checkUserStatus() {
         const chatContainer = document.getElementById('chat-container');
         const chatFooter = document.querySelector('footer');
         const regModal = document.getElementById('reg-modal');
         const pendingModal = document.getElementById('pending-modal');
+
+        // 🌟 1. AMBIL CACHE LOKAL SECOCOK MUNGKIN AGAR TIDAK MENUNGGU SERVER
+        if (!currentUser) {
+            const cachedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+            if (cachedUser) {
+                currentUser = cachedUser;
+                window.currentUser = currentUser;
+            }
+        }
 
         if (!currentUser) {
             if (chatContainer) chatContainer.classList.add('hidden');
@@ -1990,6 +1999,45 @@ onMessage(messaging, (payload) => {
             return;
         }
 
+        // 🌟 2. JIKA USER SUDAH AKTIF DI LOCALSTORAGE, LANGSUNG BUKA TAMPILAN CHAT TANPA MENUNGGU
+        if (currentUser.status === 'aktif') {
+            if (pendingModal) pendingModal.classList.add('hidden');
+            if (regModal) regModal.classList.add('hidden');
+            if (chatContainer) chatContainer.classList.remove('hidden');
+            if (chatFooter) chatFooter.classList.remove('hidden');
+            
+            const userInfo = document.getElementById('user-info-text');
+            if (userInfo) userInfo.innerText = `${currentUser.username || currentUser.nama} • ${currentUser.hunian || ''}`;
+            
+            const labelUserKetik = document.getElementById('chat-current-user-label');
+            if (labelUserKetik) {
+                labelUserKetik.innerText = `${currentUser.username || currentUser.nama}:`;
+            }
+
+            // Jalankan kumpulan listener SEKALI SAJA secara instan
+            if (!window.hasLoadedListeners) {
+                window.hasLoadedListeners = true;
+                
+                if (typeof markPublicGroupAsRead === 'function') {
+                    markPublicGroupAsRead();
+                }
+
+                loadUsersList();
+                renderPrivateTabsUI();
+                listenAllPrivateChats();
+                listenPublicGroupUnread();
+                requestNotificationPermission();
+                initFCMToken(currentUser.uid);
+                listenPinnedPoll();
+
+                activeChatType = 'public';
+                window.activeChatType = 'public';
+
+                loadChatStream();
+            }
+        }
+
+        // 🌟 3. VERIFIKASI KE DATABASE FIREBASE DI LATAR BELAKANG (SILENT SYNC)
         const userRef = ref(db, `users/${currentUser.uid}`);
         onValue(userRef, async (snapshot) => {
             const val = snapshot.val();
@@ -2002,7 +2050,8 @@ onMessage(messaging, (payload) => {
             currentUser.status = val.status;
             currentUser.role = val.role || 'warga';
             currentUser.username = val.username || val.nama;
-            window.currentUser = currentUser; // Update window global
+            currentUser.hunian = val.hunian || currentUser.hunian;
+            window.currentUser = currentUser;
 
             localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
 
@@ -2013,75 +2062,39 @@ onMessage(messaging, (payload) => {
                 if (regModal) regModal.classList.add('hidden');
                 if (chatContainer) chatContainer.classList.add('hidden');
                 if (chatFooter) chatFooter.classList.add('hidden');
-            } else if (val.status === 'aktif') {
-                if (pendingModal) pendingModal.classList.add('hidden');
-                if (regModal) regModal.classList.add('hidden');
-                if (chatContainer) chatContainer.classList.remove('hidden');
-                if (chatFooter) chatFooter.classList.remove('hidden');
-                
-                const userInfo = document.getElementById('user-info-text');
-                if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
-                
-                const labelUserKetik = document.getElementById('chat-current-user-label');
-                if (labelUserKetik) {
-                    labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
-                }
+                return;
+            }
 
-                const btnCreatePoll = document.getElementById('btn-create-poll-admin');
-                if (btnCreatePoll) {
-                    if (currentUser.role === 'admin' || currentUser.username === 'Admin1' || currentUser.nama === 'Admin1') {
-                        btnCreatePoll.style.display = 'inline-flex';
-                    } else {
-                        btnCreatePoll.style.display = 'none';
-                    }
-                }
+            // Perbarui label tampilan jika ada perubahan data dari admin
+            const userInfo = document.getElementById('user-info-text');
+            if (userInfo) userInfo.innerText = `${currentUser.username} • ${currentUser.hunian}`;
 
-              // 🛠️ Autentikasi otomatis dengan pengaman jaringan
-                try {
-                    const pseudoEmail = val.authEmail || `${currentUser.uid.toLowerCase()}@rt05kayen.internal`;
-                    const securePassword = (val.pin || '') + "RT05Key";
-                    
-                    // Cek apakah auth sedang proses atau user masih valid
-                    if (auth.currentUser?.email !== pseudoEmail) {
-                        await signInWithEmailAndPassword(auth, pseudoEmail, securePassword);
-                        console.log("Firebase Auth berhasil masuk, rules `auth != null` terpenuhi.");
-                    }
-                } catch (authErr) {
-                    // Abaikan error network-request-failed saat transisi logout/reload agar console tetap bersih
-                    if (authErr.code !== 'auth/network-request-failed') {
-                        console.log("Catatan Auth login session:", authErr);
-                    } else {
-                        console.log("Catatan jaringan: Menggunakan sesi auth lokal yang ada.");
-                    }
-                }
-                
-                setupPresence();
-                
-               // Jalankan kumpulan listener SEKALI SAJA
-                if (!window.hasLoadedListeners) {
-                    window.hasLoadedListeners = true;
-                    
-                    // 🛠️ PENGAMAN UTAMA: Pastikan saat pertama kali sesi akun ini aktif,
-                    // posisinya langsung ditandai sudah dibaca agar tidak memicu unread palsu.
-                    if (typeof markPublicGroupAsRead === 'function') {
-                        markPublicGroupAsRead();
-                    }
-
-                    loadUsersList();
-                    renderPrivateTabsUI();
-                    listenAllPrivateChats();
-                    listenPublicGroupUnread();
-                    requestNotificationPermission();
-                    initFCMToken(currentUser.uid);
-                    listenPinnedPoll();
-
-                    activeChatType = 'public';
-                    window.activeChatType = 'public';
-
-                    loadChatStream();
+            const btnCreatePoll = document.getElementById('btn-create-poll-admin');
+            if (btnCreatePoll) {
+                if (currentUser.role === 'admin' || currentUser.username === 'Admin1' || currentUser.nama === 'Admin1') {
+                    btnCreatePoll.style.display = 'inline-flex';
+                } else {
+                    btnCreatePoll.style.display = 'none';
                 }
             }
-        });
+
+            // Autentikasi otomatis di latar belakang
+            try {
+                const pseudoEmail = val.authEmail || `${currentUser.uid.toLowerCase()}@rt05kayen.internal`;
+                const securePassword = (val.pin || '') + "RT05Key";
+                
+                if (auth.currentUser?.email !== pseudoEmail) {
+                    await signInWithEmailAndPassword(auth, pseudoEmail, securePassword);
+                    console.log("Firebase Auth berhasil masuk, rules `auth != null` terpenuhi.");
+                }
+            } catch (authErr) {
+                if (authErr.code !== 'auth/network-request-failed') {
+                    console.log("Catatan Auth login session:", authErr);
+                }
+            }
+            
+            setupPresence();
+        }, { onlyOnce: true }); // 🌟 Mencegah onValue memicu ulang reset chat secara terus-menerus
     }
          
     
