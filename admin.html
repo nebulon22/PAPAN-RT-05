@@ -2640,11 +2640,11 @@ function cariDetailKeluargaAdmin() {
 
     let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" /></div>` : '';
 
-    container.innerHTML = `
+container.innerHTML = `
         <div style="font-size: 12px; color: #334155; line-height: 1.6;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                 <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
-                <button type="button" onclick='WargaAdminById("${match.id}")' style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+                <button type="button" onclick="bukaModalEditWargaAdminById('${match.id}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
                     ✏️ Edit
                 </button>
             </div>
@@ -3876,7 +3876,7 @@ function resetFormPengumuman() {
     window.currentEditPengumumanId = null;
 }
 
-    // ==========================================
+// ==========================================
     // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN
     // ==========================================
     function cariLokasiPengumuman(keyword) {
@@ -3889,9 +3889,14 @@ function resetFormPengumuman() {
       var query = keyword.toLowerCase();
       var sumberData = [];
 
-      if (typeof globalDataRumah !== 'undefined' && Array.isArray(globalDataRumah) && globalDataRumah.length > 0) {
-        sumberData = globalDataRumah.map(function(row) {
-          return { nama: row[0] || '', lat: row[1] || '', lng: row[2] || '' };
+      // Diperbarui menggunakan globalDataWarga yang terpadu
+      if (typeof globalDataWarga !== 'undefined' && Array.isArray(globalDataWarga) && globalDataWarga.length > 0) {
+        sumberData = globalDataWarga.map(function(item) {
+          let label = item.nama || '';
+          if (item.kepalaKeluarga) {
+            label += ` (${item.kepalaKeluarga})`;
+          }
+          return { nama: label, lat: item.lat || '', lng: item.lng || '' };
         });
       }
 
