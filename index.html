@@ -1351,9 +1351,11 @@ for (let i = index; i < batas; i++) {
           var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
           // 🌟 1. SELALU MASUKKAN KE `daftarPin` AGAR BISA DICARI VIA KOTAK PENCARIAN
-          daftarPin.push({ 
+            daftarPin.push({ 
             namaRaw: item.nameAsli,
             nama: item.nameAsli.toLowerCase(), 
+            noRumah: String(kolom.noRumah || '').toLowerCase(), // 🌟 Tambahkan ini
+            kepalaKeluarga: String(kolom.kepalaKeluarga || '').toLowerCase(), // 🌟 Tambahkan ini
             marker: marker, 
             lat: item.lat, 
             lng: item.lng,
@@ -1443,19 +1445,22 @@ window.jalankanPencarianPeta = function() {
     return;
   }
 
-  // Cek apakah data peta sudah terisi
-  if (!window.daftarPin || window.daftarPin.length === 0) {
-    alert("Data peta warga belum siap atau kosong. Coba refresh halaman.");
+  if (!daftarPin || daftarPin.length === 0) {
+    alert("Data peta warga belum dimuat. Mohon tunggu sebentar.");
     return;
   }
 
-  // Lakukan pencarian pada daftarPin
-  var hasil = window.daftarPin.find(pin => {
+  // 🌟 Perluas pencarian agar mencakup nomor rumah, kepala keluarga, dan nama tempat
+  var hasil = daftarPin.find(pin => {
     var namaRaw = String(pin.namaRaw || '').toLowerCase();
-    var namaClean = String(pin.nama || '').toLowerCase();
+    var noRumah = String(pin.noRumah || '').toLowerCase();
+    var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
     var kategori = String(pin.kategori || '').toLowerCase();
     
-    return namaRaw.includes(kataKunci) || namaClean.includes(kataKunci) || kategori.includes(kataKunci);
+    return namaRaw.includes(kataKunci) || 
+           noRumah.includes(kataKunci) || 
+           kepalaKeluarga.includes(kataKunci) || 
+           kategori.includes(kataKunci);
   });
 
   if (hasil) {
@@ -1463,7 +1468,6 @@ window.jalankanPencarianPeta = function() {
       map.removeLayer(pinRumahAktif);  
       pinRumahAktif = null;  
     }
-
     if (!map.hasLayer(hasil.marker)) {
       hasil.marker.addTo(map);
       pinRumahAktif = hasil.marker;
@@ -1474,15 +1478,14 @@ window.jalankanPencarianPeta = function() {
     map.flyTo(map.unproject(pointC, 19), 19);
 
     map.once('moveend', function() {
-      if (hasil.marker.getPopup()) {
-        hasil.marker.getPopup().options.autoPan = false;
-      }
+      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
       hasil.marker.openPopup();
     });
   } else {
     alert("Nama atau nomor rumah \"" + kataKunci + "\" tidak ditemukan.");
   }
 };
+  
   document.addEventListener('DOMContentLoaded', function() {
   var searchInput = document.getElementById('searchInput');
   if (searchInput) {
