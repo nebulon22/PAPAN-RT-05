@@ -42,16 +42,19 @@
   }
   
 /* 🌟 Efek halus saat peta pertama kali muncul */
-  #map {
+#map {
     width: 100%;
     height: 100vh;
     background-color: #cbd5e1;
-    opacity: 0; /* Mulai dari transparan */
-    transition: opacity 0.6s ease-in-out; /* Durasi transisi 0.6 detik */
   }
 
-  #map.loaded {
-    opacity: 1; /* Perlahan menjadi jelas */
+  /* Kelas transisi terpisah agar aman */
+  #map.fade-map {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+  }
+  #map.fade-map.loaded {
+    opacity: 1;
   }
 
 
@@ -1371,8 +1374,7 @@ window.toggleChatModal = function() {
   var pinRumahAktif = null;
   var isDataReady = false;
 
-function initPetaDanData() {
-   function initPetaDanData() {
+  function initPetaDanData() {
     // 1. Render Peta Leaflet secara sinkron dan instan begitu DOM & Leaflet siap
     if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
       let container = L.DomUtil.get('map');
@@ -1402,29 +1404,12 @@ function initPetaDanData() {
       L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
       perbaruiIndikatorSync();
 
-      // 🌟 TAMBAHKAN INI: Efek fade-in agar peta muncul dengan halus (tidak kedip kaku)
+      // 🌟 Efek fade-in agar peta muncul dengan halus (tidak kedip kaku)
       setTimeout(() => {
         let mapElement = document.getElementById('map');
         if (mapElement) mapElement.classList.add('loaded');
       }, 150);
     }
-    
-    // 2. Muat data berat (Firebase marker & pengumuman) secara asinkron di latar belakang
-    if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
-      isDataReady = true;
-      const muatDataLatarBelakang = () => {
-        muatDataPetaWarga();
-        muatPengumumanFirebase();
-        if (navigator.onLine) kirimDataPendingJimpitan();
-      };
-      
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(muatDataLatarBelakang, { timeout: 300 });
-      } else {
-        setTimeout(muatDataLatarBelakang, 100);
-      }
-    }
-  }
     
     // 2. Muat data berat (Firebase marker & pengumuman) secara asinkron di latar belakang
     if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
@@ -1442,8 +1427,8 @@ function initPetaDanData() {
         setTimeout(muatDataLatarBelakang, 100);
       }
     }
-  }
-
+  } // <-- Penutup fungsi initPetaDanData() yang benar dan lengkap
+  
   // Eksekusi secepat mungkin berdasarkan status dokumen saat ini
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initPetaDanData();
