@@ -1443,16 +1443,21 @@ window.jalankanPencarianPeta = function() {
     return;
   }
 
-  // 🌟 JIKA DATA BELUM SIAP, TARIK ULANG DARI WORKER OTOMATIS
+  // 🌟 JIKA DATA MASIH KOSONG, TUNGGU SEBENTAR SECARA OTOMATIS
   if (!daftarPin || daftarPin.length === 0) {
-    alert("Data peta sedang disinkronkan dari server proxy. Mohon tunggu 1 detik lalu klik Cari lagi.");
+    // Panggil ulang fetch worker sebagai antisipasi
     if (typeof muatDataPetaWarga === 'function') {
       muatDataPetaWarga();
     }
+    
+    // Beri tahu pengguna dan tunggu 1.5 detik lalu coba cari otomatis
+    alert("Memuat data dari server proxy, mohon tunggu sebentar...");
+    setTimeout(() => {
+      window.jalankanPencarianPeta(); // Coba jalankan ulang pencarian otomatis
+    }, 1500);
     return;
   }
 
-  // 🌟 Perluas pencarian agar mencakup nomor rumah, kepala keluarga, dan nama tempat
   var hasil = daftarPin.find(pin => {
     var namaRaw = String(pin.namaRaw || '').toLowerCase();
     var noRumah = String(pin.noRumah || '').toLowerCase();
