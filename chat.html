@@ -95,7 +95,17 @@
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y !important;
     }
+    @keyframes highlightPulse {
+  0% { background-color: rgba(255, 255, 255, 0.9); }
+  50% { background-color: rgba(255, 255, 255, 0.3); }
+  100% { background-color: rgba(255, 255, 255, 0.9); }
+}
 
+.unread-message-highlight {
+  animation: highlightPulse 2s infinite ease-in-out;
+  border-left: 3px solid #38bdf8 !important;
+  background-color: rgba(255, 255, 255, 0.2);
+}
     .msg-row {
       word-break: break-word;
       padding: 3px 6px;
@@ -2590,17 +2600,16 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   div.className = "msg-row";
   if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
-  // 🌟 LOGIKA FILE LAMA: Efek animasi unread persis seperti file lama Anda
+  // 🌟 Terapkan kelas animasi transparan jika pesan belum dibaca
   if (isUnread) {
-      div.style.transition = "background-color 2s ease, border-color 2s ease";
-      div.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
-      div.style.borderLeft = "3px solid #38bdf8";
+      div.classList.add('unread-message-highlight');
       div.style.paddingLeft = "8px";
 
+      // Efek meluruh setelah beberapa detik dibaca
       setTimeout(() => {
-          div.style.backgroundColor = "transparent";
+          div.classList.remove('unread-message-highlight');
           div.style.borderLeftColor = "transparent"; 
-      }, 2000);
+      }, 3000);
   }
 
   let nameClass = "role-user";
