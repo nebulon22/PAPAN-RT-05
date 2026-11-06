@@ -914,9 +914,16 @@
     </div>
   </div>
 
+<!-- No. Rumah / Blok (Opsional) -->
   <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Titik Denah / Nama Tempat / No. Rumah:</label>
-    <input type="text" id="editWargaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah / Blok (Opsional):</label>
+    <input type="text" id="editWargaNoRumah" placeholder="Contoh: No 10 / Blok B" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+  </div>
+
+  <!-- Nama Tempat / Keterangan / Nama Warga (Opsional) -->
+  <div class="form-group" style="margin-bottom: 10px;">
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Tempat / Keterangan (Opsional):</label>
+    <input type="text" id="editWargaNamaTempat" placeholder="Contoh: Rumah Ketua RW / Warung Bu Ani" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
   </div>
 
 <!-- Input File Tanpa Tombol Upload Otomatis -->
@@ -2663,12 +2670,11 @@ function bukaModalEditWargaAdminById(id) {
     const inputId = document.getElementById('editWargaId');
     if (inputId) inputId.value = data.id;
 
-// 🌟 1. Set nilai dropdown kategori bangunan secara aman (case-insensitive)
+    // 🌟 1. Set nilai dropdown kategori bangunan secara aman (case-insensitive)
     const selectKategori = document.getElementById('editWargaKategori');
     if (selectKategori) {
-        const dbType = String(data.type || 'rumah').toLowerCase();
+        const dbType = String(data.type || 'Rumah').toLowerCase();
         
-        // Cari option yang value-nya cocok secara lowercase
         let matched = false;
         for (let option of selectKategori.options) {
             if (option.value.toLowerCase() === dbType) {
@@ -2677,11 +2683,11 @@ function bukaModalEditWargaAdminById(id) {
                 break;
             }
         }
-        // Fallback jika tidak ketemu
         if (!matched) {
             selectKategori.value = 'Rumah'; 
         }
     }
+
     // Cek kategori tempat (Fasum, Kuliner, Minimarket, dll)
     const kategori = String(data.type || '').toLowerCase();
     const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
@@ -2692,10 +2698,13 @@ function bukaModalEditWargaAdminById(id) {
         groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
     }
 
-    // Set nilai input lainnya
+    // Set nilai input keluarga & pisahkan No Rumah dengan Nama Tempat
     document.getElementById('editWargaNama').value = data.kepalaKeluarga || '';
     document.getElementById('editWargaAnggota').value = data.anggotaKeluarga || '';
-    document.getElementById('editWargaRumah').value = data.nama || '';
+    
+    // Mengambil nilai ke dua input terpisah (noRumah & namaTempat)
+    document.getElementById('editWargaNoRumah').value = data.noRumah || '';
+    document.getElementById('editWargaNamaTempat').value = data.namaTempat || data.nama || '';
     
     // Gunakan satu input URL foto yang bersih (hapus duplikasi)
     const inputFoto = document.getElementById('editWargaFoto');
@@ -2854,10 +2863,11 @@ async function simpanPerubahanWarga(e) {
     if (e) e.preventDefault();
     
     const idWarga = document.getElementById("editWargaId").value;
-    const rumahBaru = document.getElementById("editWargaRumah").value.trim();
+    const noRumahBaru = document.getElementById("editWargaNoRumah").value.trim();
+    const namaTempatBaru = document.getElementById("editWargaNamaTempat").value.trim();
+    const kategoriBaru = document.getElementById("editWargaKategori").value;
     const fotoBaru = document.getElementById("editWargaFoto").value.trim();
     
-    // Ambil nilai kepala & anggota keluarga (jika elemennya disembunyikan, biarkan kosong)
     const groupKeluarga = document.getElementById("groupFieldKeluarga");
     const isKeluargaVisible = groupKeluarga && groupKeluarga.style.display !== 'none';
     
@@ -2865,8 +2875,14 @@ async function simpanPerubahanWarga(e) {
     const anggotaBaru = isKeluargaVisible ? document.getElementById("editWargaAnggota").value.trim() : '';
     const btn = document.getElementById("btnSimpanEditWarga");
 
-    if (!rumahBaru || !idWarga) {
-        alert("Nama tempat / Titik denah atau ID tidak ditemukan!");
+    // Validasi: Minimal salah satu diisi (No Rumah atau Nama Tempat)
+    if (!noRumahBaru && !namaTempatBaru) {
+        alert("Mohon isi minimal salah satu: No. Rumah / Blok atau Nama Tempat / Keterangan!");
+        return;
+    }
+
+    if (!idWarga) {
+        alert("ID data lokasi tidak ditemukan!");
         return;
     }
 
@@ -2875,15 +2891,18 @@ async function simpanPerubahanWarga(e) {
     try {
         const updateRef = window.firebaseRef(window.db, 'peta_warga/' + idWarga);
         await window.firebaseUpdate(updateRef, {
-            Nama: rumahBaru,
+            noRumah: noRumahBaru,       // Node baru khusus nomor rumah/blok
+            namaTempat: namaTempatBaru, // Node baru khusus nama tempat
+            Nama: namaTempatBaru ? `${noRumahBaru} - ${namaTempatBaru}`.replace(/^[-\s]+|[-\s]+$/g, '') : noRumahBaru, // Gabungan rapi untuk label utama peta
+            Type: kategoriBaru,         // Kategori bangunan
             kepalaKeluarga: namaBaru,
             anggotaKeluarga: anggotaBaru,
             foto: fotoBaru
         });
 
-        alert("✅ Data lokasi berhasil diperbarui!");
+        alert("✅ Data lokasi berhasil diperbarui ke Firebase!");
         tutupModalEditWarga();
-        // muatSemuaDataAdmin(); // aktifkan jika ingin langsung refresh data di background
+        if (typeof muatSemuaDataAdmin === 'function') muatSemuaDataAdmin();
     } catch (err) {
         alert("❌ Gagal memperbarui data: " + err.message);
     } finally {
