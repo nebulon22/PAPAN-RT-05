@@ -1192,17 +1192,7 @@ window.toggleChatModal = function() {
   }
 
 
-  // ==========================================
-  // 3. INISIALISASI PETA & DATA UTAMA
-  // ==========================================
-  var map; 
-  var daftarPin = [];
-  var daftarPengumuman = [];
-  var dataKeuangan = [];
-  var pinRumahAktif = null;
-  var isDataReady = false;
-
-  function initPetaDanData() {
+function initPetaDanData() {
     // 1. Render Peta Leaflet secara sinkron dan instan begitu DOM & Leaflet siap
     if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
       let container = L.DomUtil.get('map');
@@ -1216,7 +1206,6 @@ window.toggleChatModal = function() {
         attribution: '&copy; Google Maps'
       });
 
-      // Batasi High Priority hanya untuk 6 tile pertama agar jaringan tidak macet
       let tileLoadCount = 0;
       tileLayerUtama.on('tileloadstart', function(e) {
         if (e.tile) {
@@ -1232,29 +1221,31 @@ window.toggleChatModal = function() {
       L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
       perbaruiIndikatorSync();
 
-      // 🌟 Efek fade-in agar peta muncul dengan halus (tidak kedip kaku)
       setTimeout(() => {
         let mapElement = document.getElementById('map');
         if (mapElement) mapElement.classList.add('loaded');
       }, 150);
     }
     
-// 2. Muat data berat (Firebase marker) secara asinkron di latar belakang
-    if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
+    // 🌟 2. AMBIL DATA PETA WARGA LEWAT WORKER SECARA INDEPENDEN
+    if (map && !isDataReady) {
       isDataReady = true;
       const muatDataLatarBelakang = () => {
-        muatDataPetaWarga();
-        if (navigator.onLine) kirimDataPendingJimpitan();
+        muatDataPetaWarga(); // Langsung tembak Cloudflare Worker tanpa syarat window.db
       };
       
-      // Menggunakan requestIdleCallback agar CPU fokus merender peta dulu
       if ('requestIdleCallback' in window) {
         requestIdleCallback(muatDataLatarBelakang, { timeout: 300 });
       } else {
         setTimeout(muatDataLatarBelakang, 100);
       }
     }
-  } // <-- Penutup fungsi initPetaDanData() yang benar dan lengkap
+
+    // 3. Sinkronisasi jimpitan offline yang membutuhkan Firebase
+    if (window.db && typeof window.firebaseRef === 'function') {
+      if (navigator.onLine) kirimDataPendingJimpitan();
+    }
+  }
   
   // Eksekusi secepat mungkin berdasarkan status dokumen saat ini
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
