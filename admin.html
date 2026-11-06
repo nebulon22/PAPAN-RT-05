@@ -2594,14 +2594,6 @@ function tutupModalKelolaWarga() {
     }
 }
 
-function tutupModalEditWarga() {
-    const modalEdit = document.getElementById("modal-edit-warga");
-    if (modalEdit) {
-        modalEdit.style.display = "none";
-    }
-}
-
-
 // ==========================================
 // 3. PENCARIAN & EDIT DATA WARGA (TERPADU)
 // ==========================================
@@ -2704,7 +2696,7 @@ function bukaModalEditWargaAdminById(id) {
     document.getElementById('editWargaNamaTempat').value = data.namaTempat || data.nama || '';
     
     // Gunakan satu input URL foto yang bersih (hapus duplikasi)
-    const inputFoto = document.getElementById('editWargaFoto');
+    const inputFoto = document.getElementById('editWargaFotoURL');
     const preview = document.getElementById('previewFotoRumah');
     
     if (inputFoto) inputFoto.value = data.foto || '';
@@ -2897,7 +2889,7 @@ async function simpanPerubahanWarga(event) {
       const formData = new FormData();
       formData.append('file', fileBaruDipilih);
 
-      const responseUpload = await fetch('URL_ENDPOINT_UPLOAD_ANDA', {
+      const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
         method: 'POST',
         body: formData
       });
@@ -2940,10 +2932,20 @@ async function simpanPerubahanWarga(event) {
 
 // Fungsi reset saat modal ditutup
 function tutupModalEditWarga() {
+  // 1. Reset variabel file & input file di memori
   fileBaruDipilih = null;
-  document.getElementById('inputUploadSemiManual').value = '';
-  document.getElementById('statusSemiManual').innerHTML = '';
-  // Sembunyikan modal Anda di sini
+  const inputUpload = document.getElementById('inputUploadSemiManual');
+  if (inputUpload) inputUpload.value = '';
+  
+  // 2. Kosongkan teks status informasi file
+  const statusSemi = document.getElementById('statusSemiManual');
+  if (statusSemi) statusSemi.innerHTML = '';
+  
+  // 3. Sembunyikan modal secara visual dari layar
+  const modal = document.getElementById("modal-edit-warga");
+  if (modal) {
+    modal.style.display = "none";
+  }
 }
     
 // ==========================================
