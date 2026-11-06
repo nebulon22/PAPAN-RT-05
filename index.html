@@ -1237,11 +1237,17 @@ function initPetaDanData() {
     }
     
     // 🌟 2. AMBIL DATA PETA WARGA LEWAT WORKER SECARA INDEPENDEN
-    if (map && !isDataReady) {
-      isDataReady = true;
-      const muatDataLatarBelakang = () => {
-        muatDataPetaWarga(); // Langsung tembak Cloudflare Worker tanpa syarat window.db
-      };
+// 🌟 AMBIL DATA PETA WARGA LEWAT WORKER DENGAN TIMEOUT
+  if (map && !isDataReady) {
+    isDataReady = true;
+    
+    // Beri jeda waktu (timeout) 300ms agar peta dan UI selesai merender dulu dengan mulus
+    setTimeout(() => {
+      if (typeof muatDataPetaWarga === 'function') {
+        muatDataPetaWarga();
+      }
+    }, 300); // Jeda waktu dalam milidetik
+  }
       
       if ('requestIdleCallback' in window) {
         requestIdleCallback(muatDataLatarBelakang, { timeout: 300 });
