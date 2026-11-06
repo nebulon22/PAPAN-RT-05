@@ -1236,24 +1236,15 @@ function initPetaDanData() {
       }, 150);
     }
     
-    // 🌟 2. AMBIL DATA PETA WARGA LEWAT WORKER SECARA INDEPENDEN
-// 🌟 AMBIL DATA PETA WARGA LEWAT WORKER DENGAN TIMEOUT
-  if (map && !isDataReady) {
-    isDataReady = true;
-    
-    // Beri jeda waktu (timeout) 300ms agar peta dan UI selesai merender dulu dengan mulus
-    setTimeout(() => {
-      if (typeof muatDataPetaWarga === 'function') {
-        muatDataPetaWarga();
-      }
-    }, 300); // Jeda waktu dalam milidetik
-  }
+    // 2. Ambil data peta warga lewat worker secara independen dengan timeout
+    if (map && !isDataReady) {
+      isDataReady = true;
       
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(muatDataLatarBelakang, { timeout: 300 });
-      } else {
-        setTimeout(muatDataLatarBelakang, 100);
-      }
+      setTimeout(() => {
+        if (typeof muatDataPetaWarga === 'function') {
+          muatDataPetaWarga();
+        }
+      }, 300);
     }
 
     // 3. Sinkronisasi jimpitan offline yang membutuhkan Firebase
@@ -1261,6 +1252,7 @@ function initPetaDanData() {
       if (navigator.onLine) kirimDataPendingJimpitan();
     }
   }
+  
   
   // Eksekusi secepat mungkin berdasarkan status dokumen saat ini
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
