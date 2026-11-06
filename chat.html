@@ -2230,8 +2230,15 @@ let isLoadingMore = false;
 let shouldForceScrollDown = false;
 
 function loadChatStream(onLoaded) {
-    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
+    if (!chatStream) return;
+
+    // 🌟 Cek cerdas: Hanya tampilkan teks memuat jika kontainer benar-benar kosong atau belum ada pesan
+    if (chatStream.children.length === 0) {
+        chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
+    }
+
+    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
 
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
         if (activeChatType !== 'public') return;
@@ -2255,7 +2262,7 @@ function loadChatStream(onLoaded) {
             return;
         }
 
-        // 🌟 KOSONGKAN DOM
+        // 🌟 KOSONGKAN DOM SEBELUM RENDER ULANG
         chatStream.innerHTML = '';
 
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
@@ -2270,7 +2277,6 @@ function loadChatStream(onLoaded) {
 
             let isUnreadMsg = false;
             
-       // 🌟 PENGAMAN KETAT: Hanya bunyikan suara jika chat sudah siap, user sudah benar-benar login, dan bukan saat load awal
             if (isChatReady && currentUser && currentUser.uid && isUnreadSection && msgData.uid !== currentUser?.uid) {
                 isUnreadMsg = true;
 
@@ -2296,7 +2302,7 @@ function loadChatStream(onLoaded) {
 
         isInitialPublicChatLoaded = true;
 
-        // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS (Mencegah lari ke atas)
+        // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS
         if (shouldForceScrollDown) {
             scrollToBottom(false);
             shouldForceScrollDown = false;
@@ -2307,7 +2313,6 @@ function loadChatStream(onLoaded) {
             chatStream.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
         }
 
-        // Tampilkan tombol panah bawah jika posisi di atas
         const distanceFromBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight;
         const btnScrollBottom = document.getElementById('btn-scroll-bottom');
         if (btnScrollBottom) {
