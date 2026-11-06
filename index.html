@@ -1265,138 +1265,136 @@ window.toggleChatModal = function() {
   window.addEventListener('utilsSiap', initPetaDanData);
 
 function muatDataPetaWarga() {
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
-    setTimeout(muatDataPetaWarga, 50);
-    return;
-  }
-
-  // Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
-  if (typeof markerGroup === 'undefined' || !markerGroup) {
-    window.markerGroup = L.markerClusterGroup({
-      maxClusterRadius: 30 
-    });
-    window.markerGroup.addTo(map);
-  } else if (!map.hasLayer(markerGroup)) {
-    markerGroup.addTo(map);
-  }
-
-  const petaRef = window.firebaseRef(window.db, 'peta_warga');
-
-  window.firebaseOnValue(petaRef, (snapshot) => {
-    const dataObj = snapshot.val();
-    
-    markerGroup.clearLayers();
-    daftarPin = [];
-
-    if (!dataObj) return;
-
-    var baris = [];
-    Object.keys(dataObj).forEach(key => {
-      var item = dataObj[key];
-      if (item && (item.nama || item.name || item.Nama)) {
-        baris.push(item);
+  // 1. Ambil data melalui Cloudflare Worker proxy secara aman
+  fetch('https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("Gagal mengambil data dari server proxy.");
       }
-    });
+      return response.json();
+    })
+    .then(dataObj => {
+      // Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
+      if (typeof markerGroup === 'undefined' || !markerGroup) {
+        window.markerGroup = L.markerClusterGroup({
+          maxClusterRadius: 30 
+        });
+        window.markerGroup.addTo(map);
+      } else if (!map.hasLayer(markerGroup)) {
+        markerGroup.addTo(map);
+      }
 
-    var index = 0;
-    var chunkSize = 20;
+      markerGroup.clearLayers();
+      daftarPin = [];
 
-    function prosesChunk() {
-      var batas = Math.min(index + chunkSize, baris.length);
-      
-for (let i = index; i < batas; i++) {
-        var kolom = baris[i];
-        var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
+      if (!dataObj) return;
 
-        if (namaAsli !== '') {
-          var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
-          var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
-          var latClean = perbaikiKoordinat(rawLat);
-          var lngClean = perbaikiKoordinat(rawLng);
-          
-          var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
-          var statusHidden = typeof rawHidden === 'boolean' 
-            ? rawHidden 
-            : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+      var baris = [];
+      Object.keys(dataObj).forEach(key => {
+        var item = dataObj[key];
+        if (item && (item.nama || item.name || item.Nama)) {
+          baris.push(item);
+        }
+      });
 
-          var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
-          var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
-          
-          var item = {
-            name: namaAsli,
-            nameAsli: namaAsli,
-            lat: parseFloat(latClean),
-            lng: parseFloat(lngClean),
-            hidden: statusHidden,
-            foto: urlFoto
-          };
+      var index = 0;
+      var chunkSize = 20;
 
-          if (isNaN(item.lat) || isNaN(item.lng)) continue;
+      function prosesChunk() {
+        var batas = Math.min(index + chunkSize, baris.length);
+        
+        for (let i = index; i < batas; i++) {
+          var kolom = baris[i];
+          var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
 
-          var namaTersensor = sensorNamaDepan(item.nameAsli, kategoriManual);
+          if (namaAsli !== '') {
+            var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
+            var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
+            var latClean = perbaikiKoordinat(rawLat);
+            var lngClean = perbaikiKoordinat(rawLng);
+            
+            var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
+            var statusHidden = typeof rawHidden === 'boolean' 
+              ? rawHidden 
+              : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
 
-          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
-          
-          var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-          
-          var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+            var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
+            var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
+            
+            var item = {
+              name: namaAsli,
+              nameAsli: namaAsli,
+              lat: parseFloat(latClean),
+              lng: parseFloat(lngClean),
+              hidden: statusHidden,
+              foto: urlFoto
+            };
 
-          var customIcon = L.divIcon({
-            className: 'custom-pin',
-            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-          });
-          
-          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+            if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-          // 🌟 1. SELALU MASUKKAN KE `daftarPin` AGAR BISA DICARI VIA KOTAK PENCARIAN
+            var namaTersensor = sensorNamaDepan(item.nameAsli, kategoriManual);
+
+            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
+            
+            var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+            
+            var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+
+            var customIcon = L.divIcon({
+              className: 'custom-pin',
+              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+            });
+            
+            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+
             daftarPin.push({ 
-            namaRaw: item.nameAsli,
-            nama: item.nameAsli.toLowerCase(), 
-            noRumah: String(kolom.noRumah || '').toLowerCase(), // 🌟 Tambahkan ini
-            kepalaKeluarga: String(kolom.kepalaKeluarga || '').toLowerCase(), // 🌟 Tambahkan ini
-            marker: marker, 
-            lat: item.lat, 
-            lng: item.lng,
-            hidden: item.hidden,
-            kategori: kategoriManual || dataIkon.kategori 
-          });
+              namaRaw: item.nameAsli,
+              nama: item.nameAsli.toLowerCase(), 
+              noRumah: String(kolom.noRumah || '').toLowerCase(),
+              kepalaKeluarga: String(kolom.kepalaKeluarga || '').toLowerCase(),
+              marker: marker, 
+              lat: item.lat, 
+              lng: item.lng,
+              hidden: item.hidden,
+              kategori: kategoriManual || dataIkon.kategori 
+            });
 
-          // 🌟 2. JIKA STATUSNYA HIDDEN, JANGAN TEMPEL KE MARKER PETA UTAMA (KECUALI JIKA NANTI DICARI)
-          if (statusHidden) continue;
+            if (statusHidden) continue;
 
-          if (typeof markerGroup !== 'undefined' && markerGroup) {
-            markerGroup.addLayer(marker);
+            if (typeof markerGroup !== 'undefined' && markerGroup) {
+              markerGroup.addLayer(marker);
+            } else {
+              marker.addTo(map);
+            }
+          }
+        }
+
+        index = batas;
+
+        if (index < baris.length) {
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(prosesChunk, { timeout: 50 });
           } else {
-            marker.addTo(map);
+            setTimeout(prosesChunk, 4);
+          }
+        } else {
+          if (typeof filterKategori === 'function') {
+            filterKategori('awal');
           }
         }
       }
 
-      index = batas;
-
-      if (index < baris.length) {
-        if ('requestIdleCallback' in window) {
-          requestIdleCallback(prosesChunk, { timeout: 50 });
-        } else {
-          setTimeout(prosesChunk, 4);
-        }
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(prosesChunk, { timeout: 50 });
       } else {
-        if (typeof filterKategori === 'function') {
-          filterKategori('awal');
-        }
+        setTimeout(prosesChunk, 4);
       }
-    }
-
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(prosesChunk, { timeout: 50 });
-    } else {
-      setTimeout(prosesChunk, 4);
-    }
-  }, (error) => {
-    console.error("Gagal memuat peta warga dari Firebase RTDB:", error);
-  });
+    })
+    .catch(error => {
+      console.error("Gagal memuat peta warga dari Cloudflare Worker:", error);
+    });
 }
 // 🌟 Fungsi helper sensor nama depan warga (dengan pengecualian tempat umum/pengurus)
           function sensorNamaDepan(namaAsli, kategori) {
