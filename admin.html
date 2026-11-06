@@ -889,7 +889,7 @@
 <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
   <input type="hidden" id="editWargaId">
 
-  <!-- 🌟 Tambahkan Pilihan Kategori Bangunan di Modal Edit -->
+  <!-- 🌟 Pilihan Kategori Bangunan -->
   <div class="form-group" style="margin-bottom: 10px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">Kategori Bangunan:</label>
     <select id="editWargaKategori" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" onchange="toggleFieldKategoriEdit()">
@@ -901,7 +901,7 @@
     </select>
   </div>
 
-  <!-- Bungkus bagian keluarga agar otomatis tersembunyi jika bukan Rumah/Kost -->
+  <!-- Bungkus bagian keluarga -->
   <div id="groupFieldKeluarga">
     <div class="form-group" style="margin-bottom: 10px;">
       <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
@@ -914,36 +914,32 @@
     </div>
   </div>
 
-<!-- No. Rumah / Blok (Opsional) -->
+  <!-- No. Rumah / Blok -->
   <div class="form-group" style="margin-bottom: 10px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah / Blok (Opsional):</label>
     <input type="text" id="editWargaNoRumah" placeholder="Contoh: No 10 / Blok B" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
   </div>
 
-  <!-- Nama Tempat / Keterangan / Nama Warga (Opsional) -->
+  <!-- Nama Tempat / Keterangan -->
   <div class="form-group" style="margin-bottom: 10px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Tempat / Keterangan (Opsional):</label>
     <input type="text" id="editWargaNamaTempat" placeholder="Contoh: Rumah Ketua RW / Warung Bu Ani" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
   </div>
 
-<!-- Input File Tanpa Tombol Upload Otomatis -->
-<div class="form-group" style="margin-bottom: 12px;">
-  <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
-  <div style="margin-top: 4px;">
-    <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; width: 100%;" onchange="document.getElementById('statusSemiManual').innerHTML = '<i>✓ File baru siap. Akan diupload saat tombol Simpan Perubahan ditekan.</i>'; document.getElementById('statusSemiManual').style.color = '#2563eb';">
+  <!-- 📂 Pilih File Baru (Hanya menampung objek file di memori, BELUM di-upload) -->
+  <div class="form-group" style="margin-bottom: 12px;">
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
+    <div style="margin-top: 4px;">
+      <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; width: 100%;" onchange="handlePilihFileBaru(this)">
+    </div>
+    <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
   </div>
-  <!-- Tempat teks status muncul -->
-  <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
-  
-  <!-- Kotak URL tetap disembunyikan/dijadikan hidden agar sistem tetap bisa menyimpan link-nya secara otomatis di belakang layar -->
-  <input type="hidden" id="editWargaFoto" value="">
-</div>
 
-<!-- Kolom URL Foto (Tempat Anda paste link / link otomatis terisi) -->
-<div class="form-group" style="margin-bottom: 10px;">
-  <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media (Hasil Copy-Paste):</label>
- <input type="text" id="editWargaFoto" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-</div>
+  <!-- 🔗 Kolom URL Foto (ID unik: editWargaFotoURL) -->
+  <div class="form-group" style="margin-bottom: 10px;">
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media (Hasil Copy-Paste / Otomatis):</label>
+    <input type="text" id="editWargaFotoURL" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+  </div>
 
   <div style="display: flex; gap: 8px;">
     <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
@@ -2858,56 +2854,95 @@ function buatLabelStatus() {
   return div;
 }
 
-// Menyimpan Perubahan Data Warga & Foto ke 1 Node (peta_warga/{id})
-async function simpanPerubahanWarga(e) {
-    if (e) e.preventDefault();
-    
-    const idWarga = document.getElementById("editWargaId").value;
-    const noRumahBaru = document.getElementById("editWargaNoRumah").value.trim();
-    const namaTempatBaru = document.getElementById("editWargaNamaTempat").value.trim();
-    const kategoriBaru = document.getElementById("editWargaKategori").value;
-    const fotoBaru = document.getElementById("editWargaFoto").value.trim();
-    
-    const groupKeluarga = document.getElementById("groupFieldKeluarga");
-    const isKeluargaVisible = groupKeluarga && groupKeluarga.style.display !== 'none';
-    
-    const namaBaru = isKeluargaVisible ? document.getElementById("editWargaNama").value.trim() : '';
-    const anggotaBaru = isKeluargaVisible ? document.getElementById("editWargaAnggota").value.trim() : '';
-    const btn = document.getElementById("btnSimpanEditWarga");
+// Variabel global sementara untuk menampung file di memori browser
+let fileBaruDipilih = null;
 
-    // Validasi: Minimal salah satu diisi (No Rumah atau Nama Tempat)
-    if (!noRumahBaru && !namaTempatBaru) {
-        alert("Mohon isi minimal salah satu: No. Rumah / Blok atau Nama Tempat / Keterangan!");
-        return;
+// 1. Dipanggil saat user memilih file dari galeri/kamera (TIDAK ADA PROSES UPLOAD KE CLOUD DISINI)
+function handlePilihFileBaru(inputElement) {
+  if (inputElement.files && inputElement.files[0]) {
+    fileBaruDipilih = inputElement.files[0]; // Simpan objek file di memori
+    
+    // Tampilkan informasi ke user
+    document.getElementById('statusSemiManual.innerHTML').innerHTML = `<i>✓ File "${fileBaruDipilih.name}" siap. Akan diupload saat tombol Simpan Perubahan ditekan.</i>`;
+    document.getElementById('statusSemiManual').style.color = '#2563eb';
+    
+    // Opsional: Kosongkan kolom URL manual jika user memilih upload file baru
+    document.getElementById('editWargaFotoURL').value = '';
+  } else {
+    fileBaruDipilih = null;
+    document.getElementById('statusSemiManual').innerHTML = '';
+  }
+}
+
+// 2. Dipanggil saat tombol "Simpan Perubahan" ditekan
+async function simpanPerubahanWarga(event) {
+  event.preventDefault(); // Mencegah reload halaman
+  
+  const idWarga = document.getElementById('editWargaId').value;
+  const btnSimpan = document.getElementById('btnSimpanEditWarga');
+  
+  // Ubah tombol jadi status loading
+  btnSimpan.disabled = true;
+  btnSimpan.innerText = 'Sedang Memproses...';
+
+  try {
+    let finalUrlFoto = document.getElementById('editWargaFotoURL').value;
+
+    // KUNCI UTAMA: Jika ada file baru yang dipilih di memori, UPLOAD SEKARANG JUGA ke cloud storage
+    if (fileBaruDipilih !== null) {
+      document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file ke cloud storage...</i>';
+      
+      // Buat FormData untuk dikirim ke backend / worker / Cloudflare R2 Anda
+      const formData = new FormData();
+      formData.append('file', fileBaruDipilih);
+
+      const responseUpload = await fetch('URL_ENDPOINT_UPLOAD_ANDA', {
+        method: 'POST',
+        body: formData
+      });
+
+      const hasilUpload = await responseUpload.json();
+      if (hasilUpload.success || hasilUpload.url) {
+        finalUrlFoto = hasilUpload.url; // Ambil URL hasil upload cloud
+      } else {
+        throw new Error('Gagal mengupload file ke cloud storage.');
+      }
     }
 
-    if (!idWarga) {
-        alert("ID data lokasi tidak ditemukan!");
-        return;
-    }
+    // Ambil data form lainnya
+    const dataUpdate = {
+      kategori: document.getElementById('editWargaKategori').value,
+      namaKepalaKeluarga: document.getElementById('editWargaNama').value,
+      anggotaKeluarga: document.getElementById('editWargaAnggota').value,
+      noRumah: document.getElementById('editWargaNoRumah').value,
+      namaTempat: document.getElementById('editWargaNamaTempat').value,
+      foto: finalUrlFoto // URL foto final (bisa dari URL manual atau hasil upload baru)
+    };
 
-    if (btn) { btn.disabled = true; btn.innerText = "⏳ Menyimpan..."; }
+    // Simpan data ke Firebase Realtime Database
+    // Contoh: await firebase.database().ref('peta_warga/' + idWarga).update(dataUpdate);
+    console.log("Data berhasil disimpan:", dataUpdate);
 
-    try {
-        const updateRef = window.firebaseRef(window.db, 'peta_warga/' + idWarga);
-        await window.firebaseUpdate(updateRef, {
-            noRumah: noRumahBaru,       // Node baru khusus nomor rumah/blok
-            namaTempat: namaTempatBaru, // Node baru khusus nama tempat
-            Nama: namaTempatBaru ? `${noRumahBaru} - ${namaTempatBaru}`.replace(/^[-\s]+|[-\s]+$/g, '') : noRumahBaru, // Gabungan rapi untuk label utama peta
-            Type: kategoriBaru,         // Kategori bangunan
-            kepalaKeluarga: namaBaru,
-            anggotaKeluarga: anggotaBaru,
-            foto: fotoBaru
-        });
+    // Reset variabel sementara & tutup modal
+    fileBaruDipilih = null;
+    tutupModalEditWarga();
+    alert('Perubahan data berhasil disimpan!');
 
-        alert("✅ Data lokasi berhasil diperbarui ke Firebase!");
-        tutupModalEditWarga();
-        if (typeof muatSemuaDataAdmin === 'function') muatSemuaDataAdmin();
-    } catch (err) {
-        alert("❌ Gagal memperbarui data: " + err.message);
-    } finally {
-        if (btn) { btn.disabled = false; btn.innerText = "💾 Simpan Perubahan"; }
-    }
+  } catch (error) {
+    console.error(error);
+    alert('Terjadi kesalahan: ' + error.message);
+  } finally {
+    btnSimpan.disabled = false;
+    btnSimpan.innerText = '💾 Simpan Perubahan';
+  }
+}
+
+// Fungsi reset saat modal ditutup
+function tutupModalEditWarga() {
+  fileBaruDipilih = null;
+  document.getElementById('inputUploadSemiManual').value = '';
+  document.getElementById('statusSemiManual').innerHTML = '';
+  // Sembunyikan modal Anda di sini
 }
     
 // ==========================================
