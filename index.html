@@ -2394,7 +2394,56 @@ window.tutupModalJimpitan = function() {
   if (modal) modal.style.display = 'none';
 };
 
- 
+window.bukaModalCatatanRonda = function() {
+  const modal = document.getElementById('modal-catatan-ronda');
+  if (modal) {
+    modal.style.display = 'flex';
+    muatDataCatatanRonda(); // Memanggil fungsi untuk mengambil data dari Firebase
+  }
+};
+
+window.tutupModalCatatanRonda = function() {
+  const modal = document.getElementById('modal-catatan-ronda');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+};
+
+// Fungsi opsional untuk memuat data catatan ronda dari Firebase node 'catatan_ronda'
+window.muatDataCatatanRonda = function() {
+  if (typeof window.firebaseRef !== 'function' || !window.db) return;
+  
+  const gridCatatan = document.getElementById('grid-catatan-ronda');
+  if (gridCatatan) {
+    gridCatatan.innerHTML = '<div style="color: #64748b; font-size: 11px; text-align: center; padding: 12px 0;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat catatan ronda...</div>';
+  }
+
+  const refCatatan = window.firebaseRef(window.db, 'catatan_ronda');
+  window.firebaseOnValue(refCatatan, (snapshot) => {
+    const dataObj = snapshot.val();
+    if (!gridCatatan) return;
+
+    gridCatatan.innerHTML = '';
+    if (!dataObj) {
+      gridCatatan.innerHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada catatan khusus malam minggu.</div>';
+      return;
+    }
+
+    Object.keys(dataObj).forEach(key => {
+      let item = dataObj[key];
+      if (item) {
+        let div = document.createElement('div');
+        div.style.cssText = 'background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 11px;';
+        div.innerHTML = `
+          <div style="font-weight: bold; color: #b45309;">${teksAman(item.warga || item.nama_warga)}</div>
+          <div style="color: #555; margin-top: 2px;">Nominal: Rp ${(item.nominal || 0).toLocaleString('id-ID')}</div>
+          <div style="font-size: 10px; color: #888; margin-top: 2px;">📅 ${teksAman(item.tanggal)}</div>
+        `;
+        gridCatatan.appendChild(div);
+      }
+    });
+  }, { onlyOnce: true });
+}; 
 
 
 var cacheDataHarian = {};
