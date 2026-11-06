@@ -1270,10 +1270,8 @@ function muatDataPetaWarga() {
     return;
   }
 
-// Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
- if (typeof markerGroup === 'undefined' || !markerGroup) {
-    // 🌟 Tambahkan angka radius di dalam kurung (misal: 30 atau 40 pixel)
-    // Semakin kecil angkanya, titik-titik harus benar-benar berdekatan baru digabung.
+  // Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
+  if (typeof markerGroup === 'undefined' || !markerGroup) {
     window.markerGroup = L.markerClusterGroup({
       maxClusterRadius: 30 
     });
@@ -1303,12 +1301,20 @@ function muatDataPetaWarga() {
     var index = 0;
     var chunkSize = 20;
 
-function prosesChunk() {
+    // Fungsi helper sensor nama depan warga (sesuai permintaan sensor)
+    function sensorNamaDepan(namaAsli) {
+      if (!namaAsli) return '';
+      return namaAsli.split(' ').map(kata => {
+        if (kata.length <= 1) return kata;
+        return kata.charAt(0) + '*'.repeat(kata.length - 1);
+      }).join(' ');
+    }
+
+    function prosesChunk() {
       var batas = Math.min(index + chunkSize, baris.length);
       
       for (let i = index; i < batas; i++) {
         var kolom = baris[i];
-
         var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
 
         if (namaAsli !== '') {
@@ -1323,8 +1329,6 @@ function prosesChunk() {
             : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
 
           var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
-          
-          // Diambil langsung dari variabel 'kolom' (bukan childSnap)
           var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
           
           var item = {
@@ -1338,9 +1342,14 @@ function prosesChunk() {
 
           if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
+          // 🌟 Terapkan sensor nama depan di sini, biarkan nomor rumah/format lain tetap jelas
+          var namaTersensor = sensorNamaDepan(item.nameAsli);
+
           var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
           var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
-          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+          
+          // Sesuaikan tampilan pop-up dengan nama yang sudah disensor bagian depannya
+          var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
           
           var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
 
@@ -1388,7 +1397,6 @@ function prosesChunk() {
     console.error("Gagal memuat peta warga dari Firebase RTDB:", error);
   });
 }
-
 
 window.jalankanPencarianPeta = function() {
   var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
