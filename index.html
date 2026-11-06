@@ -1192,7 +1192,7 @@ window.toggleChatModal = function() {
   }
 
 
-// ==========================================
+  // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
   var map; 
@@ -1301,15 +1301,6 @@ function muatDataPetaWarga() {
     var index = 0;
     var chunkSize = 20;
 
-    // Fungsi helper sensor nama depan warga (sesuai permintaan sensor)
-    function sensorNamaDepan(namaAsli) {
-      if (!namaAsli) return '';
-      return namaAsli.split(' ').map(kata => {
-        if (kata.length <= 1) return kata;
-        return kata.charAt(0) + '*'.repeat(kata.length - 1);
-      }).join(' ');
-    }
-
     function prosesChunk() {
       var batas = Math.min(index + chunkSize, baris.length);
       
@@ -1342,13 +1333,12 @@ function muatDataPetaWarga() {
 
           if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-          // 🌟 Terapkan sensor nama depan di sini, biarkan nomor rumah/format lain tetap jelas
-          var namaTersensor = sensorNamaDepan(item.nameAsli);
+          // 🌟 Sertakan kategoriManual agar pengecualian tempat umum berfungsi akurat
+          var namaTersensor = sensorNamaDepan(item.nameAsli, kategoriManual);
 
           var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
           var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
           
-          // Sesuaikan tampilan pop-up dengan nama yang sudah disensor bagian depannya
           var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
           
           var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
@@ -1397,7 +1387,46 @@ function muatDataPetaWarga() {
     console.error("Gagal memuat peta warga dari Firebase RTDB:", error);
   });
 }
+// 🌟 Fungsi helper sensor nama depan warga (dengan pengecualian tempat umum/pengurus)
+          function sensorNamaDepan(namaAsli, kategori) {
+            if (!namaAsli) return '';
+            
+            var textLower = namaAsli.toLowerCase();
+            var katLower = (kategori || '').toLowerCase();
 
+            // Daftar kata kunci yang TIDAK BOLEH disensor karena bukan nama pribadi warga privat
+            var adalahTempatUmumAtauPejabat = 
+                katLower.includes('fasum') || 
+                katLower.includes('fasilitas') || 
+                katLower.includes('kost') || 
+                katLower.includes('kos') || 
+                katLower.includes('kontrakan') || 
+                katLower.includes('kuliner') || 
+                katLower.includes('minimarket') || 
+                katLower.includes('toko') || 
+                katLower.includes('pos') || 
+                textLower.includes('ketua rt') || 
+                textLower.includes('ketua rw') || 
+                textLower.includes('pak rt') || 
+                textLower.includes('pak rw') || 
+                textLower.includes('fasum') || 
+                textLower.includes('musholla') || 
+                textLower.includes('masjid') || 
+                textLower.includes('balai') || 
+                textLower.includes('sd');
+
+            // Jika termasuk Fasum / Tempat Usaha / Pejabat RT/RW, kembalikan nama aslinya tanpa sensor!
+            if (adalahTempatUmumAtauPejabat) {
+              return namaAsli;
+            }
+
+            // Jika nama warga biasa, baru jalankan sensor nama depan
+            return namaAsli.split(' ').map(kata => {
+              if (kata.length <= 1) return kata;
+              return kata.charAt(0) + '*'.repeat(kata.length - 1);
+            }).join(' ');
+          }
+  
 window.jalankanPencarianPeta = function() {
   var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
   if (!kataKunci) return;
