@@ -2663,12 +2663,25 @@ function bukaModalEditWargaAdminById(id) {
     const inputId = document.getElementById('editWargaId');
     if (inputId) inputId.value = data.id;
 
-    // 🌟 1. Set nilai dropdown kategori bangunan sesuai data di database
+// 🌟 1. Set nilai dropdown kategori bangunan secara aman (case-insensitive)
     const selectKategori = document.getElementById('editWargaKategori');
     if (selectKategori) {
-        selectKategori.value = data.type || 'Rumah'; 
+        const dbType = String(data.type || 'rumah').toLowerCase();
+        
+        // Cari option yang value-nya cocok secara lowercase
+        let matched = false;
+        for (let option of selectKategori.options) {
+            if (option.value.toLowerCase() === dbType) {
+                selectKategori.value = option.value;
+                matched = true;
+                break;
+            }
+        }
+        // Fallback jika tidak ketemu
+        if (!matched) {
+            selectKategori.value = 'Rumah'; 
+        }
     }
-
     // Cek kategori tempat (Fasum, Kuliner, Minimarket, dll)
     const kategori = String(data.type || '').toLowerCase();
     const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
