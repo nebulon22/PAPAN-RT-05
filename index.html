@@ -1192,7 +1192,7 @@ window.toggleChatModal = function() {
   }
 
 
-// ==========================================
+  // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
   var map; 
@@ -1301,15 +1301,6 @@ function muatDataPetaWarga() {
     var index = 0;
     var chunkSize = 20;
 
-    // Fungsi helper sensor nama depan warga (sesuai permintaan sensor)
-    function sensorNamaDepan(namaAsli) {
-      if (!namaAsli) return '';
-      return namaAsli.split(' ').map(kata => {
-        if (kata.length <= 1) return kata;
-        return kata.charAt(0) + '*'.repeat(kata.length - 1);
-      }).join(' ');
-    }
-
     function prosesChunk() {
       var batas = Math.min(index + chunkSize, baris.length);
       
@@ -1328,6 +1319,9 @@ function muatDataPetaWarga() {
             ? rawHidden 
             : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
 
+          // 🌟 TAMBAHKAN INI: Jika statusnya hidden, abaikan dan jangan tampilkan di peta
+          if (statusHidden) continue;
+
           var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
           var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
           
@@ -1342,13 +1336,12 @@ function muatDataPetaWarga() {
 
           if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-          // 🌟 Terapkan sensor nama depan di sini, biarkan nomor rumah/format lain tetap jelas
-          var namaTersensor = sensorNamaDepan(item.nameAsli);
+          // 🌟 Sertakan kategoriManual agar pengecualian tempat umum berfungsi akurat
+          var namaTersensor = sensorNamaDepan(item.nameAsli, kategoriManual);
 
           var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
           var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
           
-          // Sesuaikan tampilan pop-up dengan nama yang sudah disensor bagian depannya
           var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
           
           var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
@@ -1397,7 +1390,46 @@ function muatDataPetaWarga() {
     console.error("Gagal memuat peta warga dari Firebase RTDB:", error);
   });
 }
+// 🌟 Fungsi helper sensor nama depan warga (dengan pengecualian tempat umum/pengurus)
+          function sensorNamaDepan(namaAsli, kategori) {
+            if (!namaAsli) return '';
+            
+            var textLower = namaAsli.toLowerCase();
+            var katLower = (kategori || '').toLowerCase();
 
+            // Daftar kata kunci yang TIDAK BOLEH disensor karena bukan nama pribadi warga privat
+            var adalahTempatUmumAtauPejabat = 
+                katLower.includes('fasum') || 
+                katLower.includes('fasilitas') || 
+                katLower.includes('kost') || 
+                katLower.includes('kos') || 
+                katLower.includes('kontrakan') || 
+                katLower.includes('kuliner') || 
+                katLower.includes('minimarket') || 
+                katLower.includes('toko') || 
+                katLower.includes('pos') || 
+                textLower.includes('ketua rt') || 
+                textLower.includes('ketua rw') || 
+                textLower.includes('pak rt') || 
+                textLower.includes('pak rw') || 
+                textLower.includes('fasum') || 
+                textLower.includes('musholla') || 
+                textLower.includes('masjid') || 
+                textLower.includes('balai') || 
+                textLower.includes('sd');
+
+            // Jika termasuk Fasum / Tempat Usaha / Pejabat RT/RW, kembalikan nama aslinya tanpa sensor!
+            if (adalahTempatUmumAtauPejabat) {
+              return namaAsli;
+            }
+
+            // Jika nama warga biasa, baru jalankan sensor nama depan
+            return namaAsli.split(' ').map(kata => {
+              if (kata.length <= 1) return kata;
+              return kata.charAt(0) + '*'.repeat(kata.length - 1);
+            }).join(' ');
+          }
+  
 window.jalankanPencarianPeta = function() {
   var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
   if (!kataKunci) return;
@@ -2362,7 +2394,193 @@ window.tutupModalJimpitan = function() {
   if (modal) modal.style.display = 'none';
 };
 
- 
+window.bukaModalCatatanRonda = function() {
+  const modal = document.getElementById('modal-catatan-ronda');
+  if (modal) {
+    modal.style.display = 'flex';
+    muatDataCatatanRonda();
+  }
+};
+
+window.tutupModalCatatanRonda = function() {
+  const modal = document.getElementById('modal-catatan-ronda');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+};
+
+window.muatDataCatatanRonda = function() {
+  if (typeof window.firebaseRef !== 'function' || !window.db) return;
+  
+  const gridCatatan = document.getElementById('grid-catatan-ronda');
+  if (gridCatatan) {
+    gridCatatan.innerHTML = '<div style="color: #64748b; font-size: 11px; text-align: center; padding: 12px 0;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat catatan ronda...</div>';
+  }
+
+  const refCatatan = window.firebaseRef(window.db, 'catatan_ronda');
+  window.firebaseOnValue(refCatatan, (snapshot) => {
+    const dataObj = snapshot.val();
+    if (!gridCatatan) return;
+
+    gridCatatan.innerHTML = '';
+    if (!dataObj) {
+      gridCatatan.innerHTML = '<div style="color: #9ca3af; font-style: italic; font-size: 11px; text-align: center; padding: 12px 0;">Belum ada catatan khusus malam minggu.</div>';
+      return;
+    }
+
+    let totalNominalSemua = 0;
+    let itemsHTML = '';
+
+    Object.keys(dataObj).forEach(key => {
+      let item = dataObj[key];
+      if (item) {
+        let nominal = parseInt(item.nominal || 0, 10);
+        totalNominalSemua += nominal;
+        let warga = teksAman(item.warga || item.nama_warga || '-');
+        let tanggal = teksAman(item.tanggal || '-');
+
+        itemsHTML += `
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; font-size: 11px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: bold; color: #b45309;">${warga}</div>
+              <div style="font-size: 10px; color: #888; margin-top: 2px;">📅 ${tanggal}</div>
+            </div>
+            <div style="font-weight: bold; color: #059669; font-size: 12px;">Rp ${nominal.toLocaleString('id-ID')}</div>
+          </div>
+        `;
+      }
+    });
+
+    // Rangkum tampilan dengan Kotak Total & Tombol Unduh Excel + Cetak PDF di dalam modal
+    gridCatatan.innerHTML = `
+      <div style="background:#f59e0b; color:white; padding:10px; border-radius:8px; text-align:center; margin-bottom:10px;">
+        <span style="font-size:10px; text-transform:uppercase; opacity:0.9; font-weight:bold;">TOTAL CATATAN MALAM MINGGU</span>
+        <div id="total-catatan-ronda-Val" style="font-size:18px; font-weight:bold;">Rp ${totalNominalSemua.toLocaleString('id-ID')}</div>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <button type="button" data-click="exportCatatanRondaToCSV" style="flex: 1; padding: 6px; background: #059669; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+          <i class="fa-solid fa-file-excel"></i> Unduh Excel
+        </button>
+        <button type="button" data-click="cetakLaporanCatatanRonda" style="flex: 1; padding: 6px; background: #0288d1; color: white; border: none; border-radius: 6px; font-weight: bold; font-size: 10px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 4px;">
+          <i class="fa-solid fa-print"></i> Cetak PDF
+        </button>
+      </div>
+
+      <div style="max-height: 240px; overflow-y: auto; padding-right: 2px;">
+        ${itemsHTML}
+      </div>
+    `;
+  }, { onlyOnce: true });
+};
+
+// Fungsi Unduh Excel untuk Catatan Malam Minggu
+window.exportCatatanRondaToCSV = function() {
+  const grid = document.getElementById('grid-catatan-ronda');
+  if (!grid) return;
+  
+  const totalText = document.getElementById('total-catatan-ronda-Val')?.innerText || "Rp 0";
+  const refCatatan = window.firebaseRef(window.db, 'catatan_ronda');
+  
+  // Mengambil data langsung dari Firebase untuk diexport rapi ke CSV
+  window.firebaseGet(refCatatan).then((snapshot) => {
+    const dataObj = snapshot.val();
+    if (!dataObj) return;
+
+    let csvContent = "\uFEFF";
+    csvContent += `"LAPORAN CATATAN KHUSUS MALAM MINGGU - RT 05"\n`;
+    csvContent += `"Total Keseluruhan: ${totalText}"\n\n`;
+    csvContent += `"Warga / Keterangan";"Nominal";"Tanggal"\n`;
+
+    Object.keys(dataObj).forEach(key => {
+      let item = dataObj[key];
+      if (item) {
+        let warga = (item.warga || item.nama_warga || '-').replace(/"/g, '""');
+        let nominal = item.nominal || 0;
+        let tgl = item.tanggal || '-';
+        csvContent += `"${warga}";"${nominal}";"${tgl}"\n`;
+      }
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Catatan_Malam_Minggu_RT05.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+};
+
+// Fungsi Cetak PDF untuk Catatan Malam Minggu
+window.cetakLaporanCatatanRonda = function() {
+  const refCatatan = window.firebaseRef(window.db, 'catatan_ronda');
+  const totalText = document.getElementById('total-catatan-ronda-Val')?.innerText || "Rp 0";
+
+  window.firebaseGet(refCatatan).then((snapshot) => {
+    const dataObj = snapshot.val();
+    if (!dataObj) return;
+
+    let tableRows = '';
+    Object.keys(dataObj).forEach(key => {
+      let item = dataObj[key];
+      if (item) {
+        let warga = item.warga || item.nama_warga || '-';
+        let nominal = Number(item.nominal || 0).toLocaleString('id-ID');
+        let tgl = item.tanggal || '-';
+        tableRows += `
+          <tr>
+            <td>${warga}</td>
+            <td>${tgl}</td>
+            <td style="text-align: right; font-weight: bold;">Rp ${nominal}</td>
+          </tr>
+        `;
+      }
+    });
+
+    const printWindow = window.open('', '_blank', 'height=700,width=900');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Catatan Khusus Malam Minggu - RT 05 Kayen</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 25px; color: #333; }
+            h2 { text-align: center; margin-bottom: 5px; color: #b45309; }
+            .subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 15px; }
+            .total-box { background: #f59e0b; color: white; padding: 10px; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 14px; border-radius: 6px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+            th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+            th { background: #f1f5f9; font-weight: bold; }
+            .text-right { text-align: right; }
+          </style>
+        </head>
+        <body>
+          <h2>RT 05 KAYEN - CATATAN KHUSUS MALAM MINGGU</h2>
+          <div class="subtitle">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
+          <div class="total-box">TOTAL KESELURUHAN: ${totalText}</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Warga / Rumah</th>
+                <th>Tanggal Dicatat</th>
+                <th class="text-right">Nominal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${tableRows}
+            </tbody>
+          </table>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 400);
+  });
+};
 
 
 var cacheDataHarian = {};

@@ -880,7 +880,8 @@
 
          <!-- PANEL EDIT DATA LOKASI -->
 <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
-  <div class="modal-content" style="max-width: 400px; width: 90%;">
+  <!-- Tambahkan max-height, overflow-y, dan padding bawah pada style di bawah ini -->
+  <div class="modal-content" style="max-width: 400px; width: 90%; max-height: 85vh; overflow-y: auto; padding-bottom: 20px;">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
       <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Lokasi / Warga</h3>
       <button class="close-btn" onclick="tutupModalEditWarga()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
@@ -889,7 +890,7 @@
 <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
   <input type="hidden" id="editWargaId">
 
-  <!-- 🌟 Tambahkan Pilihan Kategori Bangunan di Modal Edit -->
+  <!-- 🌟 Pilihan Kategori Bangunan -->
   <div class="form-group" style="margin-bottom: 10px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">Kategori Bangunan:</label>
     <select id="editWargaKategori" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" onchange="toggleFieldKategoriEdit()">
@@ -901,7 +902,7 @@
     </select>
   </div>
 
-  <!-- Bungkus bagian keluarga agar otomatis tersembunyi jika bukan Rumah/Kost -->
+  <!-- Bungkus bagian keluarga -->
   <div id="groupFieldKeluarga">
     <div class="form-group" style="margin-bottom: 10px;">
       <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
@@ -914,36 +915,32 @@
     </div>
   </div>
 
-<!-- No. Rumah / Blok (Opsional) -->
+  <!-- No. Rumah / Blok -->
   <div class="form-group" style="margin-bottom: 10px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah / Blok (Opsional):</label>
     <input type="text" id="editWargaNoRumah" placeholder="Contoh: No 10 / Blok B" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
   </div>
 
-  <!-- Nama Tempat / Keterangan / Nama Warga (Opsional) -->
+  <!-- Nama Tempat / Keterangan -->
   <div class="form-group" style="margin-bottom: 10px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Tempat / Keterangan (Opsional):</label>
     <input type="text" id="editWargaNamaTempat" placeholder="Contoh: Rumah Ketua RW / Warung Bu Ani" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
   </div>
 
-<!-- Input File Tanpa Tombol Upload Otomatis -->
-<div class="form-group" style="margin-bottom: 12px;">
-  <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
-  <div style="margin-top: 4px;">
-    <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; width: 100%;" onchange="document.getElementById('statusSemiManual').innerHTML = '<i>✓ File baru siap. Akan diupload saat tombol Simpan Perubahan ditekan.</i>'; document.getElementById('statusSemiManual').style.color = '#2563eb';">
+  <!-- 📂 Pilih File Baru (Hanya menampung objek file di memori, BELUM di-upload) -->
+  <div class="form-group" style="margin-bottom: 12px;">
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
+    <div style="margin-top: 4px;">
+      <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; width: 100%;" onchange="handlePilihFileBaru(this)">
+    </div>
+    <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
   </div>
-  <!-- Tempat teks status muncul -->
-  <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
-  
-  <!-- Kotak URL tetap disembunyikan/dijadikan hidden agar sistem tetap bisa menyimpan link-nya secara otomatis di belakang layar -->
-  <input type="hidden" id="editWargaFoto" value="">
-</div>
 
-<!-- Kolom URL Foto (Tempat Anda paste link / link otomatis terisi) -->
-<div class="form-group" style="margin-bottom: 10px;">
-  <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media (Hasil Copy-Paste):</label>
- <input type="text" id="editWargaFoto" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-</div>
+  <!-- 🔗 Kolom URL Foto (ID unik: editWargaFotoURL) -->
+  <div class="form-group" style="margin-bottom: 10px;">
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media (Hasil Copy-Paste / Otomatis):</label>
+    <input type="text" id="editWargaFotoURL" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+  </div>
 
   <div style="display: flex; gap: 8px;">
     <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
@@ -1359,36 +1356,74 @@ function formatRupiahInput(el) {
       return false;
     }
 
-    document.getElementById('dataForm').addEventListener('submit', function(e) {
-      e.preventDefault();
-      const btn = document.getElementById('btnSubmitForm');
-      btn.innerText = '⏳ Menyimpan ke Firebase...';
-      btn.disabled = true;
+document.getElementById('dataForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btnSubmitForm');
+  btn.innerText = '⏳ Menyimpan ke Database...';
+  btn.disabled = true;
 
-      const payload = {
-        Nama: document.getElementById('inputNama').value,
-        Lat: document.getElementById('inputLat').value,
-        Lng: document.getElementById('inputLng').value,
-        Type: document.getElementById('inputKategori').value,
-        Hidden: document.getElementById('inputHidden').value === 'TRUE',
-        foto: document.getElementById('inputFoto').value
-      };
+  try {
+    let finalUrlFoto = document.getElementById('inputFoto').value.trim();
 
-      const newRef = window.firebasePush(window.firebaseRef(window.db, 'peta_warga'));
-      window.firebaseSet(newRef, payload)
-        .then(() => {
-          btn.innerText = '💾 Simpan Data';
-          btn.disabled = false;
-          alert('✅ Data berhasil disimpan ke Firebase!');
-          tutupModalForm();
-          document.getElementById('dataForm').reset();
-        })
-        .catch((err) => {
-          btn.innerText = '💾 Simpan Data';
-          btn.disabled = false;
-          alert('❌ Gagal menyimpan: ' + err.message);
-        });
-    });
+    // Jika ada file yang dipilih saat menambah data baru, upload dulu ke R2
+    const fileInput = document.getElementById('inputUploadSemiManual'); // atau sesuaikan id input file tambah data jika ada
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      let file = fileInput.files[0];
+      if (typeof kompresGambar === 'function') {
+        file = await kompresGambar(file, 1200, 0.8);
+      }
+
+      const noRumahVal = document.getElementById('inputNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const ekstensi = file.name.split('.').pop() || 'jpg';
+      const namaFileKustom = `warga_${noRumahVal || 'baru'}_${Date.now()}.${ekstensi}`;
+
+      const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
+        method: 'POST',
+        headers: {
+          "X-File-Name": encodeURIComponent(namaFileKustom),
+          "Content-Type": file.type || "application/octet-stream"
+        },
+        body: file
+      });
+
+      const hasilUpload = await responseUpload.json();
+      if (hasilUpload.success || hasilUpload.url) {
+        let urlAwal = new URL(hasilUpload.url);
+        finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
+      }
+    }
+
+    const noRumahInput = document.getElementById('inputNoRumah').value.trim();
+    const namaWargaInput = document.getElementById('inputNamaWarga') ? document.getElementById('inputNamaWarga').value.trim() : '';
+
+    const payload = {
+      Nama: namaWargaInput || noRumahInput,
+      noRumah: noRumahInput,
+      kepalaKeluarga: namaWargaInput,
+      Lat: document.getElementById('inputLat').value,
+      Lng: document.getElementById('inputLng').value,
+      Type: document.getElementById('inputKategori').value,
+      Hidden: document.getElementById('inputHidden').value === 'TRUE',
+      foto: finalUrlFoto,
+      createdAt: Date.now()
+    };
+
+    const newRef = window.firebasePush(window.firebaseRef(window.db, 'peta_warga'));
+    await window.firebaseSet(newRef, payload);
+
+    btn.innerText = '💾 Simpan Data Lokasi';
+    btn.disabled = false;
+    alert('✅ Data baru berhasil disimpan dengan node & foto R2 otomatis!');
+    tutupModalForm();
+    document.getElementById('dataForm').reset();
+    muatSemuaDataAdmin();
+
+  } catch (err) {
+    btn.innerText = '💾 Simpan Data Lokasi';
+    btn.disabled = false;
+    alert('❌ Gagal menyimpan: ' + err.message);
+  }
+});
 
     function logoutAdmin() {
       localStorage.removeItem('authAdmin');
@@ -2213,12 +2248,15 @@ window.simpanPerubahanWargaBaru = async function(e) {
     btn.innerText = "⏳ Memproses...";
   }
 
-  let fotoFinalUrl = document.getElementById('editWargaFoto').value; // Ambil URL foto lama
+  // Ambil URL foto lama dari input tersembunyi/teks jika ada
+  const inputFotoLama = document.getElementById('editWargaBaruFoto'); 
+  let fotoFinalUrl = inputFotoLama ? inputFotoLama.value : '';
+
   const fileInput = document.getElementById('inputUploadSemiManual');
   const statusDiv = document.getElementById('statusSemiManual');
 
   try {
-    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG SAAT TOMBOL SIMPAN DIKLIK
+    // Jika ada file baru yang dipilih, buat nama file kustom lalu upload ke R2
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       if (statusDiv) {
         statusDiv.innerHTML = "⏳ Mengompres & mengunggah foto baru ke R2...";
@@ -2230,11 +2268,16 @@ window.simpanPerubahanWargaBaru = async function(e) {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
+      // Buat penamaan file kustom yang unik untuk warga baru
+      const namaClean = nama.replace(/[^a-zA-Z0-9]/g, '_');
+      const ekstensi = file.name.split('.').pop() || 'jpg';
+      const namaFileKustom = `wargabaru_${namaClean}_${Date.now()}.${ekstensi}`;
+
       const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
       let response = await fetch(workerUrl, {
         method: "POST",
         headers: {
-          "X-File-Name": "warga_" + Date.now() + "_" + file.name,
+          "X-File-Name": encodeURIComponent(namaFileKustom),
           "Content-Type": file.type || "application/octet-stream"
         },
         body: file
@@ -2245,13 +2288,12 @@ window.simpanPerubahanWargaBaru = async function(e) {
 
       if (result.success && result.url) {
         let urlAwal = new URL(result.url);
-        fotoFinalUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan custom domain baru
+        fotoFinalUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain R2
       } else {
         throw new Error(result.error || "Gagal mengunggah foto baru.");
       }
     }
 
-    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE
     if (btn) {
       btn.innerText = "⏳ Menyimpan ke Database...";
     }
@@ -2262,14 +2304,13 @@ window.simpanPerubahanWargaBaru = async function(e) {
     updates[`warga_baru/${id}/hp`] = hp;
     updates[`warga_baru/${id}/status`] = status;
     updates[`warga_baru/${id}/cerita`] = cerita;
-    updates[`warga_baru/${id}/foto`] = fotoFinalUrl; // Menyimpan URL foto (lama atau hasil upload baru)
+    updates[`warga_baru/${id}/foto`] = fotoFinalUrl; // Menyimpan URL foto R2 baru
 
     await window.firebaseUpdate(window.firebaseRef(window.db), updates);
     
     alert('✅ Data warga baru & foto berhasil diperbarui!');
     tutupModalEditWargaBaru();
     
-    // Refresh daftar data di panel admin
     if (typeof bukaModalWargaBaruAdmin === 'function') {
       bukaModalWargaBaruAdmin();
     }
@@ -2597,14 +2638,6 @@ function tutupModalKelolaWarga() {
     }
 }
 
-function tutupModalEditWarga() {
-    const modalEdit = document.getElementById("modal-edit-warga");
-    if (modalEdit) {
-        modalEdit.style.display = "none";
-    }
-}
-
-
 // ==========================================
 // 3. PENCARIAN & EDIT DATA WARGA (TERPADU)
 // ==========================================
@@ -2707,7 +2740,7 @@ function bukaModalEditWargaAdminById(id) {
     document.getElementById('editWargaNamaTempat').value = data.namaTempat || data.nama || '';
     
     // Gunakan satu input URL foto yang bersih (hapus duplikasi)
-    const inputFoto = document.getElementById('editWargaFoto');
+    const inputFoto = document.getElementById('editWargaFotoURL');
     const preview = document.getElementById('previewFotoRumah');
     
     if (inputFoto) inputFoto.value = data.foto || '';
@@ -2858,56 +2891,118 @@ function buatLabelStatus() {
   return div;
 }
 
-// Menyimpan Perubahan Data Warga & Foto ke 1 Node (peta_warga/{id})
-async function simpanPerubahanWarga(e) {
-    if (e) e.preventDefault();
-    
-    const idWarga = document.getElementById("editWargaId").value;
-    const noRumahBaru = document.getElementById("editWargaNoRumah").value.trim();
-    const namaTempatBaru = document.getElementById("editWargaNamaTempat").value.trim();
-    const kategoriBaru = document.getElementById("editWargaKategori").value;
-    const fotoBaru = document.getElementById("editWargaFoto").value.trim();
-    
-    const groupKeluarga = document.getElementById("groupFieldKeluarga");
-    const isKeluargaVisible = groupKeluarga && groupKeluarga.style.display !== 'none';
-    
-    const namaBaru = isKeluargaVisible ? document.getElementById("editWargaNama").value.trim() : '';
-    const anggotaBaru = isKeluargaVisible ? document.getElementById("editWargaAnggota").value.trim() : '';
-    const btn = document.getElementById("btnSimpanEditWarga");
+// Variabel global sementara untuk menampung file di memori browser
+let fileBaruDipilih = null;
 
-    // Validasi: Minimal salah satu diisi (No Rumah atau Nama Tempat)
-    if (!noRumahBaru && !namaTempatBaru) {
-        alert("Mohon isi minimal salah satu: No. Rumah / Blok atau Nama Tempat / Keterangan!");
-        return;
+// 1. Dipanggil saat user memilih file dari galeri/kamera (TIDAK ADA PROSES UPLOAD KE CLOUD DISINI)
+function handlePilihFileBaru(inputElement) {
+  if (inputElement.files && inputElement.files[0]) {
+    fileBaruDipilih = inputElement.files[0]; // Simpan objek file di memori
+    
+    // Tampilkan informasi ke user (PERBAIKAN DI SINI)
+    document.getElementById('statusSemiManual').innerHTML = `<i>✓ File "${fileBaruDipilih.name}" siap. Akan diupload saat tombol Simpan Perubahan ditekan.</i>`;
+    document.getElementById('statusSemiManual').style.color = '#2563eb';
+    
+    // Opsional: Kosongkan kolom URL manual jika user memilih upload file baru
+    document.getElementById('editWargaFotoURL').value = '';
+  } else {
+    fileBaruDipilih = null;
+    document.getElementById('statusSemiManual').innerHTML = '';
+  }
+}
+
+// 2. Dipanggil saat tombol "Simpan Perubahan" ditekan
+async function simpanPerubahanWarga(event) {
+  event.preventDefault();
+  
+  const idWarga = document.getElementById('editWargaId').value;
+  const btnSimpan = document.getElementById('btnSimpanEditWarga');
+  
+  btnSimpan.disabled = true;
+  btnSimpan.innerText = 'Sedang Memproses...';
+
+  try {
+    let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
+
+    // 1. Proses upload file baru ke Cloudflare R2 jika ada
+    if (fileBaruDipilih !== null) {
+      document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file baru ke cloud storage...</i>';
+      
+      const noRumahVal = document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const ekstensi = fileBaruDipilih.name.split('.').pop() || 'jpg';
+      const namaFileKustom = `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`;
+
+      const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
+        method: 'POST',
+        headers: {
+          "X-File-Name": encodeURIComponent(namaFileKustom),
+          "Content-Type": fileBaruDipilih.type || "application/octet-stream"
+        },
+        body: fileBaruDipilih
+      });
+
+      const hasilUpload = await responseUpload.json();
+      if (hasilUpload.success || hasilUpload.url) {
+        let urlAwal = new URL(hasilUpload.url);
+        finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
+      } else {
+        throw new Error('Gagal mengupload file ke cloud storage.');
+      }
     }
 
-    if (!idWarga) {
-        alert("ID data lokasi tidak ditemukan!");
-        return;
-    }
+    // 2. Ambil nilai input dari form
+    const noRumahInput = document.getElementById('editWargaNoRumah').value.trim();
+    const namaTempatInput = document.getElementById('editWargaNamaTempat').value.trim();
+    const kepalaKeluargaInput = document.getElementById('editWargaNama').value.trim();
+    const anggotaKeluargaInput = document.getElementById('editWargaAnggota').value.trim();
+    const kategoriInput = document.getElementById('editWargaKategori').value;
 
-    if (btn) { btn.disabled = true; btn.innerText = "⏳ Menyimpan..."; }
+    // 3. Susun data update (Node baru otomatis terbentuk di Firebase jika belum ada)
+    const dataUpdate = {
+      Type: kategoriInput,
+      kepalaKeluarga: kepalaKeluargaInput,
+      anggotaKeluarga: anggotaKeluargaInput,
+      noRumah: noRumahInput,                              // Node baru nomor rumah otomatis
+      namaTempat: namaTempatInput,                        // Node baru nama tempat otomatis
+      Nama: namaTempatInput || kepalaKeluargaInput || noRumahInput, // Nama utama penanda di peta
+      foto: finalUrlFoto,                                 // URL R2 Cloudflare terbaru
+      updatedAt: Date.now()                               // Timestamp otomatis
+    };
 
-    try {
-        const updateRef = window.firebaseRef(window.db, 'peta_warga/' + idWarga);
-        await window.firebaseUpdate(updateRef, {
-            noRumah: noRumahBaru,       // Node baru khusus nomor rumah/blok
-            namaTempat: namaTempatBaru, // Node baru khusus nama tempat
-            Nama: namaTempatBaru ? `${noRumahBaru} - ${namaTempatBaru}`.replace(/^[-\s]+|[-\s]+$/g, '') : noRumahBaru, // Gabungan rapi untuk label utama peta
-            Type: kategoriBaru,         // Kategori bangunan
-            kepalaKeluarga: namaBaru,
-            anggotaKeluarga: anggotaBaru,
-            foto: fotoBaru
-        });
+    // Simpan ke node Firebase peta_warga
+    const refItem = window.firebaseRef(window.db, `peta_warga/${idWarga}`);
+    await window.firebaseUpdate(refItem, dataUpdate);
 
-        alert("✅ Data lokasi berhasil diperbarui ke Firebase!");
-        tutupModalEditWarga();
-        if (typeof muatSemuaDataAdmin === 'function') muatSemuaDataAdmin();
-    } catch (err) {
-        alert("❌ Gagal memperbarui data: " + err.message);
-    } finally {
-        if (btn) { btn.disabled = false; btn.innerText = "💾 Simpan Perubahan"; }
-    }
+    fileBaruDipilih = null;
+    tutupModalEditWarga();
+    alert('✅ Perubahan data, node baru, dan foto R2 berhasil disimpan otomatis!');
+    muatSemuaDataAdmin();
+
+  } catch (error) {
+    console.error(error);
+    alert('❌ Terjadi kesalahan: ' + error.message);
+  } finally {
+    btnSimpan.disabled = false;
+    btnSimpan.innerText = '💾 Simpan Perubahan';
+  }
+}
+
+// Fungsi reset saat modal ditutup
+function tutupModalEditWarga() {
+  // 1. Reset variabel file & input file di memori
+  fileBaruDipilih = null;
+  const inputUpload = document.getElementById('inputUploadSemiManual');
+  if (inputUpload) inputUpload.value = '';
+  
+  // 2. Kosongkan teks status informasi file
+  const statusSemi = document.getElementById('statusSemiManual');
+  if (statusSemi) statusSemi.innerHTML = '';
+  
+  // 3. Sembunyikan modal secara visual dari layar
+  const modal = document.getElementById("modal-edit-warga");
+  if (modal) {
+    modal.style.display = "none";
+  }
 }
     
 // ==========================================
@@ -3156,13 +3251,13 @@ window.simpanLaporanDivisi = async function() {
       }
       const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
       const response = await fetch(workerUrl, {
-        method: "POST",
-        headers: {
-          "X-File-Name": "nota_" + Date.now() + "_" + file.name,
-          "Content-Type": file.type || "application/octet-stream"
-        },
-        body: file
-      });
+  method: "POST",
+  headers: {
+    "X-File-Name": file.name ? encodeURIComponent(file.name) : "nota.jpg",
+    "Content-Type": file.type || "application/octet-stream"
+  },
+  body: file
+});
       
       const textResult = await response.text();
       let result = JSON.parse(textResult);
