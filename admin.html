@@ -2232,14 +2232,14 @@ window.simpanPerubahanWargaBaru = async function(e) {
       }
 
       const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
-      let response = await fetch(workerUrl, {
-        method: "POST",
-        headers: {
-          "X-File-Name": "warga_" + Date.now() + "_" + file.name,
-          "Content-Type": file.type || "application/octet-stream"
-        },
-        body: file
-      });
+let response = await fetch(workerUrl, {
+  method: "POST",
+  headers: {
+    "X-File-Name": file.name ? encodeURIComponent(file.name) : "warga.jpg",
+    "Content-Type": file.type || "application/octet-stream"
+  },
+  body: file
+});
 
       let textResult = await response.text();
       let result = JSON.parse(textResult);
@@ -2893,10 +2893,14 @@ async function simpanPerubahanWarga(event) {
       const formData = new FormData();
       formData.append('file', fileBaruDipilih);
 
-      const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
-        method: 'POST',
-        body: formData
-      });
+const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
+  method: 'POST',
+  headers: {
+    "X-File-Name": fileBaruDipilih.name ? encodeURIComponent(fileBaruDipilih.name) : "upload_foto.jpg",
+    "Content-Type": fileBaruDipilih.type || "application/octet-stream"
+  },
+  body: fileBaruDipilih
+});
 
       const hasilUpload = await responseUpload.json();
       if (hasilUpload.success || hasilUpload.url) {
@@ -3198,13 +3202,13 @@ window.simpanLaporanDivisi = async function() {
       }
       const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
       const response = await fetch(workerUrl, {
-        method: "POST",
-        headers: {
-          "X-File-Name": "nota_" + Date.now() + "_" + file.name,
-          "Content-Type": file.type || "application/octet-stream"
-        },
-        body: file
-      });
+  method: "POST",
+  headers: {
+    "X-File-Name": file.name ? encodeURIComponent(file.name) : "nota.jpg",
+    "Content-Type": file.type || "application/octet-stream"
+  },
+  body: file
+});
       
       const textResult = await response.text();
       let result = JSON.parse(textResult);
