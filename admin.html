@@ -2210,16 +2210,15 @@ window.simpanPerubahanWargaBaru = async function(e) {
     btn.innerText = "⏳ Memproses...";
   }
 
-  // 🌟 PERBAIKAN DI SINI: Sesuaikan ID dengan yang ada di modal edit warga baru (misal: editWargaBaruFoto)
-  // Pastikan di HTML modal edit warga baru Anda memiliki input dengan ID ini, atau sesuaikan namanya.
+  // Ambil URL foto lama dari input tersembunyi/teks jika ada
   const inputFotoLama = document.getElementById('editWargaBaruFoto'); 
-  let fotoFinalUrl = inputFotoLama ? inputFotoLama.value : ''; // Ambil URL foto lama dengan aman
+  let fotoFinalUrl = inputFotoLama ? inputFotoLama.value : '';
 
   const fileInput = document.getElementById('inputUploadSemiManual');
   const statusDiv = document.getElementById('statusSemiManual');
 
   try {
-    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG SAAT TOMBOL SIMPAN DIKLIK
+    // Jika ada file baru yang dipilih, buat nama file kustom lalu upload ke R2
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       if (statusDiv) {
         statusDiv.innerHTML = "⏳ Mengompres & mengunggah foto baru ke R2...";
@@ -2231,28 +2230,32 @@ window.simpanPerubahanWargaBaru = async function(e) {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
+      // Buat penamaan file kustom yang unik untuk warga baru
+      const namaClean = nama.replace(/[^a-zA-Z0-9]/g, '_');
+      const ekstensi = file.name.split('.').pop() || 'jpg';
+      const namaFileKustom = `wargabaru_${namaClean}_${Date.now()}.${ekstensi}`;
+
       const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
-let response = await fetch(workerUrl, {
-  method: "POST",
-  headers: {
-    "X-File-Name": file.name ? encodeURIComponent(file.name) : "warga.jpg",
-    "Content-Type": file.type || "application/octet-stream"
-  },
-  body: file
-});
+      let response = await fetch(workerUrl, {
+        method: "POST",
+        headers: {
+          "X-File-Name": encodeURIComponent(namaFileKustom),
+          "Content-Type": file.type || "application/octet-stream"
+        },
+        body: file
+      });
 
       let textResult = await response.text();
       let result = JSON.parse(textResult);
 
       if (result.success && result.url) {
         let urlAwal = new URL(result.url);
-        fotoFinalUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan custom domain baru
+        fotoFinalUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain R2
       } else {
         throw new Error(result.error || "Gagal mengunggah foto baru.");
       }
     }
 
-    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE
     if (btn) {
       btn.innerText = "⏳ Menyimpan ke Database...";
     }
@@ -2263,14 +2266,13 @@ let response = await fetch(workerUrl, {
     updates[`warga_baru/${id}/hp`] = hp;
     updates[`warga_baru/${id}/status`] = status;
     updates[`warga_baru/${id}/cerita`] = cerita;
-    updates[`warga_baru/${id}/foto`] = fotoFinalUrl; // Menyimpan URL foto (lama atau hasil upload baru)
+    updates[`warga_baru/${id}/foto`] = fotoFinalUrl; // Menyimpan URL foto R2 baru
 
     await window.firebaseUpdate(window.firebaseRef(window.db), updates);
     
     alert('✅ Data warga baru & foto berhasil diperbarui!');
     tutupModalEditWargaBaru();
     
-    // Refresh daftar data di panel admin
     if (typeof bukaModalWargaBaruAdmin === 'function') {
       bukaModalWargaBaruAdmin();
     }
@@ -2873,65 +2875,70 @@ function handlePilihFileBaru(inputElement) {
 
 // 2. Dipanggil saat tombol "Simpan Perubahan" ditekan
 async function simpanPerubahanWarga(event) {
-  event.preventDefault(); // Mencegah reload halaman
+  event.preventDefault();
   
   const idWarga = document.getElementById('editWargaId').value;
   const btnSimpan = document.getElementById('btnSimpanEditWarga');
   
-  // Ubah tombol jadi status loading
   btnSimpan.disabled = true;
   btnSimpan.innerText = 'Sedang Memproses...';
 
   try {
-    let finalUrlFoto = document.getElementById('editWargaFotoURL').value;
+    // Ambil nilai dari input URL teks terlebih dahulu
+    let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
 
-    // KUNCI UTAMA: Jika ada file baru yang dipilih di memori, UPLOAD SEKARANG JUGA ke cloud storage
+    // Jika user memilih file baru di memori, upload dulu ke R2
     if (fileBaruDipilih !== null) {
-      document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file ke cloud storage...</i>';
+      document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file baru ke cloud storage...</i>';
       
-      // Buat FormData untuk dikirim ke backend / worker / Cloudflare R2 Anda
-      const formData = new FormData();
-      formData.append('file', fileBaruDipilih);
+      const noRumahVal = document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const ekstensi = fileBaruDipilih.name.split('.').pop() || 'jpg';
+      const namaFileKustom = `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`;
 
-const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
-  method: 'POST',
-  headers: {
-    "X-File-Name": fileBaruDipilih.name ? encodeURIComponent(fileBaruDipilih.name) : "upload_foto.jpg",
-    "Content-Type": fileBaruDipilih.type || "application/octet-stream"
-  },
-  body: fileBaruDipilih
-});
+      const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
+        method: 'POST',
+        headers: {
+          "X-File-Name": encodeURIComponent(namaFileKustom),
+          "Content-Type": fileBaruDipilih.type || "application/octet-stream"
+        },
+        body: fileBaruDipilih
+      });
 
       const hasilUpload = await responseUpload.json();
       if (hasilUpload.success || hasilUpload.url) {
-        finalUrlFoto = hasilUpload.url; // Ambil URL hasil upload cloud
+        let urlAwal = new URL(hasilUpload.url);
+        // Timpa finalUrlFoto dengan URL baru dari Cloudflare R2
+        finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
       } else {
         throw new Error('Gagal mengupload file ke cloud storage.');
       }
     }
 
-    // Ambil data form lainnya
+    // Ambil data form termasuk No. Rumah dan Nama Tempat
+    const noRumahInput = document.getElementById('editWargaNoRumah').value.trim();
+    const namaTempatInput = document.getElementById('editWargaNamaTempat').value.trim();
+
     const dataUpdate = {
-      kategori: document.getElementById('editWargaKategori').value,
-      namaKepalaKeluarga: document.getElementById('editWargaNama').value,
+      Type: document.getElementById('editWargaKategori').value,
+      kepalaKeluarga: document.getElementById('editWargaNama').value,
       anggotaKeluarga: document.getElementById('editWargaAnggota').value,
-      noRumah: document.getElementById('editWargaNoRumah').value,
-      namaTempat: document.getElementById('editWargaNamaTempat').value,
-      foto: finalUrlFoto // URL foto final (bisa dari URL manual atau hasil upload baru)
+      noRumah: noRumahInput,
+      Nama: namaTempatInput || noRumahInput,
+      foto: finalUrlFoto // URL final (berisi URL R2 baru atau URL manual yang diinput)
     };
 
-    // Simpan data ke Firebase Realtime Database
-    // Contoh: await firebase.database().ref('peta_warga/' + idWarga).update(dataUpdate);
-    console.log("Data berhasil disimpan:", dataUpdate);
+    // Simpan pembaruan ke node Firebase yang sesuai
+    const refItem = window.firebaseRef(window.db, `peta_warga/${idWarga}`);
+    await window.firebaseUpdate(refItem, dataUpdate);
 
-    // Reset variabel sementara & tutup modal
     fileBaruDipilih = null;
     tutupModalEditWarga();
-    alert('Perubahan data berhasil disimpan!');
+    alert('✅ Perubahan data dan foto R2 berhasil disimpan!');
+    muatSemuaDataAdmin();
 
   } catch (error) {
     console.error(error);
-    alert('Terjadi kesalahan: ' + error.message);
+    alert('❌ Terjadi kesalahan: ' + error.message);
   } finally {
     btnSimpan.disabled = false;
     btnSimpan.innerText = '💾 Simpan Perubahan';
