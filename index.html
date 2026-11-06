@@ -1101,7 +1101,68 @@ window.perbaruiAplikasiSekarang = function() {
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
-window.toggleChatModal = function() {
+// ==========================================
+// PEMANTAU UNREAD CHAT PUBLIK DI HALAMAN UTAMA
+// ==========================================
+function initMainPageChatListener() {
+  if (typeof window.firebaseRef !== 'function' || !window.db) return;
+
+  const chatsRef = window.firebaseQuery(window.firebaseRef(window.db, 'chats'), window.firebaseLimitToLast(30));
+
+  window.firebaseOnValue(chatsRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      updatePublicTabBadge(0);
+      return;
+    }
+
+    // Ambil data user yang sedang login dari localStorage (disimpan oleh chat.html)
+    const currentUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+    if (!currentUser || !currentUser.uid) {
+      updatePublicTabBadge(0);
+      return;
+    }
+
+    const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+    let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+
+    // Jika belum ada key baca, set ke pesan terakhir agar tidak menumpuk
+    if (!lastReadPublicMapKey) {
+      let latestKey = null;
+      snapshot.forEach((msgSnap) => {
+        if (msgSnap.key !== 'pinned_poll') latestKey = msgSnap.key;
+      });
+      if (latestKey) {
+        lastReadPublicMap[currentUser.uid] = latestKey;
+        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+        lastReadPublicMapKey = latestKey;
+      }
+    }
+
+    let unreadPublicCount = 0;
+    snapshot.forEach((msgSnap) => {
+      const msgKey = msgSnap.key;
+      const msgData = msgSnap.val();
+
+      if (msgKey === 'pinned_poll') return;
+      if (!msgData || typeof msgData !== 'object') return;
+
+      // Hitung pesan dari orang lain yang lebih baru dari terakhir dibaca
+      if (msgData.uid !== currentUser.uid) {
+        if (lastReadPublicMapKey && msgKey > lastReadPublicMapKey) {
+          unreadPublicCount++;
+        }
+      }
+    });
+
+    // Perbarui badge di ikon chat utama index.html
+    updatePublicTabBadge(unreadPublicCount);
+  });
+}
+
+// Tangkap sinyal siap Firebase di halaman utama
+window.addEventListener('firebaseSiapIndex', initMainPageChatListener);
+  
+  window.toggleChatModal = function() {
   const modal = document.getElementById('chat-overlay-modal');
   const iframe = modal ? modal.querySelector('iframe') : null;
 
@@ -3389,9 +3450,8 @@ window.simpanWargaBaru = async function() {
 <!-- 🌟 Inisialisasi Firebase Cepat & Ringan -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  // Pastikan RT05_CONFIG sudah tersedia sebelum inisialisasi
   if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.FIREBASE) {
     const app = initializeApp(RT05_CONFIG.FIREBASE);
     const db = getDatabase(app);
@@ -3404,9 +3464,11 @@ window.simpanWargaBaru = async function() {
     window.firebasePush = push;
     window.firebaseSet = set;
     window.firebaseGet = get;
+    window.firebaseLimitToLast = limitToLast;
+    window.firebaseQuery = query;
 
-    // Sinyal bahwa modul Firebase telah siap disuplai ke peta
     window.dispatchEvent(new Event('utilsSiap'));
+    window.dispatchEvent(new Event('firebaseSiapIndex')); // 🌟 Sinyal baru untuk index.html
   } else {
     console.error("Konfigurasi RT05_CONFIG.FIREBASE belum dimuat dari setting.js!");
   }
