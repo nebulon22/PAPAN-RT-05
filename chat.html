@@ -1075,27 +1075,38 @@ function formatWaktuPesan(timestamp) {
    
 
     
-  window.addEventListener('DOMContentLoaded', () => {
-      checkUserStatus();
+window.addEventListener('DOMContentLoaded', () => {
+    // 🌟 Langsung aktifkan pemantau unread di latar belakang jika sesi user sudah ada
+    const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+    if (savedUser && savedUser.uid) {
+      currentUser = savedUser;
+      window.currentUser = currentUser;
+      
+      // Jalankan listener unread agar badge langsung akurat sejak awal
+      if (typeof listenPublicGroupUnread === 'function') listenPublicGroupUnread();
+      if (typeof listenAllPrivateChats === 'function') listenAllPrivateChats();
+    }
 
-      const regModal = document.getElementById('reg-modal');
-      if (regModal) {
-        ['touchstart', 'touchmove', 'wheel'].forEach(eventType => {
-          regModal.addEventListener(eventType, (e) => { e.stopPropagation(); }, { passive: true });
-        });
-      }
+    checkUserStatus();
 
-      // Deteksi jika modal disembunyikan menggunakan CSS/Iframe
-      const observer = new IntersectionObserver((entries) => {
-        isChatVisible = entries[0].isIntersecting && !document.hidden;
-        if (isChatVisible && activeChatType === 'private' && activePrivateUID) {
-          unreadCounts[activePrivateUID] = 0;
-          markRoomAsRead(activePrivateUID);
-          renderPrivateTabsUI();
-        }
+    const regModal = document.getElementById('reg-modal');
+    if (regModal) {
+      ['touchstart', 'touchmove', 'wheel'].forEach(eventType => {
+        regModal.addEventListener(eventType, (e) => { e.stopPropagation(); }, { passive: true });
       });
-      observer.observe(document.body);
+    }
+
+    // Deteksi jika modal disembunyikan menggunakan CSS/Iframe
+    const observer = new IntersectionObserver((entries) => {
+      isChatVisible = entries[0].isIntersecting && !document.hidden;
+      if (isChatVisible && activeChatType === 'private' && activePrivateUID) {
+        unreadCounts[activePrivateUID] = 0;
+        markRoomAsRead(activePrivateUID);
+        renderPrivateTabsUI();
+      }
     });
+    observer.observe(document.body);
+  });
     // ======================================
 
     
