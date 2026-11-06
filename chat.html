@@ -1532,6 +1532,22 @@ function listenPublicGroupUnread() {
     const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
     let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
 
+    // 🌟 1. INISIALISASI AMAN: Jika belum ada key baca, set ke pesan paling akhir saat load pertama 
+    // agar badge tidak menghitung pesan lama numpuk, melainkan hanya pesan baru setelah app dibuka.
+    if (!lastReadPublicMapKey && isFirstPublicLoad) {
+      let latestKey = null;
+      snapshot.forEach((msgSnap) => {
+        if (msgSnap.key !== 'pinned_poll') {
+          latestKey = msgSnap.key;
+        }
+      });
+      if (latestKey) {
+        lastReadPublicMap[currentUser.uid] = latestKey;
+        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+        lastReadPublicMapKey = latestKey;
+      }
+    }
+
     let unreadPublicCount = 0;
     let latestUnreadMsg = null;
     let latestUnreadKey = null;
@@ -1543,10 +1559,9 @@ function listenPublicGroupUnread() {
       if (msgKey === 'pinned_poll') return;
       if (!msgData || typeof msgData !== 'object') return;
 
-      // Hitung pesan dari orang lain
+      // Hitung pesan dari orang lain yang key-nya lebih baru dari terakhir dibaca
       if (msgData.uid !== currentUser.uid) {
-        // Jika ada key penanda baca, bandingkan. Jika belum ada, anggap semua pesan sebagai unread.
-        if (!lastReadPublicMapKey || msgKey > lastReadPublicMapKey) {
+        if (lastReadPublicMapKey && msgKey > lastReadPublicMapKey) {
           unreadPublicCount++;
           latestUnreadMsg = msgData;
           latestUnreadKey = msgKey;
@@ -1560,10 +1575,11 @@ function listenPublicGroupUnread() {
       markPublicGroupAsRead();
     }
 
+    // 🌟 2. PASTIKAN SELALU UPDATE UI & KIRIM KE PARENT (index.html)
     updatePublicTabBadge(unreadPublicCount);
     sendUnreadCountToParent(unreadPublicCount);
 
-    // Notifikasi melayang jika ada pesan baru dan chat ditutup
+    // Notifikasi melayang / suara hanya jika ada pesan baru masuk SETELAH app siap
     if (!isFirstPublicLoad && isChatReady && latestUnreadMsg && latestUnreadKey && unreadPublicCount > 0) {
       const notifId = 'notif_pub_' + latestUnreadKey;
       if (!sessionStorage.getItem(notifId)) {
@@ -2246,11 +2262,15 @@ function loadChatStream(onLoaded) {
     const chatStream = document.getElementById('chat-stream');
     if (!chatStream) return;
 
-    // 🌟 Cek cerdas: Hanya tampilkan teks memuat jika kontainer benar-benar kosong atau belum ada pesan
-    if (chatStream.children.length === 0) {
+    // 🌟 JANGAN tampilkan teks "Menghubungkan..." jika di LocalStorage sudah ada cache chat sebelumnya
+    const cachedPublic = localStorage.getItem('rt05_public_chat_cache');
+    if (chatStream.children.length === 0 && !cachedPublic) {
         chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
+    } else if (chatStream.children.length === 0 && cachedPublic) {
+        // Langsung muat dari cache lokal secara instan tanpa teks loading!
+        renderCachedPublicMessages(cachedPublic, chatStream, false);
     }
-
+  
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
 
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
