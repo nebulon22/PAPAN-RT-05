@@ -41,11 +41,18 @@
     overflow: hidden; 
   }
   
-#map { 
-  width: 100%; 
-  height: 100vh; 
-  background-color: #cbd5e1; /* 🌟 Sesuaikan dengan warna dasar muat peta */
-}
+/* 🌟 Efek halus saat peta pertama kali muncul */
+  #map {
+    width: 100%;
+    height: 100vh;
+    background-color: #cbd5e1;
+    opacity: 0; /* Mulai dari transparan */
+    transition: opacity 0.6s ease-in-out; /* Durasi transisi 0.6 detik */
+  }
+
+  #map.loaded {
+    opacity: 1; /* Perlahan menjadi jelas */
+  }
 
 
   @font-face {
@@ -1365,6 +1372,7 @@ window.toggleChatModal = function() {
   var isDataReady = false;
 
 function initPetaDanData() {
+   function initPetaDanData() {
     // 1. Render Peta Leaflet secara sinkron dan instan begitu DOM & Leaflet siap
     if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
       let container = L.DomUtil.get('map');
@@ -1393,7 +1401,30 @@ function initPetaDanData() {
       
       L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
       perbaruiIndikatorSync();
+
+      // 🌟 TAMBAHKAN INI: Efek fade-in agar peta muncul dengan halus (tidak kedip kaku)
+      setTimeout(() => {
+        let mapElement = document.getElementById('map');
+        if (mapElement) mapElement.classList.add('loaded');
+      }, 150);
     }
+    
+    // 2. Muat data berat (Firebase marker & pengumuman) secara asinkron di latar belakang
+    if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
+      isDataReady = true;
+      const muatDataLatarBelakang = () => {
+        muatDataPetaWarga();
+        muatPengumumanFirebase();
+        if (navigator.onLine) kirimDataPendingJimpitan();
+      };
+      
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(muatDataLatarBelakang, { timeout: 300 });
+      } else {
+        setTimeout(muatDataLatarBelakang, 100);
+      }
+    }
+  }
     
     // 2. Muat data berat (Firebase marker & pengumuman) secara asinkron di latar belakang
     if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
@@ -1432,7 +1463,7 @@ function muatDataPetaWarga() {
     // 🌟 Tambahkan angka radius di dalam kurung (misal: 30 atau 40 pixel)
     // Semakin kecil angkanya, titik-titik harus benar-benar berdekatan baru digabung.
     window.markerGroup = L.markerClusterGroup({
-      maxClusterRadius: 40 
+      maxClusterRadius: 30 
     });
     window.markerGroup.addTo(map);
   } else if (!map.hasLayer(markerGroup)) {
