@@ -5,28 +5,21 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   
   <title>Admin - Denah, Inventaris, & Keuangan RT 05</title>
+  
+  <!-- PWA & Theme Color -->
+  <link rel="manifest" href="manifest.json?v=1.6.5">
+  <meta name="theme-color" content="#0288d1">
+
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  
+  <!-- Konfigurasi Khusus iOS PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Papan 05">
+  <link rel="apple-touch-icon" href="kentongan-slit-drum.png">
 
-  <script src="utils.js"></script>
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js').catch(err => {
-          console.warn('ServiceWorker gagal terdaftar:', err);
-        });
-      });
-
-      let sedangRefresh = false;
-      navigator.serviceWorker.addEventListener('controllerchange', () => {
-        if (!sedangRefresh) {
-          sedangRefresh = true;
-          window.location.reload();
-        }
-      });
-    }
-  </script>
-    
   <style>
     html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
     #map { width: 100%; height: 100vh; }
@@ -79,44 +72,46 @@
     #searchInput { flex: 1; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; outline: none; }
     #search-box button { padding: 8px 12px; background: #111; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
 
-  .filter-container { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 6px; 
-  width: 100%; 
-}
+    .filter-container { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 6px; 
+      width: 100%; 
+    }
 
-.filter-row { 
-  display: flex; 
-  gap: 6px; 
-  width: 100%; 
-  justify-content: center; 
-}
+    .filter-row { 
+      display: flex; 
+      gap: 6px; 
+      width: 100%; 
+      justify-content: center; 
+    }
 
-/* Hapus pembatas max-width 90% agar semua baris tombol & dropdown lebarnya seragam */
-.btn-filter {
-  flex: 1; 
-  justify-content: center; 
-  padding: 8px 10px; 
-  background: white; 
-  color: #333;
-  border: 1px solid #ccc; 
-  border-radius: 8px; /* Diubah dari 20px ke 8px agar serasi dengan dropdown */
-  font-size: 11.5px; 
-  font-weight: bold;
-  cursor: pointer; 
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
-  display: flex; 
-  align-items: center; 
-  gap: 4px;
-  white-space: nowrap;
-}
+    .btn-filter {
+      flex: 1; 
+      justify-content: center; 
+      padding: 8px 10px; 
+      background: white; 
+      color: #333;
+      border: 1px solid #ccc; 
+      border-radius: 8px; 
+      font-size: 11.5px; 
+      font-weight: bold;
+      cursor: pointer; 
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+      display: flex; 
+      align-items: center; 
+      gap: 4px;
+      white-space: nowrap;
+    }
 
-.btn-purple {
-  background: #7c3aed;
-  color: white;
-  border-color: #6d28d9;
-}
+    .btn-purple {
+      background: #8b5cf6 !important;
+      color: white !important;
+      border-color: #7c3aed !important;
+    }
+    .btn-purple:hover {
+      background: #7c3aed !important;
+    }
 
     .modal-bg {
       display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -124,7 +119,7 @@
       align-items: center; justify-content: center;
       padding: 20px 10px; box-sizing: border-box;
     }
-   .modal-content {
+    .modal-content {
       background: white; 
       width: 90%; 
       max-width: 400px; 
@@ -133,38 +128,35 @@
       box-shadow: 0 5px 20px rgba(0,0,0,0.3); 
       display: flex; 
       flex-direction: column;
-      height: 480px;      /* <--- KUNCI TINGGI KOTAK SUPAYA PAS & TIDAK BERUBAH */
+      height: 480px; 
       max-height: 80vh; 
-      overflow: hidden;   /* <--- Ubah jadi hidden, agar scroll ada di dalam isi kontennya */
+      overflow: hidden; 
       margin: auto;
     }
 
-    /* Sesuaikan tinggi modal keuangan agar seragam dan stabil */
-#modal-laporan .modal-content {
-  background: white;
-  width: 90%;
-  max-width: 500px;
-  height: 590px !important;       /* <--- Kunci tinggi konsisten untuk kedua tab */
-  max-height: 85vh !important;
-  border-radius: 12px;
-  padding: 16px;
-  box-shadow: 0 5px 20px rgba(0,0,0,0.3);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;               /* Sembunyikan overflow utama */
-  margin: auto;
-}
+    #modal-laporan .modal-content {
+      background: white;
+      width: 90%;
+      max-width: 500px;
+      height: 590px !important; 
+      max-height: 85vh !important;
+      border-radius: 12px;
+      padding: 16px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden; 
+      margin: auto;
+    }
 
-/* Area konten di dalam tab agar flex & bisa digulir secara mandiri jika melebihi tinggi */
-#panel-tab-input, #panel-tab-edit {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-  min-height: 0;
-}
+    #panel-tab-input, #panel-tab-edit {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      min-height: 0;
+    }
     
-    /* Tambahkan kelas ini untuk membungkus area isi tab di dalam modal */
     .modal-body-scroll {
       flex: 1;
       overflow-y: auto;
@@ -178,27 +170,44 @@
     .form-group label { display: block; font-size: 12px; font-weight: bold; color: #444; margin-bottom: 4px; }
     .form-group input, .form-group select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box; }
     .btn-submit { background: #00c853; color: white; border: none; padding: 10px; font-size: 14px; font-weight: bold; border-radius: 6px; cursor: pointer; margin-top: 10px; width: 100%; }
-
-    .btn-purple {
-      background: #8b5cf6 !important;
-      color: white !important;
-      border-color: #7c3aed !important;
-    }
-    .btn-purple:hover {
-      background: #7c3aed !important;
-    }
   </style>
-</head>
+</head> <!-- 🌟 Penutup Head yang kurang -->
 <body>
 
- <div id="login-overlay">
-    <div class="login-box">
-      <h2>🔒 Akses Admin</h2>
-      <label for="adminPin" class="subtitle" style="display: block; cursor: pointer;">Masukkan 6 Digit PIN Pengurus</label>
-     <input type="password" id="adminPin" name="adminPin" autocomplete="current-password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••" onkeypress="if(event.key === 'Enter') cekLogin()">
-      <button onclick="cekLogin()">Buka Kunci</button>
-    </div>
+  <!-- Tempat Konten / Peta / Elemen HTML Anda di sini -->
+  <div id="map"></div>
+
+  <!-- Skrip JavaScript diletakkan di bagian bawah sebelum penutup body -->
+  <script src="utils.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js').catch(err => {
+          console.warn('ServiceWorker gagal terdaftar:', err);
+        });
+      });
+
+      let sedangRefresh = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!sedangRefresh) {
+          sedangRefresh = true;
+          window.location.reload();
+        }
+      });
+    }
+  </script>
+
+
+<div id="login-overlay">
+  <div class="login-box">
+    <h2>🔒 Akses Admin</h2>
+    <form onsubmit="event.preventDefault(); cekLogin();">
+  <input type="text" name="username" value="admin" autocomplete="username" style="display:none;" aria-hidden="true">
+  <input type="password" id="adminPin" name="adminPin" autocomplete="current-password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••">
+  <button type="submit">Buka Kunci</button>
+    </form>
   </div>
+</div>
 
  <!-- BARU: Panggil fungsi logoutAdmin() -->
  <a href="javascript:void(0)" onclick="logoutAdmin()" class="btn-back-floating">⬅️ Mode Warga (Logout)</a>
@@ -545,7 +554,7 @@
           
           <div style="margin-top: 10px;">
             <label style="font-size: 11px; font-weight: bold; color: #475569;">🔒 PIN Khusus Divisi:</label>
-            <input type="password" id="laporanPinDivisi" maxlength="6" inputmode="numeric" placeholder="Masukkan PIN Divisi Anda" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;">
+            <input type="password" id="laporanPinDivisi" autocomplete="current-password" maxlength="6" inputmode="numeric" ...>
           </div>
         </div>
 
@@ -631,7 +640,7 @@
 
       <div class="form-group" style="margin-bottom: 10px;">
         <label style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
-        <input type="text" id="editNominal" inputmode="numeric" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
+        <input type="text" id="editNominal" autocomplete="off" inputmode="numeric" ...>
       </div>
 
       <!-- Upload Bukti Transaksi / Nota -->
@@ -648,8 +657,7 @@
         <label for="editPinDivisi" style="font-size: 11px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">
           🔒 PIN Khusus Divisi (Wajib untuk Edit):
         </label>
-        <input type="password" id="editPinDivisi" maxlength="6" inputmode="numeric" placeholder="Masukkan PIN divisi terkait" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
-        <span style="font-size: 10px; color: #64748b; margin-top: 2px; display: block;">*Masukkan PIN divisi yang sesuai untuk menyimpan perubahan.</span>
+        <input type="password" id="editPinDivisi" maxlength="6" inputmode="numeric" autocomplete="current-password" placeholder="Masukkan PIN divisi terkait" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
       </div>
 
       <div style="display: flex; gap: 8px; margin-top: 15px;">

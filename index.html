@@ -23,6 +23,12 @@
   <link rel="manifest" href="manifest.json?v=1.6.5">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
+  <!-- Konfigurasi Khusus iOS PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Papan 05">
+  <link rel="apple-touch-icon" href="kentongan-slit-drum.png">
   
   <!-- 🌟 2. JAVASCRIPT LOKAL (Urutan harus berurutan: Leaflet -> MarkerCluster -> Utils/Setting) -->
   <script src="leaflet.js"></script>
@@ -31,6 +37,8 @@
   <!-- Konfigurasi Global & Utils -->
   <script src="utils.js" defer></script>
   <script src="setting.js" defer></script>
+
+  
 
  <style>
   html, body { 
@@ -41,11 +49,21 @@
     overflow: hidden; 
   }
   
-#map { 
-  width: 100%; 
-  height: 100vh; 
-  background-color: #cbd5e1; /* 🌟 Sesuaikan dengan warna dasar muat peta */
-}
+/* 🌟 Efek halus saat peta pertama kali muncul */
+#map {
+    width: 100%;
+    height: 100vh;
+    background-color: #cbd5e1;
+  }
+
+  /* Kelas transisi terpisah agar aman */
+  #map.fade-map {
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+  }
+  #map.fade-map.loaded {
+    opacity: 1;
+  }
 
 
   @font-face {
@@ -558,11 +576,13 @@
   <button data-click="jalankanPencarianPeta">Cari</button>
     </div>
     
-    <div class="filter-container">
+<div class="filter-container">
       <div class="filter-row">
-        <button class="btn-filter btn-info-rt" data-click="bukaModalInfo">
+        <!-- Tombol Info RT -->
+        <a href="pengumuman.html" class="btn-filter btn-info-rt" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
           📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
-        </button>
+        </a>
+        <!-- Tombol Keuangan yang sebelumnya hilang -->
         <button class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1;" data-click="bukaModalKeuangan">
           💰 Keuangan
         </button>
@@ -577,7 +597,7 @@
         </button>
       </div>
 
-  <div class="filter-row">
+      <div class="filter-row">
         <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" data-click="bukaModalRiwayatJimpitan">
           🪙 Rekap Jimpitan
         </button>
@@ -587,16 +607,15 @@
             🗺️ Denah RT 05
           </button>
 
-         <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: -100%; width: 220px; margin-top: 6px; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(0px); -webkit-backdrop-filter: blur(2px); padding: 10px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15); z-index: 100;">
-  <button class="btn-filter active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
-  <button class="btn-filter" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%;">🏪 Minimarket</button>
-  <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%;">🛏️ Kost</button>
-  <button class="btn-filter" data-click="pilihFilterDenah" data-arg="fasum" style="width: 100%;">🏛️ Fasum</button>
-  <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kuliner" style="width: 100%;">🍽️ Kuliner</button>
-      </div>
+          <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; margin-top: 6px; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15); z-index: 100;">
+            <button class="btn-filter active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
+            <button class="btn-filter" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%;">🏪 Minimarket</button>
+            <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%;">🛏️ Kost</button>
+            <button class="btn-filter" data-click="pilihFilterDenah" data-arg="fasum" style="width: 100%;">🏛️ Fasum</button>
+            <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kuliner" style="width: 100%;">🍽️ Kuliner</button>
+          </div>
         </div>
       </div>
-      
     </div>
   </div>
 
@@ -664,191 +683,8 @@
     </div>
   </div>
 
-<div id="modal-info" class="modal-bg" data-click="bukaTutupLuar">
-  <div class="modal-content" style="max-width: 500px; width: 92%; height: 80vh; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box;">
-    
-    <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px; flex-shrink: 0;">
-      <h3 style="margin: 0; font-size: 16px; color: #111;">📢 Informasi & RAB RT 05</h3>
-      <button class="close-btn" data-click="tutupModalInfo">&times;</button>
-    </div>
-
-<div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px; flex-shrink: 0;">
-  <button type="button" id="btn-tab-info" data-click="switchTabWarga" data-arg="info" 
-          style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">
-    📢 Informasi Umum
-  </button>
-  <button type="button" id="btn-tab-rab" data-click="switchTabWarga" data-arg="rab" 
-          style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: bold; font-size: 12px; cursor: pointer;">
-    📋 RAB & Progker
-  </button>
-</div>
-
-<div style="flex: 1; overflow-y: auto; padding-right: 2px;">
-  
-  <div id="panel-tab-info">
-    <div class="modal-body" id="list-pengumuman">
-      <p style="text-align:center; color:#888; font-size:13px;">Memuat informasi...</p>
-    </div>
-  </div>
-
-  <div id="panel-tab-rab" style="display: none;">
-    
-    <div style="display: flex; gap: 8px; margin-bottom: 10px;">
       
-      <div style="flex: 1; background: #eff6ff; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #3b82f6;">
-        <span style="font-size: 9.5px; color: #1d4ed8; font-weight: bold; text-transform: uppercase; display: block;">Total Estimasi RAB</span>
-        <div id="warga-total-rab" style="font-size: 15px; font-weight: bold; color: #1e40af;">Rp 0</div>
-      </div>
-
-      <div style="flex: 1; background: #ecfdf5; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #10b981;">
-        <span style="font-size: 9.5px; color: #047857; font-weight: bold; text-transform: uppercase; display: block;">Realisasi Selesai</span>
-        <div id="warga-total-realisasi" style="font-size: 15px; font-weight: bold; color: #065f46;">Rp 0</div>
-      </div>
-
-    </div>
-
-    <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
-  <table style="width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 10px; text-align: left;">
-    <thead>
-      <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1;">
-        <th style="padding: 6px 4px; width: 28%;">Kegiatan / Divisi</th>
-        <th style="padding: 6px 4px; width: 28%;">Rencana vs Realisasi</th>
-        <th style="padding: 6px 4px; width: 22%; text-align: center;">Status Dana</th>
-        <th style="padding: 6px 4px; width: 22%; text-align: center;">Status Progker</th>
-      </tr>
-    </thead>
-    <tbody id="tabel-progker-warga">
-      <!-- Data dari Firebase akan masuk ke sini -->
-    </tbody>
-  </table>
-</div>
-  </div>
-
-</div> 
-
-  </div> 
-</div>
-
-<div id="modal-foto" class="modal-foto-bg" data-click="tutupFotoBesar" style="
-  display: none; 
-  position: fixed; 
-  inset: 0; 
-  z-index: 3000; 
-  background: rgba(0,0,0,0.9); 
-  align-items: center; 
-  justify-content: center; 
-  padding: 16px;
-">
-  <div style="position: relative; max-width: 100%; max-height: 90vh; display: flex; align-items: center; justify-content: center;">
-
-    <button type="button" data-click="tutupFotoBesar" title="Tutup" style="
-      position: absolute; 
-      top: -12px; 
-      right: -12px; 
-      background: #ef4444; 
-      color: #ffffff; 
-      border: 2px solid #ffffff; 
-      border-radius: 50%; 
-      width: 32px; 
-      height: 32px; 
-      display: flex; 
-      align-items: center; 
-      justify-content: center; 
-      font-size: 16px; 
-      font-weight: bold; 
-      cursor: pointer; 
-      z-index: 3010; 
-      box-shadow: 0 4px 10px rgba(0,0,0,0.5); 
-      outline: none;
-    ">
-      ✕
-    </button>
     
-   <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" style="
-    max-width: 100%; 
-    max-height: 85vh; 
-    width: auto; 
-    height: auto; 
-    object-fit: contain; 
-    border-radius: 8px; 
-    display: block; 
-    box-shadow: 0 8px 24px rgba(0,0,0,0.8);
-">
-  </div>
-</div>
-
-<div id="modal-video-popup" style="
-  display: none; 
-  position: fixed; 
-  top: 0; left: 0; 
-  width: 100vw; height: 100vh; 
-  background: #000000; 
-  z-index: 999999; 
-  flex-direction: column;
-  align-items: center; 
-  justify-content: center;
-">
-  <button id="btn-rotate-video" type="button" data-click="toggleRotasiVideo" title="Putar Layar" style="
-    display: none; 
-    position: absolute; 
-    top: 16px; 
-    right: 58px; 
-    z-index: 1000000; 
-    background: rgba(255, 255, 255, 0.2); 
-    color: #ffffff; 
-    border: 1px solid rgba(255, 255, 255, 0.4); 
-    border-radius: 20px; 
-    padding: 6px 12px; 
-    font-size: 12px; 
-    font-weight: bold; 
-    cursor: pointer; 
-    backdrop-filter: blur(4px); 
-    -webkit-backdrop-filter: blur(4px); 
-    outline: none;
-  ">🔄 Putar Layar</button>
-<button type="button" data-click="tutupModalVideo" title="Tutup Video" style="
-  position: absolute; 
-  top: 16px; 
-  right: 16px; 
-  z-index: 1000000; 
-  background: rgba(255, 255, 255, 0.2); 
-  color: #ffffff; 
-  border: 1px solid rgba(255, 255, 255, 0.4); 
-  border-radius: 50%; 
-  width: 32px; 
-  height: 32px; 
-  font-size: 16px; 
-  line-height: 1; 
-  cursor: pointer; 
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  backdrop-filter: blur(4px); 
-  -webkit-backdrop-filter: blur(4px); 
-  transition: all 0.2s ease; 
-  outline: none;
-">✖</button>
-
-  <div style="
-    width: 100%; 
-    height: 100%; 
-    display: flex; 
-    align-items: center; 
-    justify-content: center;
-    padding: 10px;
-    box-sizing: border-box;
-  ">
-    <video id="player-video-modal" controls playsinline webkit-playsinline style="
-      width: 100%; 
-      height: 100%; 
-      max-width: 100vw; 
-      max-height: 90vh; 
-      object-fit: contain; 
-      background: #000000;
-    ">
-    </video>
-  </div>
-</div>
 
 <div id="modal-inventaris" class="modal-bg" data-click="tutupModalInventarisLuar">
   <div class="modal-content" style="max-width: 600px; width: 95%; height: 85vh; padding: 0; overflow: hidden; display: flex; flex-direction: column;">
@@ -1364,7 +1200,7 @@ window.toggleChatModal = function() {
   var pinRumahAktif = null;
   var isDataReady = false;
 
-function initPetaDanData() {
+  function initPetaDanData() {
     // 1. Render Peta Leaflet secara sinkron dan instan begitu DOM & Leaflet siap
     if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
       let container = L.DomUtil.get('map');
@@ -1393,14 +1229,19 @@ function initPetaDanData() {
       
       L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
       perbaruiIndikatorSync();
+
+      // 🌟 Efek fade-in agar peta muncul dengan halus (tidak kedip kaku)
+      setTimeout(() => {
+        let mapElement = document.getElementById('map');
+        if (mapElement) mapElement.classList.add('loaded');
+      }, 150);
     }
     
-    // 2. Muat data berat (Firebase marker & pengumuman) secara asinkron di latar belakang
+// 2. Muat data berat (Firebase marker) secara asinkron di latar belakang
     if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
       isDataReady = true;
       const muatDataLatarBelakang = () => {
         muatDataPetaWarga();
-        muatPengumumanFirebase();
         if (navigator.onLine) kirimDataPendingJimpitan();
       };
       
@@ -1411,8 +1252,8 @@ function initPetaDanData() {
         setTimeout(muatDataLatarBelakang, 100);
       }
     }
-  }
-
+  } // <-- Penutup fungsi initPetaDanData() yang benar dan lengkap
+  
   // Eksekusi secepat mungkin berdasarkan status dokumen saat ini
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
     initPetaDanData();
@@ -1432,7 +1273,7 @@ function muatDataPetaWarga() {
     // 🌟 Tambahkan angka radius di dalam kurung (misal: 30 atau 40 pixel)
     // Semakin kecil angkanya, titik-titik harus benar-benar berdekatan baru digabung.
     window.markerGroup = L.markerClusterGroup({
-      maxClusterRadius: 40 
+      maxClusterRadius: 30 
     });
     window.markerGroup.addTo(map);
   } else if (!map.hasLayer(markerGroup)) {
@@ -1581,432 +1422,6 @@ window.jalankanPencarianPeta = function() {
   });
 };
    
-function muatPengumumanFirebase() {
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
-    setTimeout(muatPengumumanFirebase, 50);
-    return;
-  }
-
-  const pengumumanRef = window.firebaseRef(window.db, "pengumuman");
-  
-  window.firebaseOnValue(pengumumanRef, (snapshot) => {
-    const data = snapshot.val();
-    daftarPengumuman = [];
-
-    if (data) {
-      Object.keys(data).forEach(key => {
-        const item = data[key];
-        var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
-        
-        if (status === 'AKTIF') {
-          var tglRaw = item.tanggal || '';
-          var tglRapi = tglRaw;
-          
-          if (tglRapi.includes('T')) {
-            var parts = tglRapi.split('T')[0].split('-');
-            if (parts.length === 3) {
-              tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
-            }
-          }
-
-          daftarPengumuman.push({
-            tanggal: tglRapi,
-            judul: item.judul || '',
-            detail: item.detail || '',
-            lokasi: item.lokasi || '',
-            foto: item.foto || ''
-          });
-        }
-      });
-    }
-
-    daftarPengumuman.sort((a, b) => {
-      var partsA = a.tanggal.split('/');
-      var partsB = b.tanggal.split('/');
-      
-      var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
-      var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
-      
-      return dateB - dateA;
-    });
-
-    daftarPengumuman = daftarPengumuman.slice(0, 10);
-    
-    var badge = document.getElementById('badge-count');
-    if (badge) {
-      if (daftarPengumuman.length > 0) {
-        badge.innerText = daftarPengumuman.length;
-        badge.style.display = 'inline-block';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
-
-    // =========================================================================
-    // TAMBAHKAN BARIS INI: 
-    // Jika modal info sedang terbuka saat admin melakukan update data, 
-    // layar warga akan otomatis memperbarui isinya secara real-time.
-    // =========================================================================
-    const modalInfo = document.getElementById('modal-info');
-    if (modalInfo && modalInfo.style.display === 'flex') {
-      bukaModalInfo();
-    }
-  });
-}
-
-
-function escapeHTML(text) {
-  if (!text) return '';
-  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-}
-
-
-  
-window.bukaModalInfo = function() {
-  var container = document.getElementById('list-pengumuman');
-  var modal = document.getElementById('modal-info');
-  
-  if (modal) modal.style.display = 'flex';
-  if (!container) return;
-  
-  if (!daftarPengumuman || daftarPengumuman.length === 0) {
-    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
-    return;
-  }
-
-  // 🌟 1. Buat variabel untuk menampung semua HTML secara kolektif
-  let htmlKolektif = '';
-
-  daftarPengumuman.forEach(function(info) {
-    var lokasiParam = encodeURIComponent(info.lokasi || '');
-    var htmlFoto = '';
-    
-    if (info.foto) {
-      var urlFoto = info.foto.toLowerCase();
-      
-      if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
-        htmlFoto = `
-          <div data-click="bukaModalVideo" data-arg="${info.foto}" style="
-            position: relative; 
-            width: 100%; 
-            max-height: 200px; 
-            border-radius: 6px; 
-            overflow: hidden; 
-            margin-top: 8px; 
-            background: #000; 
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-          ">
-            <video src="${info.foto}" preload="metadata" playsinline style="
-              width: 100%; 
-              max-height: 200px; 
-              object-fit: cover; 
-              opacity: 0.8;
-              pointer-events: none;
-            "></video>
-            <div style="
-              position: absolute; 
-              background: rgba(239, 68, 68, 0.9); 
-              color: #fff; 
-              border-radius: 50%; 
-              width: 48px; height: 48px; 
-              display: flex; align-items: center; justify-content: center; 
-              font-size: 22px; 
-              box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-            ">▶</div>
-          </div>`;
-      } else {
-        htmlFoto = `
-          <img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" data-click="bukaFotoBesar" data-arg="${info.foto}" onError="this.style.display='none'">`;
-      }
-    }
-
-    var html = `
-      <div class="card-info">
-        ${info.tanggal ? `<div class="tgl">📅 ${escapeHTML(info.tanggal)}</div>` : ''}
-        <div class="judul">${escapeHTML(info.judul)}</div>
-        <div class="detail">${escapeHTML(info.detail)}</div>
-        ${htmlFoto}
-        ${info.lokasi ? `<button class="btn-lihat-lokasi" style="margin-top:8px;" data-click="sorotLokasi" data-arg="${lokasiParam}">📍 Lihat Lokasi (${escapeHTML(info.lokasi)})</button>` : ''}
-      </div>
-    `;
-    
-    // 🌟 2. Tambahkan ke variabel penampung, BUKAN merender langsung ke DOM
-    htmlKolektif += html;
-  });
-
-  // 🌟 3. Suntikkan ke DOM sekaligus di akhir (Hanya 1x proses render visual)
-  container.innerHTML = htmlKolektif;
-};
-
-window.tutupModalInfo = function() {  
-  var modal = document.getElementById('modal-info');
-  if (modal) modal.style.display = 'none';  
-};
-
-window.bukaTutupLuar = function(e) {  
-  if (e && e.target && e.target.id === 'modal-info') {
-    window.tutupModalInfo(); 
-  } 
-};
-
-  
-var isVideoRotated = false;
-
-window.toggleRotasiVideo = function() {
-  var player = document.getElementById('player-video-modal');
-  var btnRotate = document.getElementById('btn-rotate-video');
-  
-  if (player) {
-    isVideoRotated = !isVideoRotated;
-    
-    if (isVideoRotated) {
-      player.classList.add('video-rotated');
-      if (btnRotate) btnRotate.innerHTML = '🔄 Kembalikan';
-    } else {
-      player.classList.remove('video-rotated');
-      if (btnRotate) btnRotate.innerHTML = '🔄 Putar Layar';
-    }
-  }
-};
-
-window.bukaModalVideo = function(videoUrl, event) {
-  if (event && typeof event.stopPropagation === 'function') {
-    event.stopPropagation();
-  }
-  if (event && typeof event.preventDefault === 'function') {
-    event.preventDefault();
-  }
-
-  var modalInfo = document.getElementById('modal-info');
-  if (modalInfo) modalInfo.style.display = 'none';
-
-  var modal = document.getElementById('modal-video-popup');
-  var player = document.getElementById('player-video-modal');
-  var btnRotate = document.getElementById('btn-rotate-video');
-
-  if (modal && player) {
-    let finalVideoUrl = videoUrl;
-
-    // Konversi otomatis link halaman Archive.org ke link file langsung (.webm/.mp4)
-    if (videoUrl && videoUrl.includes('archive.org') && !videoUrl.includes('/download/')) {
-      let parts = videoUrl.split('/');
-      let detailsIndex = parts.indexOf('details');
-      if (detailsIndex !== -1 && parts[detailsIndex + 1]) {
-        let identifier = parts[detailsIndex + 1];
-        finalVideoUrl = `https://archive.org/download/${identifier}/${identifier}.webm`;
-      }
-    }
-
-    player.src = finalVideoUrl;
-    modal.style.display = 'flex';
-
-    // 🌟 Deteksi otomatis orientasi video setelah metadata dimuat
-    player.onloadedmetadata = function() {
-      var lebarVideo = player.videoWidth;
-      var tinggiVideo = player.videoHeight;
-
-      // Jika lebar lebih besar dari tinggi (Lanskap), tampilkan tombol Putar Layar
-      // Jika tinggi lebih besar atau sama dengan lebar (Potret/Kotak), sembunyikan tombol Putar Layar
-      if (btnRotate) {
-        if (lebarVideo > tinggiVideo) {
-          btnRotate.style.display = 'block';
-        } else {
-          btnRotate.style.display = 'none';
-        }
-      }
-    };
-
-    player.load();
-    var playPromise = player.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(function(error) {
-        console.log("Autoplay dicegah oleh browser:", error);
-      });
-    }
-  }
-};
-
-window.tutupModalVideo = function() {
-  var modal = document.getElementById('modal-video-popup');
-  var player = document.getElementById('player-video-modal');
-  var btnRotate = document.getElementById('btn-rotate-video');
-
-  if (typeof isVideoRotated !== 'undefined') {
-    isVideoRotated = false;
-  }
-  
-  if (player) {
-    player.classList.remove('video-rotated');
-    player.pause();
-    player.currentTime = 0;
-    player.src = '';
-  }
-  
-  if (btnRotate) btnRotate.style.display = 'none';
-  if (modal) modal.style.display = 'none';
-
-  var modalInfo = document.getElementById('modal-info');
-  if (modalInfo) modalInfo.style.display = 'flex';
-};
-
-
-    
-window.switchTabWarga = function(target) {
-  // Ambil nama tab baik dari parameter string langsung maupun dari event delegation (data-arg)
-  const tab = (typeof target === 'string') ? target : target?.dataset?.arg;
-
-  const panelInfo = document.getElementById('panel-tab-info');
-  const panelRab = document.getElementById('panel-tab-rab');
-  const btnInfo = document.getElementById('btn-tab-info');
-  const btnRab = document.getElementById('btn-tab-rab');
-
-  if (tab === 'info') {
-    if (panelInfo) panelInfo.style.display = 'block';
-    if (panelRab) panelRab.style.display = 'none';
-    if (btnInfo) { btnInfo.style.background = '#0288d1'; btnInfo.style.color = '#ffffff'; }
-    if (btnRab) { btnRab.style.background = '#f1f5f9'; btnRab.style.color = '#64748b'; }
-  } else {
-    if (panelInfo) panelInfo.style.display = 'none';
-    if (panelRab) panelRab.style.display = 'block';
-    if (btnRab) { btnRab.style.background = '#0288d1'; btnRab.style.color = '#ffffff'; }
-    if (btnInfo) { btnInfo.style.background = '#f1f5f9'; btnInfo.style.color = '#64748b'; }
-    
-    if (typeof muatProgkerWarga === 'function') {
-      muatProgkerWarga();
-    }
-  }
-};
-
-// 🌟 1. Tambahkan variabel penanda ini di LUAR fungsi (tepat di atas fungsi muatProgkerWarga)
-let isProgkerLoaded = false;
-
-function muatProgkerWarga() {
-  const tbody = document.getElementById('tabel-progker-warga');
-  if (!tbody) return;
-
-  // 🌟 2. CEGAH MEMORY LEAK: Hentikan fungsi jika listener Firebase sudah terpasang
-  if (isProgkerLoaded) return;
-
-  function renderData(dataArray) {
-    if (!dataArray || dataArray.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
-      
-      const totalEstimasiEl = document.getElementById('warga-total-rab') || document.getElementById('warga-total-estimasi');
-      if (totalEstimasiEl) totalEstimasiEl.innerText = 'Rp 0';
-      
-      const totalRealisasiEl = document.getElementById('warga-total-realisasi');
-      if (totalRealisasiEl) totalRealisasiEl.innerText = 'Rp 0';
-      return;
-    }
-
-    var totalRabPerencanaan = 0;  
-    var totalRealisasiSelesai = 0;  
-    var html = '';
-
-    dataArray.forEach(item => {
-      var angPlan = Number(item.Anggaran || item.anggaran || item.anggaran_disetujui || item.nominal || 0);
-      var angRealisasi = Number(item.Realisasi || item.realisasi || 0);
-      var statusRaw = String(item.Status || item.status || 'Perencanaan').trim();
-      var statusLower = statusRaw.toLowerCase();
-      var namaKegiatan = item.Nama_Kegiatan || item.kegiatan || 'Kegiatan RT';
-      var namaDivisi = item.Divisi || item.divisi || 'Umum';
-      var detailProg = item.Detail || item.detail || '';
-
-      totalRabPerencanaan += angPlan;
-
-      if (statusLower === 'selesai') {
-        totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
-      }
-
-      var badgeDana = '';
-      var infoTambahanHTML = '';
-
-      if (statusLower === 'selesai') {
-        badgeDana = '<span style="background:#e5e7eb; color:#374151; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">⚪ Dana Telah Direalisasikan</span>';
-        infoTambahanHTML = `<div style="font-size:10px; color:#059669; font-weight:bold;">Realisasi: Rp ${(angRealisasi > 0 ? angRealisasi : angPlan).toLocaleString('id-ID')}</div>`;
-      } else if (statusLower === 'berjalan') {
-        badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
-        infoTambahanHTML = `<div style="font-size:10px; color:#10b981; font-weight:bold;">Dana Siap Direalisasikan</div>`;
-      } else if (statusLower === 'disetujui') {
-        badgeDana = '<span style="background:#eff6ff; color:#1d4ed8; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🔵 Dana Terkumpul Sebagian</span>';
-        infoTambahanHTML = `<div style="font-size:10px; color:#2563eb; font-weight:bold;">Dalam tahap pemenuhan dana dan sumber daya</div>`;
-      } else {
-        badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
-        infoTambahanHTML = `<div style="font-size:10px; color:#d97706; font-weight:bold;">Proses Penggalangan Dana/Mobilisasi Sumber Daya</div>`;
-      }
-
-      var badgeColor = '#eab308';
-      if (statusLower === 'disetujui') {
-        badgeColor = '#3b82f6';  
-      } else if (statusLower === 'berjalan') {
-        badgeColor = '#10b981';  
-      } else if (statusLower === 'selesai') {
-        badgeColor = '#6b7280';  
-      } else if (statusLower === 'perencanaan') {
-        badgeColor = '#f59e0b';
-      }
-
-      var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:bold; white-space: nowrap;">${escapeHTML(statusRaw)}</span>`;
-
-      html += `
-        <tr style="border-bottom: 1px solid #f1f5f9;">
-          <td style="padding: 6px 4px; vertical-align: top; word-break: break-word; width: 28%;">
-            <strong style="color:#1e293b; display:block; font-size: 10px;">${escapeHTML(namaKegiatan)}</strong>
-            <span style="font-size:9px; color:#64748b; display:block;">🏷️ ${escapeHTML(namaDivisi)}</span>
-            ${detailProg ? `<span style="font-size:8.5px; color:#475569; font-style:italic; display:block; margin-top:2px;">📝 ${escapeHTML(detailProg)}</span>` : ''}
-          </td>
-          <td style="padding: 6px 4px; vertical-align: top; word-break: break-word; width: 28%;">
-            <div style="font-size: 10px; font-weight: bold; color:#0f172a;">Rp ${angPlan.toLocaleString('id-ID')}</div>
-            ${infoTambahanHTML}
-          </td>
-          <td style="padding: 6px 4px; text-align: center; vertical-align: top; width: 22%;">
-            ${badgeDana}
-          </td>
-          <td style="padding: 6px 4px; text-align: center; vertical-align: top; width: 22%;">
-            ${badgeProgker}
-          </td>
-        </tr>
-      `;
-    });
-
-    tbody.innerHTML = html;
-    
-    const totalEstimasiEl = document.getElementById('warga-total-rab') || document.getElementById('warga-total-estimasi');
-    if (totalEstimasiEl) {
-      totalEstimasiEl.innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
-    }
-
-    const totalRealisasiEl = document.getElementById('warga-total-realisasi');
-    if (totalRealisasiEl) {
-      totalRealisasiEl.innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
-    }
-  }
-
-  // 🌟 3. BLOK SETTIMEOUT DIHAPUS karena redundan dan menghambat render
-
-  const progkerRef = window.firebaseRef(window.db, "progker_rab");
-  window.firebaseOnValue(progkerRef, (snapshot) => {
-    isProgkerLoaded = true; // 🌟 4. Kunci listener agar tidak menumpuk saat tab diklik lagi
-
-    const dataObj = snapshot.val();
-    let dataArray = [];
-
-    if (dataObj) {
-      Object.keys(dataObj).forEach(key => {
-        dataArray.push(dataObj[key]);
-      });
-    }
-
-    renderData(dataArray);
-  }, (error) => {
-    console.error("Gagal memuat data RAB dari Firebase:", error);
-    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
-  });
-}
-
   window.bukaModalSetting = function() {
   var modal = document.getElementById('modal-setting');
   if (modal) modal.style.display = 'flex';

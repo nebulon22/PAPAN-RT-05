@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Informasi & RAB RT 05 Kayen</title>
+
+    <!-- FontAwesome Lokal -->
+  <link rel="stylesheet" href="all.min.css">
+   <!-- Konfigurasi Khusus iOS PWA -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Papan 05">
+  <link rel="apple-touch-icon" href="kentongan-slit-drum.png">
+  
+  <!-- Konfigurasi Global & Utils -->
+  <script src="utils.js" defer></script>
+  <script src="setting.js" defer></script>
+
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: sans-serif;
+      background-color: #f8fafc;
+      color: #333;
+    }
+
+    .header-bar {
+      background: #0288d1;
+      color: white;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    .header-bar h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .btn-back {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: none;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      font-size: 12px;
+      text-decoration: none;
+    }
+
+    .container {
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 12px;
+      box-sizing: border-box;
+    }
+
+    .card-info {
+      background: #ffffff;
+      border: 1px solid #e0e0e0;
+      border-left: 4px solid #ff9800;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .card-info .tgl { font-size: 11px; color: #777; font-weight: bold; }
+    .card-info .judul { font-size: 14px; font-weight: bold; margin: 4px 0; color: #222; }
+    .card-info .detail { font-size: 12.5px; color: #444; margin-bottom: 8px; line-height: 1.4; white-space: pre-line; }
+    
+    .img-popup {
+      width: 100%;
+      max-height: 200px;
+      object-fit: cover;
+      border-radius: 6px;
+      margin-top: 6px;
+      border: 1px solid #ddd;
+      cursor: pointer;
+    }
+
+    .video-rotated {
+      transform: rotate(90deg) !important;
+      width: 100vh !important;
+      height: 100vw !important;
+      max-width: 100vh !important;
+      max-height: 100vw !important;
+      object-fit: contain !important;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header Navigasi Atas -->
+  <div class="header-bar">
+    <h3>📢 Informasi & RAB RT 05</h3>
+    <a href="index.html" class="btn-back">⬅️ Kembali ke Peta</a>
+  </div>
+
+  <div class="container">
+    
+    <!-- Tab Menu (Informasi Umum & RAB) -->
+    <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
+      <button type="button" id="btn-tab-info" onclick="switchTabWarga('info')" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">
+        📢 Informasi Umum
+      </button>
+      <button type="button" id="btn-tab-rab" onclick="switchTabWarga('rab')" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: bold; font-size: 12px; cursor: pointer;">
+        📋 RAB & Progker
+      </button>
+    </div>
+
+    <!-- Konten Panel Informasi Umum -->
+    <div id="panel-tab-info">
+      <div class="modal-body" id="list-pengumuman">
+        <p style="text-align:center; color:#888; font-size:13px; margin-top:30px;">Memuat informasi...</p>
+      </div>
+    </div>
+
+    <!-- Konten Panel RAB & Progker -->
+    <div id="panel-tab-rab" style="display: none;">
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <div style="flex: 1; background: #eff6ff; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #3b82f6;">
+          <span style="font-size: 9.5px; color: #1d4ed8; font-weight: bold; text-transform: uppercase; display: block;">Total Estimasi RAB</span>
+          <div id="warga-total-rab" style="font-size: 15px; font-weight: bold; color: #1e40af;">Rp 0</div>
+        </div>
+
+        <div style="flex: 1; background: #ecfdf5; padding: 8px 10px; border-radius: 8px; border-left: 4px solid #10b981;">
+          <span style="font-size: 9.5px; color: #047857; font-weight: bold; text-transform: uppercase; display: block;">Realisasi Selesai</span>
+          <div id="warga-total-realisasi" style="font-size: 15px; font-weight: bold; color: #065f46;">Rp 0</div>
+        </div>
+      </div>
+
+      <div style="overflow-x: auto; background: white; border-radius: 6px; border: 1px solid #e2e8f0;">
+        <table style="width: 100%; table-layout: fixed; border-collapse: collapse; font-size: 10px; text-align: left;">
+          <thead>
+            <tr style="background: #f1f5f9; color: #475569; border-bottom: 2px solid #cbd5e1;">
+              <th style="padding: 6px 4px; width: 28%;">Kegiatan / Divisi</th>
+              <th style="padding: 6px 4px; width: 28%;">Rencana vs Realisasi</th>
+              <th style="padding: 6px 4px; width: 22%; text-align: center;">Status Dana</th>
+              <th style="padding: 6px 4px; width: 22%; text-align: center;">Status Progker</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-progker-warga">
+            <tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Memuat data RAB...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Modal Pratinjau Foto Besar -->
+  <div id="modal-foto" class="modal-foto-bg" style="display: none; position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,0.9); align-items: center; justify-content: center; padding: 16px;">
+    <div style="position: relative; max-width: 100%; max-height: 90vh; display: flex; align-items: center; justify-content: center;">
+      <button type="button" onclick="tutupFotoBesar()" title="Tutup" style="position: absolute; top: -12px; right: -12px; background: #ef4444; color: #ffffff; border: 2px solid #ffffff; border-radius: 50%; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; cursor: pointer; z-index: 3010; box-shadow: 0 4px 10px rgba(0,0,0,0.5); outline: none;">✕</button>
+      <img id="foto-preview" class="modal-foto-img" src="" alt="Pratinjau Foto" style="max-width: 100%; max-height: 85vh; width: auto; height: auto; object-fit: contain; border-radius: 8px; display: block; box-shadow: 0 8px 24px rgba(0,0,0,0.8);">
+    </div>
+  </div>
+
+  <!-- Modal Pratinjau Video Popup -->
+  <div id="modal-video-popup" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: #000000; z-index: 999999; flex-direction: column; align-items: center; justify-content: center;">
+    <button id="btn-rotate-video" type="button" onclick="toggleRotasiVideo()" title="Putar Layar" style="display: none; position: absolute; top: 16px; right: 58px; z-index: 1000000; background: rgba(255, 255, 255, 0.2); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 20px; padding: 6px 12px; font-size: 12px; font-weight: bold; cursor: pointer; backdrop-filter: blur(4px); outline: none;">🔄 Putar Layar</button>
+    <button type="button" onclick="tutupModalVideo()" title="Tutup Video" style="position: absolute; top: 16px; right: 16px; z-index: 1000000; background: rgba(255, 255, 255, 0.2); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.4); border-radius: 50%; width: 32px; height: 32px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(4px); outline: none;">✖</button>
+    <div style="width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 10px; box-sizing: border-box;">
+      <video id="player-video-modal" controls playsinline webkit-playsinline style="width: 100%; height: 100%; max-width: 100vw; max-height: 90vh; object-fit: contain; background: #000000;"></video>
+    </div>
+  </div>
+
+  <!-- Skrip JavaScript Pendukung -->
+  <script>
+    var daftarPengumuman = [];
+    let isProgkerLoaded = false;
+    var isVideoRotated = false;
+
+    function escapeHTML(text) {
+      if (!text) return '';
+      return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+    }
+
+    function switchTabWarga(target) {
+      const tab = (typeof target === 'string') ? target : target?.dataset?.arg;
+      const panelInfo = document.getElementById('panel-tab-info');
+      const panelRab = document.getElementById('panel-tab-rab');
+      const btnInfo = document.getElementById('btn-tab-info');
+      const btnRab = document.getElementById('btn-tab-rab');
+
+      if (tab === 'info') {
+        if (panelInfo) panelInfo.style.display = 'block';
+        if (panelRab) panelRab.style.display = 'none';
+        if (btnInfo) { btnInfo.style.background = '#0288d1'; btnInfo.style.color = '#ffffff'; }
+        if (btnRab) { btnRab.style.background = '#f1f5f9'; btnRab.style.color = '#64748b'; }
+      } else {
+        if (panelInfo) panelInfo.style.display = 'none';
+        if (panelRab) panelRab.style.display = 'block';
+        if (btnRab) { btnRab.style.background = '#0288d1'; btnRab.style.color = '#ffffff'; }
+        if (btnInfo) { btnInfo.style.background = '#f1f5f9'; btnInfo.style.color = '#64748b'; }
+        
+        if (typeof muatProgkerWarga === 'function') {
+          muatProgkerWarga();
+        }
+      }
+    }
+
+    function muatPengumumanFirebase() {
+      if (typeof window.firebaseRef !== 'function' || !window.db) {
+        setTimeout(muatPengumumanFirebase, 50);
+        return;
+      }
+
+      const pengumumanRef = window.firebaseRef(window.db, "pengumuman");
+      window.firebaseOnValue(pengumumanRef, (snapshot) => {
+        const data = snapshot.val();
+        daftarPengumuman = [];
+
+        if (data) {
+          Object.keys(data).forEach(key => {
+            const item = data[key];
+            var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
+            
+            if (status === 'AKTIF') {
+              var tglRapi = item.tanggal || '';
+              if (tglRapi.includes('T')) {
+                var parts = tglRapi.split('T')[0].split('-');
+                if (parts.length === 3) tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
+              }
+
+              daftarPengumuman.push({
+                tanggal: tglRapi,
+                judul: item.judul || '',
+                detail: item.detail || '',
+                lokasi: item.lokasi || '',
+                foto: item.foto || ''
+              });
+            }
+          });
+        }
+
+        daftarPengumuman.sort((a, b) => {
+          var partsA = a.tanggal.split('/');
+          var partsB = b.tanggal.split('/');
+          var dateA = partsA.length === 3 ? new Date(partsA[2], partsA[1] - 1, partsA[0]) : new Date(0);
+          var dateB = partsB.length === 3 ? new Date(partsB[2], partsB[1] - 1, partsB[0]) : new Date(0);
+          return dateB - dateA;
+        });
+
+        renderPengumumanUI();
+      });
+    }
+
+    function renderPengumumanUI() {
+      var container = document.getElementById('list-pengumuman');
+      if (!container) return;
+
+      if (!daftarPengumuman || daftarPengumuman.length === 0) {
+        container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px; margin-top:30px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
+        return;
+      }
+
+      let htmlKolektif = '';
+      daftarPengumuman.forEach(function(info) {
+        var htmlFoto = '';
+        if (info.foto) {
+          var urlFoto = info.foto.toLowerCase();
+          if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+            htmlFoto = `
+              <div onclick="bukaModalVideo('${info.foto}')" style="position: relative; width: 100%; max-height: 200px; border-radius: 6px; overflow: hidden; margin-top: 8px; background: #000; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <video src="${info.foto}" preload="metadata" playsinline style="width: 100%; max-height: 200px; object-fit: cover; opacity: 0.8; pointer-events: none;"></video>
+                <div style="position: absolute; background: rgba(239, 68, 68, 0.9); color: #fff; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">▶</div>
+              </div>`;
+          } else {
+            htmlFoto = `<img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}')" onError="this.style.display='none'">`;
+          }
+        }
+
+        htmlKolektif += `
+          <div class="card-info">
+            ${info.tanggal ? `<div class="tgl">📅 ${escapeHTML(info.tanggal)}</div>` : ''}
+            <div class="judul">${escapeHTML(info.judul)}</div>
+            <div class="detail">${escapeHTML(info.detail)}</div>
+            ${htmlFoto}
+          </div>
+        `;
+      });
+      container.innerHTML = htmlKolektif;
+    }
+
+    function muatProgkerWarga() {
+      const tbody = document.getElementById('tabel-progker-warga');
+      if (!tbody || isProgkerLoaded) return;
+
+      const progkerRef = window.firebaseRef(window.db, "progker_rab");
+      window.firebaseOnValue(progkerRef, (snapshot) => {
+        isProgkerLoaded = true;
+        const dataObj = snapshot.val();
+        let dataArray = [];
+
+        if (dataObj) {
+          Object.keys(dataObj).forEach(key => {
+            dataArray.push(dataObj[key]);
+          });
+        }
+
+        if (dataArray.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
+          return;
+        }
+
+        var totalRabPerencanaan = 0;
+        var totalRealisasiSelesai = 0;
+        var html = '';
+
+        dataArray.forEach(item => {
+          var angPlan = Number(item.Anggaran || item.anggaran || item.anggaran_disetujui || item.nominal || 0);
+          var angRealisasi = Number(item.Realisasi || item.realisasi || 0);
+          var statusRaw = String(item.Status || item.status || 'Perencanaan').trim();
+          var statusLower = statusRaw.toLowerCase();
+          var namaKegiatan = item.Nama_Kegiatan || item.kegiatan || 'Kegiatan RT';
+          var namaDivisi = item.Divisi || item.divisi || 'Umum';
+          var detailProg = item.Detail || item.detail || '';
+
+          totalRabPerencanaan += angPlan;
+          if (statusLower === 'selesai') {
+            totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
+          }
+
+          var badgeDana = '';
+          var infoTambahanHTML = '';
+
+          if (statusLower === 'selesai') {
+            badgeDana = '<span style="background:#e5e7eb; color:#374151; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">⚪ Dana Telah Direalisasikan</span>';
+            infoTambahanHTML = `<div style="font-size:10px; color:#059669; font-weight:bold;">Realisasi: Rp ${(angRealisasi > 0 ? angRealisasi : angPlan).toLocaleString('id-ID')}</div>`;
+          } else if (statusLower === 'berjalan') {
+            badgeDana = '<span style="background:#d1fae5; color:#065f46; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟢 Dana Siap</span>';
+            infoTambahanHTML = `<div style="font-size:10px; color:#10b981; font-weight:bold;">Dana Siap Direalisasikan</div>`;
+          } else if (statusLower === 'disetujui') {
+            badgeDana = '<span style="background:#eff6ff; color:#1d4ed8; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🔵 Dana Terkumpul Sebagian</span>';
+            infoTambahanHTML = `<div style="font-size:10px; color:#2563eb; font-weight:bold;">Dalam tahap pemenuhan dana</div>`;
+          } else {
+            badgeDana = '<span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-weight:bold; font-size:9.5px;">🟡 Cari Dana</span>';
+            infoTambahanHTML = `<div style="font-size:10px; color:#d97706; font-weight:bold;">Proses Penggalangan Dana</div>`;
+          }
+
+          var badgeColor = '#eab308';
+          if (statusLower === 'disetujui') badgeColor = '#3b82f6';
+          else if (statusLower === 'berjalan') badgeColor = '#10b981';
+          else if (statusLower === 'selesai') badgeColor = '#6b7280';
+
+          var badgeProgker = `<span style="background:${badgeColor}; color:white; padding:2px 6px; border-radius:10px; font-size:9px; font-weight:bold; white-space: nowrap;">${escapeHTML(statusRaw)}</span>`;
+
+          html += `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px 4px; vertical-align: top; width: 28%;">
+                <strong style="color:#1e293b; display:block; font-size: 10px;">${escapeHTML(namaKegiatan)}</strong>
+                <span style="font-size:9px; color:#64748b; display:block;">🏷️ ${escapeHTML(namaDivisi)}</span>
+                ${detailProg ? `<span style="font-size:8.5px; color:#475569; font-style:italic; display:block; margin-top:2px;">📝 ${escapeHTML(detailProg)}</span>` : ''}
+              </td>
+              <td style="padding: 6px 4px; vertical-align: top; width: 28%;">
+                <div style="font-size: 10px; font-weight: bold; color:#0f172a;">Rp ${angPlan.toLocaleString('id-ID')}</div>
+                ${infoTambahanHTML}
+              </td>
+              <td style="padding: 6px 4px; text-align: center; vertical-align: top; width: 22%;">
+                ${badgeDana}
+              </td>
+              <td style="padding: 6px 4px; text-align: center; vertical-align: top; width: 22%;">
+                ${badgeProgker}
+              </td>
+            </tr>
+          `;
+        });
+
+        tbody.innerHTML = html;
+        document.getElementById('warga-total-rab').innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
+        document.getElementById('warga-total-realisasi').innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
+      }, (error) => {
+        console.error("Gagal memuat data RAB:", error);
+        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:red;">Gagal memuat data RAB.</td></tr>';
+      });
+    }
+
+    // Fungsi Pengelolaan Video & Foto Besar
+    function toggleRotasiVideo() {
+      var player = document.getElementById('player-video-modal');
+      var btnRotate = document.getElementById('btn-rotate-video');
+      if (player) {
+        isVideoRotated = !isVideoRotated;
+        if (isVideoRotated) {
+          player.classList.add('video-rotated');
+          if (btnRotate) btnRotate.innerHTML = '🔄 Kembalikan';
+        } else {
+          player.classList.remove('video-rotated');
+          if (btnRotate) btnRotate.innerHTML = '🔄 Putar Layar';
+        }
+      }
+    }
+
+    function bukaModalVideo(videoUrl) {
+      var modal = document.getElementById('modal-video-popup');
+      var player = document.getElementById('player-video-modal');
+      var btnRotate = document.getElementById('btn-rotate-video');
+
+      if (modal && player) {
+        let finalVideoUrl = videoUrl;
+        if (videoUrl && videoUrl.includes('archive.org') && !videoUrl.includes('/download/')) {
+          let parts = videoUrl.split('/');
+          let detailsIndex = parts.indexOf('details');
+          if (detailsIndex !== -1 && parts[detailsIndex + 1]) {
+            let identifier = parts[detailsIndex + 1];
+            finalVideoUrl = `https://archive.org/download/${identifier}/${identifier}.webm`;
+          }
+        }
+        player.src = finalVideoUrl;
+        modal.style.display = 'flex';
+        player.onloadedmetadata = function() {
+          if (btnRotate) {
+            btnRotate.style.display = (player.videoWidth > player.videoHeight) ? 'block' : 'none';
+          }
+        };
+        player.load();
+        player.play().catch(e => console.log("Autoplay dicegah:", e));
+      }
+    }
+
+    function tutupModalVideo() {
+      var modal = document.getElementById('modal-video-popup');
+      var player = document.getElementById('player-video-modal');
+      isVideoRotated = false;
+      if (player) {
+        player.classList.remove('video-rotated');
+        player.pause();
+        player.currentTime = 0;
+        player.src = '';
+      }
+      if (modal) modal.style.display = 'none';
+    }
+
+    function bukaFotoBesar(urlFoto) {
+      const modalFoto = document.getElementById('modal-foto');
+      const imgPreview = document.getElementById('foto-preview');
+      if (modalFoto && imgPreview) {
+        imgPreview.src = urlFoto;
+        modalFoto.style.display = 'flex';
+      }
+    }
+
+    function tutupFotoBesar() {
+      const modalFoto = document.getElementById('modal-foto');
+      if (modalFoto) modalFoto.style.display = 'none';
+    }
+  </script>
+
+  <!-- Inisialisasi Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+    if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.FIREBASE) {
+      const app = initializeApp(RT05_CONFIG.FIREBASE);
+      const db = getDatabase(app);
+      window.db = db;
+      window.firebaseRef = ref;
+      window.firebaseOnValue = onValue;
+      
+      muatPengumumanFirebase();
+    } else {
+      console.error("Konfigurasi RT05_CONFIG.FIREBASE belum dimuat dari setting.js!");
+    }
+  </script>
+</body>
+</html>
