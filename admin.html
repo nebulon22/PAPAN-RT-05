@@ -422,7 +422,7 @@
     
 </div>
 
- <!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
+<!-- MODAL 1: Form Tambah/Edit Lokasi Peta -->
 <div id="modal-form" class="modal-bg" onclick="bukaTutupLuarForm(event)">
   <div class="modal-content">
     <div class="modal-header">
@@ -432,9 +432,28 @@
     <form id="dataForm">
       <input type="hidden" name="pin" id="inputPinForm">
       
+      <!-- 1. Kategori Bangunan (Dropdown Utama di Atas) -->
       <div class="form-group">
-        <label for="inputNama">Nama / No. Rumah / Tempat:</label>
-        <input type="text" name="nama" id="inputNama" required>
+        <label for="inputKategori">Kategori Bangunan:</label>
+        <select name="kategori" id="inputKategori" onchange="sesuaikanFormKategori()">
+          <option value="Rumah">🏠 Rumah Warga</option>
+          <option value="Kost">🛏️ Kost / Kontrakan</option>
+          <option value="Fasum">🏛️ Fasum / Pos / Tempat Ibadah</option>
+          <option value="Kuliner">🍽️ Kuliner / Warung</option>
+          <option value="Minimarket">🏪 Minimarket / Toko</option>
+        </select>
+      </div>
+
+      <!-- 2. Kolom Terpisah: No. Rumah / Blok / Nama Tempat -->
+      <div class="form-group">
+        <label for="inputNoRumah">No. Rumah / Blok / Nama Tempat:</label>
+        <input type="text" name="noRumah" id="inputNoRumah" placeholder="Contoh: No 06 / Pos Satpam RT 05" required>
+      </div>
+
+      <!-- 3. Kolom Terpisah: Nama Warga / Pemilik (Opsional untuk Fasum) -->
+      <div class="form-group" id="groupNamaWarga">
+        <label for="inputNamaWarga">Nama Kepala Keluarga / Pemilik:</label>
+        <input type="text" name="namaWarga" id="inputNamaWarga" placeholder="Contoh: Bejo Nurmantyo">
       </div>
       
       <div style="display: flex; gap: 10px;">
@@ -446,17 +465,6 @@
           <label for="inputLng">Longitude:</label>
           <input type="text" name="lng" id="inputLng" required>
         </div>
-      </div>
-      
-      <div class="form-group">
-        <label for="inputKategori">Kategori:</label>
-        <select name="kategori" id="inputKategori">
-          <option value="Rumah">🏠 Rumah</option>
-          <option value="Kost">🛏️ Kost</option>
-          <option value="Fasum">🏛️ Fasum</option>
-          <option value="Kuliner">🍽️ Kuliner</option>
-          <option value="Minimarket">🏪 Minimarket</option>
-        </select>
       </div>
       
       <div class="form-group">
@@ -472,7 +480,7 @@
         <input type="url" name="foto" id="inputFoto">
       </div>
       
-      <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan ke Google Sheet</button>
+      <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan Data Lokasi</button>
     </form>
   </div>
 </div>
@@ -870,6 +878,7 @@
     </div>
   </div>
 
+         <!-- PANEL EDIT DATA LOKASI -->
 <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
   <div class="modal-content" style="max-width: 400px; width: 90%;">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
@@ -880,7 +889,19 @@
 <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
   <input type="hidden" id="editWargaId">
 
-  <!-- Bungkus bagian ini agar otomatis hilang jika Fasum/Kuliner/Minimarket -->
+  <!-- 🌟 Tambahkan Pilihan Kategori Bangunan di Modal Edit -->
+  <div class="form-group" style="margin-bottom: 10px;">
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">Kategori Bangunan:</label>
+    <select id="editWargaKategori" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" onchange="toggleFieldKategoriEdit()">
+      <option value="Rumah">🏠 Rumah Warga</option>
+      <option value="Kost">🛏️ Kost / Kontrakan</option>
+      <option value="Fasum">🏛️ Fasum / Pos / Tempat Ibadah</option>
+      <option value="Kuliner">🍽️ Kuliner / Warung</option>
+      <option value="Minimarket">🏪 Minimarket / Toko</option>
+    </select>
+  </div>
+
+  <!-- Bungkus bagian keluarga agar otomatis tersembunyi jika bukan Rumah/Kost -->
   <div id="groupFieldKeluarga">
     <div class="form-group" style="margin-bottom: 10px;">
       <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
@@ -893,9 +914,16 @@
     </div>
   </div>
 
+<!-- No. Rumah / Blok (Opsional) -->
   <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Titik Denah / Nama Tempat:</label>
-    <input type="text" id="editWargaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah / Blok (Opsional):</label>
+    <input type="text" id="editWargaNoRumah" placeholder="Contoh: No 10 / Blok B" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+  </div>
+
+  <!-- Nama Tempat / Keterangan / Nama Warga (Opsional) -->
+  <div class="form-group" style="margin-bottom: 10px;">
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Tempat / Keterangan (Opsional):</label>
+    <input type="text" id="editWargaNamaTempat" placeholder="Contoh: Rumah Ketua RW / Warung Bu Ani" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
   </div>
 
 <!-- Input File Tanpa Tombol Upload Otomatis -->
@@ -926,6 +954,7 @@
     </button>
   </div>
 </form>
+    
   </div>
 </div>
 
@@ -2037,6 +2066,33 @@ window.simpanSemuaPeminjamanAdmin = async function() {
   }
 };
 
+    function sesuaikanFormKategori() {
+  let kategori = document.getElementById('inputKategori').value;
+  let groupNama = document.getElementById('groupNamaWarga');
+  
+  if (kategori === 'Fasum') {
+    if (groupNama) groupNama.style.display = 'none';
+  } else {
+    if (groupNama) groupNama.style.display = 'block';
+  }
+}
+
+    function toggleFieldKategoriEdit() {
+  const kategoriSelect = document.getElementById('editWargaKategori');
+  const groupKeluarga = document.getElementById('groupFieldKeluarga');
+  
+  if (!kategoriSelect || !groupKeluarga) return;
+
+  const kategoriVal = kategoriSelect.value.toLowerCase();
+  
+  // Jika kategori berupa Fasum, Kuliner, atau Minimarket, sembunyikan form keluarga
+  if (kategoriVal === 'fasum' || kategoriVal === 'kuliner' || kategoriVal === 'minimarket') {
+    groupKeluarga.style.display = 'none';
+  } else {
+    groupKeluarga.style.display = 'block';
+  }
+}
+
     function bukaModalKelolaWarga() {
       const modal = document.getElementById('modal-kelola-warga');
       if (modal) {
@@ -2591,11 +2647,11 @@ function cariDetailKeluargaAdmin() {
 
     let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" /></div>` : '';
 
-    container.innerHTML = `
+container.innerHTML = `
         <div style="font-size: 12px; color: #334155; line-height: 1.6;">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
                 <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
-                <button type="button" onclick='bukaModalEditWargaAdminById("${match.id}")' style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+                <button type="button" onclick="bukaModalEditWargaAdminById('${match.id}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
                     ✏️ Edit
                 </button>
             </div>
@@ -2614,6 +2670,24 @@ function bukaModalEditWargaAdminById(id) {
     const inputId = document.getElementById('editWargaId');
     if (inputId) inputId.value = data.id;
 
+    // 🌟 1. Set nilai dropdown kategori bangunan secara aman (case-insensitive)
+    const selectKategori = document.getElementById('editWargaKategori');
+    if (selectKategori) {
+        const dbType = String(data.type || 'Rumah').toLowerCase();
+        
+        let matched = false;
+        for (let option of selectKategori.options) {
+            if (option.value.toLowerCase() === dbType) {
+                selectKategori.value = option.value;
+                matched = true;
+                break;
+            }
+        }
+        if (!matched) {
+            selectKategori.value = 'Rumah'; 
+        }
+    }
+
     // Cek kategori tempat (Fasum, Kuliner, Minimarket, dll)
     const kategori = String(data.type || '').toLowerCase();
     const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
@@ -2624,10 +2698,13 @@ function bukaModalEditWargaAdminById(id) {
         groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
     }
 
-    // Set nilai input
+    // Set nilai input keluarga & pisahkan No Rumah dengan Nama Tempat
     document.getElementById('editWargaNama').value = data.kepalaKeluarga || '';
     document.getElementById('editWargaAnggota').value = data.anggotaKeluarga || '';
-    document.getElementById('editWargaRumah').value = data.nama || '';
+    
+    // Mengambil nilai ke dua input terpisah (noRumah & namaTempat)
+    document.getElementById('editWargaNoRumah').value = data.noRumah || '';
+    document.getElementById('editWargaNamaTempat').value = data.namaTempat || data.nama || '';
     
     // Gunakan satu input URL foto yang bersih (hapus duplikasi)
     const inputFoto = document.getElementById('editWargaFoto');
@@ -2786,10 +2863,11 @@ async function simpanPerubahanWarga(e) {
     if (e) e.preventDefault();
     
     const idWarga = document.getElementById("editWargaId").value;
-    const rumahBaru = document.getElementById("editWargaRumah").value.trim();
+    const noRumahBaru = document.getElementById("editWargaNoRumah").value.trim();
+    const namaTempatBaru = document.getElementById("editWargaNamaTempat").value.trim();
+    const kategoriBaru = document.getElementById("editWargaKategori").value;
     const fotoBaru = document.getElementById("editWargaFoto").value.trim();
     
-    // Ambil nilai kepala & anggota keluarga (jika elemennya disembunyikan, biarkan kosong)
     const groupKeluarga = document.getElementById("groupFieldKeluarga");
     const isKeluargaVisible = groupKeluarga && groupKeluarga.style.display !== 'none';
     
@@ -2797,8 +2875,14 @@ async function simpanPerubahanWarga(e) {
     const anggotaBaru = isKeluargaVisible ? document.getElementById("editWargaAnggota").value.trim() : '';
     const btn = document.getElementById("btnSimpanEditWarga");
 
-    if (!rumahBaru || !idWarga) {
-        alert("Nama tempat / Titik denah atau ID tidak ditemukan!");
+    // Validasi: Minimal salah satu diisi (No Rumah atau Nama Tempat)
+    if (!noRumahBaru && !namaTempatBaru) {
+        alert("Mohon isi minimal salah satu: No. Rumah / Blok atau Nama Tempat / Keterangan!");
+        return;
+    }
+
+    if (!idWarga) {
+        alert("ID data lokasi tidak ditemukan!");
         return;
     }
 
@@ -2807,15 +2891,18 @@ async function simpanPerubahanWarga(e) {
     try {
         const updateRef = window.firebaseRef(window.db, 'peta_warga/' + idWarga);
         await window.firebaseUpdate(updateRef, {
-            Nama: rumahBaru,
+            noRumah: noRumahBaru,       // Node baru khusus nomor rumah/blok
+            namaTempat: namaTempatBaru, // Node baru khusus nama tempat
+            Nama: namaTempatBaru ? `${noRumahBaru} - ${namaTempatBaru}`.replace(/^[-\s]+|[-\s]+$/g, '') : noRumahBaru, // Gabungan rapi untuk label utama peta
+            Type: kategoriBaru,         // Kategori bangunan
             kepalaKeluarga: namaBaru,
             anggotaKeluarga: anggotaBaru,
             foto: fotoBaru
         });
 
-        alert("✅ Data lokasi berhasil diperbarui!");
+        alert("✅ Data lokasi berhasil diperbarui ke Firebase!");
         tutupModalEditWarga();
-        // muatSemuaDataAdmin(); // aktifkan jika ingin langsung refresh data di background
+        if (typeof muatSemuaDataAdmin === 'function') muatSemuaDataAdmin();
     } catch (err) {
         alert("❌ Gagal memperbarui data: " + err.message);
     } finally {
@@ -3808,7 +3895,7 @@ function resetFormPengumuman() {
     window.currentEditPengumumanId = null;
 }
 
-    // ==========================================
+// ==========================================
     // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN
     // ==========================================
     function cariLokasiPengumuman(keyword) {
@@ -3821,9 +3908,14 @@ function resetFormPengumuman() {
       var query = keyword.toLowerCase();
       var sumberData = [];
 
-      if (typeof globalDataRumah !== 'undefined' && Array.isArray(globalDataRumah) && globalDataRumah.length > 0) {
-        sumberData = globalDataRumah.map(function(row) {
-          return { nama: row[0] || '', lat: row[1] || '', lng: row[2] || '' };
+      // Diperbarui menggunakan globalDataWarga yang terpadu
+      if (typeof globalDataWarga !== 'undefined' && Array.isArray(globalDataWarga) && globalDataWarga.length > 0) {
+        sumberData = globalDataWarga.map(function(item) {
+          let label = item.nama || '';
+          if (item.kepalaKeluarga) {
+            label += ` (${item.kepalaKeluarga})`;
+          }
+          return { nama: label, lat: item.lat || '', lng: item.lng || '' };
         });
       }
 

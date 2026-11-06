@@ -597,25 +597,27 @@
         </button>
       </div>
 
-      <div class="filter-row">
-        <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" data-click="bukaModalRiwayatJimpitan">
-          🪙 Rekap Jimpitan
-        </button>
+<div class="filter-row">
+  <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" onclick="bukaModalRiwayatJimpitan()">
+    🪙 Rekap Jimpitan
+  </button>
 
-        <div style="flex: 1; position: relative;">
-          <button type="button" id="btn-toggle-denah" data-click="toggleDenahMenu" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
-            🗺️ Denah RT 05
-          </button>
+<div style="flex: 1; position: relative;">
+  <!-- Tombol Utama Denah -->
+  <button type="button" id="btn-toggle-denah" data-click="toggleDenahMenu" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
+    🗺️ Denah RT 05
+  </button>
 
-          <div id="denah-filter-popup" style="display: none; position: absolute; top: 100%; left: 0; width: 100%; margin-top: 6px; grid-template-columns: 1fr 1fr; gap: 6px; background: rgba(15, 23, 42, 0.9); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px; border-radius: 14px; box-shadow: 0 10px 25px rgba(0,0,0,0.4); border: 1px solid rgba(255, 255, 255, 0.15); z-index: 100;">
-            <button class="btn-filter active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua</button>
-            <button class="btn-filter" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%;">🏪 Minimarket</button>
-            <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%;">🛏️ Kost</button>
-            <button class="btn-filter" data-click="pilihFilterDenah" data-arg="fasum" style="width: 100%;">🏛️ Fasum</button>
-            <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kuliner" style="width: 100%;">🍽️ Kuliner</button>
-          </div>
-        </div>
-      </div>
+  <!-- Popup Menu Filter yang Diposisikan di Tengah Layar -->
+  <div id="denah-filter-popup" style="display: none; position: fixed; top: 180px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 380px; display: none; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(4px); padding: 14px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255, 255, 255, 0.2); z-index: 9999; box-sizing: border-box;">
+    <button class="btn-filter active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua Lokasi</button>
+    <button class="btn-filter" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%; justify-content: center;">🏪 Minimarket</button>
+    <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%; justify-content: center;">🛏️ Kost</button>
+    <button class="btn-filter" data-click="pilihFilterDenah" data-arg="fasum" style="width: 100%; justify-content: center;">🏛️ Fasum</button>
+    <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kuliner" style="width: 100%; justify-content: center;">🍽️ Kuliner</button>
+  </div>
+</div>
+</div>
     </div>
   </div>
 
@@ -1268,10 +1270,8 @@ function muatDataPetaWarga() {
     return;
   }
 
-// Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
- if (typeof markerGroup === 'undefined' || !markerGroup) {
-    // 🌟 Tambahkan angka radius di dalam kurung (misal: 30 atau 40 pixel)
-    // Semakin kecil angkanya, titik-titik harus benar-benar berdekatan baru digabung.
+  // Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
+  if (typeof markerGroup === 'undefined' || !markerGroup) {
     window.markerGroup = L.markerClusterGroup({
       maxClusterRadius: 30 
     });
@@ -1301,12 +1301,20 @@ function muatDataPetaWarga() {
     var index = 0;
     var chunkSize = 20;
 
-function prosesChunk() {
+    // Fungsi helper sensor nama depan warga (sesuai permintaan sensor)
+    function sensorNamaDepan(namaAsli) {
+      if (!namaAsli) return '';
+      return namaAsli.split(' ').map(kata => {
+        if (kata.length <= 1) return kata;
+        return kata.charAt(0) + '*'.repeat(kata.length - 1);
+      }).join(' ');
+    }
+
+    function prosesChunk() {
       var batas = Math.min(index + chunkSize, baris.length);
       
       for (let i = index; i < batas; i++) {
         var kolom = baris[i];
-
         var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
 
         if (namaAsli !== '') {
@@ -1321,8 +1329,6 @@ function prosesChunk() {
             : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
 
           var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
-          
-          // Diambil langsung dari variabel 'kolom' (bukan childSnap)
           var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
           
           var item = {
@@ -1336,9 +1342,14 @@ function prosesChunk() {
 
           if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
+          // 🌟 Terapkan sensor nama depan di sini, biarkan nomor rumah/format lain tetap jelas
+          var namaTersensor = sensorNamaDepan(item.nameAsli);
+
           var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
           var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
-          var popupContent = `<b>${item.name}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+          
+          // Sesuaikan tampilan pop-up dengan nama yang sudah disensor bagian depannya
+          var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
           
           var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
 
@@ -1386,7 +1397,6 @@ function prosesChunk() {
     console.error("Gagal memuat peta warga dari Firebase RTDB:", error);
   });
 }
-
 
 window.jalankanPencarianPeta = function() {
   var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
