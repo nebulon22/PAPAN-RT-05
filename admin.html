@@ -444,18 +444,11 @@
         </select>
       </div>
 
-      <!-- 2. No. Rumah / Blok (DIUBAH: Hapus atribut required agar opsional) -->
-      <div class="form-group">
-        <label for="inputNoRumah">No. Rumah / Blok / Nama Tempat (Opsional):</label>
-        <input type="text" name="noRumah" id="inputNoRumah" placeholder="Contoh: No 06 / Pos Satpam RT 05">
+      <!-- 🌟 CONTAINER DINAMIS: Akan berubah isinya tergantung kategori -->
+      <div id="containerFormDinamis">
+        <!-- Diisi otomatis oleh fungsi sesuaikanFormKategori() -->
       </div>
 
-      <!-- 3. Nama Warga / Pemilik (Opsional untuk semua kategori) -->
-      <div class="form-group" id="groupNamaWarga">
-        <label for="inputNamaWarga">Nama Kepala Keluarga / Pemilik (Opsional):</label>
-        <input type="text" name="namaWarga" id="inputNamaWarga" placeholder="Contoh: Bejo Nurmantyo">
-      </div>
-      
       <div style="display: flex; gap: 10px;">
         <div class="form-group" style="flex: 1;">
           <label for="inputLat">Latitude:</label>
@@ -476,8 +469,8 @@
       </div>
       
       <div class="form-group">
-        <label for="inputFoto">URL Foto Depan (Opsional):</label>
-        <input type="url" name="foto" id="inputFoto">
+        <label for="inputFoto">URL Foto Depan / Lokasi (Opsional):</label>
+        <input type="url" name="foto" id="inputFoto" placeholder="https://...">
       </div>
       
       <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan Data Lokasi</button>
@@ -880,7 +873,6 @@
 
          <!-- PANEL EDIT DATA LOKASI -->
 <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
-  <!-- Tambahkan max-height, overflow-y, dan padding bawah pada style di bawah ini -->
   <div class="modal-content" style="max-width: 400px; width: 90%; max-height: 85vh; overflow-y: auto; padding-bottom: 20px;">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
       <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Lokasi / Warga</h3>
@@ -890,7 +882,7 @@
 <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
   <input type="hidden" id="editWargaId">
 
-  <!-- 🌟 Pilihan Kategori Bangunan -->
+  <!-- Kategori Bangunan -->
   <div class="form-group" style="margin-bottom: 10px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">Kategori Bangunan:</label>
     <select id="editWargaKategori" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" onchange="toggleFieldKategoriEdit()">
@@ -902,32 +894,12 @@
     </select>
   </div>
 
-  <!-- Bungkus bagian keluarga -->
-  <div id="groupFieldKeluarga">
-    <div class="form-group" style="margin-bottom: 10px;">
-      <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
-      <input type="text" id="editWargaNama" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-    </div>
-
-    <div class="form-group" style="margin-bottom: 10px;">
-      <label style="font-size: 12px; font-weight: bold; color: #374151;">Anggota Keluarga (pisahkan dengan koma):</label>
-      <textarea id="editWargaAnggota" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
-    </div>
+  <!-- 🌟 CONTAINER DINAMIS EDIT -->
+  <div id="containerEditDinamis">
+    <!-- Diisi otomatis oleh fungsi toggleFieldKategoriEdit() -->
   </div>
 
-  <!-- No. Rumah / Blok -->
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah / Blok (Opsional):</label>
-    <input type="text" id="editWargaNoRumah" placeholder="Contoh: No 10 / Blok B" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-  </div>
-
-  <!-- Nama Tempat / Keterangan -->
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Tempat / Keterangan (Opsional):</label>
-    <input type="text" id="editWargaNamaTempat" placeholder="Contoh: Rumah Ketua RW / Warung Bu Ani" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-  </div>
-
-  <!-- 📂 Pilih File Baru (Hanya menampung objek file di memori, BELUM di-upload) -->
+  <!-- Pilih File Baru -->
   <div class="form-group" style="margin-bottom: 12px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
     <div style="margin-top: 4px;">
@@ -936,9 +908,9 @@
     <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
   </div>
 
-  <!-- 🔗 Kolom URL Foto (ID unik: editWargaFotoURL) -->
+  <!-- Kolom URL Foto -->
   <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media (Hasil Copy-Paste / Otomatis):</label>
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media:</label>
     <input type="text" id="editWargaFotoURL" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
   </div>
 
@@ -951,7 +923,6 @@
     </button>
   </div>
 </form>
-    
   </div>
 </div>
 
