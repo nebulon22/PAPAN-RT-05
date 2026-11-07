@@ -2,6 +2,9 @@
 
 const RT05_CONFIG = {
     GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbz5RqSEYxjwq_wr3ItVkLRexeGWjKLUtxmhVdqbm7kIFdngulFWdBCLU0xqBOichmMQuw/exec",
+    // 🌟 Tambahkan endpoint Cloudflare Worker di sini
+    PETA_PROXY_URL: "https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga",
+    UPLOADER_URL: "https://rt05-uploader.deny220291.workers.dev/",
     FIREBASE: {
         apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
         authDomain: "papan05-21a56.firebaseapp.com",
