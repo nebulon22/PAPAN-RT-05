@@ -4003,14 +4003,22 @@ function resetFormPengumuman() {
       var query = keyword.toLowerCase();
       var sumberData = [];
 
-      // Diperbarui menggunakan globalDataWarga yang terpadu
-      if (typeof globalDataWarga !== 'undefined' && Array.isArray(globalDataWarga) && globalDataWarga.length > 0) {
-        sumberData = globalDataWarga.map(function(item) {
-          let label = item.nama || '';
-          if (item.kepalaKeluarga) {
-            label += ` (${item.kepalaKeluarga})`;
+      // Diperbarui agar lebih fleksibel mendeteksi data warga
+      var rawData = (typeof globalDataWarga !== 'undefined' && Array.isArray(globalDataWarga) && globalDataWarga.length > 0) ? globalDataWarga :
+                    (typeof daftarPin !== 'undefined' && Array.isArray(daftarPin) && daftarPin.length > 0) ? daftarPin : [];
+
+      if (rawData.length > 0) {
+        sumberData = rawData.map(function(item) {
+          let label = item.namaRaw || item.nama || item.name || '';
+          let kepalaKeluarga = item.kepalaKeluarga || '';
+          if (kepalaKeluarga && !label.toLowerCase().includes(kepalaKeluarga.toLowerCase())) {
+            label += ` (${kepalaKeluarga})`;
           }
-          return { nama: label, lat: item.lat || '', lng: item.lng || '' };
+          return { 
+            nama: label, 
+            lat: item.lat || '', 
+            lng: item.lng || '' 
+          };
         });
       }
 
