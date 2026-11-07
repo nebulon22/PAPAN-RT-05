@@ -2379,12 +2379,16 @@ window.exportWargaBaruToCSV = async function() {
   }
 };
 
-  // 1. Fungsi Unduh Data Sensus ke Excel (CSV) dengan Ringkasan Total (1 Node: peta_warga)
+async function ambilDataWargaWorker() {
+    const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+    return await response.json();
+}
+
 async function exportSensusToCSV() {
     try {
-        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'peta_warga'));
-        if (!snapshot.exists()) {
-            alert("Tidak ada data warga di database.");
+        const dataObj = await ambilDataWargaWorker();
+        if (!dataObj) {
+            alert("Tidak ada data warga dari server.");
             return;
         }
 
@@ -2392,17 +2396,15 @@ async function exportSensusToCSV() {
         let totalJiwa = 0;
         let rowsData = [];
 
-        snapshot.forEach(child => {
-            const data = child.val();
-            // Hanya ambil data yang memiliki informasi kepala keluarga
+        Object.keys(dataObj).forEach(key => {
+            const data = dataObj[key];
             if (!data || !data.kepalaKeluarga || String(data.kepalaKeluarga).trim() === '') return;
 
             totalKK++;
             const namaRumah = (data.Nama || data.namaRumah || '-').replace(/"/g, '""');
             const kepala = (data.kepalaKeluarga || '-').replace(/"/g, '""');
-            const rawAnggota = data.anggotaKeluarga || '';
+            const rawAnggota = data.anggotaKeluarga || data.Anggota || '';
             
-            // Hitung jumlah jiwa (1 untuk kepala keluarga + jumlah anggota berdasarkan pemisah koma)
             let jumlahAnggotaKeluarga = 1;
             if (rawAnggota.trim() !== '') {
                 const listAnggota = rawAnggota.split(',').filter(item => item.trim() !== '');
@@ -2415,7 +2417,7 @@ async function exportSensusToCSV() {
         });
 
         if (totalKK === 0) {
-            alert("Belum ada data keluarga/sensus yang diisi pada peta warga.");
+            alert("Belum ada data keluarga/sensus yang diisi.");
             return;
         }
 
@@ -2423,7 +2425,6 @@ async function exportSensusToCSV() {
         csvContent += `"LAPORAN DATA KELUARGA & SENSUS WARGA RT 05 KAYEN"\n`;
         csvContent += `"Total Keluarga (KK): ${totalKK}";"Total Jiwa / Warga: ${totalJiwa}"\n\n`;
         csvContent += `"Nama Rumah / Lokasi";"Nama Kepala Keluarga";"Anggota Keluarga";"Jumlah Jiwa"\n`;
-
         csvContent += rowsData.join("\n") + "\n\n";
         csvContent += `"TOTAL Keseluruhan";"";"Total KK: ${totalKK}";"Total Jiwa: ${totalJiwa}"\n`;
 
@@ -2440,11 +2441,10 @@ async function exportSensusToCSV() {
     }
 }
 
-// 2. Fungsi Cetak / Simpan ke PDF dengan Ringkasan Total (1 Node: peta_warga)
 async function cetakLaporanSensus() {
     try {
-        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'peta_warga'));
-        if (!snapshot.exists()) {
+        const dataObj = await ambilDataWargaWorker();
+        if (!dataObj) {
             alert("Tidak ada data warga untuk dicetak.");
             return;
         }
@@ -2453,15 +2453,14 @@ async function cetakLaporanSensus() {
         let totalJiwa = 0;
         let htmlRows = '';
 
-        snapshot.forEach(child => {
-            const data = child.val();
-            // Hanya ambil data yang memiliki informasi kepala keluarga
+        Object.keys(dataObj).forEach(key => {
+            const data = dataObj[key];
             if (!data || !data.kepalaKeluarga || String(data.kepalaKeluarga).trim() === '') return;
 
             totalKK++;
             const namaRumah = data.Nama || data.namaRumah || '-';
             const kepala = data.kepalaKeluarga || '-';
-            const rawAnggota = data.anggotaKeluarga || '';
+            const rawAnggota = data.anggotaKeluarga || data.Anggota || '';
 
             let jumlahAnggotaKeluarga = 1;
             if (rawAnggota.trim() !== '') {
@@ -2471,15 +2470,15 @@ async function cetakLaporanSensus() {
             totalJiwa += jumlahAnggotaKeluarga;
 
             htmlRows += `<tr>
-                <td><b>${namaRumah}</b></td>
-                <td>${kepala}</td>
-                <td>${rawAnggota || '-'}</td>
+                <td><b>${escapeHTML(namaRumah)}</b></td>
+                <td>${escapeHTML(kepala)}</td>
+                <td>${escapeHTML(rawAnggota || '-')}</td>
                 <td style="text-align: center;">${jumlahAnggotaKeluarga} Jiwa</td>
             </tr>`;
         });
 
         if (totalKK === 0) {
-            alert("Belum ada data keluarga/sensus yang diisi pada peta warga.");
+            alert("Belum ada data keluarga/sensus untuk dicetak.");
             return;
         }
 
@@ -2500,7 +2499,7 @@ async function cetakLaporanSensus() {
         
         printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN REKAPITULASI KEPENDUDUKAN</h2>');
         printWindow.document.write(`<div class="subtitle">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}</div>`);
-        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK} KK</div><div>Total Jiwa / Warga: ${totalJiwa} Orang</div></div>`);
+        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK} KK</div><div>Total Jiwa / Warga: ${totalJiual || totalJiwa} Orang</div></div>`);
         
         printWindow.document.write('<table>');
         printWindow.document.write('<thead><tr><th style="width: 22%;">Nama Rumah / Lokasi</th><th style="width: 28%;">Kepala Keluarga</th><th style="width: 38%;">Anggota Keluarga</th><th style="width: 12%; text-align: center;">Jumlah</th></tr></thead>');
@@ -2528,67 +2527,77 @@ let listSemuaRumahAdmin = [];
 // ==========================================
 // 1. MEMUAT DATA ADMIN DARI 1 NODE (peta_warga)
 // ==========================================
-function muatSemuaDataAdmin() {
-    if (!window.db || typeof window.firebaseRef !== 'function') return;
+async function muatSemuaDataAdmin() {
+    try {
+        // 🌟 Mengambil data melalui Cloudflare Worker Proxy
+        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+        const dataObj = await response.json();
 
-    window.firebaseOnValue(window.firebaseRef(window.db, 'peta_warga'), (snapshot) => {
         globalDataWarga = [];
         listSemuaRumahAdmin = [];
         
         let totalKK = 0;
         let totalJiwa = 0;
 
-        if (!snapshot.exists()) {
+        if (!dataObj) {
             document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
             document.getElementById("stat-total-kk").innerText = "0 KK";
             document.getElementById("stat-total-jiwa").innerText = "0 Orang";
             return;
         }
 
-        snapshot.forEach(child => {
-           const val = child.val();
-           if (!val) return;
+        // Iterasi objek data dari Cloudflare Worker
+        Object.keys(dataObj).forEach(key => {
+            const val = dataObj[key];
+            if (!val) return;
 
-           const id = child.key;
-           const namaRumah = val.Nama || val.nama || val.name || '';
-           const lat = val.Lat !== undefined ? val.Lat : (val.lat || '');
-           const lng = val.Lng !== undefined ? val.Lng : (val.lng || '');
-           const hidden = val.Hidden !== undefined ? val.Hidden : (val.hidden || false);
-           const type = val.Type || val.type || val.Kategori || val.kategori || 'Rumah';
-           const foto = val.foto || val.Foto || val['LINK GAMBAR/VIDEO'] || '';
-           
-           const kepalaKeluarga = val.kepalaKeluarga || '';
-           const anggotaKeluarga = val.anggotaKeluarga || val.Anggota || '';
-           const noRumah = val.noRumah || '';
-           const namaTempat = val.namaTempat || '';
+            const id = key;
+            const namaRumah = val.Nama || val.nama || val.name || '';
+            const lat = val.Lat !== undefined ? val.Lat : (val.lat || '');
+            const lng = val.Lng !== undefined ? val.Lng : (val.lng || '');
+            const hidden = val.Hidden !== undefined ? val.Hidden : (val.hidden || false);
+            const type = val.Type || val.type || val.Kategori || val.kategori || 'Rumah';
+            const foto = val.foto || val.Foto || val['LINK GAMBAR/VIDEO'] || '';
+            
+            const kepalaKeluarga = val.kepalaKeluarga || '';
+            const anggotaKeluarga = val.anggotaKeluarga || val.Anggota || '';
+            const noRumah = val.noRumah || '';
+            const namaTempat = val.namaTempat || '';
 
-           globalDataWarga.push({
-             id: id,
-             nama: namaRumah,
-             noRumah: noRumah,
-             namaTempat: namaTempat,
-             lat: lat,
-             lng: lng,
-             hidden: hidden,
-             type: type,
-             foto: foto,
-             kepalaKeluarga: kepalaKeluarga,
-             anggotaKeluarga: anggotaKeluarga
-           });
+            globalDataWarga.push({
+                id: id,
+                nama: namaRumah,
+                noRumah: noRumah,
+                namaTempat: namaTempat,
+                lat: lat,
+                lng: lng,
+                hidden: hidden,
+                type: type,
+                foto: foto,
+                kepalaKeluarga: kepalaKeluarga,
+                anggotaKeluarga: anggotaKeluarga
+            });
 
-           if (namaRumah) listSemuaRumahAdmin.push(namaRumah);
+            if (namaRumah) listSemuaRumahAdmin.push(namaRumah);
 
-           if (kepalaKeluarga.trim() !== '') {
-             totalKK++;
-             let jmlAnggota = anggotaKeluarga ? anggotaKeluarga.split(',').filter(Boolean).length : 0;
-             totalJiwa += (1 + jmlAnggota);
-           }
+            if (kepalaKeluarga.trim() !== '') {
+                totalKK++;
+                let jmlAnggota = anggotaKeluarga ? anggotaKeluarga.split(',').filter(Boolean).length : 0;
+                totalJiwa += (1 + jmlAnggota);
+            }
         });
         
+        // Perbarui elemen UI statistik
         document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
         document.getElementById("stat-total-kk").innerText = totalKK + " KK";
         document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
-    }, { onlyOnce: true });
+
+    } catch (err) {
+        console.error("Gagal memuat data admin dari Cloudflare Worker:", err);
+        document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+        document.getElementById("stat-total-kk").innerText = "0 KK";
+        document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+    }
 }
     
 function prosesDanTampilkanStatistik(resWarga) {
@@ -2733,9 +2742,7 @@ async function cariDetailKeluargaAdmin() {
         // Perbarui juga globalDataWarga agar sinkron jika dibutuhkan fungsi lain
         window.globalDataWarga = daftarWargaWorker;
 
-    } menarik {
-        // tangani error jika jaringan/worker bermasalah
-    } catch (err) {
+    } catch (err) { // ✅ Diperbaiki menjadi catch (err) yang benar
         console.error("Gagal memuat data dari Cloudflare Worker:", err);
         if (container) {
             container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Gagal terhubung ke Cloudflare Worker.</p>`;
