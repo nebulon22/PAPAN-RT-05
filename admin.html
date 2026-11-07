@@ -2852,8 +2852,9 @@ async function prosesUploadSemiManual() {
   statusDiv.innerHTML = "⏳ Sedang mengkompres & mengunggah file ke R2...";
   statusDiv.style.color = "#d97706";
 
-  try {
-    const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+try {
+    // Menggunakan konfigurasi terpusat dari utils.js
+    const workerUrl = RT05_CONFIG.UPLOADER_URL; 
     file = await kompresGambar(file, 1200, 0.8);
 
     const response = await fetch(workerUrl, {
@@ -3291,11 +3292,12 @@ window.simpanLaporanDivisi = async function() {
     }
 
     let file = fileInput.files[0];
-    try {
+   try {
       if (typeof kompresGambar === 'function') {
         file = await kompresGambar(file, 1200, 0.8);
       }
-      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+      // Mengambil URL dari konfigurasi terpusat di utils.js
+      const workerUrl = RT05_CONFIG.UPLOADER_URL; 
       const response = await fetch(workerUrl, {
   method: "POST",
   headers: {
@@ -4043,7 +4045,7 @@ function resetFormPengumuman() {
 
     // 1. Ambil data lengkap beserta kategori/ikon dari Cloudflare Worker
     function muatDataPetaUntukAdmin() {
-      fetch('https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga')
+      fetch(RT05_CONFIG.PETA_PROXY_URL)
         .then(response => response.json())
         .then(dataObj => {
           cacheDataPetaAdmin = [];
