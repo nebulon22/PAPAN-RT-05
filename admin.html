@@ -2549,17 +2549,21 @@ function muatSemuaDataAdmin() {
            const namaRumah = val.Nama || val.nama || val.name || '';
            const lat = val.Lat !== undefined ? val.Lat : (val.lat || '');
            const lng = val.Lng !== undefined ? val.Lng : (val.lng || '');
-           const hidden = val.Hidden !== undefined ? val.Hidden : false;
-           const type = val.Type || val.type || val.Kategori || '';
+           const hidden = val.Hidden !== undefined ? val.Hidden : (val.hidden || false);
+           const type = val.Type || val.type || val.Kategori || val.kategori || 'Rumah';
            const foto = val.foto || val.Foto || val['LINK GAMBAR/VIDEO'] || '';
            
            const kepalaKeluarga = val.kepalaKeluarga || '';
-           const anggotaKeluarga = val.anggotaKeluarga || '';
+           const anggotaKeluarga = val.anggotaKeluarga || val.Anggota || '';
+           const noRumah = val.noRumah || '';
+           const namaTempat = val.namaTempat || '';
 
-           // Simpan ke array objek terpadu
+           // Simpan ke array objek terpadu dengan menangkap semua variasi key
            globalDataWarga.push({
              id: id,
              nama: namaRumah,
+             noRumah: noRumah,
+             namaTempat: namaTempat,
              lat: lat,
              lng: lng,
              hidden: hidden,
@@ -2583,7 +2587,7 @@ function muatSemuaDataAdmin() {
         prosesDanTampilkanStatistik(resWarga);
     });
 }
-
+    
 function prosesDanTampilkanStatistik(resWarga) {
     if (!Array.isArray(resWarga) || resWarga.length <= 1) {
         document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
@@ -2639,7 +2643,10 @@ function cariDetailKeluargaAdmin() {
         containerAutocomplete.innerHTML = "";
     }
     
-    const keyword = document.getElementById("inputCariWargaAdmin").value.toLowerCase().trim();
+    const inputCari = document.getElementById("inputCariWargaAdmin");
+    if (!inputCari) return;
+
+    const keyword = inputCari.value.toLowerCase().trim();
     const container = document.getElementById("hasil-cari-warga");
 
     if (!keyword) {
@@ -2647,58 +2654,64 @@ function cariDetailKeluargaAdmin() {
         return;
     }
 
-    const match = globalDataWarga.find(row => 
-        (row.kepalaKeluarga && row.kepalaKeluarga.toLowerCase().includes(keyword)) || 
-        (row.anggotaKeluarga && row.anggotaKeluarga.toLowerCase().includes(keyword)) ||
-        (row.nama && row.nama.toLowerCase().includes(keyword))
-    );
+    // 🌟 PERBAIKAN: Tangani pencarian dengan aman dari berbagai variasi huruf kapital (case-insensitive & fallback key)
+    const match = globalDataWarga.find(row => {
+        const kepala = String(row.kepalaKeluarga || row.Nama || row.nama || '').toLowerCase();
+        const anggota = String(row.anggotaKeluarga || row.Anggota || '').toLowerCase();
+        const rumah = String(row.nama || row.noRumah || '').toLowerCase();
+        
+        return kepala.includes(keyword) || anggota.includes(keyword) || rumah.includes(keyword);
+    });
 
-    container.style.display = "block";
+    if (container) container.style.display = "block";
 
     if (!match) {
-        container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga atau rumah tidak ditemukan.</p>`;
+        if (container) {
+            container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga atau rumah tidak ditemukan.</p>`;
+        }
         return;
     }
 
-    const kepala = match.kepalaKeluarga || match.nama || '-';
-    const anggota = match.anggotaKeluarga || 'Belum ada data anggota keluarga';
-    const labelRumah = match.nama || '-';
-    const foto = match.foto || '';
+    const kepala = match.kepalaKeluarga || match.Nama || match.nama || '-';
+    const anggota = match.anggotaKeluarga || match.Anggota || 'Belum ada data anggota keluarga';
+    const labelRumah = match.nama || match.noRumah || '-';
+    const foto = match.foto || match.Foto || '';
 
     let htmlKoor = (match.lat && match.lng) 
         ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${match.lat},${match.lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat</a>`
         : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
 
-    let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" /></div>` : '';
+    let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" onError="this.style.display='none'" /></div>` : '';
 
-container.innerHTML = `
-        <div style="font-size: 12px; color: #334155; line-height: 1.6;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
-                <button type="button" onclick="bukaModalEditWargaAdminById('${match.id}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
-                    ✏️ Edit
-                </button>
+    if (container) {
+        container.innerHTML = `
+            <div style="font-size: 12px; color: #334155; line-height: 1.6;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                    <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
+                    <button type="button" onclick="bukaModalEditWargaAdminById('${match.id}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+                        ✏️ Edit
+                    </button>
+                </div>
+                <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
+                <div style="margin-top: 4px;"><b>Titik Denah / Rumah:</b> ${escapeHTML(labelRumah)}</div>
+                ${htmlFoto}
+                ${htmlKoor}
             </div>
-            <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
-            <div style="margin-top: 4px;"><b>Titik Denah / Rumah:</b> ${escapeHTML(labelRumah)}</div>
-            ${htmlFoto}
-            ${htmlKoor}
-        </div>
-    `;
+        `;
+    }
 }
 
 function bukaModalEditWargaAdminById(id) {
-    const data = globalDataWarga.find(item => item.id === id);
+    const data = globalDataWarga.find(item => String(item.id) === String(id));
     if (!data) return;
 
     const inputId = document.getElementById('editWargaId');
     if (inputId) inputId.value = data.id;
 
-    // 🌟 1. Set nilai dropdown kategori bangunan secara aman (case-insensitive)
+    // 🌟 Set nilai dropdown kategori bangunan secara aman
     const selectKategori = document.getElementById('editWargaKategori');
     if (selectKategori) {
-        const dbType = String(data.type || 'Rumah').toLowerCase();
-        
+        const dbType = String(data.type || data.Type || 'Rumah').toLowerCase();
         let matched = false;
         for (let option of selectKategori.options) {
             if (option.value.toLowerCase() === dbType) {
@@ -2707,37 +2720,31 @@ function bukaModalEditWargaAdminById(id) {
                 break;
             }
         }
-        if (!matched) {
-            selectKategori.value = 'Rumah'; 
-        }
+        if (!matched) selectKategori.value = 'Rumah'; 
     }
 
-    // Cek kategori tempat (Fasum, Kuliner, Minimarket, dll)
-    const kategori = String(data.type || '').toLowerCase();
+    const kategori = String(data.type || data.Type || '').toLowerCase();
     const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
 
-    // Sembunyikan atau tampilkan field Keluarga berdasarkan kategori
     const groupKeluarga = document.getElementById('groupFieldKeluarga');
     if (groupKeluarga) {
         groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
     }
 
-    // Set nilai input keluarga & pisahkan No Rumah dengan Nama Tempat
+    // Set input nilai keluarga dan alamat
     document.getElementById('editWargaNama').value = data.kepalaKeluarga || '';
-    document.getElementById('editWargaAnggota').value = data.anggotaKeluarga || '';
-    
-    // Mengambil nilai ke dua input terpisah (noRumah & namaTempat)
+    document.getElementById('editWargaAnggota').value = data.anggotaKeluarga || data.Anggota || '';
     document.getElementById('editWargaNoRumah').value = data.noRumah || '';
-    document.getElementById('editWargaNamaTempat').value = data.namaTempat || data.nama || '';
+    document.getElementById('editWargaNamaTempat').value = data.namaTempat || data.Nama || data.nama || '';
     
-    // Gunakan satu input URL foto yang bersih (hapus duplikasi)
     const inputFoto = document.getElementById('editWargaFotoURL');
     const preview = document.getElementById('previewFotoRumah');
     
-    if (inputFoto) inputFoto.value = data.foto || '';
+    const fotoVal = data.foto || data.Foto || '';
+    if (inputFoto) inputFoto.value = fotoVal;
     if (preview) {
-        if (data.foto) {
-            preview.src = data.foto;
+        if (fotoVal) {
+            preview.src = fotoVal;
             preview.style.display = 'inline-block';
         } else {
             preview.style.display = 'none';
@@ -2747,7 +2754,7 @@ function bukaModalEditWargaAdminById(id) {
     const modal = document.getElementById('modal-edit-warga');
     if (modal) modal.style.display = 'flex';
 }
-
+    
 function bukaModalEditWargaDariPeta(id) {
     if (map) map.closePopup();
     bukaModalEditWargaAdminById(id);
@@ -2915,7 +2922,7 @@ async function simpanPerubahanWarga(event) {
   try {
     let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
 
-    // 1. Proses upload file baru ke Cloudflare R2 jika ada
+    // Proses upload file baru ke Cloudflare R2 jika ada
     if (fileBaruDipilih !== null) {
       document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file baru ke cloud storage...</i>';
       
@@ -2941,32 +2948,31 @@ async function simpanPerubahanWarga(event) {
       }
     }
 
-    // 2. Ambil nilai input dari form
+    // Ambil nilai input dari form
     const noRumahInput = document.getElementById('editWargaNoRumah').value.trim();
     const namaTempatInput = document.getElementById('editWargaNamaTempat').value.trim();
     const kepalaKeluargaInput = document.getElementById('editWargaNama').value.trim();
     const anggotaKeluargaInput = document.getElementById('editWargaAnggota').value.trim();
     const kategoriInput = document.getElementById('editWargaKategori').value;
 
-    // 3. Susun data update (Node baru otomatis terbentuk di Firebase jika belum ada)
+    // 🌟 Susun data update sesuai dengan struktur node database Anda
     const dataUpdate = {
       Type: kategoriInput,
       kepalaKeluarga: kepalaKeluargaInput,
       anggotaKeluarga: anggotaKeluargaInput,
-      noRumah: noRumahInput,                              // Node baru nomor rumah otomatis
-      namaTempat: namaTempatInput,                        // Node baru nama tempat otomatis
-      Nama: namaTempatInput || kepalaKeluargaInput || noRumahInput, // Nama utama penanda di peta
-      foto: finalUrlFoto,                                 // URL R2 Cloudflare terbaru
-      updatedAt: Date.now()                               // Timestamp otomatis
+      noRumah: noRumahInput,
+      namaTempat: namaTempatInput,
+      Nama: namaTempatInput || `Rumah ${kepalaKeluargaInput}` || noRumahInput,
+      foto: finalUrlFoto,
+      updatedAt: Date.now()
     };
 
-    // Simpan ke node Firebase peta_warga
     const refItem = window.firebaseRef(window.db, `peta_warga/${idWarga}`);
     await window.firebaseUpdate(refItem, dataUpdate);
 
     fileBaruDipilih = null;
     tutupModalEditWarga();
-    alert('✅ Perubahan data, node baru, dan foto R2 berhasil disimpan otomatis!');
+    alert('✅ Perubahan data dan foto berhasil disimpan!');
     muatSemuaDataAdmin();
 
   } catch (error) {
