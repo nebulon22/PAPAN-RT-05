@@ -2085,18 +2085,26 @@ window.simpanSemuaPeminjamanAdmin = async function() {
   }
 };
 
-    function sesuaikanFormKategori() {
-  let kategori = document.getElementById('inputKategori').value;
-  let groupNama = document.getElementById('groupNamaWarga');
+function sesuaikanFormKategori() {
+  const kategoriSelect = document.getElementById('inputKategori');
+  const groupNama = document.getElementById('groupNamaWarga');
   
-  if (kategori === 'Fasum') {
-    if (groupNama) groupNama.style.display = 'none';
+  if (!kategoriSelect || !groupNama) return;
+
+  const kategori = kategoriSelect.value.toLowerCase();
+  
+  // Jika kategori adalah Fasum, Kost, Kuliner, atau Minimarket, sembunyikan input nama warga
+  if (kategori === 'fasum' || kategori === 'kost' || kategori === 'kuliner' || kategori === 'minimarket') {
+    groupNama.style.display = 'none';
+    // Opsional: Kosongkan nilai input saat disembunyikan agar tidak ikut tersimpan
+    const inputNamaWarga = document.getElementById('inputNamaWarga');
+    if (inputNamaWarga) inputNamaWarga.value = '';
   } else {
-    if (groupNama) groupNama.style.display = 'block';
+    groupNama.style.display = 'block';
   }
 }
 
-    function toggleFieldKategoriEdit() {
+function toggleFieldKategoriEdit() {
   const kategoriSelect = document.getElementById('editWargaKategori');
   const groupKeluarga = document.getElementById('groupFieldKeluarga');
   
@@ -2104,8 +2112,8 @@ window.simpanSemuaPeminjamanAdmin = async function() {
 
   const kategoriVal = kategoriSelect.value.toLowerCase();
   
-  // Jika kategori berupa Fasum, Kuliner, atau Minimarket, sembunyikan form keluarga
-  if (kategoriVal === 'fasum' || kategoriVal === 'kuliner' || kategoriVal === 'minimarket') {
+  // Jika kategori berupa Fasum, Kost, Kuliner, atau Minimarket, sembunyikan form keluarga
+  if (kategoriVal === 'fasum' || kategoriVal === 'kost' || kategoriVal === 'kuliner' || kategoriVal === 'minimarket') {
     groupKeluarga.style.display = 'none';
   } else {
     groupKeluarga.style.display = 'block';
