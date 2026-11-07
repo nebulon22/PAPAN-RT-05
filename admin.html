@@ -3990,12 +3990,12 @@ function resetFormPengumuman() {
     window.currentEditPengumumanId = null;
 }
 
-    // ==========================================
-    // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN (VIA WORKER / FIREBASE)
+   // ==========================================
+    // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN (DENGAN IKON & BERSIH)
     // ==========================================
     let cacheDataPetaAdmin = [];
 
-    // Ambil data dari Cloudflare Worker saat halaman dimuat
+    // 1. Ambil data lengkap beserta kategori/ikon dari Cloudflare Worker
     function muatDataPetaUntukAdmin() {
       fetch('https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga')
         .then(response => response.json())
@@ -4007,11 +4007,17 @@ function resetFormPengumuman() {
             var item = dataObj[key];
             var namaAsli = String(item.Nama || item.nama || item.name || '').trim();
             if (namaAsli !== '') {
+              var kategoriManual = String(item.Type || item.type || item.Kategori || item.kategori || '').trim().toLowerCase();
+              
+              // Panggil fungsi getIkonKategori bawaan utils jika ada, untuk mendapatkan emoji/ikon yang sesuai
+              var dataIkon = (typeof getIkonKategori === 'function') ? getIkonKategori(namaAsli, kategoriManual) : { emoji: '🏠' };
+
               cacheDataPetaAdmin.push({
                 nama: namaAsli,
                 kepalaKeluarga: item.kepalaKeluarga || '',
                 lat: item.Lat !== undefined ? item.Lat : (item.lat || ''),
-                lng: item.Lng !== undefined ? item.Lng : (item.lng || '')
+                lng: item.Lng !== undefined ? item.Lng : (item.lng || ''),
+                emoji: dataIkon.emoji || '🏠'
               });
             }
           });
@@ -4019,7 +4025,6 @@ function resetFormPengumuman() {
         .catch(err => console.error("Gagal memuat data peta untuk admin:", err));
     }
 
-    // Panggil fungsi muat data ini saat halaman admin dibuka
     document.addEventListener('DOMContentLoaded', muatDataPetaUntukAdmin);
 
     function cariLokasiPengumuman(keyword) {
@@ -4038,22 +4043,24 @@ function resetFormPengumuman() {
       });
 
       if (hasil.length === 0) {
-        container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Ketik bebas (Tidak ada data di peta)</div>`;
+        // 🌟 Beri background putih solid agar tidak tembus pandang / kotak hitam
+        container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: #ffffff;">Ketik bebas (Tidak ada data di peta)</div>`;
         container.style.display = 'block';
         return;
       }
 
       var html = '';
       hasil.slice(0, 6).forEach(function(item) {
-        var labelTampil = item.nama; // 🌟 Diperbaiki: Digabung menjadi labelTampil
+        var labelTampil = item.nama;
         if (item.kepalaKeluarga && !labelTampil.toLowerCase().includes(item.kepalaKeluarga.toLowerCase())) {
           labelTampil += ` (${item.kepalaKeluarga})`;
         }
         var safeNama = typeof escapeHTML === 'function' ? escapeHTML(labelTampil) : labelTampil;
         
+        // 🌟 Menggunakan emoji ikon asli (rumah, fasum, minimarket, dll) dan background putih solid (#ffffff)
         html += `
-          <div onclick="pilihLokasiPengumuman('${safeNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-            <strong>📍 ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
+          <div onclick="pilihLokasiPengumuman('${safeNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: #ffffff;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
+            <strong>${item.emoji || '🏠'} ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
           </div>
         `;
       });
@@ -4068,7 +4075,7 @@ function resetFormPengumuman() {
       document.getElementById('pengumumanLng').value = lng;
       document.getElementById('hasilPencarianLokasi').style.display = 'none';
     }
-
+    
     document.addEventListener('click', function(e) {
       var container = document.getElementById('hasilPencarianLokasi');
       var input = document.getElementById('pengumumanLokasi');
