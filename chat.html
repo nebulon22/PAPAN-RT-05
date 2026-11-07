@@ -1181,6 +1181,10 @@ window.addEventListener('DOMContentLoaded', () => {
 function markRoomAsRead(targetUID) {
   if (!currentUser?.uid || !targetUID) return;
 
+  // 🛑 PENGAMAN: Jangan tandai sudah dibaca jika user sedang tidak melihat chat pribadi ini di layar!
+  const isViewingThisPrivateChat = (activeChatType === 'private' && activePrivateUID === targetUID && window.isUserViewingChat());
+  if (!isViewingThisPrivateChat) return;
+
   // 🛠️ FIX: Gunakan targetUID (bukan activePrivateUID) agar roomID tidak tertukar / null!
   const roomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
   const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
@@ -1632,31 +1636,31 @@ function listenPublicGroupUnread() {
       }
     }
 
-  window.markPublicGroupAsRead = () => {
-      if (!currentUser?.uid) return;
+window.markPublicGroupAsRead = () => {
+    // 🛑 PENGAMAN: Jangan tandai sudah dibaca jika user belum membuka/melihat chat di layar!
+    if (!currentUser?.uid || !window.isUserViewingChat() || activeChatType !== 'public') return;
 
-      // 🛠️ PERBAIKAN: Ambil 5 data terakhir, cari yang BUKAN pinned_poll
-      const chatsRef = query(ref(db, 'chats'), limitToLast(5));
-      get(chatsRef).then((snapshot) => {
+    const chatsRef = query(ref(db, 'chats'), limitToLast(5));
+    get(chatsRef).then((snapshot) => {
         if (snapshot.exists()) {
-          let lastKey = null;
-          snapshot.forEach(child => {
-            if (child.key !== 'pinned_poll') { // 👈 Abaikan polling
-              lastKey = child.key;
+            let lastKey = null;
+            snapshot.forEach(child => {
+                if (child.key !== 'pinned_poll') { 
+                    lastKey = child.key;
+                }
+            });
+
+            if (lastKey) {
+                const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+                lastReadPublicMap[currentUser.uid] = lastKey;
+                localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
             }
-          });
-
-          if (lastKey) {
-            const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-            lastReadPublicMap[currentUser.uid] = lastKey;
-            localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
-          }
         }
-      });
+    });
 
-      updatePublicTabBadge(0);
-      sendUnreadCountToParent(0);
-    };
+    updatePublicTabBadge(0);
+    sendUnreadCountToParent(0);
+};
     
    // Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
    let lastPublicUnreadCount = 0;
@@ -2314,13 +2318,19 @@ function loadChatStream(onLoaded) {
         let isUnreadSection = false;
         if (!lastReadPublicMapKey) isUnreadSection = true;
 
-        snapshot.forEach((childSnap) => {
+snapshot.forEach((childSnap) => {
             const msgKey = childSnap.key;
             const msgData = childSnap.val();
 
+            // 1. CEK BATAS KUNCI BACA TERLEBIH DAHULU
+            if (msgKey === lastReadPublicMapKey) {
+                isUnreadSection = true;
+            }
+
             let isUnreadMsg = false;
             
-            if (isChatReady && currentUser && currentUser.uid && isUnreadSection && msgData.uid !== currentUser?.uid) {
+            // 2. BARU TENTUKAN APAKAH PESAN INI MASUK DALAM KATEGORI UNREAD
+            if (isChatReady && currentUser && currentUser.uid && isUnreadSection && msgData.uid !== currentUser?.uid && msgKey !== lastReadPublicMapKey) {
                 isUnreadMsg = true;
 
                 const notifKey = 'notified_' + msgKey;
@@ -2334,10 +2344,6 @@ function loadChatStream(onLoaded) {
                         console.log("Gagal memicu notifikasi media:", e);
                     }
                 }
-            }
-
-            if (msgKey === lastReadPublicMapKey) {
-                isUnreadSection = true;
             }
 
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
