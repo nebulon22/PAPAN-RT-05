@@ -289,7 +289,7 @@
 
 <!-- Modal Kelola Pengumuman -->
 <div id="modal-admin-pengumuman" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-pengumuman') tutupModalPengumumanAdmin()">
-  <div class="modal-content" style="max-width: 500px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden;">
+  <div class="modal-content" style="max-width: 500px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; background: #ffffff; border-radius: 12px; box-sizing: border-box;">
     
     <!-- HEADER MODAL (Tetap di atas) -->
     <div class="modal-header" style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
@@ -339,13 +339,13 @@
           <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
         </div>
 
-<button type="button" data-click="simpanPengumumanAdmin" id="btnSimpanPengumuman" style="width: 100%; padding: 7px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">
-  💾 Terbitkan Pengumuman
-</button>
+        <button type="button" data-click="simpanPengumumanAdmin" id="btnSimpanPengumuman" style="width: 100%; padding: 7px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">
+          💾 Terbitkan Pengumuman
+        </button>
       </form>
 
-      <!-- Daftar Pengumuman & Tombol Edit/Arsip (Sekarang terlihat dan dapat digulir) -->
-      <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; flex-shrink: 0;">
+      <!-- Daftar Pengumuman & Tombol Edit/Arsip (Ditambahkan overflow: hidden agar sudut tabel tidak tembus) -->
+      <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; flex-shrink: 0; overflow: hidden;">
         <h4 style="margin: 0 0 6px 0; font-size: 12px; color: #374151;">📋 Daftar Pengumuman & Status Arsip:</h4>
         <div style="max-height: 180px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
           <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
@@ -432,7 +432,7 @@
     <form id="dataForm">
       <input type="hidden" name="pin" id="inputPinForm">
       
-      <!-- 1. Kategori Bangunan (Dropdown Utama di Atas) -->
+      <!-- 1. Kategori Bangunan -->
       <div class="form-group">
         <label for="inputKategori">Kategori Bangunan:</label>
         <select name="kategori" id="inputKategori" onchange="sesuaikanFormKategori()">
@@ -444,18 +444,11 @@
         </select>
       </div>
 
-      <!-- 2. Kolom Terpisah: No. Rumah / Blok / Nama Tempat -->
-      <div class="form-group">
-        <label for="inputNoRumah">No. Rumah / Blok / Nama Tempat:</label>
-        <input type="text" name="noRumah" id="inputNoRumah" placeholder="Contoh: No 06 / Pos Satpam RT 05" required>
+      <!-- 🌟 CONTAINER DINAMIS: Akan berubah isinya tergantung kategori -->
+      <div id="containerFormDinamis">
+        <!-- Diisi otomatis oleh fungsi sesuaikanFormKategori() -->
       </div>
 
-      <!-- 3. Kolom Terpisah: Nama Warga / Pemilik (Opsional untuk Fasum) -->
-      <div class="form-group" id="groupNamaWarga">
-        <label for="inputNamaWarga">Nama Kepala Keluarga / Pemilik:</label>
-        <input type="text" name="namaWarga" id="inputNamaWarga" placeholder="Contoh: Bejo Nurmantyo">
-      </div>
-      
       <div style="display: flex; gap: 10px;">
         <div class="form-group" style="flex: 1;">
           <label for="inputLat">Latitude:</label>
@@ -476,8 +469,8 @@
       </div>
       
       <div class="form-group">
-        <label for="inputFoto">URL Foto Depan (Opsional):</label>
-        <input type="url" name="foto" id="inputFoto">
+        <label for="inputFoto">URL Foto Depan / Lokasi (Opsional):</label>
+        <input type="url" name="foto" id="inputFoto" placeholder="https://...">
       </div>
       
       <button type="submit" class="btn-submit" id="btnSubmitForm">💾 Simpan Data Lokasi</button>
@@ -880,7 +873,6 @@
 
          <!-- PANEL EDIT DATA LOKASI -->
 <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
-  <!-- Tambahkan max-height, overflow-y, dan padding bawah pada style di bawah ini -->
   <div class="modal-content" style="max-width: 400px; width: 90%; max-height: 85vh; overflow-y: auto; padding-bottom: 20px;">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
       <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Lokasi / Warga</h3>
@@ -890,7 +882,7 @@
 <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
   <input type="hidden" id="editWargaId">
 
-  <!-- 🌟 Pilihan Kategori Bangunan -->
+  <!-- Kategori Bangunan -->
   <div class="form-group" style="margin-bottom: 10px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">Kategori Bangunan:</label>
     <select id="editWargaKategori" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" onchange="toggleFieldKategoriEdit()">
@@ -902,32 +894,12 @@
     </select>
   </div>
 
-  <!-- Bungkus bagian keluarga -->
-  <div id="groupFieldKeluarga">
-    <div class="form-group" style="margin-bottom: 10px;">
-      <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Kepala Keluarga:</label>
-      <input type="text" id="editWargaNama" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-    </div>
-
-    <div class="form-group" style="margin-bottom: 10px;">
-      <label style="font-size: 12px; font-weight: bold; color: #374151;">Anggota Keluarga (pisahkan dengan koma):</label>
-      <textarea id="editWargaAnggota" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
-    </div>
+  <!-- 🌟 CONTAINER DINAMIS EDIT -->
+  <div id="containerEditDinamis">
+    <!-- Diisi otomatis oleh fungsi toggleFieldKategoriEdit() -->
   </div>
 
-  <!-- No. Rumah / Blok -->
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah / Blok (Opsional):</label>
-    <input type="text" id="editWargaNoRumah" placeholder="Contoh: No 10 / Blok B" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-  </div>
-
-  <!-- Nama Tempat / Keterangan -->
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Tempat / Keterangan (Opsional):</label>
-    <input type="text" id="editWargaNamaTempat" placeholder="Contoh: Rumah Ketua RW / Warung Bu Ani" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-  </div>
-
-  <!-- 📂 Pilih File Baru (Hanya menampung objek file di memori, BELUM di-upload) -->
+  <!-- Pilih File Baru -->
   <div class="form-group" style="margin-bottom: 12px;">
     <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
     <div style="margin-top: 4px;">
@@ -936,9 +908,9 @@
     <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
   </div>
 
-  <!-- 🔗 Kolom URL Foto (ID unik: editWargaFotoURL) -->
+  <!-- Kolom URL Foto -->
   <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media (Hasil Copy-Paste / Otomatis):</label>
+    <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media:</label>
     <input type="text" id="editWargaFotoURL" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
   </div>
 
@@ -951,7 +923,6 @@
     </button>
   </div>
 </form>
-    
   </div>
 </div>
 
@@ -1364,58 +1335,58 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
 
   try {
     let finalUrlFoto = document.getElementById('inputFoto').value.trim();
+    const kategoriVal = document.getElementById('inputKategori').value;
+    const isRumah = kategoriVal.toLowerCase().includes('rumah');
 
-    // Jika ada file yang dipilih saat menambah data baru, upload dulu ke R2
-    const fileInput = document.getElementById('inputUploadSemiManual'); // atau sesuaikan id input file tambah data jika ada
-    if (fileInput && fileInput.files && fileInput.files.length > 0) {
-      let file = fileInput.files[0];
-      if (typeof kompresGambar === 'function') {
-        file = await kompresGambar(file, 1200, 0.8);
-      }
-
-      const noRumahVal = document.getElementById('inputNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_');
-      const ekstensi = file.name.split('.').pop() || 'jpg';
-      const namaFileKustom = `warga_${noRumahVal || 'baru'}_${Date.now()}.${ekstensi}`;
-
-      const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
-        method: 'POST',
-        headers: {
-          "X-File-Name": encodeURIComponent(namaFileKustom),
-          "Content-Type": file.type || "application/octet-stream"
-        },
-        body: file
-      });
-
-      const hasilUpload = await responseUpload.json();
-      if (hasilUpload.success || hasilUpload.url) {
-        let urlAwal = new URL(hasilUpload.url);
-        finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
-      }
-    }
-
-    const noRumahInput = document.getElementById('inputNoRumah').value.trim();
-    const namaWargaInput = document.getElementById('inputNamaWarga') ? document.getElementById('inputNamaWarga').value.trim() : '';
-
-    const payload = {
-      Nama: namaWargaInput || noRumahInput,
-      noRumah: noRumahInput,
-      kepalaKeluarga: namaWargaInput,
+    let payload = {
+      Type: kategoriVal,
       Lat: document.getElementById('inputLat').value,
       Lng: document.getElementById('inputLng').value,
-      Type: document.getElementById('inputKategori').value,
       Hidden: document.getElementById('inputHidden').value === 'TRUE',
       foto: finalUrlFoto,
-      createdAt: Date.now()
+      createdAt: Date.now(),
+      updatedAt: Date.now()
     };
 
+    // 🌟 Mengambil data berdasarkan jenis form dinamis yang aktif
+    if (isRumah) {
+      const namaRumah = document.getElementById('inputNamaRumah') ? document.getElementById('inputNamaRumah').value.trim() : '';
+      const noRumah = document.getElementById('inputNoRumah') ? document.getElementById('inputNoRumah').value.trim() : '';
+      const kepalaKeluarga = document.getElementById('inputKepalaKeluarga') ? document.getElementById('inputKepalaKeluarga').value.trim() : '';
+      const anggotaKeluarga = document.getElementById('inputAnggotaKeluarga') ? document.getElementById('inputAnggotaKeluarga').value.trim() : '';
+
+      payload.Nama = namaRumah || (kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : `No ${noRumah}`);
+      payload.namaTempat = namaRumah || (kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : `No ${noRumah}`);
+      payload.noRumah = noRumah;
+      payload.kepalaKeluarga = kepalaKeluarga;
+      payload.anggotaKeluarga = anggotaKeluarga;
+    } else {
+      const namaTempat = document.getElementById('inputNamaTempat') ? document.getElementById('inputNamaTempat').value.trim() : '';
+      const namaPemilik = document.getElementById('inputNamaPemilik') ? document.getElementById('inputNamaPemilik').value.trim() : '';
+      const noBangunan = document.getElementById('inputNoBangunan') ? document.getElementById('inputNoBangunan').value.trim() : '';
+
+      payload.Nama = namaTempat || kategoriVal;
+      payload.namaTempat = namaTempat || kategoriVal;
+      payload.kepalaKeluarga = namaPemilik; // Disimpan sebagai nama pemilik/pengelola usaha
+      payload.noRumah = noBangunan;
+      payload.anggotaKeluarga = ""; // Dikosongkan untuk non-rumah
+    }
+
+    // Membuat node baru otomatis di Firebase
     const newRef = window.firebasePush(window.firebaseRef(window.db, 'peta_warga'));
     await window.firebaseSet(newRef, payload);
 
     btn.innerText = '💾 Simpan Data Lokasi';
     btn.disabled = false;
-    alert('✅ Data baru berhasil disimpan dengan node & foto R2 otomatis!');
+    alert('✅ Data lokasi baru berhasil disimpan ke Firebase!');
     tutupModalForm();
     document.getElementById('dataForm').reset();
+    
+    // Kembalikan form dinamis ke state awal (Rumah) setelah reset
+    if (typeof sesuaikanFormKategori === 'function') {
+      sesuaikanFormKategori();
+    }
+    
     muatSemuaDataAdmin();
 
   } catch (err) {
@@ -1437,7 +1408,7 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
     var markerGroup = L.layerGroup();
     var pinHasilPencarian = null;
 
-    function initMap() {
+function initMap() {
       if (map) return;
 
       map = L.map('map').setView([-7.7423, 110.3842], 17);
@@ -1458,29 +1429,42 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
 
       markerGroup.addTo(map);
 
-      map.on('click', function(e) {
+map.on('click', function(e) {
         if (document.getElementById('modal-form').style.display === 'flex' || 
             document.getElementById('modal-admin-inventaris').style.display === 'flex' || 
             document.getElementById('modal-kelola-warga').style.display === 'flex') return;
         
-        document.getElementById('formTitle').innerText = "📍 Tambah Data Baru";
-        document.getElementById('inputNama').value = "";
-        document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
-        document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
-        document.getElementById('inputFoto').value = "";
-        document.getElementById('modal-form').style.display = 'flex';
+        const elTitle = document.getElementById('formTitle');
+        const elNoRumah = document.getElementById('inputNoRumah');
+        const elNamaWarga = document.getElementById('inputNamaWarga');
+        const elLat = document.getElementById('inputLat');
+        const elLng = document.getElementById('inputLng');
+        const elFoto = document.getElementById('inputFoto');
+        const modalForm = document.getElementById('modal-form');
+
+        if (elTitle) elTitle.innerText = "📍 Tambah Data Baru";
+        if (elNoRumah) elNoRumah.value = "";
+        if (elNamaWarga) elNamaWarga.value = "";
+        if (elLat) elLat.value = e.latlng.lat.toFixed(6);
+        if (elLng) elLng.value = e.latlng.lng.toFixed(6);
+        if (elFoto) elFoto.value = "";
+        
+        if (modalForm) {
+          modalForm.style.display = 'flex';
+        }
       });
 
-      if (typeof window.firebaseRef === 'function' && window.db) {
-        const petaRef = window.firebaseRef(window.db, 'peta_warga');
-        window.firebaseOnValue(petaRef, (snapshot) => {
+      // 🌟 PERBAIKAN: Mengganti listener Firebase langsung dengan fetch ke Cloudflare Worker Worker Proxy
+      fetch(RT05_CONFIG.PETA_PROXY_URL)
+        .then(response => response.json())
+        .then(dataObj => {
           markerGroup.clearLayers();
           daftarPin = [];
 
-          if (!snapshot.exists()) return;
+          if (!dataObj) return;
 
-          snapshot.forEach((childSnap) => {
-            const val = childSnap.val();
+          Object.keys(dataObj).forEach(key => {
+            const val = dataObj[key];
             if (!val) return;
 
             var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || '');
@@ -1501,34 +1485,32 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
             var urlFoto = String(rawFoto).trim();
             var namaAsli = String(rawNama).trim();
 
-            // Di dalam snapshot.forEach((childSnap) => { ... })
-var item = {
-    id: childSnap.key, // Simpan key Firebase agar mudah saat update data
-    name: namaAsli,
-    nameAsli: namaAsli,
-    lat: parseFloat(latClean),
-    lng: parseFloat(lngClean),
-    hidden: statusHidden,
-    foto: urlFoto,
-    anggota: val.Anggota || val.anggota || '', // Ambil data anggota keluarga jika ada
-};
+            var item = {
+              id: key,
+              name: namaAsli,
+              nameAsli: namaAsli,
+              lat: parseFloat(latClean),
+              lng: parseFloat(lngClean),
+              hidden: statusHidden,
+              foto: urlFoto,
+              anggota: val.Anggota || val.anggota || '',
+            };
 
-if (isNaN(item.lat) || isNaN(item.lng)) return;
+            if (isNaN(item.lat) || isNaN(item.lng)) return;
 
-var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
 
-// TAMBAHKAN TOMBOL EDIT DI SINI:
-var popupContent = `
-    <div style="text-align: center; min-width: 180px;">
-        <b>${item.name}</b>
-        ${htmlFoto}
-        <div style="display: flex; gap: 4px; margin-top: 8px;">
-            <a href="${urlRute}" target="_blank" class="btn-rute" style="flex: 1; padding: 4px; font-size: 11px; text-decoration: none; background: #22c55e; color: white; border-radius: 4px; display: inline-block;">📍 Rute</a>
-            <button onclick="bukaModalEditWargaDariPeta('${item.id}')" style="flex: 1; padding: 4px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">✏️ Edit</button>
-        </div>
-    </div>
-`;
+            var popupContent = `
+              <div style="text-align: center; min-width: 180px;">
+                <b>${escapeHTML(item.name)}</b>
+                ${htmlFoto}
+                <div style="display: flex; gap: 4px; margin-top: 8px;">
+                    <a href="${urlRute}" target="_blank" class="btn-rute" style="flex: 1; padding: 4px; font-size: 11px; text-decoration: none; background: #22c55e; color: white; border-radius: 4px; display: inline-block;">📍 Rute</a>
+                    <button onclick="bukaModalEditWargaDariPeta('${item.id}')" style="flex: 1; padding: 4px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">✏️ Edit</button>
+                </div>
+              </div>
+            `;
             
             let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
 
@@ -1554,9 +1536,11 @@ var popupContent = `
           });
 
           filterKategori('semua');
+        })
+        .catch(err => {
+          console.error("Gagal memuat peta via Cloudflare Worker:", err);
         });
-      }
-    } // <--- KURUNG TUTUP initMap() TELAH DIPERBAIKI
+    }
 
     function filterKategori(kat) {
       var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
@@ -2101,18 +2085,26 @@ window.simpanSemuaPeminjamanAdmin = async function() {
   }
 };
 
-    function sesuaikanFormKategori() {
-  let kategori = document.getElementById('inputKategori').value;
-  let groupNama = document.getElementById('groupNamaWarga');
+function sesuaikanFormKategori() {
+  const kategoriSelect = document.getElementById('inputKategori');
+  const groupNama = document.getElementById('groupNamaWarga');
   
-  if (kategori === 'Fasum') {
-    if (groupNama) groupNama.style.display = 'none';
+  if (!kategoriSelect || !groupNama) return;
+
+  const kategori = kategoriSelect.value.toLowerCase();
+  
+  // Jika kategori adalah Fasum, Kost, Kuliner, atau Minimarket, sembunyikan input nama warga
+  if (kategori === 'fasum' || kategori === 'kost' || kategori === 'kuliner' || kategori === 'minimarket') {
+    groupNama.style.display = 'none';
+    // Opsional: Kosongkan nilai input saat disembunyikan agar tidak ikut tersimpan
+    const inputNamaWarga = document.getElementById('inputNamaWarga');
+    if (inputNamaWarga) inputNamaWarga.value = '';
   } else {
-    if (groupNama) groupNama.style.display = 'block';
+    groupNama.style.display = 'block';
   }
 }
 
-    function toggleFieldKategoriEdit() {
+function toggleFieldKategoriEdit() {
   const kategoriSelect = document.getElementById('editWargaKategori');
   const groupKeluarga = document.getElementById('groupFieldKeluarga');
   
@@ -2120,8 +2112,8 @@ window.simpanSemuaPeminjamanAdmin = async function() {
 
   const kategoriVal = kategoriSelect.value.toLowerCase();
   
-  // Jika kategori berupa Fasum, Kuliner, atau Minimarket, sembunyikan form keluarga
-  if (kategoriVal === 'fasum' || kategoriVal === 'kuliner' || kategoriVal === 'minimarket') {
+  // Jika kategori berupa Fasum, Kost, Kuliner, atau Minimarket, sembunyikan form keluarga
+  if (kategoriVal === 'fasum' || kategoriVal === 'kost' || kategoriVal === 'kuliner' || kategoriVal === 'minimarket') {
     groupKeluarga.style.display = 'none';
   } else {
     groupKeluarga.style.display = 'block';
@@ -2273,8 +2265,8 @@ window.simpanPerubahanWargaBaru = async function(e) {
       const ekstensi = file.name.split('.').pop() || 'jpg';
       const namaFileKustom = `wargabaru_${namaClean}_${Date.now()}.${ekstensi}`;
 
-      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
-      let response = await fetch(workerUrl, {
+      // 🌟 Menggunakan konfigurasi terpusat dari utils.js
+      let response = await fetch(RT05_CONFIG.UPLOADER_URL, {
         method: "POST",
         headers: {
           "X-File-Name": encodeURIComponent(namaFileKustom),
@@ -2388,12 +2380,16 @@ window.exportWargaBaruToCSV = async function() {
   }
 };
 
-  // 1. Fungsi Unduh Data Sensus ke Excel (CSV) dengan Ringkasan Total (1 Node: peta_warga)
+async function ambilDataWargaWorker() {
+    const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+    return await response.json();
+}
+
 async function exportSensusToCSV() {
     try {
-        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'peta_warga'));
-        if (!snapshot.exists()) {
-            alert("Tidak ada data warga di database.");
+        const dataObj = await ambilDataWargaWorker();
+        if (!dataObj) {
+            alert("Tidak ada data warga dari server.");
             return;
         }
 
@@ -2401,17 +2397,15 @@ async function exportSensusToCSV() {
         let totalJiwa = 0;
         let rowsData = [];
 
-        snapshot.forEach(child => {
-            const data = child.val();
-            // Hanya ambil data yang memiliki informasi kepala keluarga
+        Object.keys(dataObj).forEach(key => {
+            const data = dataObj[key];
             if (!data || !data.kepalaKeluarga || String(data.kepalaKeluarga).trim() === '') return;
 
             totalKK++;
             const namaRumah = (data.Nama || data.namaRumah || '-').replace(/"/g, '""');
             const kepala = (data.kepalaKeluarga || '-').replace(/"/g, '""');
-            const rawAnggota = data.anggotaKeluarga || '';
+            const rawAnggota = data.anggotaKeluarga || data.Anggota || '';
             
-            // Hitung jumlah jiwa (1 untuk kepala keluarga + jumlah anggota berdasarkan pemisah koma)
             let jumlahAnggotaKeluarga = 1;
             if (rawAnggota.trim() !== '') {
                 const listAnggota = rawAnggota.split(',').filter(item => item.trim() !== '');
@@ -2424,7 +2418,7 @@ async function exportSensusToCSV() {
         });
 
         if (totalKK === 0) {
-            alert("Belum ada data keluarga/sensus yang diisi pada peta warga.");
+            alert("Belum ada data keluarga/sensus yang diisi.");
             return;
         }
 
@@ -2432,7 +2426,6 @@ async function exportSensusToCSV() {
         csvContent += `"LAPORAN DATA KELUARGA & SENSUS WARGA RT 05 KAYEN"\n`;
         csvContent += `"Total Keluarga (KK): ${totalKK}";"Total Jiwa / Warga: ${totalJiwa}"\n\n`;
         csvContent += `"Nama Rumah / Lokasi";"Nama Kepala Keluarga";"Anggota Keluarga";"Jumlah Jiwa"\n`;
-
         csvContent += rowsData.join("\n") + "\n\n";
         csvContent += `"TOTAL Keseluruhan";"";"Total KK: ${totalKK}";"Total Jiwa: ${totalJiwa}"\n`;
 
@@ -2449,11 +2442,10 @@ async function exportSensusToCSV() {
     }
 }
 
-// 2. Fungsi Cetak / Simpan ke PDF dengan Ringkasan Total (1 Node: peta_warga)
 async function cetakLaporanSensus() {
     try {
-        const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'peta_warga'));
-        if (!snapshot.exists()) {
+        const dataObj = await ambilDataWargaWorker();
+        if (!dataObj) {
             alert("Tidak ada data warga untuk dicetak.");
             return;
         }
@@ -2462,15 +2454,14 @@ async function cetakLaporanSensus() {
         let totalJiwa = 0;
         let htmlRows = '';
 
-        snapshot.forEach(child => {
-            const data = child.val();
-            // Hanya ambil data yang memiliki informasi kepala keluarga
+        Object.keys(dataObj).forEach(key => {
+            const data = dataObj[key];
             if (!data || !data.kepalaKeluarga || String(data.kepalaKeluarga).trim() === '') return;
 
             totalKK++;
             const namaRumah = data.Nama || data.namaRumah || '-';
             const kepala = data.kepalaKeluarga || '-';
-            const rawAnggota = data.anggotaKeluarga || '';
+            const rawAnggota = data.anggotaKeluarga || data.Anggota || '';
 
             let jumlahAnggotaKeluarga = 1;
             if (rawAnggota.trim() !== '') {
@@ -2480,15 +2471,15 @@ async function cetakLaporanSensus() {
             totalJiwa += jumlahAnggotaKeluarga;
 
             htmlRows += `<tr>
-                <td><b>${namaRumah}</b></td>
-                <td>${kepala}</td>
-                <td>${rawAnggota || '-'}</td>
+                <td><b>${escapeHTML(namaRumah)}</b></td>
+                <td>${escapeHTML(kepala)}</td>
+                <td>${escapeHTML(rawAnggota || '-')}</td>
                 <td style="text-align: center;">${jumlahAnggotaKeluarga} Jiwa</td>
             </tr>`;
         });
 
         if (totalKK === 0) {
-            alert("Belum ada data keluarga/sensus yang diisi pada peta warga.");
+            alert("Belum ada data keluarga/sensus untuk dicetak.");
             return;
         }
 
@@ -2509,7 +2500,7 @@ async function cetakLaporanSensus() {
         
         printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN REKAPITULASI KEPENDUDUKAN</h2>');
         printWindow.document.write(`<div class="subtitle">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}</div>`);
-        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK} KK</div><div>Total Jiwa / Warga: ${totalJiwa} Orang</div></div>`);
+        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK} KK</div><div>Total Jiwa / Warga: ${totalJiual || totalJiwa} Orang</div></div>`);
         
         printWindow.document.write('<table>');
         printWindow.document.write('<thead><tr><th style="width: 22%;">Nama Rumah / Lokasi</th><th style="width: 28%;">Kepala Keluarga</th><th style="width: 38%;">Anggota Keluarga</th><th style="width: 12%; text-align: center;">Jumlah</th></tr></thead>');
@@ -2537,62 +2528,79 @@ let listSemuaRumahAdmin = [];
 // ==========================================
 // 1. MEMUAT DATA ADMIN DARI 1 NODE (peta_warga)
 // ==========================================
-function muatSemuaDataAdmin() {
-    window.firebaseOnValue(window.firebaseRef(window.db, 'peta_warga'), (snapshot) => {
+async function muatSemuaDataAdmin() {
+    try {
+        // 🌟 Mengambil data melalui Cloudflare Worker Proxy
+        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+        const dataObj = await response.json();
+
         globalDataWarga = [];
         listSemuaRumahAdmin = [];
         
-        const dummyHeader = ["Kepala", "Anggota", "Rumah", "Total"];
-        const resWarga = [dummyHeader]; 
+        let totalKK = 0;
+        let totalJiwa = 0;
 
-        if (!snapshot.exists()) {
-            prosesDanTampilkanStatistik(resWarga);
+        if (!dataObj) {
+            document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+            document.getElementById("stat-total-kk").innerText = "0 KK";
+            document.getElementById("stat-total-jiwa").innerText = "0 Orang";
             return;
         }
 
-        snapshot.forEach(child => {
-           const val = child.val();
-           if (!val) return;
+        // Iterasi objek data dari Cloudflare Worker
+        Object.keys(dataObj).forEach(key => {
+            const val = dataObj[key];
+            if (!val) return;
 
-           const id = child.key;
-           const namaRumah = val.Nama || val.nama || val.name || '';
-           const lat = val.Lat !== undefined ? val.Lat : (val.lat || '');
-           const lng = val.Lng !== undefined ? val.Lng : (val.lng || '');
-           const hidden = val.Hidden !== undefined ? val.Hidden : false;
-           const type = val.Type || val.type || val.Kategori || '';
-           const foto = val.foto || val.Foto || val['LINK GAMBAR/VIDEO'] || '';
-           
-           const kepalaKeluarga = val.kepalaKeluarga || '';
-           const anggotaKeluarga = val.anggotaKeluarga || '';
+            const id = key;
+            const namaRumah = val.Nama || val.nama || val.name || '';
+            const lat = val.Lat !== undefined ? val.Lat : (val.lat || '');
+            const lng = val.Lng !== undefined ? val.Lng : (val.lng || '');
+            const hidden = val.Hidden !== undefined ? val.Hidden : (val.hidden || false);
+            const type = val.Type || val.type || val.Kategori || val.kategori || 'Rumah';
+            const foto = val.foto || val.Foto || val['LINK GAMBAR/VIDEO'] || '';
+            
+            const kepalaKeluarga = val.kepalaKeluarga || '';
+            const anggotaKeluarga = val.anggotaKeluarga || val.Anggota || '';
+            const noRumah = val.noRumah || '';
+            const namaTempat = val.namaTempat || '';
 
-           // Simpan ke array objek terpadu
-           globalDataWarga.push({
-             id: id,
-             nama: namaRumah,
-             lat: lat,
-             lng: lng,
-             hidden: hidden,
-             type: type,
-             foto: foto,
-             kepalaKeluarga: kepalaKeluarga,
-             anggotaKeluarga: anggotaKeluarga
-           });
+            globalDataWarga.push({
+                id: id,
+                nama: namaRumah,
+                noRumah: noRumah,
+                namaTempat: namaTempat,
+                lat: lat,
+                lng: lng,
+                hidden: hidden,
+                type: type,
+                foto: foto,
+                kepalaKeluarga: kepalaKeluarga,
+                anggotaKeluarga: anggotaKeluarga
+            });
 
-           if (namaRumah) {
-             listSemuaRumahAdmin.push(namaRumah);
-           }
+            if (namaRumah) listSemuaRumahAdmin.push(namaRumah);
 
-           if (kepalaKeluarga.trim() !== '') {
-             const hitungAnggota = anggotaKeluarga ? anggotaKeluarga.split(',').filter(Boolean).length : 0;
-             const totalJiwa = 1 + hitungAnggota; 
-             resWarga.push([kepalaKeluarga, anggotaKeluarga, namaRumah, totalJiwa]);
-           }
+            if (kepalaKeluarga.trim() !== '') {
+                totalKK++;
+                let jmlAnggota = anggotaKeluarga ? anggotaKeluarga.split(',').filter(Boolean).length : 0;
+                totalJiwa += (1 + jmlAnggota);
+            }
         });
         
-        prosesDanTampilkanStatistik(resWarga);
-    });
-}
+        // Perbarui elemen UI statistik
+        document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
+        document.getElementById("stat-total-kk").innerText = totalKK + " KK";
+        document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
 
+    } catch (err) {
+        console.error("Gagal memuat data admin dari Cloudflare Worker:", err);
+        document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+        document.getElementById("stat-total-kk").innerText = "0 KK";
+        document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+    }
+}
+    
 function prosesDanTampilkanStatistik(resWarga) {
     if (!Array.isArray(resWarga) || resWarga.length <= 1) {
         document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
@@ -2639,16 +2647,19 @@ function tutupModalKelolaWarga() {
 }
 
 // ==========================================
-// 3. PENCARIAN & EDIT DATA WARGA (TERPADU)
+// 3. PENCARIAN & EDIT DATA WARGA (TERPADU VIA CLOUDFLARE WORKER)
 // ==========================================
-function cariDetailKeluargaAdmin() {
+async function cariDetailKeluargaAdmin() {
     const containerAutocomplete = document.getElementById("dropdown-autocomplete-admin") || document.getElementById("listDropdownWargaAdmin");
     if (containerAutocomplete) {
         containerAutocomplete.style.display = "none";
         containerAutocomplete.innerHTML = "";
     }
     
-    const keyword = document.getElementById("inputCariWargaAdmin").value.toLowerCase().trim();
+    const inputCari = document.getElementById("inputCariWargaAdmin");
+    if (!inputCari) return;
+
+    const keyword = inputCari.value.toLowerCase().trim();
     const container = document.getElementById("hasil-cari-warga");
 
     if (!keyword) {
@@ -2656,58 +2667,100 @@ function cariDetailKeluargaAdmin() {
         return;
     }
 
-    const match = globalDataWarga.find(row => 
-        (row.kepalaKeluarga && row.kepalaKeluarga.toLowerCase().includes(keyword)) || 
-        (row.anggotaKeluarga && row.anggotaKeluarga.toLowerCase().includes(keyword)) ||
-        (row.nama && row.nama.toLowerCase().includes(keyword))
-    );
-
-    container.style.display = "block";
-
-    if (!match) {
-        container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga atau rumah tidak ditemukan.</p>`;
-        return;
+    if (container) {
+        container.style.display = "block";
+        container.innerHTML = `<p style="font-size: 12px; color: #0288d1; text-align: center; margin: 0;">⏳ Mengambil data dari Cloudflare Worker...</p>`;
     }
 
-    const kepala = match.kepalaKeluarga || match.nama || '-';
-    const anggota = match.anggotaKeluarga || 'Belum ada data anggota keluarga';
-    const labelRumah = match.nama || '-';
-    const foto = match.foto || '';
+    try {
+        // 🌟 Mengambil data langsung dari Cloudflare Worker Proxy (seperti inisialisasi peta utama)
+        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+        const dataObj = await response.json();
 
-    let htmlKoor = (match.lat && match.lng) 
-        ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${match.lat},${match.lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat</a>`
-        : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
+        if (!dataObj) {
+            throw new Error("Data kosong dari server.");
+        }
 
-    let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" /></div>` : '';
+        let daftarWargaWorker = [];
+        Object.keys(dataObj).forEach(key => {
+            const val = dataObj[key];
+            if (!val) return;
 
-container.innerHTML = `
-        <div style="font-size: 12px; color: #334155; line-height: 1.6;">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
-                <button type="button" onclick="bukaModalEditWargaAdminById('${match.id}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
-                    ✏️ Edit
-                </button>
+            daftarWargaWorker.push({
+                id: key,
+                nama: val.Nama || val.nama || val.name || '',
+                noRumah: val.noRumah || '',
+                namaTempat: val.namaTempat || '',
+                kepalaKeluarga: val.kepalaKeluarga || '',
+                anggotaKeluarga: val.anggotaKeluarga || val.Anggota || '',
+                lat: val.Lat !== undefined ? val.Lat : (val.lat || ''),
+                lng: val.Lng !== undefined ? val.Lng : (val.lng || ''),
+                foto: val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '',
+                type: val.Type || val.type || val.Kategori || ''
+            });
+        });
+
+        // Lakukan pencarian berdasarkan keyword (Nama, Kepala Keluarga, Anggota, atau No Rumah)
+        const match = daftarWargaWorker.find(row => {
+            const kepala = String(row.kepalaKeluarga || row.nama || '').toLowerCase();
+            const anggota = String(row.anggotaKeluarga || '').toLowerCase();
+            const rumah = String(row.nama || row.noRumah || '').toLowerCase();
+            
+            return kepala.includes(keyword) || anggota.includes(keyword) || rumah.includes(keyword);
+        });
+
+        if (!match) {
+            container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga atau rumah tidak ditemukan.</p>`;
+            return;
+        }
+
+        const kepala = match.kepalaKeluarga || match.nama || '-';
+        const anggota = match.anggotaKeluarga || 'Belum ada data anggota keluarga';
+        const labelRumah = match.nama || match.noRumah || '-';
+        const foto = match.foto || '';
+
+        let htmlKoor = (match.lat && match.lng) 
+            ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${match.lat},${match.lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat</a>`
+            : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
+
+        let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" onError="this.style.display='none'" /></div>` : '';
+
+        container.innerHTML = `
+            <div style="font-size: 12px; color: #334155; line-height: 1.6;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                    <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
+                    <button type="button" onclick="bukaModalEditWargaAdminById('${match.id}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+                        ✏️ Edit
+                    </button>
+                </div>
+                <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
+                <div style="margin-top: 4px;"><b>Titik Denah / Rumah:</b> ${escapeHTML(labelRumah)}</div>
+                ${htmlFoto}
+                ${htmlKoor}
             </div>
-            <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
-            <div style="margin-top: 4px;"><b>Titik Denah / Rumah:</b> ${escapeHTML(labelRumah)}</div>
-            ${htmlFoto}
-            ${htmlKoor}
-        </div>
-    `;
-}
+        `;
 
+        // Perbarui juga globalDataWarga agar sinkron jika dibutuhkan fungsi lain
+        window.globalDataWarga = daftarWargaWorker;
+
+    } catch (err) { // ✅ Diperbaiki menjadi catch (err) yang benar
+        console.error("Gagal memuat data dari Cloudflare Worker:", err);
+        if (container) {
+            container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Gagal terhubung ke Cloudflare Worker.</p>`;
+        }
+    }
+}
 function bukaModalEditWargaAdminById(id) {
-    const data = globalDataWarga.find(item => item.id === id);
+    const data = globalDataWarga.find(item => String(item.id) === String(id));
     if (!data) return;
 
     const inputId = document.getElementById('editWargaId');
     if (inputId) inputId.value = data.id;
 
-    // 🌟 1. Set nilai dropdown kategori bangunan secara aman (case-insensitive)
+    // 🌟 1. Set nilai dropdown kategori bangunan secara aman
     const selectKategori = document.getElementById('editWargaKategori');
     if (selectKategori) {
-        const dbType = String(data.type || 'Rumah').toLowerCase();
-        
+        const dbType = String(data.type || data.Type || 'Rumah').toLowerCase();
         let matched = false;
         for (let option of selectKategori.options) {
             if (option.value.toLowerCase() === dbType) {
@@ -2716,47 +2769,149 @@ function bukaModalEditWargaAdminById(id) {
                 break;
             }
         }
-        if (!matched) {
-            selectKategori.value = 'Rumah'; 
+        if (!matched) selectKategori.value = 'Rumah'; 
+    }
+
+    // 🌟 2. Jalankan fungsi toggle/atur tampilan form berdasarkan kategori yang terpilih
+    if (typeof toggleFieldKategoriEdit === 'function') {
+        toggleFieldKategoriEdit();
+    } else {
+        // Fallback manual jika fungsi toggle belum terpanggil
+        const kategori = String(data.type || data.Type || '').toLowerCase();
+        const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
+        const groupKeluarga = document.getElementById('groupFieldKeluarga');
+        if (groupKeluarga) {
+            groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
         }
     }
 
-    // Cek kategori tempat (Fasum, Kuliner, Minimarket, dll)
-    const kategori = String(data.type || '').toLowerCase();
-    const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
+    // 🌟 3. Set input nilai keluarga dan alamat secara aman (menggunakan pengaman if)
+    const elNama = document.getElementById('editWargaNama');
+    if (elNama) elNama.value = data.kepalaKeluarga || '';
 
-    // Sembunyikan atau tampilkan field Keluarga berdasarkan kategori
-    const groupKeluarga = document.getElementById('groupFieldKeluarga');
-    if (groupKeluarga) {
-        groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
-    }
+    const elAnggota = document.getElementById('editWargaAnggota');
+    if (elAnggota) elAnggota.value = data.anggotaKeluarga || data.Anggota || '';
 
-    // Set nilai input keluarga & pisahkan No Rumah dengan Nama Tempat
-    document.getElementById('editWargaNama').value = data.kepalaKeluarga || '';
-    document.getElementById('editWargaAnggota').value = data.anggotaKeluarga || '';
+    const elNoRumah = document.getElementById('editWargaNoRumah');
+    if (elNoRumah) elNoRumah.value = data.noRumah || '';
+
+    const elNamaTempat = document.getElementById('editWargaNamaTempat');
+    if (elNamaTempat) elNamaTempat.value = data.namaTempat || data.Nama || data.nama || '';
     
-    // Mengambil nilai ke dua input terpisah (noRumah & namaTempat)
-    document.getElementById('editWargaNoRumah').value = data.noRumah || '';
-    document.getElementById('editWargaNamaTempat').value = data.namaTempat || data.nama || '';
-    
-    // Gunakan satu input URL foto yang bersih (hapus duplikasi)
+    // Set Foto & Preview
     const inputFoto = document.getElementById('editWargaFotoURL');
     const preview = document.getElementById('previewFotoRumah');
     
-    if (inputFoto) inputFoto.value = data.foto || '';
+    const fotoVal = data.foto || data.Foto || '';
+    if (inputFoto) inputFoto.value = fotoVal;
     if (preview) {
-        if (data.foto) {
-            preview.src = data.foto;
+        if (fotoVal) {
+            preview.src = fotoVal;
             preview.style.display = 'inline-block';
         } else {
             preview.style.display = 'none';
         }
     }
 
+    // 🌟 4. Tampilkan modal edit
     const modal = document.getElementById('modal-edit-warga');
     if (modal) modal.style.display = 'flex';
 }
 
+// --- FORM TAMBAH LOKASI DINAMIS ---
+function sesuaikanFormKategori() {
+  const kategori = document.getElementById('inputKategori').value.toLowerCase();
+  const container = document.getElementById('containerFormDinamis');
+  if (!container) return;
+
+  if (kategori.includes('rumah')) {
+    // Tampilan Form Khusus Rumah Warga
+    container.innerHTML = `
+      <div class="form-group">
+        <label for="inputNamaRumah">Nama Rumah / Blok:</label>
+        <input type="text" id="inputNamaRumah" placeholder="Contoh: Rumah Budi">
+      </div>
+      <div class="form-group">
+        <label for="inputNoRumah">No. Rumah:</label>
+        <input type="text" id="inputNoRumah" placeholder="Contoh: No 05">
+      </div>
+      <div class="form-group">
+        <label for="inputKepalaKeluarga">Kepala Keluarga:</label>
+        <input type="text" id="inputKepalaKeluarga" placeholder="Contoh: Bapak Budi Santoso">
+      </div>
+      <div class="form-group">
+        <label for="inputAnggotaKeluarga">Anggota Keluarga (pisahkan koma):</label>
+        <textarea id="inputAnggotaKeluarga" rows="2" placeholder="Ibu Ani, Anak 1, Anak 2" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:13px; box-sizing:border-box; resize:vertical;"></textarea>
+      </div>
+    `;
+  } else {
+    // Tampilan Form untuk Selain Rumah (Kuliner, Kost, Fasum, Minimarket)
+    container.innerHTML = `
+      <div class="form-group">
+        <label for="inputNamaTempat">Nama Tempat / Usaha:</label>
+        <input type="text" id="inputNamaTempat" placeholder="Contoh: Angkringan Armadillo / Warung Bu Ani" required>
+      </div>
+      <div class="form-group">
+        <label for="inputNamaPemilik">Nama Pemilik / Pengelola (Opsional):</label>
+        <input type="text" id="inputNamaPemilik" placeholder="Contoh: Mas Iroel">
+      </div>
+      <div class="form-group">
+        <label for="inputNoBangunan">Nomor Rumah / Blok / Keterangan (Opsional):</label>
+        <input type="text" id="inputNoBangunan" placeholder="Contoh: Blok A / No 12">
+      </div>
+    `;
+  }
+}
+
+// Panggil fungsi ini saat pertama kali modal tambah dibuka
+// (Pastikan dipanggil di dalam event klik peta atau tombol tambah data baru)
+
+
+// --- FORM EDIT LOKASI DINAMIS ---
+function toggleFieldKategoriEdit(kategoriVal = null) {
+  const selectKat = document.getElementById('editWargaKategori');
+  const container = document.getElementById('containerEditDinamis');
+  if (!selectKat || !container) return;
+
+  const kategori = (kategoriVal || selectKat.value).toLowerCase();
+
+  if (kategori.includes('rumah')) {
+    container.innerHTML = `
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Rumah / Blok:</label>
+        <input type="text" id="editNamaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah:</label>
+        <input type="text" id="editWargaNoRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Kepala Keluarga:</label>
+        <input type="text" id="editWargaNama" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Anggota Keluarga:</label>
+        <textarea id="editWargaAnggota" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Tempat / Usaha:</label>
+        <input type="text" id="editNamaTempat" placeholder="Contoh: Angkringan Armadillo" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Pemilik / Pengelola (Opsional):</label>
+        <input type="text" id="editNamaPemilik" placeholder="Contoh: Mas Iroel" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nomor Rumah / Bangunan (Opsional):</label>
+        <input type="text" id="editWargaNoRumah" placeholder="Contoh: No 06" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+    `;
+  }
+}
+    
 function bukaModalEditWargaDariPeta(id) {
     if (map) map.closePopup();
     bukaModalEditWargaAdminById(id);
@@ -2805,8 +2960,9 @@ async function prosesUploadSemiManual() {
   statusDiv.innerHTML = "⏳ Sedang mengkompres & mengunggah file ke R2...";
   statusDiv.style.color = "#d97706";
 
-  try {
-    const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+try {
+    // Menggunakan konfigurasi terpusat dari utils.js
+    const workerUrl = RT05_CONFIG.UPLOADER_URL; 
     file = await kompresGambar(file, 1200, 0.8);
 
     const response = await fetch(workerUrl, {
@@ -2924,15 +3080,15 @@ async function simpanPerubahanWarga(event) {
   try {
     let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
 
-    // 1. Proses upload file baru ke Cloudflare R2 jika ada
-    if (fileBaruDipilih !== null) {
+    // Proses upload file baru jika dipilih
+    if (typeof fileBaruDipilih !== 'undefined' && fileBaruDipilih !== null) {
       document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file baru ke cloud storage...</i>';
       
-      const noRumahVal = document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const noRumahVal = document.getElementById('editWargaNoRumah') ? document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_') : idWarga;
       const ekstensi = fileBaruDipilih.name.split('.').pop() || 'jpg';
       const namaFileKustom = `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`;
 
-      const responseUpload = await fetch('https://rt05-uploader.deny220291.workers.dev/', {
+      const responseUpload = await fetch(RT05_CONFIG.UPLOADER_URL, {
         method: 'POST',
         headers: {
           "X-File-Name": encodeURIComponent(namaFileKustom),
@@ -2950,33 +3106,49 @@ async function simpanPerubahanWarga(event) {
       }
     }
 
-    // 2. Ambil nilai input dari form
-    const noRumahInput = document.getElementById('editWargaNoRumah').value.trim();
-    const namaTempatInput = document.getElementById('editWargaNamaTempat').value.trim();
-    const kepalaKeluargaInput = document.getElementById('editWargaNama').value.trim();
-    const anggotaKeluargaInput = document.getElementById('editWargaAnggota').value.trim();
     const kategoriInput = document.getElementById('editWargaKategori').value;
+    const isRumah = kategoriInput.toLowerCase().includes('rumah') || kategoriInput.toLowerCase().includes('kost');
 
-    // 3. Susun data update (Node baru otomatis terbentuk di Firebase jika belum ada)
-    const dataUpdate = {
+    const noRumahInput = document.getElementById('editWargaNoRumah') ? document.getElementById('editWargaNoRumah').value.trim() : '';
+    
+    let dataUpdate = {
       Type: kategoriInput,
-      kepalaKeluarga: kepalaKeluargaInput,
-      anggotaKeluarga: anggotaKeluargaInput,
-      noRumah: noRumahInput,                              // Node baru nomor rumah otomatis
-      namaTempat: namaTempatInput,                        // Node baru nama tempat otomatis
-      Nama: namaTempatInput || kepalaKeluargaInput || noRumahInput, // Nama utama penanda di peta
-      foto: finalUrlFoto,                                 // URL R2 Cloudflare terbaru
-      updatedAt: Date.now()                               // Timestamp otomatis
+      noRumah: noRumahInput,
+      foto: finalUrlFoto,
+      updatedAt: Date.now()
     };
 
-    // Simpan ke node Firebase peta_warga
+    // 🌟 Ambil nilai secara aman berdasarkan jenis kategori
+    if (isRumah) {
+      const kepalaKeluarga = document.getElementById('editWargaNama') ? document.getElementById('editWargaNama').value.trim() : '';
+      const anggotaKeluarga = document.getElementById('editWargaAnggota') ? document.getElementById('editWargaAnggota').value.trim() : '';
+      const namaRumah = document.getElementById('editNamaRumah') ? document.getElementById('editNamaRumah').value.trim() : '';
+
+      dataUpdate.kepalaKeluarga = kepalaKeluarga;
+      dataUpdate.anggotaKeluarga = anggotaKeluarga;
+      dataUpdate.namaTempat = namaRumah || (kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : `No ${noRumahInput}`);
+      dataUpdate.Nama = dataUpdate.namaTempat;
+    } else {
+      // Untuk Kuliner, Fasum, Minimarket, dll.
+      const namaTempat = document.getElementById('editNamaTempat') ? document.getElementById('editNamaTempat').value.trim() : '';
+      const namaPemilik = document.getElementById('editNamaPemilik') ? document.getElementById('editNamaPemilik').value.trim() : '';
+
+      dataUpdate.namaTempat = namaTempat || kategoriInput;
+      dataUpdate.Nama = dataUpdate.namaTempat;
+      dataUpdate.kepalaKeluarga = namaPemilik; // Disimpan sebagai nama pemilik/pengelola
+      dataUpdate.anggotaKeluarga = ""; // Dikosongkan
+    }
+
     const refItem = window.firebaseRef(window.db, `peta_warga/${idWarga}`);
     await window.firebaseUpdate(refItem, dataUpdate);
 
-    fileBaruDipilih = null;
+    if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
     tutupModalEditWarga();
-    alert('✅ Perubahan data, node baru, dan foto R2 berhasil disimpan otomatis!');
-    muatSemuaDataAdmin();
+    alert('✅ Perubahan data dan foto berhasil disimpan!');
+    
+    if (typeof muatSemuaDataAdmin === 'function') {
+      muatSemuaDataAdmin();
+    }
 
   } catch (error) {
     console.error(error);
@@ -3245,11 +3417,12 @@ window.simpanLaporanDivisi = async function() {
     }
 
     let file = fileInput.files[0];
-    try {
+   try {
       if (typeof kompresGambar === 'function') {
         file = await kompresGambar(file, 1200, 0.8);
       }
-      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+      // Mengambil URL dari konfigurasi terpusat di utils.js
+      const workerUrl = RT05_CONFIG.UPLOADER_URL; 
       const response = await fetch(workerUrl, {
   method: "POST",
   headers: {
@@ -3990,9 +4163,43 @@ function resetFormPengumuman() {
     window.currentEditPengumumanId = null;
 }
 
-// ==========================================
-    // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN
+   // ==========================================
+    // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN (DENGAN IKON & BERSIH)
     // ==========================================
+    let cacheDataPetaAdmin = [];
+
+    // 1. Ambil data lengkap beserta kategori/ikon dari Cloudflare Worker
+    function muatDataPetaUntukAdmin() {
+      fetch(RT05_CONFIG.PETA_PROXY_URL)
+        .then(response => response.json())
+        .then(dataObj => {
+          cacheDataPetaAdmin = [];
+          if (!dataObj) return;
+
+          Object.keys(dataObj).forEach(key => {
+            var item = dataObj[key];
+            var namaAsli = String(item.Nama || item.nama || item.name || '').trim();
+            if (namaAsli !== '') {
+              var kategoriManual = String(item.Type || item.type || item.Kategori || item.kategori || '').trim().toLowerCase();
+              
+              // Panggil fungsi getIkonKategori bawaan utils jika ada, untuk mendapatkan emoji/ikon yang sesuai
+              var dataIkon = (typeof getIkonKategori === 'function') ? getIkonKategori(namaAsli, kategoriManual) : { emoji: '🏠' };
+
+              cacheDataPetaAdmin.push({
+                nama: namaAsli,
+                kepalaKeluarga: item.kepalaKeluarga || '',
+                lat: item.Lat !== undefined ? item.Lat : (item.lat || ''),
+                lng: item.Lng !== undefined ? item.Lng : (item.lng || ''),
+                emoji: dataIkon.emoji || '🏠'
+              });
+            }
+          });
+        })
+        .catch(err => console.error("Gagal memuat data peta untuk admin:", err));
+    }
+
+    document.addEventListener('DOMContentLoaded', muatDataPetaUntukAdmin);
+
     function cariLokasiPengumuman(keyword) {
       var container = document.getElementById('hasilPencarianLokasi');
       if (!keyword || keyword.trim() === '') {
@@ -4001,35 +4208,32 @@ function resetFormPengumuman() {
       }
 
       var query = keyword.toLowerCase();
-      var sumberData = [];
-
-      // Diperbarui menggunakan globalDataWarga yang terpadu
-      if (typeof globalDataWarga !== 'undefined' && Array.isArray(globalDataWarga) && globalDataWarga.length > 0) {
-        sumberData = globalDataWarga.map(function(item) {
-          let label = item.nama || '';
-          if (item.kepalaKeluarga) {
-            label += ` (${item.kepalaKeluarga})`;
-          }
-          return { nama: label, lat: item.lat || '', lng: item.lng || '' };
-        });
-      }
+      var sumberData = cacheDataPetaAdmin;
 
       var hasil = sumberData.filter(function(item) {
-        return String(item.nama).toLowerCase().includes(query);
+        return String(item.nama).toLowerCase().includes(query) || 
+               String(item.kepalaKeluarga).toLowerCase().includes(query);
       });
 
       if (hasil.length === 0) {
-        container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: white;">Ketik bebas (Tidak ada data di peta)</div>`;
+        // 🌟 Beri background putih solid agar tidak tembus pandang / kotak hitam
+        container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: #ffffff;">Ketik bebas (Tidak ada data di peta)</div>`;
         container.style.display = 'block';
         return;
       }
 
       var html = '';
       hasil.slice(0, 6).forEach(function(item) {
-        var safeNama = typeof escapeHTML === 'function' ? escapeHTML(item.nama) : item.nama;
+        var labelTampil = item.nama;
+        if (item.kepalaKeluarga && !labelTampil.toLowerCase().includes(item.kepalaKeluarga.toLowerCase())) {
+          labelTampil += ` (${item.kepalaKeluarga})`;
+        }
+        var safeNama = typeof escapeHTML === 'function' ? escapeHTML(labelTampil) : labelTampil;
+        
+        // 🌟 Menggunakan emoji ikon asli (rumah, fasum, minimarket, dll) dan background putih solid (#ffffff)
         html += `
-          <div onclick="pilihLokasiPengumuman('${safeNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: white;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='white'">
-            <strong>🏠 ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
+          <div onclick="pilihLokasiPengumuman('${safeNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: #ffffff;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
+            <strong>${item.emoji || '🏠'} ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
           </div>
         `;
       });
@@ -4044,7 +4248,7 @@ function resetFormPengumuman() {
       document.getElementById('pengumumanLng').value = lng;
       document.getElementById('hasilPencarianLokasi').style.display = 'none';
     }
-
+    
     document.addEventListener('click', function(e) {
       var container = document.getElementById('hasilPencarianLokasi');
       var input = document.getElementById('pengumumanLokasi');

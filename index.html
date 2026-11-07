@@ -1257,7 +1257,6 @@ window.addEventListener('firebaseSiapIndex', initMainPageChatListener);
   // ==========================================
   var map; 
   var daftarPin = [];
-  var daftarPengumuman = [];
   var dataKeuangan = [];
   var pinRumahAktif = null;
   var isDataReady = false; // 🌟 PASTIKAN VARIABEL INI ADA DI SINI
@@ -1312,8 +1311,12 @@ function initPetaDanData() {
     if (window.db && typeof window.firebaseRef === 'function') {
       if (navigator.onLine) kirimDataPendingJimpitan();
     }
+    // 🌟 Tambahkan baris ini agar pemantau badge langsung berjalan
+    if (typeof muatBadgeInfoRT === 'function') {
+      muatBadgeInfoRT();
+    }
   }
-  
+
   
   // Eksekusi secepat mungkin berdasarkan status dokumen saat ini
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -1494,6 +1497,51 @@ function muatDataPetaWarga() {
               return kata.charAt(0) + '*'.repeat(kata.length - 1);
             }).join(' ');
           }
+
+// 🌟 Fungsi untuk Memantau & Menampilkan Badge Jumlah Info RT Aktif di Index
+function muatBadgeInfoRT() {
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatBadgeInfoRT, 100);
+    return;
+  }
+
+  const pengumumanRef = window.firebaseRef(window.db, "pengumuman");
+  window.firebaseOnValue(pengumumanRef, (snapshot) => {
+    const data = snapshot.val();
+    let activeKeys = [];
+
+    if (data) {
+      Object.keys(data).forEach(key => {
+        const item = data[key];
+        var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
+        if (status === 'AKTIF') {
+          activeKeys.push(key);
+        }
+      });
+    }
+
+    // Cek riwayat baca di LocalStorage perangkat warga
+    let readKeys = JSON.parse(localStorage.getItem('rt05_read_announcements') || '[]');
+    let unreadKeys = activeKeys.filter(k => !readKeys.includes(k));
+
+    var badge = document.getElementById('badge-count');
+    if (badge) {
+      if (unreadKeys.length > 0) {
+        // 🔴 Ada info baru yang belum dibaca (Menarik perhatian warga dengan warna merah menyala)
+        badge.innerText = unreadKeys.length;
+        badge.style.display = 'inline-block';
+        badge.style.background = '#ef4444';
+      } else if (activeKeys.length > 0) {
+        // ⚪ Semua sudah dibaca, tampilkan total aktif dengan warna abu-abu netral
+        badge.innerText = activeKeys.length;
+        badge.style.display = 'inline-block';
+        badge.style.background = '#64748b';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+  });
+}
   
 window.jalankanPencarianPeta = function() {
   var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();

@@ -208,7 +208,7 @@
       }
     }
 
-    function muatPengumumanFirebase() {
+function muatPengumumanFirebase() {
       if (typeof window.firebaseRef !== 'function' || !window.db) {
         setTimeout(muatPengumumanFirebase, 50);
         return;
@@ -218,6 +218,7 @@
       window.firebaseOnValue(pengumumanRef, (snapshot) => {
         const data = snapshot.val();
         daftarPengumuman = [];
+        let activeKeys = []; // 🌟 Menampung ID pengumuman aktif untuk sinkronisasi badge
 
         if (data) {
           Object.keys(data).forEach(key => {
@@ -225,6 +226,8 @@
             var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
             
             if (status === 'AKTIF') {
+              activeKeys.push(key); // 🌟 Rekam ID pengumuman yang berstatus aktif
+
               var tglRapi = item.tanggal || '';
               if (tglRapi.includes('T')) {
                 var parts = tglRapi.split('T')[0].split('-');
@@ -240,6 +243,13 @@
               });
             }
           });
+        }
+
+        // 🌟 OTOMATIS TANDAI SUDAH DIBACA:
+        // Saat halaman pengumuman dibuka warga, simpan ID aktif ke LocalStorage perangkat ini
+        // agar badge unread di index.html berubah menjadi total aktif (warna netral/abu)
+        if (activeKeys.length > 0) {
+          localStorage.setItem('rt05_read_announcements', JSON.stringify(activeKeys));
         }
 
         daftarPengumuman.sort((a, b) => {
