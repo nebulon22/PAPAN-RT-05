@@ -1179,28 +1179,29 @@ window.addEventListener('DOMContentLoaded', () => {
     
 // Helper: Tandai Pesan Terakhir di Room ini Sudah Dibaca
 function markRoomAsRead(targetUID) {
-  if (!currentUser?.uid || !targetUID) return;
+    if (!currentUser?.uid || !targetUID) return;
 
-  // 🛑 PENGAMAN: Jangan tandai sudah dibaca jika user sedang tidak melihat chat pribadi ini di layar!
-  const isViewingThisPrivateChat = (activeChatType === 'private' && activePrivateUID === targetUID && window.isUserViewingChat());
-  if (!isViewingThisPrivateChat) return;
+    const isViewingThisPrivateChat = (activeChatType === 'private' && activePrivateUID === targetUID && window.isUserViewingChat());
+    if (!isViewingThisPrivateChat) return;
 
-  // 🛠️ FIX: Gunakan targetUID (bukan activePrivateUID) agar roomID tidak tertukar / null!
-  const roomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
-  const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
+    // 🌟 Berikan jeda 1 detik agar animasi highlight sempat tampil pada pesan private
+    setTimeout(() => {
+        const roomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
+        const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
 
-  get(roomRef).then((snapshot) => {
-    if (snapshot.exists()) {
-      let lastKey = null;
-      snapshot.forEach(child => { lastKey = child.key; });
-      
-      if (lastKey) {
-        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
-        lastReadKeyMap[targetUID] = lastKey;
-        localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
-      }
-    }
-  });
+        get(roomRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                let lastKey = null;
+                snapshot.forEach(child => { lastKey = child.key; });
+                
+                if (lastKey) {
+                    const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+                    lastReadKeyMap[targetUID] = lastKey;
+                    localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
+                }
+            }
+        });
+    }, 1000);
 }
 
  // 3. Pindah Tab (Public <-> Private) dengan Perbedaan Warna Latar
@@ -1637,26 +1638,28 @@ function listenPublicGroupUnread() {
     }
 
 window.markPublicGroupAsRead = () => {
-    // 🛑 PENGAMAN: Jangan tandai sudah dibaca jika user belum membuka/melihat chat di layar!
     if (!currentUser?.uid || !window.isUserViewingChat() || activeChatType !== 'public') return;
 
-    const chatsRef = query(ref(db, 'chats'), limitToLast(5));
-    get(chatsRef).then((snapshot) => {
-        if (snapshot.exists()) {
-            let lastKey = null;
-            snapshot.forEach(child => {
-                if (child.key !== 'pinned_poll') { 
-                    lastKey = child.key;
-                }
-            });
+    // 🌟 Berikan jeda 1 detik agar animasi highlight sempat tampil saat tab dibuka
+    setTimeout(() => {
+        const chatsRef = query(ref(db, 'chats'), limitToLast(5));
+        get(chatsRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                let lastKey = null;
+                snapshot.forEach(child => {
+                    if (child.key !== 'pinned_poll') { 
+                        lastKey = child.key;
+                    }
+                });
 
-            if (lastKey) {
-                const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-                lastReadPublicMap[currentUser.uid] = lastKey;
-                localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+                if (lastKey) {
+                    const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+                    lastReadPublicMap[currentUser.uid] = lastKey;
+                    localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+                }
             }
-        }
-    });
+        });
+    }, 1000);
 
     updatePublicTabBadge(0);
     sendUnreadCountToParent(0);
