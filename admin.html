@@ -1335,28 +1335,44 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
 
   try {
     let finalUrlFoto = document.getElementById('inputFoto').value.trim();
-
-    const noRumahInput = document.getElementById('inputNoRumah').value.trim();
-    const namaWargaInput = document.getElementById('inputNamaWarga') ? document.getElementById('inputNamaWarga').value.trim() : '';
     const kategoriVal = document.getElementById('inputKategori').value;
+    const isRumah = kategoriVal.toLowerCase().includes('rumah');
 
-    // 🌟 Payload disesuaikan dengan struktur node Firebase terbaru
-    const payload = {
-      Nama: namaWargaInput ? `Rumah ${namaWargaInput}` : `No ${noRumahInput}`,
-      noRumah: noRumahInput,
-      kepalaKeluarga: namaWargaInput,
-      namaTempat: namaWargaInput ? `Rumah ${namaWargaInput}` : `No ${noRumahInput}`,
-      anggotaKeluarga: "",
+    let payload = {
+      Type: kategoriVal,
       Lat: document.getElementById('inputLat').value,
       Lng: document.getElementById('inputLng').value,
-      Type: kategoriVal,
       Hidden: document.getElementById('inputHidden').value === 'TRUE',
       foto: finalUrlFoto,
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
 
-    // Membuat node baru otomatis di Firebase (seperti item_1, item_10, dst.)
+    // 🌟 Mengambil data berdasarkan jenis form dinamis yang aktif
+    if (isRumah) {
+      const namaRumah = document.getElementById('inputNamaRumah') ? document.getElementById('inputNamaRumah').value.trim() : '';
+      const noRumah = document.getElementById('inputNoRumah') ? document.getElementById('inputNoRumah').value.trim() : '';
+      const kepalaKeluarga = document.getElementById('inputKepalaKeluarga') ? document.getElementById('inputKepalaKeluarga').value.trim() : '';
+      const anggotaKeluarga = document.getElementById('inputAnggotaKeluarga') ? document.getElementById('inputAnggotaKeluarga').value.trim() : '';
+
+      payload.Nama = namaRumah || (kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : `No ${noRumah}`);
+      payload.namaTempat = namaRumah || (kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : `No ${noRumah}`);
+      payload.noRumah = noRumah;
+      payload.kepalaKeluarga = kepalaKeluarga;
+      payload.anggotaKeluarga = anggotaKeluarga;
+    } else {
+      const namaTempat = document.getElementById('inputNamaTempat') ? document.getElementById('inputNamaTempat').value.trim() : '';
+      const namaPemilik = document.getElementById('inputNamaPemilik') ? document.getElementById('inputNamaPemilik').value.trim() : '';
+      const noBangunan = document.getElementById('inputNoBangunan') ? document.getElementById('inputNoBangunan').value.trim() : '';
+
+      payload.Nama = namaTempat || kategoriVal;
+      payload.namaTempat = namaTempat || kategoriVal;
+      payload.kepalaKeluarga = namaPemilik; // Disimpan sebagai nama pemilik/pengelola usaha
+      payload.noRumah = noBangunan;
+      payload.anggotaKeluarga = ""; // Dikosongkan untuk non-rumah
+    }
+
+    // Membuat node baru otomatis di Firebase
     const newRef = window.firebasePush(window.firebaseRef(window.db, 'peta_warga'));
     await window.firebaseSet(newRef, payload);
 
@@ -1365,6 +1381,12 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
     alert('✅ Data lokasi baru berhasil disimpan ke Firebase!');
     tutupModalForm();
     document.getElementById('dataForm').reset();
+    
+    // Kembalikan form dinamis ke state awal (Rumah) setelah reset
+    if (typeof sesuaikanFormKategori === 'function') {
+      sesuaikanFormKategori();
+    }
+    
     muatSemuaDataAdmin();
 
   } catch (err) {
@@ -2773,6 +2795,100 @@ function bukaModalEditWargaAdminById(id) {
 
     const modal = document.getElementById('modal-edit-warga');
     if (modal) modal.style.display = 'flex';
+}
+
+// --- FORM TAMBAH LOKASI DINAMIS ---
+function sesuaikanFormKategori() {
+  const kategori = document.getElementById('inputKategori').value.toLowerCase();
+  const container = document.getElementById('containerFormDinamis');
+  if (!container) return;
+
+  if (kategori.includes('rumah')) {
+    // Tampilan Form Khusus Rumah Warga
+    container.innerHTML = `
+      <div class="form-group">
+        <label for="inputNamaRumah">Nama Rumah / Blok:</label>
+        <input type="text" id="inputNamaRumah" placeholder="Contoh: Rumah Budi">
+      </div>
+      <div class="form-group">
+        <label for="inputNoRumah">No. Rumah:</label>
+        <input type="text" id="inputNoRumah" placeholder="Contoh: No 05">
+      </div>
+      <div class="form-group">
+        <label for="inputKepalaKeluarga">Kepala Keluarga:</label>
+        <input type="text" id="inputKepalaKeluarga" placeholder="Contoh: Bapak Budi Santoso">
+      </div>
+      <div class="form-group">
+        <label for="inputAnggotaKeluarga">Anggota Keluarga (pisahkan koma):</label>
+        <textarea id="inputAnggotaKeluarga" rows="2" placeholder="Ibu Ani, Anak 1, Anak 2" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:6px; font-size:13px; box-sizing:border-box; resize:vertical;"></textarea>
+      </div>
+    `;
+  } else {
+    // Tampilan Form untuk Selain Rumah (Kuliner, Kost, Fasum, Minimarket)
+    container.innerHTML = `
+      <div class="form-group">
+        <label for="inputNamaTempat">Nama Tempat / Usaha:</label>
+        <input type="text" id="inputNamaTempat" placeholder="Contoh: Angkringan Armadillo / Warung Bu Ani" required>
+      </div>
+      <div class="form-group">
+        <label for="inputNamaPemilik">Nama Pemilik / Pengelola (Opsional):</label>
+        <input type="text" id="inputNamaPemilik" placeholder="Contoh: Mas Iroel">
+      </div>
+      <div class="form-group">
+        <label for="inputNoBangunan">Nomor Rumah / Blok / Keterangan (Opsional):</label>
+        <input type="text" id="inputNoBangunan" placeholder="Contoh: Blok A / No 12">
+      </div>
+    `;
+  }
+}
+
+// Panggil fungsi ini saat pertama kali modal tambah dibuka
+// (Pastikan dipanggil di dalam event klik peta atau tombol tambah data baru)
+
+
+// --- FORM EDIT LOKASI DINAMIS ---
+function toggleFieldKategoriEdit(kategoriVal = null) {
+  const selectKat = document.getElementById('editWargaKategori');
+  const container = document.getElementById('containerEditDinamis');
+  if (!selectKat || !container) return;
+
+  const kategori = (kategoriVal || selectKat.value).toLowerCase();
+
+  if (kategori.includes('rumah')) {
+    container.innerHTML = `
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Rumah / Blok:</label>
+        <input type="text" id="editNamaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah:</label>
+        <input type="text" id="editWargaNoRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Kepala Keluarga:</label>
+        <input type="text" id="editWargaNama" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Anggota Keluarga:</label>
+        <textarea id="editWargaAnggota" rows="2" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box; resize: vertical;"></textarea>
+      </div>
+    `;
+  } else {
+    container.innerHTML = `
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Tempat / Usaha:</label>
+        <input type="text" id="editNamaTempat" placeholder="Contoh: Angkringan Armadillo" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" required>
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Pemilik / Pengelola (Opsional):</label>
+        <input type="text" id="editNamaPemilik" placeholder="Contoh: Mas Iroel" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nomor Rumah / Bangunan (Opsional):</label>
+        <input type="text" id="editWargaNoRumah" placeholder="Contoh: No 06" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+    `;
+  }
 }
     
 function bukaModalEditWargaDariPeta(id) {
