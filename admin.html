@@ -2750,7 +2750,6 @@ async function cariDetailKeluargaAdmin() {
         }
     }
 }
-
 function bukaModalEditWargaAdminById(id) {
     const data = globalDataWarga.find(item => String(item.id) === String(id));
     if (!data) return;
@@ -2758,7 +2757,7 @@ function bukaModalEditWargaAdminById(id) {
     const inputId = document.getElementById('editWargaId');
     if (inputId) inputId.value = data.id;
 
-    // 🌟 Set nilai dropdown kategori bangunan secara aman
+    // 🌟 1. Set nilai dropdown kategori bangunan secara aman
     const selectKategori = document.getElementById('editWargaKategori');
     if (selectKategori) {
         const dbType = String(data.type || data.Type || 'Rumah').toLowerCase();
@@ -2773,20 +2772,33 @@ function bukaModalEditWargaAdminById(id) {
         if (!matched) selectKategori.value = 'Rumah'; 
     }
 
-    const kategori = String(data.type || data.Type || '').toLowerCase();
-    const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
-
-    const groupKeluarga = document.getElementById('groupFieldKeluarga');
-    if (groupKeluarga) {
-        groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
+    // 🌟 2. Jalankan fungsi toggle/atur tampilan form berdasarkan kategori yang terpilih
+    if (typeof toggleFieldKategoriEdit === 'function') {
+        toggleFieldKategoriEdit();
+    } else {
+        // Fallback manual jika fungsi toggle belum terpanggil
+        const kategori = String(data.type || data.Type || '').toLowerCase();
+        const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
+        const groupKeluarga = document.getElementById('groupFieldKeluarga');
+        if (groupKeluarga) {
+            groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
+        }
     }
 
-    // Set input nilai keluarga dan alamat
-    document.getElementById('editWargaNama').value = data.kepalaKeluarga || '';
-    document.getElementById('editWargaAnggota').value = data.anggotaKeluarga || data.Anggota || '';
-    document.getElementById('editWargaNoRumah').value = data.noRumah || '';
-    document.getElementById('editWargaNamaTempat').value = data.namaTempat || data.Nama || data.nama || '';
+    // 🌟 3. Set input nilai keluarga dan alamat secara aman (menggunakan pengaman if)
+    const elNama = document.getElementById('editWargaNama');
+    if (elNama) elNama.value = data.kepalaKeluarga || '';
+
+    const elAnggota = document.getElementById('editWargaAnggota');
+    if (elAnggota) elAnggota.value = data.anggotaKeluarga || data.Anggota || '';
+
+    const elNoRumah = document.getElementById('editWargaNoRumah');
+    if (elNoRumah) elNoRumah.value = data.noRumah || '';
+
+    const elNamaTempat = document.getElementById('editWargaNamaTempat');
+    if (elNamaTempat) elNamaTempat.value = data.namaTempat || data.Nama || data.nama || '';
     
+    // Set Foto & Preview
     const inputFoto = document.getElementById('editWargaFotoURL');
     const preview = document.getElementById('previewFotoRumah');
     
@@ -2801,6 +2813,7 @@ function bukaModalEditWargaAdminById(id) {
         }
     }
 
+    // 🌟 4. Tampilkan modal edit
     const modal = document.getElementById('modal-edit-warga');
     if (modal) modal.style.display = 'flex';
 }
