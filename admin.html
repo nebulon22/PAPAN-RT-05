@@ -3080,11 +3080,11 @@ async function simpanPerubahanWarga(event) {
   try {
     let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
 
-    // Proses upload file baru ke Cloudflare R2 jika ada
-    if (fileBaruDipilih !== null) {
+    // Proses upload file baru jika dipilih
+    if (typeof fileBaruDipilih !== 'undefined' && fileBaruDipilih !== null) {
       document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file baru ke cloud storage...</i>';
       
-      const noRumahVal = document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_');
+      const noRumahVal = document.getElementById('editWargaNoRumah') ? document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_') : idWarga;
       const ekstensi = fileBaruDipilih.name.split('.').pop() || 'jpg';
       const namaFileKustom = `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`;
 
@@ -3106,32 +3106,49 @@ async function simpanPerubahanWarga(event) {
       }
     }
 
-    // Ambil nilai input dari form
-    const noRumahInput = document.getElementById('editWargaNoRumah').value.trim();
-    const namaTempatInput = document.getElementById('editWargaNamaTempat').value.trim();
-    const kepalaKeluargaInput = document.getElementById('editWargaNama').value.trim();
-    const anggotaKeluargaInput = document.getElementById('editWargaAnggota').value.trim();
     const kategoriInput = document.getElementById('editWargaKategori').value;
+    const isRumah = kategoriInput.toLowerCase().includes('rumah') || kategoriInput.toLowerCase().includes('kost');
 
-    // 🌟 Susun data update sesuai dengan struktur node database Anda
-    const dataUpdate = {
+    const noRumahInput = document.getElementById('editWargaNoRumah') ? document.getElementById('editWargaNoRumah').value.trim() : '';
+    
+    let dataUpdate = {
       Type: kategoriInput,
-      kepalaKeluarga: kepalaKeluargaInput,
-      anggotaKeluarga: anggotaKeluargaInput,
       noRumah: noRumahInput,
-      namaTempat: namaTempatInput,
-      Nama: namaTempatInput || `Rumah ${kepalaKeluargaInput}` || noRumahInput,
       foto: finalUrlFoto,
       updatedAt: Date.now()
     };
 
+    // 🌟 Ambil nilai secara aman berdasarkan jenis kategori
+    if (isRumah) {
+      const kepalaKeluarga = document.getElementById('editWargaNama') ? document.getElementById('editWargaNama').value.trim() : '';
+      const anggotaKeluarga = document.getElementById('editWargaAnggota') ? document.getElementById('editWargaAnggota').value.trim() : '';
+      const namaRumah = document.getElementById('editNamaRumah') ? document.getElementById('editNamaRumah').value.trim() : '';
+
+      dataUpdate.kepalaKeluarga = kepalaKeluarga;
+      dataUpdate.anggotaKeluarga = anggotaKeluarga;
+      dataUpdate.namaTempat = namaRumah || (kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : `No ${noRumahInput}`);
+      dataUpdate.Nama = dataUpdate.namaTempat;
+    } else {
+      // Untuk Kuliner, Fasum, Minimarket, dll.
+      const namaTempat = document.getElementById('editNamaTempat') ? document.getElementById('editNamaTempat').value.trim() : '';
+      const namaPemilik = document.getElementById('editNamaPemilik') ? document.getElementById('editNamaPemilik').value.trim() : '';
+
+      dataUpdate.namaTempat = namaTempat || kategoriInput;
+      dataUpdate.Nama = dataUpdate.namaTempat;
+      dataUpdate.kepalaKeluarga = namaPemilik; // Disimpan sebagai nama pemilik/pengelola
+      dataUpdate.anggotaKeluarga = ""; // Dikosongkan
+    }
+
     const refItem = window.firebaseRef(window.db, `peta_warga/${idWarga}`);
     await window.firebaseUpdate(refItem, dataUpdate);
 
-    fileBaruDipilih = null;
+    if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
     tutupModalEditWarga();
     alert('✅ Perubahan data dan foto berhasil disimpan!');
-    muatSemuaDataAdmin();
+    
+    if (typeof muatSemuaDataAdmin === 'function') {
+      muatSemuaDataAdmin();
+    }
 
   } catch (error) {
     console.error(error);
