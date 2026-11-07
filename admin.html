@@ -2529,15 +2529,19 @@ let listSemuaRumahAdmin = [];
 // 1. MEMUAT DATA ADMIN DARI 1 NODE (peta_warga)
 // ==========================================
 function muatSemuaDataAdmin() {
+    if (!window.db || typeof window.firebaseRef !== 'function') return;
+
     window.firebaseOnValue(window.firebaseRef(window.db, 'peta_warga'), (snapshot) => {
         globalDataWarga = [];
         listSemuaRumahAdmin = [];
         
-        const dummyHeader = ["Kepala", "Anggota", "Rumah", "Total"];
-        const resWarga = [dummyHeader]; 
+        let totalKK = 0;
+        let totalJiwa = 0;
 
         if (!snapshot.exists()) {
-            prosesDanTampilkanStatistik(resWarga);
+            document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+            document.getElementById("stat-total-kk").innerText = "0 KK";
+            document.getElementById("stat-total-jiwa").innerText = "0 Orang";
             return;
         }
 
@@ -2558,7 +2562,6 @@ function muatSemuaDataAdmin() {
            const noRumah = val.noRumah || '';
            const namaTempat = val.namaTempat || '';
 
-           // Simpan ke array objek terpadu dengan menangkap semua variasi key
            globalDataWarga.push({
              id: id,
              nama: namaRumah,
@@ -2573,19 +2576,19 @@ function muatSemuaDataAdmin() {
              anggotaKeluarga: anggotaKeluarga
            });
 
-           if (namaRumah) {
-             listSemuaRumahAdmin.push(namaRumah);
-           }
+           if (namaRumah) listSemuaRumahAdmin.push(namaRumah);
 
            if (kepalaKeluarga.trim() !== '') {
-             const hitungAnggota = anggotaKeluarga ? anggotaKeluarga.split(',').filter(Boolean).length : 0;
-             const totalJiwa = 1 + hitungAnggota; 
-             resWarga.push([kepalaKeluarga, anggotaKeluarga, namaRumah, totalJiwa]);
+             totalKK++;
+             let jmlAnggota = anggotaKeluarga ? anggotaKeluarga.split(',').filter(Boolean).length : 0;
+             totalJiwa += (1 + jmlAnggota);
            }
         });
         
-        prosesDanTampilkanStatistik(resWarga);
-    });
+        document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
+        document.getElementById("stat-total-kk").innerText = totalKK + " KK";
+        document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
+    }, { onlyOnce: true });
 }
     
 function prosesDanTampilkanStatistik(resWarga) {
@@ -2634,9 +2637,9 @@ function tutupModalKelolaWarga() {
 }
 
 // ==========================================
-// 3. PENCARIAN & EDIT DATA WARGA (TERPADU)
+// 3. PENCARIAN & EDIT DATA WARGA (TERPADU VIA CLOUDFLARE WORKER)
 // ==========================================
-function cariDetailKeluargaAdmin() {
+async function cariDetailKeluargaAdmin() {
     const containerAutocomplete = document.getElementById("dropdown-autocomplete-admin") || document.getElementById("listDropdownWargaAdmin");
     if (containerAutocomplete) {
         containerAutocomplete.style.display = "none";
@@ -2654,36 +2657,64 @@ function cariDetailKeluargaAdmin() {
         return;
     }
 
-    // 🌟 PERBAIKAN: Tangani pencarian dengan aman dari berbagai variasi huruf kapital (case-insensitive & fallback key)
-    const match = globalDataWarga.find(row => {
-        const kepala = String(row.kepalaKeluarga || row.Nama || row.nama || '').toLowerCase();
-        const anggota = String(row.anggotaKeluarga || row.Anggota || '').toLowerCase();
-        const rumah = String(row.nama || row.noRumah || '').toLowerCase();
-        
-        return kepala.includes(keyword) || anggota.includes(keyword) || rumah.includes(keyword);
-    });
-
-    if (container) container.style.display = "block";
-
-    if (!match) {
-        if (container) {
-            container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga atau rumah tidak ditemukan.</p>`;
-        }
-        return;
+    if (container) {
+        container.style.display = "block";
+        container.innerHTML = `<p style="font-size: 12px; color: #0288d1; text-align: center; margin: 0;">⏳ Mengambil data dari Cloudflare Worker...</p>`;
     }
 
-    const kepala = match.kepalaKeluarga || match.Nama || match.nama || '-';
-    const anggota = match.anggotaKeluarga || match.Anggota || 'Belum ada data anggota keluarga';
-    const labelRumah = match.nama || match.noRumah || '-';
-    const foto = match.foto || match.Foto || '';
+    try {
+        // 🌟 Mengambil data langsung dari Cloudflare Worker Proxy (seperti inisialisasi peta utama)
+        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+        const dataObj = await response.json();
 
-    let htmlKoor = (match.lat && match.lng) 
-        ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${match.lat},${match.lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat</a>`
-        : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
+        if (!dataObj) {
+            throw new Error("Data kosong dari server.");
+        }
 
-    let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" onError="this.style.display='none'" /></div>` : '';
+        let daftarWargaWorker = [];
+        Object.keys(dataObj).forEach(key => {
+            const val = dataObj[key];
+            if (!val) return;
 
-    if (container) {
+            daftarWargaWorker.push({
+                id: key,
+                nama: val.Nama || val.nama || val.name || '',
+                noRumah: val.noRumah || '',
+                namaTempat: val.namaTempat || '',
+                kepalaKeluarga: val.kepalaKeluarga || '',
+                anggotaKeluarga: val.anggotaKeluarga || val.Anggota || '',
+                lat: val.Lat !== undefined ? val.Lat : (val.lat || ''),
+                lng: val.Lng !== undefined ? val.Lng : (val.lng || ''),
+                foto: val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '',
+                type: val.Type || val.type || val.Kategori || ''
+            });
+        });
+
+        // Lakukan pencarian berdasarkan keyword (Nama, Kepala Keluarga, Anggota, atau No Rumah)
+        const match = daftarWargaWorker.find(row => {
+            const kepala = String(row.kepalaKeluarga || row.nama || '').toLowerCase();
+            const anggota = String(row.anggotaKeluarga || '').toLowerCase();
+            const rumah = String(row.nama || row.noRumah || '').toLowerCase();
+            
+            return kepala.includes(keyword) || anggota.includes(keyword) || rumah.includes(keyword);
+        });
+
+        if (!match) {
+            container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga atau rumah tidak ditemukan.</p>`;
+            return;
+        }
+
+        const kepala = match.kepalaKeluarga || match.nama || '-';
+        const anggota = match.anggotaKeluarga || 'Belum ada data anggota keluarga';
+        const labelRumah = match.nama || match.noRumah || '-';
+        const foto = match.foto || '';
+
+        let htmlKoor = (match.lat && match.lng) 
+            ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${match.lat},${match.lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat</a>`
+            : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
+
+        let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" onError="this.style.display='none'" /></div>` : '';
+
         container.innerHTML = `
             <div style="font-size: 12px; color: #334155; line-height: 1.6;">
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
@@ -2698,6 +2729,17 @@ function cariDetailKeluargaAdmin() {
                 ${htmlKoor}
             </div>
         `;
+
+        // Perbarui juga globalDataWarga agar sinkron jika dibutuhkan fungsi lain
+        window.globalDataWarga = daftarWargaWorker;
+
+    } menarik {
+        // tangani error jika jaringan/worker bermasalah
+    } catch (err) {
+        console.error("Gagal memuat data dari Cloudflare Worker:", err);
+        if (container) {
+            container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Gagal terhubung ke Cloudflare Worker.</p>`;
+        }
     }
 }
 
