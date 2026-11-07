@@ -95,7 +95,17 @@
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y !important;
     }
+    @keyframes highlightPulse {
+  0% { background-color: rgba(255, 255, 255, 0.9); }
+  50% { background-color: rgba(255, 255, 255, 0.3); }
+  100% { background-color: rgba(255, 255, 255, 0.9); }
+}
 
+.unread-message-highlight {
+  animation: highlightPulse 2s infinite ease-in-out;
+  border-left: 3px solid #38bdf8 !important;
+  background-color: rgba(255, 255, 255, 0.2);
+}
     .msg-row {
       word-break: break-word;
       padding: 3px 6px;
@@ -1075,27 +1085,38 @@ function formatWaktuPesan(timestamp) {
    
 
     
-  window.addEventListener('DOMContentLoaded', () => {
-      checkUserStatus();
+window.addEventListener('DOMContentLoaded', () => {
+    // 🌟 Langsung aktifkan pemantau unread di latar belakang jika sesi user sudah ada
+    const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+    if (savedUser && savedUser.uid) {
+      currentUser = savedUser;
+      window.currentUser = currentUser;
+      
+      // Jalankan listener unread agar badge langsung akurat sejak awal
+      if (typeof listenPublicGroupUnread === 'function') listenPublicGroupUnread();
+      if (typeof listenAllPrivateChats === 'function') listenAllPrivateChats();
+    }
 
-      const regModal = document.getElementById('reg-modal');
-      if (regModal) {
-        ['touchstart', 'touchmove', 'wheel'].forEach(eventType => {
-          regModal.addEventListener(eventType, (e) => { e.stopPropagation(); }, { passive: true });
-        });
-      }
+    checkUserStatus();
 
-      // Deteksi jika modal disembunyikan menggunakan CSS/Iframe
-      const observer = new IntersectionObserver((entries) => {
-        isChatVisible = entries[0].isIntersecting && !document.hidden;
-        if (isChatVisible && activeChatType === 'private' && activePrivateUID) {
-          unreadCounts[activePrivateUID] = 0;
-          markRoomAsRead(activePrivateUID);
-          renderPrivateTabsUI();
-        }
+    const regModal = document.getElementById('reg-modal');
+    if (regModal) {
+      ['touchstart', 'touchmove', 'wheel'].forEach(eventType => {
+        regModal.addEventListener(eventType, (e) => { e.stopPropagation(); }, { passive: true });
       });
-      observer.observe(document.body);
+    }
+
+    // Deteksi jika modal disembunyikan menggunakan CSS/Iframe
+    const observer = new IntersectionObserver((entries) => {
+      isChatVisible = entries[0].isIntersecting && !document.hidden;
+      if (isChatVisible && activeChatType === 'private' && activePrivateUID) {
+        unreadCounts[activePrivateUID] = 0;
+        markRoomAsRead(activePrivateUID);
+        renderPrivateTabsUI();
+      }
     });
+    observer.observe(document.body);
+  });
     // ======================================
 
     
@@ -1158,24 +1179,29 @@ function formatWaktuPesan(timestamp) {
     
 // Helper: Tandai Pesan Terakhir di Room ini Sudah Dibaca
 function markRoomAsRead(targetUID) {
-  if (!currentUser?.uid || !targetUID) return;
+    if (!currentUser?.uid || !targetUID) return;
 
-  // 🛠️ FIX: Gunakan targetUID (bukan activePrivateUID) agar roomID tidak tertukar / null!
-  const roomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
-  const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
+    const isViewingThisPrivateChat = (activeChatType === 'private' && activePrivateUID === targetUID && window.isUserViewingChat());
+    if (!isViewingThisPrivateChat) return;
 
-  get(roomRef).then((snapshot) => {
-    if (snapshot.exists()) {
-      let lastKey = null;
-      snapshot.forEach(child => { lastKey = child.key; });
-      
-      if (lastKey) {
-        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
-        lastReadKeyMap[targetUID] = lastKey;
-        localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
-      }
-    }
-  });
+    // 🌟 Berikan jeda 1 detik agar animasi highlight sempat tampil pada pesan private
+    setTimeout(() => {
+        const roomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
+        const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(1));
+
+        get(roomRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                let lastKey = null;
+                snapshot.forEach(child => { lastKey = child.key; });
+                
+                if (lastKey) {
+                    const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+                    lastReadKeyMap[targetUID] = lastKey;
+                    localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
+                }
+            }
+        });
+    }, 1000);
 }
 
  // 3. Pindah Tab (Public <-> Private) dengan Perbedaan Warna Latar
@@ -1508,7 +1534,7 @@ function listenPublicGroupUnread() {
     publicGroupListener = null;
   }
 
-  const chatsRef = query(ref(db, 'chats'), limitToLast(50));
+  const chatsRef = query(ref(db, 'chats'), limitToLast(30));
 
   publicGroupListener = onValue(chatsRef, (snapshot) => {
     if (!snapshot.exists()) {
@@ -1521,12 +1547,13 @@ function listenPublicGroupUnread() {
     const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
     let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
 
-    // Inisialisasi key awal jika belum ada
-    if (!lastReadPublicMapKey) {
+    // 🌟 1. INISIALISASI AMAN: Jika belum ada key baca, set ke pesan paling akhir saat load pertama 
+    // agar badge tidak menghitung pesan lama numpuk, melainkan hanya pesan baru setelah app dibuka.
+    if (!lastReadPublicMapKey && isFirstPublicLoad) {
       let latestKey = null;
       snapshot.forEach((msgSnap) => {
         if (msgSnap.key !== 'pinned_poll') {
-          latestKey = msgSnap.key; 
+          latestKey = msgSnap.key;
         }
       });
       if (latestKey) {
@@ -1537,7 +1564,6 @@ function listenPublicGroupUnread() {
     }
 
     let unreadPublicCount = 0;
-    let countAfterKey = false; 
     let latestUnreadMsg = null;
     let latestUnreadKey = null;
 
@@ -1546,82 +1572,55 @@ function listenPublicGroupUnread() {
       const msgData = msgSnap.val();
 
       if (msgKey === 'pinned_poll') return;
+      if (!msgData || typeof msgData !== 'object') return;
 
-      if (msgKey === lastReadPublicMapKey) {
-        countAfterKey = true;
-        unreadPublicCount = 0; 
-        return;
-      }
-
-      if (countAfterKey) {
-        if (msgData && msgData.uid !== currentUser.uid) {
+      // Hitung pesan dari orang lain yang key-nya lebih baru dari terakhir dibaca
+      if (msgData.uid !== currentUser.uid) {
+        if (lastReadPublicMapKey && msgKey > lastReadPublicMapKey) {
           unreadPublicCount++;
-          // Simpan pesan unread terakhir untuk dinotifikasikan (mencegah spam loop)
           latestUnreadMsg = msgData;
           latestUnreadKey = msgKey;
         }
       }
     });
 
-    // Fallback jika pesan terakhir dibaca tertimbun >50 pesan
-    if (!countAfterKey && lastReadPublicMapKey) {
-      snapshot.forEach((msgSnap) => {
-        const msgData = msgSnap.val();
-        if (msgSnap.key !== 'pinned_poll' && msgData && msgData.uid !== currentUser.uid) {
-          unreadPublicCount++;
-          latestUnreadMsg = msgData;
-          latestUnreadKey = msgSnap.key;
-        }
-      });
+    // Jika user sedang aktif melihat chat publik di layar, langsung bersihkan unread
+    if (activeChatType === 'public' && isChatVisible) {
+      unreadPublicCount = 0;
+      markPublicGroupAsRead();
     }
 
-    // 🌟 LOGIKA NOTIFIKASI MELAYANG (Hanya 1x untuk Pesan Terakhir)
-    if (!isFirstPublicLoad && isChatReady && latestUnreadMsg && latestUnreadKey) {
-      const notifId = 'notif_pub_' + latestUnreadKey;
+    // 🌟 2. PASTIKAN SELALU UPDATE UI & KIRIM KE PARENT (index.html)
+    updatePublicTabBadge(unreadPublicCount);
+    sendUnreadCountToParent(unreadPublicCount);
 
+    // Notifikasi melayang / suara hanya jika ada pesan baru masuk SETELAH app siap
+    if (!isFirstPublicLoad && isChatReady && latestUnreadMsg && latestUnreadKey && unreadPublicCount > 0) {
+      const notifId = 'notif_pub_' + latestUnreadKey;
       if (!sessionStorage.getItem(notifId)) {
         sessionStorage.setItem(notifId, 'true');
 
-        // 🛡️ Hanya tampilkan jika user sedang TIDAK aktif melihat chat
-        if (!window.isUserViewingChat()) {
-          const senderName = latestUnreadMsg.sender || (allUsersCache[latestUnreadMsg.uid]?.username || allUsersCache[latestUnreadMsg.uid]?.nama) || "Warga";
+        if (!window.isUserViewingChat() && Notification.permission === 'granted') {
+          const senderName = latestUnreadMsg.sender || "Warga";
           const title = "Grup RT 05 - " + senderName;
-          
           const options = {
             body: latestUnreadMsg.text || 'Mengirim pesan...',
-            icon: './kentongan-slit-drum.png', // 🛠️ FIX: Menggunakan ikon kentongan resmi
-            badge: './kentongan-slit-drum.png',
-            tag: 'grup-chat-rt05',            // 🛠️ FIX: Samakan tag dengan sw.js agar tidak double
+            icon: './kentongan-slit-drum.png',
+            tag: 'grup-chat-rt05',
             renotify: true,
             silent: true
           };
-
-          if ('Notification' in window && Notification.permission === 'granted') {
-            try {
-              if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, options));
-              } else {
-                new Notification(title, options);
-              }
-            } catch (e) {
-              console.error("Gagal memanggil notifikasi:", e);
-            }
+          if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, options));
+          } else {
+            new Notification(title, options);
           }
         }
       }
     }
 
     isFirstPublicLoad = false;
-
-    // Bersihkan badge jika user sedang aktif melihat tab publik
-    if (activeChatType === 'public' && isChatVisible) {
-      unreadPublicCount = 0;
-      markPublicGroupAsRead(); 
-    }
-
-    updatePublicTabBadge(unreadPublicCount);
-    sendUnreadCountToParent(unreadPublicCount);
-  }); 
+  });
 }
 
     
@@ -1638,31 +1637,33 @@ function listenPublicGroupUnread() {
       }
     }
 
-  window.markPublicGroupAsRead = () => {
-      if (!currentUser?.uid) return;
+window.markPublicGroupAsRead = () => {
+    if (!currentUser?.uid || !window.isUserViewingChat() || activeChatType !== 'public') return;
 
-      // 🛠️ PERBAIKAN: Ambil 5 data terakhir, cari yang BUKAN pinned_poll
-      const chatsRef = query(ref(db, 'chats'), limitToLast(5));
-      get(chatsRef).then((snapshot) => {
-        if (snapshot.exists()) {
-          let lastKey = null;
-          snapshot.forEach(child => {
-            if (child.key !== 'pinned_poll') { // 👈 Abaikan polling
-              lastKey = child.key;
+    // 🌟 Berikan jeda 1 detik agar animasi highlight sempat tampil saat tab dibuka
+    setTimeout(() => {
+        const chatsRef = query(ref(db, 'chats'), limitToLast(5));
+        get(chatsRef).then((snapshot) => {
+            if (snapshot.exists()) {
+                let lastKey = null;
+                snapshot.forEach(child => {
+                    if (child.key !== 'pinned_poll') { 
+                        lastKey = child.key;
+                    }
+                });
+
+                if (lastKey) {
+                    const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+                    lastReadPublicMap[currentUser.uid] = lastKey;
+                    localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+                }
             }
-          });
+        });
+    }, 1000);
 
-          if (lastKey) {
-            const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-            lastReadPublicMap[currentUser.uid] = lastKey;
-            localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
-          }
-        }
-      });
-
-      updatePublicTabBadge(0);
-      sendUnreadCountToParent(0);
-    };
+    updatePublicTabBadge(0);
+    sendUnreadCountToParent(0);
+};
     
    // Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
    let lastPublicUnreadCount = 0;
@@ -2005,11 +2006,20 @@ onMessage(messaging, (payload) => {
   }
 });
 
-    async function checkUserStatus() {
+async function checkUserStatus() {
         const chatContainer = document.getElementById('chat-container');
         const chatFooter = document.querySelector('footer');
         const regModal = document.getElementById('reg-modal');
         const pendingModal = document.getElementById('pending-modal');
+
+        // 🌟 1. AMBIL CACHE LOKAL SECOCOK MUNGKIN AGAR TIDAK MENUNGGU SERVER
+        if (!currentUser) {
+            const cachedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+            if (cachedUser) {
+                currentUser = cachedUser;
+                window.currentUser = currentUser;
+            }
+        }
 
         if (!currentUser) {
             if (chatContainer) chatContainer.classList.add('hidden');
@@ -2022,6 +2032,45 @@ onMessage(messaging, (payload) => {
             return;
         }
 
+        // 🌟 2. JIKA USER SUDAH AKTIF DI LOCALSTORAGE, LANGSUNG BUKA TAMPILAN CHAT TANPA MENUNGGU
+        if (currentUser.status === 'aktif') {
+            if (pendingModal) pendingModal.classList.add('hidden');
+            if (regModal) regModal.classList.add('hidden');
+            if (chatContainer) chatContainer.classList.remove('hidden');
+            if (chatFooter) chatFooter.classList.remove('hidden');
+            
+            const userInfo = document.getElementById('user-info-text');
+            if (userInfo) userInfo.innerText = `${currentUser.username || currentUser.nama} • ${currentUser.hunian || ''}`;
+            
+            const labelUserKetik = document.getElementById('chat-current-user-label');
+            if (labelUserKetik) {
+                labelUserKetik.innerText = `${currentUser.username || currentUser.nama}:`;
+            }
+
+            // Jalankan kumpulan listener SEKALI SAJA secara instan
+            if (!window.hasLoadedListeners) {
+                window.hasLoadedListeners = true;
+                
+                if (typeof markPublicGroupAsRead === 'function') {
+                    markPublicGroupAsRead();
+                }
+
+                loadUsersList();
+                renderPrivateTabsUI();
+                listenAllPrivateChats();
+                listenPublicGroupUnread();
+                requestNotificationPermission();
+                initFCMToken(currentUser.uid);
+                listenPinnedPoll();
+
+                activeChatType = 'public';
+                window.activeChatType = 'public';
+
+                loadChatStream();
+            }
+        }
+
+        // 🌟 3. VERIFIKASI KE DATABASE FIREBASE DI LATAR BELAKANG (SILENT SYNC)
         const userRef = ref(db, `users/${currentUser.uid}`);
         onValue(userRef, async (snapshot) => {
             const val = snapshot.val();
@@ -2034,7 +2083,8 @@ onMessage(messaging, (payload) => {
             currentUser.status = val.status;
             currentUser.role = val.role || 'warga';
             currentUser.username = val.username || val.nama;
-            window.currentUser = currentUser; // Update window global
+            currentUser.hunian = val.hunian || currentUser.hunian;
+            window.currentUser = currentUser;
 
             localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
 
@@ -2045,75 +2095,39 @@ onMessage(messaging, (payload) => {
                 if (regModal) regModal.classList.add('hidden');
                 if (chatContainer) chatContainer.classList.add('hidden');
                 if (chatFooter) chatFooter.classList.add('hidden');
-            } else if (val.status === 'aktif') {
-                if (pendingModal) pendingModal.classList.add('hidden');
-                if (regModal) regModal.classList.add('hidden');
-                if (chatContainer) chatContainer.classList.remove('hidden');
-                if (chatFooter) chatFooter.classList.remove('hidden');
-                
-                const userInfo = document.getElementById('user-info-text');
-                if (userInfo) userInfo.innerText = `${currentUser.username} • ${val.hunian}`;
-                
-                const labelUserKetik = document.getElementById('chat-current-user-label');
-                if (labelUserKetik) {
-                    labelUserKetik.innerText = `${currentUser.username || val.nama}:`;
-                }
+                return;
+            }
 
-                const btnCreatePoll = document.getElementById('btn-create-poll-admin');
-                if (btnCreatePoll) {
-                    if (currentUser.role === 'admin' || currentUser.username === 'Admin1' || currentUser.nama === 'Admin1') {
-                        btnCreatePoll.style.display = 'inline-flex';
-                    } else {
-                        btnCreatePoll.style.display = 'none';
-                    }
-                }
+            // Perbarui label tampilan jika ada perubahan data dari admin
+            const userInfo = document.getElementById('user-info-text');
+            if (userInfo) userInfo.innerText = `${currentUser.username} • ${currentUser.hunian}`;
 
-              // 🛠️ Autentikasi otomatis dengan pengaman jaringan
-                try {
-                    const pseudoEmail = val.authEmail || `${currentUser.uid.toLowerCase()}@rt05kayen.internal`;
-                    const securePassword = (val.pin || '') + "RT05Key";
-                    
-                    // Cek apakah auth sedang proses atau user masih valid
-                    if (auth.currentUser?.email !== pseudoEmail) {
-                        await signInWithEmailAndPassword(auth, pseudoEmail, securePassword);
-                        console.log("Firebase Auth berhasil masuk, rules `auth != null` terpenuhi.");
-                    }
-                } catch (authErr) {
-                    // Abaikan error network-request-failed saat transisi logout/reload agar console tetap bersih
-                    if (authErr.code !== 'auth/network-request-failed') {
-                        console.log("Catatan Auth login session:", authErr);
-                    } else {
-                        console.log("Catatan jaringan: Menggunakan sesi auth lokal yang ada.");
-                    }
-                }
-                
-                setupPresence();
-                
-               // Jalankan kumpulan listener SEKALI SAJA
-                if (!window.hasLoadedListeners) {
-                    window.hasLoadedListeners = true;
-                    
-                    // 🛠️ PENGAMAN UTAMA: Pastikan saat pertama kali sesi akun ini aktif,
-                    // posisinya langsung ditandai sudah dibaca agar tidak memicu unread palsu.
-                    if (typeof markPublicGroupAsRead === 'function') {
-                        markPublicGroupAsRead();
-                    }
-
-                    loadUsersList();
-                    renderPrivateTabsUI();
-                    listenAllPrivateChats();
-                    listenPublicGroupUnread();
-                    requestNotificationPermission();
-                    initFCMToken(currentUser.uid);
-                    listenPinnedPoll();
-
-                    activeChatType = 'public';
-                    window.activeChatType = 'public';
-
-                    loadChatStream();
+            const btnCreatePoll = document.getElementById('btn-create-poll-admin');
+            if (btnCreatePoll) {
+                if (currentUser.role === 'admin' || currentUser.username === 'Admin1' || currentUser.nama === 'Admin1') {
+                    btnCreatePoll.style.display = 'inline-flex';
+                } else {
+                    btnCreatePoll.style.display = 'none';
                 }
             }
-        });
+
+            // Autentikasi otomatis di latar belakang
+            try {
+                const pseudoEmail = val.authEmail || `${currentUser.uid.toLowerCase()}@rt05kayen.internal`;
+                const securePassword = (val.pin || '') + "RT05Key";
+                
+                if (auth.currentUser?.email !== pseudoEmail) {
+                    await signInWithEmailAndPassword(auth, pseudoEmail, securePassword);
+                    console.log("Firebase Auth berhasil masuk, rules `auth != null` terpenuhi.");
+                }
+            } catch (authErr) {
+                if (authErr.code !== 'auth/network-request-failed') {
+                    console.log("Catatan Auth login session:", authErr);
+                }
+            }
+            
+            setupPresence();
+        }, { onlyOnce: true }); // 🌟 Mencegah onValue memicu ulang reset chat secara terus-menerus
     }
          
     
@@ -2262,8 +2276,19 @@ let isLoadingMore = false;
 let shouldForceScrollDown = false;
 
 function loadChatStream(onLoaded) {
-    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
     const chatStream = document.getElementById('chat-stream');
+    if (!chatStream) return;
+
+    // 🌟 JANGAN tampilkan teks "Menghubungkan..." jika di LocalStorage sudah ada cache chat sebelumnya
+    const cachedPublic = localStorage.getItem('rt05_public_chat_cache');
+    if (chatStream.children.length === 0 && !cachedPublic) {
+        chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
+    } else if (chatStream.children.length === 0 && cachedPublic) {
+        // Langsung muat dari cache lokal secara instan tanpa teks loading!
+        renderCachedPublicMessages(cachedPublic, chatStream, false);
+    }
+  
+    const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
 
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
         if (activeChatType !== 'public') return;
@@ -2287,7 +2312,7 @@ function loadChatStream(onLoaded) {
             return;
         }
 
-        // 🌟 KOSONGKAN DOM
+        // 🌟 KOSONGKAN DOM SEBELUM RENDER ULANG
         chatStream.innerHTML = '';
 
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
@@ -2296,14 +2321,19 @@ function loadChatStream(onLoaded) {
         let isUnreadSection = false;
         if (!lastReadPublicMapKey) isUnreadSection = true;
 
-        snapshot.forEach((childSnap) => {
+snapshot.forEach((childSnap) => {
             const msgKey = childSnap.key;
             const msgData = childSnap.val();
 
+            // 1. CEK BATAS KUNCI BACA TERLEBIH DAHULU
+            if (msgKey === lastReadPublicMapKey) {
+                isUnreadSection = true;
+            }
+
             let isUnreadMsg = false;
             
-       // 🌟 PENGAMAN KETAT: Hanya bunyikan suara jika chat sudah siap, user sudah benar-benar login, dan bukan saat load awal
-            if (isChatReady && currentUser && currentUser.uid && isUnreadSection && msgData.uid !== currentUser?.uid) {
+            // 2. BARU TENTUKAN APAKAH PESAN INI MASUK DALAM KATEGORI UNREAD
+            if (isChatReady && currentUser && currentUser.uid && isUnreadSection && msgData.uid !== currentUser?.uid && msgKey !== lastReadPublicMapKey) {
                 isUnreadMsg = true;
 
                 const notifKey = 'notified_' + msgKey;
@@ -2319,16 +2349,12 @@ function loadChatStream(onLoaded) {
                 }
             }
 
-            if (msgKey === lastReadPublicMapKey) {
-                isUnreadSection = true;
-            }
-
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
         isInitialPublicChatLoaded = true;
 
-        // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS (Mencegah lari ke atas)
+        // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS
         if (shouldForceScrollDown) {
             scrollToBottom(false);
             shouldForceScrollDown = false;
@@ -2339,7 +2365,6 @@ function loadChatStream(onLoaded) {
             chatStream.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
         }
 
-        // Tampilkan tombol panah bawah jika posisi di atas
         const distanceFromBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight;
         const btnScrollBottom = document.getElementById('btn-scroll-bottom');
         if (btnScrollBottom) {
@@ -2584,17 +2609,18 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   div.className = "msg-row";
   if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
-  // 🌟 LOGIKA FILE LAMA: Efek animasi unread persis seperti file lama Anda
+  // 🌟 Terapkan kelas animasi transparan jika pesan belum dibaca
+// 🌟 Efek transparan halus yang dipaksa langsung secara inline
   if (isUnread) {
       div.style.transition = "background-color 2s ease, border-color 2s ease";
-      div.style.backgroundColor = "rgba(255, 255, 255, 0.2)";
+      div.style.backgroundColor = "rgba(255, 255, 255, 0.25)";
       div.style.borderLeft = "3px solid #38bdf8";
       div.style.paddingLeft = "8px";
 
       setTimeout(() => {
           div.style.backgroundColor = "transparent";
           div.style.borderLeftColor = "transparent"; 
-      }, 2000);
+      }, 3000);
   }
 
   let nameClass = "role-user";

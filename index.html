@@ -1101,7 +1101,68 @@ window.perbaruiAplikasiSekarang = function() {
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
-window.toggleChatModal = function() {
+// ==========================================
+// PEMANTAU UNREAD CHAT PUBLIK DI HALAMAN UTAMA
+// ==========================================
+function initMainPageChatListener() {
+  if (typeof window.firebaseRef !== 'function' || !window.db) return;
+
+  const chatsRef = window.firebaseQuery(window.firebaseRef(window.db, 'chats'), window.firebaseLimitToLast(30));
+
+  window.firebaseOnValue(chatsRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      updatePublicTabBadge(0);
+      return;
+    }
+
+    // Ambil data user yang sedang login dari localStorage (disimpan oleh chat.html)
+    const currentUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+    if (!currentUser || !currentUser.uid) {
+      updatePublicTabBadge(0);
+      return;
+    }
+
+    const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+    let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+
+    // Jika belum ada key baca, set ke pesan terakhir agar tidak menumpuk
+    if (!lastReadPublicMapKey) {
+      let latestKey = null;
+      snapshot.forEach((msgSnap) => {
+        if (msgSnap.key !== 'pinned_poll') latestKey = msgSnap.key;
+      });
+      if (latestKey) {
+        lastReadPublicMap[currentUser.uid] = latestKey;
+        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+        lastReadPublicMapKey = latestKey;
+      }
+    }
+
+    let unreadPublicCount = 0;
+    snapshot.forEach((msgSnap) => {
+      const msgKey = msgSnap.key;
+      const msgData = msgSnap.val();
+
+      if (msgKey === 'pinned_poll') return;
+      if (!msgData || typeof msgData !== 'object') return;
+
+      // Hitung pesan dari orang lain yang lebih baru dari terakhir dibaca
+      if (msgData.uid !== currentUser.uid) {
+        if (lastReadPublicMapKey && msgKey > lastReadPublicMapKey) {
+          unreadPublicCount++;
+        }
+      }
+    });
+
+    // Perbarui badge di ikon chat utama index.html
+    updatePublicTabBadge(unreadPublicCount);
+  });
+}
+
+// Tangkap sinyal siap Firebase di halaman utama
+window.addEventListener('firebaseSiapIndex', initMainPageChatListener);
+  
+  window.toggleChatModal = function() {
   const modal = document.getElementById('chat-overlay-modal');
   const iframe = modal ? modal.querySelector('iframe') : null;
 
@@ -1191,8 +1252,7 @@ window.toggleChatModal = function() {
     }
   }
 
-
-  // ==========================================
+// ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
   var map; 
@@ -1200,9 +1260,9 @@ window.toggleChatModal = function() {
   var daftarPengumuman = [];
   var dataKeuangan = [];
   var pinRumahAktif = null;
-  var isDataReady = false;
-
-  function initPetaDanData() {
+  var isDataReady = false; // 🌟 PASTIKAN VARIABEL INI ADA DI SINI
+  
+function initPetaDanData() {
     // 1. Render Peta Leaflet secara sinkron dan instan begitu DOM & Leaflet siap
     if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
       let container = L.DomUtil.get('map');
@@ -1216,7 +1276,6 @@ window.toggleChatModal = function() {
         attribution: '&copy; Google Maps'
       });
 
-      // Batasi High Priority hanya untuk 6 tile pertama agar jaringan tidak macet
       let tileLoadCount = 0;
       tileLayerUtama.on('tileloadstart', function(e) {
         if (e.tile) {
@@ -1232,29 +1291,29 @@ window.toggleChatModal = function() {
       L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
       perbaruiIndikatorSync();
 
-      // 🌟 Efek fade-in agar peta muncul dengan halus (tidak kedip kaku)
       setTimeout(() => {
         let mapElement = document.getElementById('map');
         if (mapElement) mapElement.classList.add('loaded');
       }, 150);
     }
     
-// 2. Muat data berat (Firebase marker) secara asinkron di latar belakang
-    if (map && window.db && typeof window.firebaseRef === 'function' && !isDataReady) {
+    // 2. Ambil data peta warga lewat worker secara independen dengan timeout
+    if (map && !isDataReady) {
       isDataReady = true;
-      const muatDataLatarBelakang = () => {
-        muatDataPetaWarga();
-        if (navigator.onLine) kirimDataPendingJimpitan();
-      };
       
-      // Menggunakan requestIdleCallback agar CPU fokus merender peta dulu
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(muatDataLatarBelakang, { timeout: 300 });
-      } else {
-        setTimeout(muatDataLatarBelakang, 100);
-      }
+      setTimeout(() => {
+        if (typeof muatDataPetaWarga === 'function') {
+          muatDataPetaWarga();
+        }
+      }, 300);
     }
-  } // <-- Penutup fungsi initPetaDanData() yang benar dan lengkap
+
+    // 3. Sinkronisasi jimpitan offline yang membutuhkan Firebase
+    if (window.db && typeof window.firebaseRef === 'function') {
+      if (navigator.onLine) kirimDataPendingJimpitan();
+    }
+  }
+  
   
   // Eksekusi secepat mungkin berdasarkan status dokumen saat ini
   if (document.readyState === 'complete' || document.readyState === 'interactive') {
@@ -1265,130 +1324,136 @@ window.toggleChatModal = function() {
   window.addEventListener('utilsSiap', initPetaDanData);
 
 function muatDataPetaWarga() {
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
-    setTimeout(muatDataPetaWarga, 50);
-    return;
-  }
-
-  // Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
-  if (typeof markerGroup === 'undefined' || !markerGroup) {
-    window.markerGroup = L.markerClusterGroup({
-      maxClusterRadius: 30 
-    });
-    window.markerGroup.addTo(map);
-  } else if (!map.hasLayer(markerGroup)) {
-    markerGroup.addTo(map);
-  }
-
-  const petaRef = window.firebaseRef(window.db, 'peta_warga');
-
-  window.firebaseOnValue(petaRef, (snapshot) => {
-    const dataObj = snapshot.val();
-    
-    markerGroup.clearLayers();
-    daftarPin = [];
-
-    if (!dataObj) return;
-
-    var baris = [];
-    Object.keys(dataObj).forEach(key => {
-      var item = dataObj[key];
-      if (item && (item.nama || item.name || item.Nama)) {
-        baris.push(item);
+  // 1. Ambil data melalui Cloudflare Worker proxy secara aman
+  fetch('https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga')
+    .then(response => {
+      if (!response.ok) {
+        throw new Error("Gagal mengambil data dari server proxy.");
       }
-    });
+      return response.json();
+    })
+    .then(dataObj => {
+      // Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
+      if (typeof markerGroup === 'undefined' || !markerGroup) {
+        window.markerGroup = L.markerClusterGroup({
+          maxClusterRadius: 30 
+        });
+        window.markerGroup.addTo(map);
+      } else if (!map.hasLayer(markerGroup)) {
+        markerGroup.addTo(map);
+      }
 
-    var index = 0;
-    var chunkSize = 20;
+      markerGroup.clearLayers();
+      daftarPin = [];
 
-    function prosesChunk() {
-      var batas = Math.min(index + chunkSize, baris.length);
-      
-      for (let i = index; i < batas; i++) {
-        var kolom = baris[i];
-        var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
+      if (!dataObj) return;
 
-        if (namaAsli !== '') {
-          var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
-          var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
-          var latClean = perbaikiKoordinat(rawLat);
-          var lngClean = perbaikiKoordinat(rawLng);
-          
-          var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
-          var statusHidden = typeof rawHidden === 'boolean' 
-            ? rawHidden 
-            : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
-
-          // 🌟 TAMBAHKAN INI: Jika statusnya hidden, abaikan dan jangan tampilkan di peta
-          if (statusHidden) continue;
-
-          var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
-          var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
-          
-          var item = {
-            name: namaAsli,
-            nameAsli: namaAsli,
-            lat: parseFloat(latClean),
-            lng: parseFloat(lngClean),
-            hidden: statusHidden,
-            foto: urlFoto
-          };
-
-          if (isNaN(item.lat) || isNaN(item.lng)) continue;
-
-          // 🌟 Sertakan kategoriManual agar pengecualian tempat umum berfungsi akurat
-          var namaTersensor = sensorNamaDepan(item.nameAsli, kategoriManual);
-
-          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
-          
-          var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-          
-          var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
-
-          var customIcon = L.divIcon({
-            className: 'custom-pin',
-            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-          });
-          
-          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-
-          daftarPin.push({ 
-            namaRaw: item.nameAsli,
-            nama: item.nameAsli.toLowerCase(), 
-            marker: marker, 
-            lat: item.lat, 
-            lng: item.lng,
-            hidden: item.hidden,
-            kategori: kategoriManual || dataIkon.kategori 
-          });
+      var baris = [];
+      Object.keys(dataObj).forEach(key => {
+        var item = dataObj[key];
+        if (item && (item.nama || item.name || item.Nama)) {
+          baris.push(item);
         }
-      }
+      });
 
-      index = batas;
+      var index = 0;
+      var chunkSize = 20;
 
-      if (index < baris.length) {
-        if ('requestIdleCallback' in window) {
-          requestIdleCallback(prosesChunk, { timeout: 50 });
+      function prosesChunk() {
+        var batas = Math.min(index + chunkSize, baris.length);
+        
+        for (let i = index; i < batas; i++) {
+          var kolom = baris[i];
+          var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
+
+          if (namaAsli !== '') {
+            var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
+            var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
+            var latClean = perbaikiKoordinat(rawLat);
+            var lngClean = perbaikiKoordinat(rawLng);
+            
+            var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
+            var statusHidden = typeof rawHidden === 'boolean' 
+              ? rawHidden 
+              : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+
+            var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
+            var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
+            
+            var item = {
+              name: namaAsli,
+              nameAsli: namaAsli,
+              lat: parseFloat(latClean),
+              lng: parseFloat(lngClean),
+              hidden: statusHidden,
+              foto: urlFoto
+            };
+
+            if (isNaN(item.lat) || isNaN(item.lng)) continue;
+
+            var namaTersensor = sensorNamaDepan(item.nameAsli, kategoriManual);
+
+            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
+            
+            var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+            
+            var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+
+            var customIcon = L.divIcon({
+              className: 'custom-pin',
+              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+            });
+            
+            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+
+            daftarPin.push({ 
+              namaRaw: item.nameAsli,
+              nama: item.nameAsli.toLowerCase(), 
+              noRumah: String(kolom.noRumah || '').toLowerCase(),
+              kepalaKeluarga: String(kolom.kepalaKeluarga || '').toLowerCase(),
+              marker: marker, 
+              lat: item.lat, 
+              lng: item.lng,
+              hidden: item.hidden,
+              kategori: kategoriManual || dataIkon.kategori 
+            });
+
+            if (statusHidden) continue;
+
+            if (typeof markerGroup !== 'undefined' && markerGroup) {
+              markerGroup.addLayer(marker);
+            } else {
+              marker.addTo(map);
+            }
+          }
+        }
+
+        index = batas;
+
+        if (index < baris.length) {
+          if ('requestIdleCallback' in window) {
+            requestIdleCallback(prosesChunk, { timeout: 50 });
+          } else {
+            setTimeout(prosesChunk, 4);
+          }
         } else {
-          setTimeout(prosesChunk, 4);
-        }
-      } else {
-        if (typeof filterKategori === 'function') {
-          filterKategori('awal');
+          if (typeof filterKategori === 'function') {
+            filterKategori('awal');
+          }
         }
       }
-    }
 
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(prosesChunk, { timeout: 50 });
-    } else {
-      setTimeout(prosesChunk, 4);
-    }
-  }, (error) => {
-    console.error("Gagal memuat peta warga dari Firebase RTDB:", error);
-  });
+      if ('requestIdleCallback' in window) {
+        requestIdleCallback(prosesChunk, { timeout: 50 });
+      } else {
+        setTimeout(prosesChunk, 4);
+      }
+    })
+    .catch(error => {
+      console.error("Gagal memuat peta warga dari Cloudflare Worker:", error);
+    });
 }
 // 🌟 Fungsi helper sensor nama depan warga (dengan pengecualian tempat umum/pengurus)
           function sensorNamaDepan(namaAsli, kategori) {
@@ -1432,37 +1497,71 @@ function muatDataPetaWarga() {
   
 window.jalankanPencarianPeta = function() {
   var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
-  if (!kataKunci) return;
+  if (!kataKunci) {
+    alert("Masukkan nama atau nomor rumah yang ingin dicari!");
+    return;
+  }
 
-  // Memanggil fungsi cariLokasi universal yang ada di utils.js
-  cariLokasi(kataKunci, daftarPin, function(hasilPencarian) {
-    if (hasilPencarian && hasilPencarian.length > 0) {
-      var hasil = hasilPencarian[0]; 
-      
-      if (hasil.marker) {
-        if (typeof pinRumahAktif !== 'undefined' && pinRumahAktif) { 
-          map.removeLayer(pinRumahAktif); 
-          pinRumahAktif = null; 
-        }
-        if (!map.hasLayer(hasil.marker)) {
-          hasil.marker.addTo(map);
-          pinRumahAktif = hasil.marker;
-        }
-
-        var pointM = map.project([hasil.lat, hasil.lng], 19);
-        var pointC = L.point(pointM.x, pointM.y - 200);
-        map.flyTo(map.unproject(pointC, 19), 19);
-
-        map.once('moveend', function() {
-          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-          hasil.marker.openPopup();
-        });
-      }
-    } else {
-      alert("Nomor atau nama tempat tidak ditemukan.");
+  // 🌟 JIKA DATA MASIH KOSONG, TUNGGU SEBENTAR SECARA OTOMATIS
+  if (!daftarPin || daftarPin.length === 0) {
+    // Panggil ulang fetch worker sebagai antisipasi
+    if (typeof muatDataPetaWarga === 'function') {
+      muatDataPetaWarga();
     }
+    
+    // Beri tahu pengguna dan tunggu 1.5 detik lalu coba cari otomatis
+    alert("Memuat data dari server proxy, mohon tunggu sebentar...");
+    setTimeout(() => {
+      window.jalankanPencarianPeta(); // Coba jalankan ulang pencarian otomatis
+    }, 1500);
+    return;
+  }
+
+  var hasil = daftarPin.find(pin => {
+    var namaRaw = String(pin.namaRaw || '').toLowerCase();
+    var noRumah = String(pin.noRumah || '').toLowerCase();
+    var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
+    var kategori = String(pin.kategori || '').toLowerCase();
+    
+    return namaRaw.includes(kataKunci) || 
+           noRumah.includes(kataKunci) || 
+           kepalaKeluarga.includes(kataKunci) || 
+           kategori.includes(kataKunci);
   });
+
+  if (hasil) {
+    if (typeof pinRumahAktif !== 'undefined' && pinRumahAktif) {  
+      map.removeLayer(pinRumahAktif);  
+      pinRumahAktif = null;  
+    }
+    if (!map.hasLayer(hasil.marker)) {
+      hasil.marker.addTo(map);
+      pinRumahAktif = hasil.marker;
+    }
+
+    var pointM = map.project([hasil.lat, hasil.lng], 19);
+    var pointC = L.point(pointM.x, pointM.y - 200);
+    map.flyTo(map.unproject(pointC, 19), 19);
+
+    map.once('moveend', function() {
+      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+      hasil.marker.openPopup();
+    });
+  } else {
+    alert("Nama atau nomor rumah \"" + kataKunci + "\" tidak ditemukan.");
+  }
 };
+  
+  document.addEventListener('DOMContentLoaded', function() {
+  var searchInput = document.getElementById('searchInput');
+  if (searchInput) {
+    searchInput.addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        window.jalankanPencarianPeta();
+      }
+    });
+  }
+});
    
   window.bukaModalSetting = function() {
   var modal = document.getElementById('modal-setting');
@@ -3351,9 +3450,8 @@ window.simpanWargaBaru = async function() {
 <!-- 🌟 Inisialisasi Firebase Cepat & Ringan -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  // Pastikan RT05_CONFIG sudah tersedia sebelum inisialisasi
   if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.FIREBASE) {
     const app = initializeApp(RT05_CONFIG.FIREBASE);
     const db = getDatabase(app);
@@ -3366,9 +3464,11 @@ window.simpanWargaBaru = async function() {
     window.firebasePush = push;
     window.firebaseSet = set;
     window.firebaseGet = get;
+    window.firebaseLimitToLast = limitToLast;
+    window.firebaseQuery = query;
 
-    // Sinyal bahwa modul Firebase telah siap disuplai ke peta
     window.dispatchEvent(new Event('utilsSiap'));
+    window.dispatchEvent(new Event('firebaseSiapIndex')); // 🌟 Sinyal baru untuk index.html
   } else {
     console.error("Konfigurasi RT05_CONFIG.FIREBASE belum dimuat dari setting.js!");
   }
