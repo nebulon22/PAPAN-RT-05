@@ -5,6 +5,7 @@ const RT05_CONFIG = {
     // 🌟 Tambahkan endpoint Cloudflare Worker di sini
     PETA_PROXY_URL: "https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga",
     UPLOADER_URL: "https://rt05-uploader.deny220291.workers.dev/",
+    ADMIN_API_URL: "https://rt05-admin-worker.deny220291.workers.dev",
     FIREBASE: {
         apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
         authDomain: "papan05-21a56.firebaseapp.com",
