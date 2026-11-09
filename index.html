@@ -20,7 +20,7 @@
   <noscript><link rel="stylesheet" href="all.min.css"></noscript>
   
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.6.5">
+  <link rel="manifest" href="manifest.json?v=1.6.6">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   <!-- Konfigurasi Khusus iOS PWA -->
@@ -1327,8 +1327,16 @@ function initPetaDanData() {
   window.addEventListener('utilsSiap', initPetaDanData);
 
 function muatDataPetaWarga() {
+  // 🌟 Ambil endpoint secara aman langsung dari RT05_CONFIG di utils.js
+  const endpointPeta = window.RT05_CONFIG && window.RT05_CONFIG.PETA_PROXY_URL;
+  
+  if (!endpointPeta) {
+    console.error("❌ Konfigurasi PETA_PROXY_URL tidak ditemukan di utils.js");
+    return;
+  }
+
   // 1. Ambil data melalui Cloudflare Worker proxy secara aman
-  fetch('https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga')
+  fetch(endpointPeta)
     .then(response => {
       if (!response.ok) {
         throw new Error("Gagal mengambil data dari server proxy.");
@@ -1354,7 +1362,8 @@ function muatDataPetaWarga() {
       var baris = [];
       Object.keys(dataObj).forEach(key => {
         var item = dataObj[key];
-        if (item && (item.nama || item.name || item.Nama)) {
+        // Mendukung pengecekan properti data lama maupun baru
+        if (item && (item.nama || item.name || item.Nama || item.kepalaKeluarga)) {
           baris.push(item);
         }
       });
@@ -1367,9 +1376,21 @@ function muatDataPetaWarga() {
         
         for (let i = index; i < batas; i++) {
           var kolom = baris[i];
-          var namaAsli = String(kolom.Nama || kolom.nama || kolom.name || '').trim();
+          
+          // 🌟 Ambil data Kepala Keluarga, No Rumah, dan Nama Tempat secara spesifik
+          var kepalaKeluarga = String(kolom.kepalaKeluarga || kolom.KepalaKeluarga || '').trim();
+          var noRumah = String(kolom.noRumah || kolom.NoRumah || '').trim();
+          var namaTempat = String(kolom.namaTempat || kolom.Nama || kolom.nama || kolom.name || '').trim();
+          var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
 
-          if (namaAsli !== '') {
+          // 🌟 Tentukan format nama tampil: Kombinasi Kepala Keluarga & No Rumah, atau Nama Tempat jika Fasum/Umum
+          var namaTampilAsli = namaTempat;
+          if (kepalaKeluarga !== '') {
+            var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
+            namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
+          }
+
+          if (namaTampilAsli !== '') {
             var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
             var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
             var latClean = perbaikiKoordinat(rawLat);
@@ -1380,12 +1401,11 @@ function muatDataPetaWarga() {
               ? rawHidden 
               : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
 
-            var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
             var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
             
             var item = {
-              name: namaAsli,
-              nameAsli: namaAsli,
+              name: namaTampilAsli,
+              nameAsli: namaTampilAsli,
               lat: parseFloat(latClean),
               lng: parseFloat(lngClean),
               hidden: statusHidden,
@@ -1394,14 +1414,19 @@ function muatDataPetaWarga() {
 
             if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-            var namaTersensor = sensorNamaDepan(item.nameAsli, kategoriManual);
+            // 🌟 Sensor nama depan hanya pada bagian Kepala Keluarga, nomor rumah tetap dibiarkan jelas
+            var namaTersensor = sensorNamaDepan(kepalaKeluarga !== '' ? kepalaKeluarga : namaTampilAsli, kategoriManual);
+            if (kepalaKeluarga !== '') {
+              var formatNoRmhSensor = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
+              namaTersensor = `${namaTersensor}${formatNoRmhSensor}`;
+            }
 
             var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
             var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
             
             var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
             
-            var dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+            var dataIkon = getIkonKategori(namaTampilAsli, kategoriManual);
 
             var customIcon = L.divIcon({
               className: 'custom-pin',
@@ -1412,10 +1437,10 @@ function muatDataPetaWarga() {
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
             daftarPin.push({ 
-              namaRaw: item.nameAsli,
-              nama: item.nameAsli.toLowerCase(), 
-              noRumah: String(kolom.noRumah || '').toLowerCase(),
-              kepalaKeluarga: String(kolom.kepalaKeluarga || '').toLowerCase(),
+              namaRaw: namaTampilAsli,
+              nama: namaTampilAsli.toLowerCase(), 
+              noRumah: noRumah.toLowerCase(),
+              kepalaKeluarga: kepalaKeluarga.toLowerCase(),
               marker: marker, 
               lat: item.lat, 
               lng: item.lng,
@@ -1458,45 +1483,58 @@ function muatDataPetaWarga() {
       console.error("Gagal memuat peta warga dari Cloudflare Worker:", error);
     });
 }
+  
 // 🌟 Fungsi helper sensor nama depan warga (dengan pengecualian tempat umum/pengurus)
-          function sensorNamaDepan(namaAsli, kategori) {
-            if (!namaAsli) return '';
-            
-            var textLower = namaAsli.toLowerCase();
-            var katLower = (kategori || '').toLowerCase();
+function sensorNamaDepan(namaAsli, kategori) {
+  if (!namaAsli) return '';
+  
+  var textLower = namaAsli.toLowerCase();
+  var katLower = (kategori || '').toLowerCase();
 
-            // Daftar kata kunci yang TIDAK BOLEH disensor karena bukan nama pribadi warga privat
-            var adalahTempatUmumAtauPejabat = 
-                katLower.includes('fasum') || 
-                katLower.includes('fasilitas') || 
-                katLower.includes('kost') || 
-                katLower.includes('kos') || 
-                katLower.includes('kontrakan') || 
-                katLower.includes('kuliner') || 
-                katLower.includes('minimarket') || 
-                katLower.includes('toko') || 
-                katLower.includes('pos') || 
-                textLower.includes('ketua rt') || 
-                textLower.includes('ketua rw') || 
-                textLower.includes('pak rt') || 
-                textLower.includes('pak rw') || 
-                textLower.includes('fasum') || 
-                textLower.includes('musholla') || 
-                textLower.includes('masjid') || 
-                textLower.includes('balai') || 
-                textLower.includes('sd');
+  // Daftar kata kunci yang TIDAK BOLEH disensor karena bukan nama pribadi warga privat
+  var adalahTempatUmumAtauPejabat = 
+      katLower.includes('fasum') || 
+      katLower.includes('fasilitas') || 
+      katLower.includes('kost') || 
+      katLower.includes('kos') || 
+      katLower.includes('kontrakan') || 
+      katLower.includes('kuliner') || 
+      katLower.includes('minimarket') || 
+      katLower.includes('toko') || 
+      katLower.includes('pos') || 
+      textLower.includes('ketua rt') || 
+      textLower.includes('ketua rw') || 
+      textLower.includes('pak rt') || 
+      textLower.includes('pak rw') || 
+      textLower.includes('musholla') || 
+      textLower.includes('masjid') || 
+      textLower.includes('balai') || 
+      textLower.includes('sd');
 
-            // Jika termasuk Fasum / Tempat Usaha / Pejabat RT/RW, kembalikan nama aslinya tanpa sensor!
-            if (adalahTempatUmumAtauPejabat) {
-              return namaAsli;
-            }
+  // Jika termasuk Fasum / Tempat Usaha / Pejabat RT/RW, kembalikan nama aslinya tanpa sensor!
+  if (adalahTempatUmumAtauPejabat) {
+    return namaAsli;
+  }
 
-            // Jika nama warga biasa, baru jalankan sensor nama depan
-            return namaAsli.split(' ').map(kata => {
-              if (kata.length <= 1) return kata;
-              return kata.charAt(0) + '*'.repeat(kata.length - 1);
-            }).join(' ');
-          }
+  // 🌟 Pisahkan antara nama orang dengan teks tambahan (seperti "(Rumah No. 06)")
+  var bagianNama = namaAsli;
+  var bagianInfoRumah = '';
+  
+  var indexKurung = namaAsli.indexOf('(');
+  if (indexKurung !== -1) {
+    bagianNama = namaAsli.substring(0, indexKurung).trim();
+    bagianInfoRumah = namaAsli.substring(indexKurung); // Mengambil teks "(Rumah No. 06)" apa adanya
+  }
+
+  // Jalankan sensor huruf depan HANYA pada bagian nama kepala keluarga
+  var namaTersensor = bagianNama.split(' ').map(kata => {
+    if (kata.length <= 1) return kata;
+    return kata.charAt(0) + '*'.repeat(kata.length - 1);
+  }).join(' ');
+
+  // Gabungkan kembali dengan info nomor rumah
+  return bagianInfoRumah !== '' ? `${namaTersensor} ${bagianInfoRumah}` : namaTersensor;
+}
 
 // 🌟 Fungsi untuk Memantau & Menampilkan Badge Jumlah Info RT Aktif di Index
 function muatBadgeInfoRT() {
@@ -2508,6 +2546,7 @@ window.simpanJimpitan = function(dataInput) {
     nominal: rawNominal
   };
 
+  // Mekanisme penyimpanan lokal (antrean offline) agar tetap aman jika sinyal pos ronda terganggu
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
@@ -3143,12 +3182,22 @@ window.cetakLaporanJimpitan = function() {
     }, 600);
 };
 
-    const dataChangelog = [
+    const dataChangelog = [       {
+        versi: "v1.6.6",
+        tanggal: "9 Nov 2026",
+        status: "Terbaru",
+        warna: "#4CAF50",
+        fitur: [
+          "Perbaikan fitur Edit/Kelola Data Warga",
+          "Perbaikan Major pada halaman cloud storage",
+          "Penambahan keamanan database"
+        ]
+      },
        {
         versi: "v1.6.5",
         tanggal: "4 Nov 2026",
-        status: "Terbaru",
-        warna: "#4CAF50",
+        status: "",
+        warna: "#888",
         fitur: [
           "Perbaikan fitur Laporan Divisi",
           "Perbaikan Major pada halaman admin",
@@ -3443,12 +3492,6 @@ window.tutupModalWargaBaruLuar = function(e) {
 };
 
 window.simpanWargaBaru = async function() {
-  // 🛡️ PENGAMAN UTAMA: Pastikan Firebase siap sebelum dipakai
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
-    alert('⚠️ Koneksi database sedang bersiap, mohon coba klik tombol Kirim sekali lagi dalam 1 detik.');
-    return;
-  }
-
   const nama = document.getElementById('wargaNama')?.value.trim();
   const noRumah = document.getElementById('wargaNoRumah')?.value.trim();
   const hp = document.getElementById('wargaHp')?.value.trim();
@@ -3463,12 +3506,13 @@ window.simpanWargaBaru = async function() {
   const btn = document.getElementById('btnSimpanWarga');
   if (btn) {
     btn.disabled = true;
-    btn.innerText = '⏳ Menyimpan ke Firebase...';
+    btn.innerText = '⏳ Mengirim Data...';
   }
 
   try {
-    const dbRef = window.firebaseRef(window.db, 'warga_baru');
-    await window.firebasePush(dbRef, {
+    // 🌟 Menggunakan Cloudflare Worker / Endpoint aman untuk warga baru
+    // (Atau kirim melalui endpoint proxy yang sudah Anda sediakan)
+    const payload = {
       nama: nama,
       noRumah: noRumah,
       hp: hp,
@@ -3476,21 +3520,29 @@ window.simpanWargaBaru = async function() {
       cerita: cerita,
       tanggal: new Date().toLocaleString('id-ID'),
       timestamp: Date.now()
-    });
+    };
+
+    // Jika menggunakan Firebase langsung untuk data publik warga baru (karena warga umum boleh isi):
+    if (typeof window.firebaseRef === 'function' && window.db) {
+      const dbRef = window.firebaseRef(window.db, 'warga_baru');
+      await window.firebasePush(dbRef, payload);
+    } else {
+      throw new Error("Database belum siap.");
+    }
 
     if (btn) {
       btn.disabled = false;
       btn.innerText = '📤 Kirim Data Warga Baru';
     }
 
-    alert('✅ Data Warga Baru berhasil terdaftar di database!');
+    alert('✅ Data Warga Baru berhasil terdaftar!');
     window.tutupModalWargaBaru();
   } catch (err) {
     if (btn) {
       btn.disabled = false;
       btn.innerText = '📤 Kirim Data Warga Baru';
     }
-    alert('❌ Gagal menyimpan ke Firebase: ' + err);
+    alert('❌ Gagal menyimpan data: ' + err.message);
   }
 };
   </script>
