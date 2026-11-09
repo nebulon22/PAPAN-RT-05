@@ -1129,6 +1129,40 @@ function formatRupiahInput(el) {
   }
   el.value = Number(value).toLocaleString('id-ID');
 }
+async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "POST") {
+  const pinAdmin = prompt("🔒 Masukkan PIN Admin RT 05 untuk menyimpan perubahan:");
+  if (!pinAdmin) {
+    alert("Simpan dibatalkan: PIN Admin wajib diisi.");
+    return false;
+  }
+
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: pathTujuan,      // Contoh: "peta_warga/item_1" atau "inventaris"
+        method: metodeHttp,    // "POST" atau "PUT"
+        data: payloadData
+      })
+    });
+
+    const hasil = await response.json();
+
+    if (hasil.success) {
+      return true;
+    } else {
+      alert("❌ Gagal: " + (hasil.error || "PIN Salah atau Terjadi Kesalahan"));
+      return false;
+    }
+  } catch (err) {
+    alert("❌ Kesalahan Jaringan / Worker: " + err.message);
+    return false;
+  }
+}
 
     // --- FITUR SINKRONISASI & ANTREAN OFFLINE ADMIN ---
     let sedangMengirimAdmin = false;
