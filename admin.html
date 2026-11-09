@@ -1264,19 +1264,29 @@ async function cekLogin() {
     }
 
     try {
-        // Kirim PIN ke Worker Cloudflare untuk divalidasi secara aman di backend
-        const response = await fetch('/api/verify-pin', {
+        // 🌟 Gunakan RT05_CONFIG.ADMIN_API_URL agar menembak langsung ke Cloudflare Worker, 
+        // bukan ke domain pages lokal.
+        const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ pin: input })
+            body: JSON.stringify({ 
+                action: 'verify-pin', // Kita beri penanda aksi jika diperlukan, atau langsung kirim pin
+                pin: input 
+            })
         });
 
-        const result = await response.json();
+        // Ambil teks dulu untuk mengantisipasi jika respons bukan JSON
+        const textResult = await response.text();
+        let result;
+        try {
+            result = JSON.parse(textResult);
+        } catch (e) {
+            throw new Error("Respon server bukan JSON valid: " + textResult);
+        }
 
         if (response.ok && result.success) {
-            // Simpan sesi login lokal
             localStorage.setItem('authAdmin', 'true');
-            localStorage.setItem('adminToken', result.token);
+            localStorage.setItem('adminToken', result.token || ('rt05-admin-' + Date.now()));
             localStorage.setItem('admin_login_time', Date.now().toString());
 
             document.getElementById('adminPin').value = '';
@@ -1286,13 +1296,12 @@ async function cekLogin() {
                 bukaAkses();
             }
         } else {
-            alert("❌ PIN salah! Akses ditolak.");
+            alert("❌ " + (result.error || result.message || "PIN salah! Akses ditolak."));
             document.getElementById('adminPin').value = '';
-            if (errorMsg) errorMsg.innerText = "❌ PIN yang Anda masukkan salah.";
         }
     } catch (error) {
         console.error("Gagal verifikasi PIN:", error);
-        alert("❌ Terjadi kesalahan jaringan saat menghubungi server.");
+        alert("❌ Terjadi kesalahan jaringan / URL API Worker keliru.");
     }
 }
 
