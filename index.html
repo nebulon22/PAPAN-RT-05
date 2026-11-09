@@ -578,10 +578,10 @@
     
 <div class="filter-container">
       <div class="filter-row">
-        <!-- Tombol Info RT -->
-        <a href="pengumuman.html" class="btn-filter btn-info-rt" style="text-decoration: none; display: flex; align-items: center; justify-content: center;">
-          📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
-        </a>
+        <!-- Tombol Info RT yang dioptimalkan dengan transisi halus -->
+<a href="pengumuman.html" onclick="bukaInfoSmooth(event, this.href)" class="btn-filter btn-info-rt" style="text-decoration: none; display: flex; align-items: center; justify-content: center; transition: transform 0.1s ease;">
+  📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
+</a>
         <!-- Tombol Keuangan yang sebelumnya hilang -->
         <button class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1;" data-click="bukaModalKeuangan">
           💰 Keuangan
@@ -1536,6 +1536,23 @@ function sensorNamaDepan(namaAsli, kategori) {
   return bagianInfoRumah !== '' ? `${namaTersensor} ${bagianInfoRumah}` : namaTersensor;
 }
 
+  function bukaInfoSmooth(event, targetUrl) {
+  event.preventDefault(); // Mencegah pindah halaman secara langsung/kaku
+
+  // Berikan efek klik membal (scale down tipis) agar terasa interaktif
+  const btn = event.currentTarget;
+  btn.style.transform = "scale(0.95)";
+
+  // Berikan efek fade-out halus pada seluruh body index
+  document.body.style.transition = "opacity 0.18s ease-in-out, transform 0.18s ease-in-out";
+  document.body.style.opacity = "0";
+  document.body.style.transform = "translateY(-4px)";
+
+  // Pindah ke halaman pengumuman setelah animasi selesai (180 milidetik)
+  setTimeout(() => {
+    window.location.href = targetUrl;
+  }, 180);
+}
 // 🌟 Fungsi untuk Memantau & Menampilkan Badge Jumlah Info RT Aktif di Index
 function muatBadgeInfoRT() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
