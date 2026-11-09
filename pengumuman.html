@@ -19,12 +19,25 @@
   <script src="setting.js" defer></script>
 
   <style>
-    html, body {
+html, body {
       margin: 0;
       padding: 0;
       font-family: sans-serif;
       background-color: #f8fafc;
       color: #333;
+      /* 🌟 Tambahkan animasi halus saat halaman pertama kali dimuat */
+      animation: fadeInPage 0.25s ease-out forwards;
+    }
+
+    @keyframes fadeInPage {
+      from {
+        opacity: 0;
+        transform: translateY(6px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .header-bar {
@@ -209,6 +222,15 @@
     }
 
 function muatPengumumanFirebase() {
+      // 🌟 1. AMBIL CACHE LOKAL AGAR LANGSUNG MUNCUL INSTAN TANPA MENUNGGU KONEKSI
+      const cachedData = localStorage.getItem('rt05_cached_pengumuman');
+      if (cachedData) {
+        try {
+          daftarPengumuman = JSON.parse(cachedData);
+          renderPengumumanUI(); // Render kilat dari cache
+        } catch(e) {}
+      }
+
       if (typeof window.firebaseRef !== 'function' || !window.db) {
         setTimeout(muatPengumumanFirebase, 50);
         return;
@@ -218,7 +240,7 @@ function muatPengumumanFirebase() {
       window.firebaseOnValue(pengumumanRef, (snapshot) => {
         const data = snapshot.val();
         daftarPengumuman = [];
-        let activeKeys = []; // 🌟 Menampung ID pengumuman aktif untuk sinkronisasi badge
+        let activeKeys = []; 
 
         if (data) {
           Object.keys(data).forEach(key => {
@@ -226,7 +248,7 @@ function muatPengumumanFirebase() {
             var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
             
             if (status === 'AKTIF') {
-              activeKeys.push(key); // 🌟 Rekam ID pengumuman yang berstatus aktif
+              activeKeys.push(key);
 
               var tglRapi = item.tanggal || '';
               if (tglRapi.includes('T')) {
@@ -245,9 +267,6 @@ function muatPengumumanFirebase() {
           });
         }
 
-        // 🌟 OTOMATIS TANDAI SUDAH DIBACA:
-        // Saat halaman pengumuman dibuka warga, simpan ID aktif ke LocalStorage perangkat ini
-        // agar badge unread di index.html berubah menjadi total aktif (warna netral/abu)
         if (activeKeys.length > 0) {
           localStorage.setItem('rt05_read_announcements', JSON.stringify(activeKeys));
         }
@@ -260,6 +279,8 @@ function muatPengumumanFirebase() {
           return dateB - dateA;
         });
 
+        // 🌟 2. SIMPAN KE CACHE DAN RENDER ULANG DATA TERBARU
+        localStorage.setItem('rt05_cached_pengumuman', JSON.stringify(daftarPengumuman));
         renderPengumumanUI();
       });
     }
