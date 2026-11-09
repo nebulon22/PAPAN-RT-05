@@ -2894,58 +2894,45 @@ function bukaModalEditWargaDariPeta(id) {
     bukaModalEditWargaAdminById(id);
 }
 
-async function prosesUploadKeR2Warga() {
-  const fileInput = document.getElementById('inputUploadFotoWarga');
-  if (!fileInput || fileInput.files.length === 0) return;
-
-  const labelStatus = document.getElementById('statusUploadInfo') || buatLabelStatus();
-  labelStatus.innerText = "⏳ Sedang mengunggah ke Cloudflare R2...";
-  labelStatus.style.color = "#d97706";
-
-  const url = await uploadKeCloudflareR2('inputUploadFotoWarga');
+async function prosesUploadR2Universal(jenisTarget = 'warga') {
+  // Tentukan elemen berdasarkan jenis target
+  const isSemiManual = jenisTarget === 'semimanual';
+  const fileInputId = isSemiManual ? 'inputUploadSemiManual' : 'inputUploadFotoWarga';
+  const statusEl = isSemiManual 
+    ? document.getElementById('statusSemiManual') 
+    : (document.getElementById('statusUploadInfo') || buatLabelStatus());
   
-  if (url) {
-    // Masukkan URL otomatis ke input teks foto
-    document.getElementById('editWargaFoto').value = url;
-    
-    // Tampilkan preview gambar
-    const preview = document.getElementById('previewFotoRumah');
-    if (preview) {
-      preview.src = url;
-      preview.style.display = 'inline-block';
-    }
-    
-    labelStatus.innerText = "✅ Berhasil diunggah ke R2!";
-    labelStatus.style.color = "#10b981";
-  } else {
-    labelStatus.innerText = "❌ Gagal mengunggah. Cek koneksi / Worker.";
-    labelStatus.style.color = "#dc2626";
-  }
-}
-
-async function prosesUploadSemiManual() {
-  const fileInput = document.getElementById('inputUploadSemiManual');
-  const statusDiv = document.getElementById('statusSemiManual');
-  const inputUrlTarget = document.getElementById('editWargaFoto');
-
+  const fileInput = document.getElementById(fileInputId);
   if (!fileInput || fileInput.files.length === 0) {
-    alert("Silakan pilih file foto/video terlebih dahulu!");
+    if (isSemiManual) alert("Silakan pilih file foto/video terlebih dahulu!");
     return;
   }
 
-  let file = fileInput.files[0];
-  statusDiv.innerHTML = "⏳ Sedang mengkompres & mengunggah file ke R2...";
-  statusDiv.style.color = "#d97706";
+  // Set status loading
+  if (isSemiManual) {
+    statusEl.innerHTML = "⏳ Sedang mengkompres & mengunggah file ke R2...";
+    statusEl.style.color = "#d97706";
+  } else {
+    statusEl.innerText = "⏳ Sedang mengunggah ke Cloudflare R2...";
+    statusEl.style.color = "#d97706";
+  }
 
-try {
-    // Menggunakan konfigurasi terpusat dari utils.js
-    const workerUrl = RT05_CONFIG.UPLOADER_URL; 
-    file = await kompresGambar(file, 1200, 0.8);
+  try {
+    let file = fileInput.files[0];
 
-    const response = await fetch(workerUrl, {
+    // Kompres otomatis jika berupa gambar
+    if (typeof kompresGambar === 'function' && file.type.startsWith('image/')) {
+      file = await kompresGambar(file, 1200, 0.8);
+    }
+
+    const ekstensi = file.name.split('.').pop() || 'jpg';
+    const namaFileKustom = `${jenisTarget}_${Date.now()}.${ekstensi}`;
+
+    // Kirim ke Cloudflare Worker (menggunakan config terpusat)
+    const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
       method: "POST",
       headers: {
-        "X-File-Name": file.name,
+        "X-File-Name": encodeURIComponent(namaFileKustom),
         "Content-Type": file.type || "application/octet-stream"
       },
       body: file
@@ -2955,20 +2942,41 @@ try {
     let result = JSON.parse(textResult);
 
     if (result.success && result.url) {
-      // 🌟 MANIPULASI DOMAIN KE CUSTOM DOMAIN R2
       let urlAwal = new URL(result.url);
       let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
 
-      inputUrlTarget.value = urlFinal;
-      statusDiv.innerHTML = `✅ Berhasil dikompres & diunggah! Link R2:<br><a href="${urlFinal}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${urlFinal}</b></a>`;
-      statusDiv.style.color = "#10b981";
+      // Masukkan ke input target form warga
+      const inputUrlTarget = document.getElementById('editWargaFoto');
+      if (inputUrlTarget) inputUrlTarget.value = urlFinal;
+
+      // Preview gambar khusus warga
+      if (!isSemiManual) {
+        const preview = document.getElementById('previewFotoRumah');
+        if (preview) {
+          preview.src = urlFinal;
+          preview.style.display = 'inline-block';
+        }
+      }
+
+      // Update pesan sukses
+      if (isSemiManual) {
+        statusEl.innerHTML = `✅ Berhasil dikompres & diunggah! Link R2:<br><a href="${urlFinal}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${urlFinal}</b></a>`;
+      } else {
+        statusEl.innerText = "✅ Berhasil diunggah ke R2!";
+      }
+      statusEl.style.color = "#10b981";
+
     } else {
       throw new Error(result.error || "Gagal mendapatkan URL dari server.");
     }
   } catch (err) {
     console.error(err);
-    statusDiv.innerHTML = `❌ Gagal: ${err.message}`;
-    statusDiv.style.color = "#dc2626";
+    if (isSemiManual) {
+      statusEl.innerHTML = `❌ Gagal: ${err.message}`;
+    } else {
+      statusEl.innerText = `❌ Gagal: ${err.message}`;
+    }
+    statusEl.style.color = "#dc2626";
   }
 }
 
@@ -3292,48 +3300,6 @@ document.addEventListener("DOMContentLoaded", () => {
         kirimDataPendingAdmin();
     }
 });
-
-async function uploadKeCloudflareR2(fileInputId) {
-  const fileInput = document.getElementById(fileInputId);
-  if (!fileInput || fileInput.files.length === 0) return null;
-
-  let file = fileInput.files[0];
-  const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
-
-  try {
-    file = await kompresGambar(file, 1200, 0.8);
-
-    const response = await fetch(workerUrl, {
-      method: "POST",
-      headers: {
-        "X-File-Name": file.name,
-        "Content-Type": file.type || "application/octet-stream"
-      },
-      body: file
-    });
-    
-    const textResult = await response.text();
-    let result;
-    try {
-      result = JSON.parse(textResult);
-    } catch (e) {
-      throw new Error("Respon server bukan JSON valid: " + textResult);
-    }
-
-    if (result.success) {
-      // 🌟 MANIPULASI DOMAIN: Ubah URL bawaan worker ke custom domain Anda
-      let urlAwal = new URL(result.url);
-      let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
-      
-      return urlFinal; 
-    } else {
-      throw new Error(result.error);
-    }
-  } catch (err) {
-    alert("Gagal mengupload file: " + err.message);
-    return null;
-  }
-}
 
    function bukaModalLaporan() {
       const today = new Date().toISOString().split('T')[0];
@@ -4487,18 +4453,22 @@ function resetFormPengumuman() {
     update(ref(db, `users/${uid}`), { status: 'aktif' });
   };
 
-  window.rejectUser = (uid) => {
-    if (confirm("Hapus / Tolak pendaftaran warga ini?")) {
-      remove(ref(db, `users/${uid}`));
-    }
-  };
+window.rejectUser = (uid, statusWarga = 'pending') => {
+  const pesan = statusWarga === 'aktif' 
+    ? "PERINGATAN: Yakin ingin menghapus akun warga aktif ini secara permanen?" 
+    : "Hapus / Tolak pendaftaran warga ini?";
+    
+  if (confirm(pesan)) {
+    remove(ref(db, `users/${uid}`));
+  }
+};
 
   window.toggleRole = (uid, currentRole) => {
     const newRole = currentRole === 'admin' ? 'warga' : 'admin';
     update(ref(db, `users/${uid}`), { role: newRole });
   };
 
-  // Listener Real-time untuk Chat/Users
+ // Listener Real-time untuk Chat/Users
   const usersRef = ref(db, 'users');
   onValue(usersRef, (snapshot) => {
     const pendingTable = document.getElementById('pending-users-list');
@@ -4559,7 +4529,7 @@ function resetFormPengumuman() {
             <button onclick="toggleRole('${uid}', '${u.role}')" style="background: #334155; color: #cbd5e1; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
               ${isAdmin ? 'Warga' : 'Jadi Admin'}
             </button>
-            <button onclick="rejectUser('${uid}')" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
+            <button onclick="rejectUser('${uid}', 'aktif')" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
               ❌Hapus Akun
             </button>
           </td>
@@ -4571,7 +4541,8 @@ function resetFormPengumuman() {
     if (pendingCount === 0) {
       pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar pending.</td></tr>';
     }
-
+  });
+  
     const pBadge = document.getElementById('pending-badge');
     const tWarga = document.getElementById('total-warga-count');
     const detailsElem = document.getElementById('details-chat-admin');
