@@ -1254,50 +1254,47 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
       perbaruiIndikatorSyncAdmin();
     });
 
-    function cekLogin() {
-      const input = document.getElementById('adminPin').value.trim();
-      if (!/^\d{6}$/.test(input)) { alert("PIN harus berisi 6 digit angka!"); return; }
-      const btnLogin = document.querySelector('.login-box button');
-      btnLogin.innerText = "⏳ Memeriksa..."; btnLogin.disabled = true;
+async function cekLogin() {
+    const input = document.getElementById('adminPin').value.trim();
+    const errorMsg = document.getElementById('loginError');
 
-      if (!navigator.onLine) {
-        btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
-        alert("❌ Tidak dapat memverifikasi PIN karena tidak ada koneksi internet.");
+    if (!input) {
+        if (errorMsg) errorMsg.innerText = "⚠️ Masukkan PIN terlebih dahulu.";
         return;
-      }
-
-      window.firebaseGet(window.firebaseRef(window.db, 'admin_config/pin')).then((snapshot) => {
-        btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
-        let validPin = snapshot.val();
-        
-        if (!validPin) {
-          validPin = "050505";
-        }
-        
-        if (String(input).trim() === String(validPin).trim()) {
-          localStorage.setItem('authAdmin', 'true');
-          localStorage.setItem('adminToken', 'rt05-admin-' + Date.now());
-          localStorage.setItem('admin_login_time', Date.now().toString());
-          document.getElementById('adminPin').value = "";
-          bukaAkses();
-        } else {
-          alert("❌ PIN salah! Akses ditolak.");
-          document.getElementById('adminPin').value = "";
-        }
-      }).catch(err => {
-        console.error("Gagal terhubung ke DB:", err);
-        if (input === "050505") {
-          localStorage.setItem('authAdmin', 'true');
-          localStorage.setItem('adminToken', 'rt05-admin-' + Date.now());
-          localStorage.setItem('admin_login_time', Date.now().toString());
-          document.getElementById('adminPin').value = "";
-          bukaAkses();
-          return;
-        }
-        btnLogin.innerText = "Buka Kunci"; btnLogin.disabled = false;
-        alert("❌ Gagal menghubungi database. Pastikan koneksi stabil.");
-      });
     }
+
+    try {
+        // Kirim PIN ke Worker Cloudflare untuk divalidasi secara aman di backend
+        const response = await fetch('/api/verify-pin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ pin: input })
+        });
+
+        const result = await response.json();
+
+        if (response.ok && result.success) {
+            // Simpan sesi login lokal
+            localStorage.setItem('authAdmin', 'true');
+            localStorage.setItem('adminToken', result.token);
+            localStorage.setItem('admin_login_time', Date.now().toString());
+
+            document.getElementById('adminPin').value = '';
+            if (errorMsg) errorMsg.innerText = "";
+
+            if (typeof bukaAkses === 'function') {
+                bukaAkses();
+            }
+        } else {
+            alert("❌ PIN salah! Akses ditolak.");
+            document.getElementById('adminPin').value = '';
+            if (errorMsg) errorMsg.innerText = "❌ PIN yang Anda masukkan salah.";
+        }
+    } catch (error) {
+        console.error("Gagal verifikasi PIN:", error);
+        alert("❌ Terjadi kesalahan jaringan saat menghubungi server.");
+    }
+}
 
     // 🌟 Buat fungsi baru ini untuk memunculkan overlay login admin
     function bukaFormLoginAdmin() {
