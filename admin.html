@@ -1423,8 +1423,8 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
     document.getElementById('dataForm').reset();
     
     // Kembalikan form dinamis ke state awal (Rumah) setelah reset
-    if (typeof sesuaikanFormKategori === 'function') {
-      sesuaikanFormKategori();
+    if (typeof  === 'function') {
+      ();
     }
     
     muatSemuaDataAdmin();
@@ -2125,59 +2125,6 @@ window.simpanSemuaPeminjamanAdmin = async function() {
   }
 };
 
-function sesuaikanFormKategori() {
-  const kategoriSelect = document.getElementById('inputKategori');
-  const groupNama = document.getElementById('groupNamaWarga');
-  
-  if (!kategoriSelect || !groupNama) return;
-
-  const kategori = kategoriSelect.value.toLowerCase();
-  
-  // Jika kategori adalah Fasum, Kost, Kuliner, atau Minimarket, sembunyikan input nama warga
-  if (kategori === 'fasum' || kategori === 'kost' || kategori === 'kuliner' || kategori === 'minimarket') {
-    groupNama.style.display = 'none';
-    // Opsional: Kosongkan nilai input saat disembunyikan agar tidak ikut tersimpan
-    const inputNamaWarga = document.getElementById('inputNamaWarga');
-    if (inputNamaWarga) inputNamaWarga.value = '';
-  } else {
-    groupNama.style.display = 'block';
-  }
-}
-
-function toggleFieldKategoriEdit() {
-  const kategoriSelect = document.getElementById('editWargaKategori');
-  const groupKeluarga = document.getElementById('groupFieldKeluarga');
-  
-  if (!kategoriSelect || !groupKeluarga) return;
-
-  const kategoriVal = kategoriSelect.value.toLowerCase();
-  
-  // Jika kategori berupa Fasum, Kost, Kuliner, atau Minimarket, sembunyikan form keluarga
-  if (kategoriVal === 'fasum' || kategoriVal === 'kost' || kategoriVal === 'kuliner' || kategoriVal === 'minimarket') {
-    groupKeluarga.style.display = 'none';
-  } else {
-    groupKeluarga.style.display = 'block';
-  }
-}
-
-    function bukaModalKelolaWarga() {
-      const modal = document.getElementById('modal-kelola-warga');
-      if (modal) {
-        modal.style.display = 'flex';
-        if (typeof muatSemuaDataAdmin === 'function') {
-          muatSemuaDataAdmin();
-        }
-      }
-    }
-
-    function tutupModalKelolaWarga() {
-      const modal = document.getElementById('modal-kelola-warga');
-      if (modal) {
-        modal.style.display = 'none';
-      }
-    }
-
-
 // 📋 Fungsi Toggle Panel Warga Baru & Sembunyikan Menu Sensus Utama
 window.togglePanelWargaBaruAdmin = function() {
   const container = document.getElementById('containerDaftarWargaBaru');
@@ -2865,12 +2812,8 @@ function sesuaikanFormKategori() {
   if (!container) return;
 
   if (kategori.includes('rumah')) {
-    // Tampilan Form Khusus Rumah Warga
+    // Tampilan Form Khusus Rumah Warga (Tanpa Nama Rumah/Blok yang ambigu)
     container.innerHTML = `
-      <div class="form-group">
-        <label for="inputNamaRumah">Nama Rumah / Blok:</label>
-        <input type="text" id="inputNamaRumah" placeholder="Contoh: Rumah Budi">
-      </div>
       <div class="form-group">
         <label for="inputNoRumah">No. Rumah:</label>
         <input type="text" id="inputNoRumah" placeholder="Contoh: No 05">
@@ -2903,9 +2846,6 @@ function sesuaikanFormKategori() {
   }
 }
 
-// Panggil fungsi ini saat pertama kali modal tambah dibuka
-// (Pastikan dipanggil di dalam event klik peta atau tombol tambah data baru)
-
 
 // --- FORM EDIT LOKASI DINAMIS ---
 function toggleFieldKategoriEdit(kategoriVal = null) {
@@ -2916,11 +2856,8 @@ function toggleFieldKategoriEdit(kategoriVal = null) {
   const kategori = (kategoriVal || selectKat.value).toLowerCase();
 
   if (kategori.includes('rumah')) {
+    // Tampilan Form Edit Khusus Rumah Warga (Tanpa Nama Rumah/Blok)
     container.innerHTML = `
-      <div class="form-group" style="margin-bottom: 10px;">
-        <label style="font-size: 12px; font-weight: bold; color: #374151;">Nama Rumah / Blok:</label>
-        <input type="text" id="editNamaRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-      </div>
       <div class="form-group" style="margin-bottom: 10px;">
         <label style="font-size: 12px; font-weight: bold; color: #374151;">No. Rumah:</label>
         <input type="text" id="editWargaNoRumah" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
