@@ -1327,8 +1327,16 @@ function initPetaDanData() {
   window.addEventListener('utilsSiap', initPetaDanData);
 
 function muatDataPetaWarga() {
+  // 🌟 Ambil endpoint secara aman langsung dari RT05_CONFIG di utils.js
+  const endpointPeta = window.RT05_CONFIG && window.RT05_CONFIG.PETA_PROXY_URL;
+  
+  if (!endpointPeta) {
+    console.error("❌ Konfigurasi PETA_PROXY_URL tidak ditemukan di utils.js");
+    return;
+  }
+
   // 1. Ambil data melalui Cloudflare Worker proxy secara aman
-  fetch('https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga')
+  fetch(endpointPeta)
     .then(response => {
       if (!response.ok) {
         throw new Error("Gagal mengambil data dari server proxy.");
