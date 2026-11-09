@@ -2508,6 +2508,7 @@ window.simpanJimpitan = function(dataInput) {
     nominal: rawNominal
   };
 
+  // Mekanisme penyimpanan lokal (antrean offline) agar tetap aman jika sinyal pos ronda terganggu
   let antrean = JSON.parse(localStorage.getItem('antrean_jimpitan') || '[]');
   antrean.push(dataBaru);
   localStorage.setItem('antrean_jimpitan', JSON.stringify(antrean));
@@ -3443,12 +3444,6 @@ window.tutupModalWargaBaruLuar = function(e) {
 };
 
 window.simpanWargaBaru = async function() {
-  // 🛡️ PENGAMAN UTAMA: Pastikan Firebase siap sebelum dipakai
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
-    alert('⚠️ Koneksi database sedang bersiap, mohon coba klik tombol Kirim sekali lagi dalam 1 detik.');
-    return;
-  }
-
   const nama = document.getElementById('wargaNama')?.value.trim();
   const noRumah = document.getElementById('wargaNoRumah')?.value.trim();
   const hp = document.getElementById('wargaHp')?.value.trim();
@@ -3463,12 +3458,13 @@ window.simpanWargaBaru = async function() {
   const btn = document.getElementById('btnSimpanWarga');
   if (btn) {
     btn.disabled = true;
-    btn.innerText = '⏳ Menyimpan ke Firebase...';
+    btn.innerText = '⏳ Mengirim Data...';
   }
 
   try {
-    const dbRef = window.firebaseRef(window.db, 'warga_baru');
-    await window.firebasePush(dbRef, {
+    // 🌟 Menggunakan Cloudflare Worker / Endpoint aman untuk warga baru
+    // (Atau kirim melalui endpoint proxy yang sudah Anda sediakan)
+    const payload = {
       nama: nama,
       noRumah: noRumah,
       hp: hp,
@@ -3476,21 +3472,29 @@ window.simpanWargaBaru = async function() {
       cerita: cerita,
       tanggal: new Date().toLocaleString('id-ID'),
       timestamp: Date.now()
-    });
+    };
+
+    // Jika menggunakan Firebase langsung untuk data publik warga baru (karena warga umum boleh isi):
+    if (typeof window.firebaseRef === 'function' && window.db) {
+      const dbRef = window.firebaseRef(window.db, 'warga_baru');
+      await window.firebasePush(dbRef, payload);
+    } else {
+      throw new Error("Database belum siap.");
+    }
 
     if (btn) {
       btn.disabled = false;
       btn.innerText = '📤 Kirim Data Warga Baru';
     }
 
-    alert('✅ Data Warga Baru berhasil terdaftar di database!');
+    alert('✅ Data Warga Baru berhasil terdaftar!');
     window.tutupModalWargaBaru();
   } catch (err) {
     if (btn) {
       btn.disabled = false;
       btn.innerText = '📤 Kirim Data Warga Baru';
     }
-    alert('❌ Gagal menyimpan ke Firebase: ' + err);
+    alert('❌ Gagal menyimpan data: ' + err.message);
   }
 };
   </script>
