@@ -4453,22 +4453,22 @@ function resetFormPengumuman() {
     update(ref(db, `users/${uid}`), { status: 'aktif' });
   };
 
-window.rejectUser = (uid, statusWarga = 'pending') => {
-  const pesan = statusWarga === 'aktif' 
-    ? "PERINGATAN: Yakin ingin menghapus akun warga aktif ini secara permanen?" 
-    : "Hapus / Tolak pendaftaran warga ini?";
-    
-  if (confirm(pesan)) {
-    remove(ref(db, `users/${uid}`));
-  }
-};
+  window.rejectUser = (uid, statusWarga = 'pending') => {
+    const pesan = statusWarga === 'aktif' 
+      ? "PERINGATAN: Yakin ingin menghapus akun warga aktif ini secara permanen?" 
+      : "Hapus / Tolak pendaftaran warga ini?";
+      
+    if (confirm(pesan)) {
+      remove(ref(db, `users/${uid}`));
+    }
+  };
 
   window.toggleRole = (uid, currentRole) => {
     const newRole = currentRole === 'admin' ? 'warga' : 'admin';
     update(ref(db, `users/${uid}`), { role: newRole });
   };
 
- // Listener Real-time untuk Chat/Users
+  // Listener Real-time untuk Chat/Users
   const usersRef = ref(db, 'users');
   onValue(usersRef, (snapshot) => {
     const pendingTable = document.getElementById('pending-users-list');
@@ -4481,6 +4481,12 @@ window.rejectUser = (uid, statusWarga = 'pending') => {
 
     if (!snapshot.exists()) {
       pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar.</td></tr>';
+      
+      // Update badge kosong
+      const pBadge = document.getElementById('pending-badge');
+      const tWarga = document.getElementById('total-warga-count');
+      if (pBadge) pBadge.innerText = `0 Pending`;
+      if (tWarga) tWarga.innerText = 0;
       return;
     }
 
@@ -4541,8 +4547,8 @@ window.rejectUser = (uid, statusWarga = 'pending') => {
     if (pendingCount === 0) {
       pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar pending.</td></tr>';
     }
-  });
-  
+
+    // Update Badge & Counter di UI
     const pBadge = document.getElementById('pending-badge');
     const tWarga = document.getElementById('total-warga-count');
     const detailsElem = document.getElementById('details-chat-admin');
