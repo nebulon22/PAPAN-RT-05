@@ -1586,86 +1586,78 @@ function initMap() {
 // ==========================================
 // 2. CARI LOKASI (Robust & Fallback ke Leaflet Layer)
 // ==========================================
-function cariLokasi(queryManual) {
+window.cariLokasi = function(queryManual) {
   if (document.activeElement) document.activeElement.blur();
 
+  // 1. Ambil kata kunci dari argumen fungsi atau dari input HTML
   var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
   var inputVal = inputElem ? inputElem.value : '';
   var kataKunci = String(queryManual !== undefined ? queryManual : inputVal).toLowerCase().trim();
   
   if (!kataKunci) {
-    alert("Silakan masukkan nama warga atau nomor rumah.");
-    return;
-  }
-
-  var targetLat = null;
-  var targetLng = null;
-  var targetMarker = null;
-
-  var kataKunciAngka = kataKunci.replace(/^0+/, '');
-  var isPureAngka = /^\d+$/.test(kataKunci);
-
-  // TRIK 1: Cari dari window.daftarPin
-  var listPin = (typeof window.daftarPin !== 'undefined' && Array.isArray(window.daftarPin)) ? window.daftarPin : [];
-
-  if (listPin.length > 0) {
-    var hasil = listPin.find(pin => {
-      var noRumahClean = String(pin.noRumah || '').replace(/^0+/, '').toLowerCase();
-      if (isPureAngka && noRumahClean === kataKunciAngka) return true;
-
-      var teksGabungan = [pin.namaRaw, pin.namaTempat, pin.kepalaKeluarga, pin.anggota, pin.noRumah].join(' ').toLowerCase();
-      return teksGabungan.includes(kataKunci);
-    });
-
-    if (hasil) {
-      targetMarker = hasil.marker;
-      targetLat = hasil.lat;
-      targetLng = hasil.lng;
-    }
-  }
-
-  // TRIK 2 (FALLBACK): Jika daftarPin kosong, cari langsung dari seluruh Marker di Leaflet
-  if (!targetMarker && markerGroup) {
-    markerGroup.eachLayer(function(layer) {
-      if (targetMarker) return; // Jika sudah ketemu, skip
-      
-      var searchTxt = layer.customSearchText || '';
-      var noRmh = layer.customNoRumah || '';
-
-      if (isPureAngka && noRmh === kataKunciAngka) {
-        targetMarker = layer;
-        targetLat = layer.customLat || layer.getLatLng().lat;
-        targetLng = layer.customLng || layer.getLatLng().lng;
-      } else if (searchTxt.includes(kataKunci)) {
-        targetMarker = layer;
-        targetLat = layer.customLat || layer.getLatLng().lat;
-        targetLng = layer.customLng || layer.getLatLng().lng;
-      }
-    });
-  }
-
-  // EKSEKUSI ANIMASI DAN POPUP
-  if (targetMarker && targetLat && targetLng) {
-    if (!markerGroup.hasLayer(targetMarker)) {
-      markerGroup.addLayer(targetMarker);
-    }
-
-    var pointM = map.project([targetLat, targetLng], 19);
-    var pointC = L.point(pointM.x, pointM.y - 150);
-    map.flyTo(map.unproject(pointC, 19), 19);  
-
-    map.once('moveend', function() {
-      if (targetMarker.getPopup()) {
-        targetMarker.openPopup();
-      }
-    });
-    
-    return targetMarker;
-  } else {
-    alert("❌ Data '" + kataKunci + "' tidak ditemukan di peta.");
+    alert("Masukkan kata kunci pencarian!");
     return null;
   }
-}
+
+  if (!daftarPin || daftarPin.length === 0) {
+    alert("Data peta belum siap, silakan coba beberapa saat lagi.");
+    return null;
+  }
+
+  var keywordBersih = kataKunci.replace(/^0+/, ''); // Hilangkan nol di depan (misal "06" -> "6")
+
+  // 2. Cari dari daftarPin dengan logika persis seperti index.html
+  var hasil = daftarPin.find(pin => {
+    var namaRaw = String(pin.namaRaw || pin.nameAsli || '').toLowerCase();
+    var namaTeks = String(pin.nama || '').toLowerCase();
+    var namaTempat = String(pin.namaTempat || pin.name || '').toLowerCase();
+    var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
+    var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
+    var noRumahAsli = String(pin.noRumah || '').toLowerCase();
+    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
+    var kategori = String(pin.kategori || '').toLowerCase();
+    
+    return namaRaw.includes(kataKunci) ||
+           namaTeks.includes(kataKunci) || 
+           namaTempat.includes(kataKunci) ||
+           kepalaKeluarga.includes(kataKunci) || 
+           anggotaKeluarga.includes(kataKunci) ||
+           noRumahAsli.includes(kataKunci) || 
+           (noRumahTanpaNol !== '' && noRumahTanpaNol === keywordBersih) ||
+           kategori.includes(kataKunci);
+  });
+
+  if (hasil) {
+    // Simpan pin aktif
+    pinHasilPencarian = hasil;
+    pinRumahAktif = hasil.marker;
+
+    // Tampilkan di peta jika tersembunyi
+    if (typeof markerGroup !== 'undefined' && markerGroup && hasil.marker) {
+      if (!markerGroup.hasLayer(hasil.marker)) {
+        markerGroup.addLayer(hasil.marker);
+      }
+    }
+
+    // Geser peta & buka Popup
+    if (typeof map !== 'undefined' && map && hasil.lat && hasil.lng) {
+      var pointM = map.project([hasil.lat, hasil.lng], 19);
+      var pointC = L.point(pointM.x, pointM.y - 180);
+      map.flyTo(map.unproject(pointC, 19), 19);
+
+      map.once('moveend', function() {
+        if (hasil.marker && hasil.marker.getPopup()) {
+          hasil.marker.openPopup();
+        }
+      });
+    }
+
+    return hasil; // Mengembalikan Objek Pin (bukan array kosong [])
+  } else {
+    alert("❌ Data '" + kataKunci + "' tidak ditemukan.");
+    return null;
+  }
+};
     
  // 3. FUNGSI FILTER KATEGORI LOKASI PETA
 // FUNGSI FILTER KATEGORI KHUSUS HALAMAN ADMIN
