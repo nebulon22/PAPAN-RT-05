@@ -1609,34 +1609,39 @@ window.addEventListener('pageshow', function(event) {
 window.jalankanPencarianPeta = function() {
   var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
   if (!kataKunci) {
-    alert("Masukkan nama atau nomor rumah yang ingin dicari!");
+    alert("Masukkan kata kunci (Nama, Kepala Keluarga, Anggota, No. Rumah, atau Kategori) yang ingin dicari!");
     return;
   }
 
   // 🌟 JIKA DATA MASIH KOSONG, TUNGGU SEBENTAR SECARA OTOMATIS
   if (!daftarPin || daftarPin.length === 0) {
-    // Panggil ulang fetch worker sebagai antisipasi
     if (typeof muatDataPetaWarga === 'function') {
       muatDataPetaWarga();
     }
     
-    // Beri tahu pengguna dan tunggu 1.5 detik lalu coba cari otomatis
     alert("Memuat data dari server proxy, mohon tunggu sebentar...");
     setTimeout(() => {
-      window.jalankanPencarianPeta(); // Coba jalankan ulang pencarian otomatis
+      window.jalankanPencarianPeta(); 
     }, 1500);
     return;
   }
 
+  // 🔍 Pencarian fleksibel mencakup semua atribut properti pada pin
+  var keywordBersih = kataKunci.replace(/^0+/, ''); // Untuk toleransi nomor rumah misal "06" jadi "6"
+
   var hasil = daftarPin.find(pin => {
-    var namaRaw = String(pin.namaRaw || '').toLowerCase();
-    var noRumah = String(pin.noRumah || '').toLowerCase();
+    var namaRaw = String(pin.namaRaw || pin.nama || '').toLowerCase();
+    var noRumahAsli = String(pin.noRumah || '').toLowerCase();
+    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
     var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
-    var kategori = String(pin.kategori || '').toLowerCase();
+    var anggotaKeluarga = String(pin.anggotaKeluarga || pin.Anggota || '').toLowerCase();
+    var kategori = String(pin.kategori || pin.type || '').toLowerCase();
     
     return namaRaw.includes(kataKunci) || 
-           noRumah.includes(kataKunci) || 
            kepalaKeluarga.includes(kataKunci) || 
+           anggotaKeluarga.includes(kataKunci) ||
+           noRumahAsli.includes(kataKunci) || 
+           (noRumahTanpaNol && noRumahTanpaNol === keywordBersih) ||
            kategori.includes(kataKunci);
   });
 
@@ -1659,7 +1664,7 @@ window.jalankanPencarianPeta = function() {
       hasil.marker.openPopup();
     });
   } else {
-    alert("Nama atau nomor rumah \"" + kataKunci + "\" tidak ditemukan.");
+    alert("Data \"" + kataKunci + "\" tidak ditemukan.");
   }
 };
   
