@@ -1481,9 +1481,9 @@ function initMap() {
   markerGroup.addTo(map);
 
   map.on('click', function(e) {
-    if (document.getElementById('modal-form').style.display === 'flex' || 
-        document.getElementById('modal-admin-inventaris').style.display === 'flex' || 
-        document.getElementById('modal-kelola-warga').style.display === 'flex') return;
+    if (document.getElementById('modal-form')?.style.display === 'flex' || 
+        document.getElementById('modal-admin-inventaris')?.style.display === 'flex' || 
+        document.getElementById('modal-kelola-warga')?.style.display === 'flex') return;
     
     const elTitle = document.getElementById('formTitle');
     const elNoRumah = document.getElementById('inputNoRumah');
@@ -1505,8 +1505,17 @@ function initMap() {
     }
   });
 
-  // PENGAMBILAN DATA DENGAN DETEKSI KEY YANG FLEKSIBEL
-  fetch(RT05_CONFIG.PETA_PROXY_URL)
+  // Ambil token sesi login admin dari localStorage (otomatis terkirim jika sedang di Halaman Admin)
+  const adminToken = localStorage.getItem('adminToken') || '';
+
+  // PENGAMBILAN DATA DENGAN DETEKSI KEY YANG FLEKSIBEL VIA WORKER PROXY
+  fetch(RT05_CONFIG.PETA_PROXY_URL, {
+    method: 'GET',
+    headers: {
+      'X-Admin-Token': adminToken,
+      'Content-Type': 'application/json'
+    }
+  })
     .then(response => response.json())
     .then(dataObj => {
       markerGroup.clearLayers();
@@ -1589,6 +1598,7 @@ function initMap() {
         var keywordPencarian = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah} ${semuaNilaiObjek}`.toLowerCase();
 
         daftarPin.push({ 
+          id: key,
           namaRaw: namaTampilAsli,
           nama: keywordPencarian, 
           namaTempat: namaTempat.toLowerCase(),
@@ -1603,13 +1613,14 @@ function initMap() {
         });
       });
 
+      // Jalankan filter awal (Akan menyembunyikan pin yang berstatus hidden dari filter utama)
       filterKategori('semua');
     })
     .catch(err => {
       console.error("Gagal memuat peta via Cloudflare Worker:", err);
     });
 }
-
+    
 // 2. FUNGSI PENCARIAN LOKASI
 function cariLokasi() {
   if (document.activeElement) {
@@ -2577,7 +2588,22 @@ let listSemuaRumahAdmin = [];
 // ==========================================
 async function muatSemuaDataAdmin() {
     try {
-        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+        // 🌟 1. Ambil token sesi admin dari localStorage
+        const adminToken = localStorage.getItem('adminToken') || '';
+
+        // 🌟 2. Sertakan X-Admin-Token agar Worker memberikan 100% data lokasi utuh tanpa hidden otomatis
+        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, {
+            method: 'GET',
+            headers: {
+                'X-Admin-Token': adminToken,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error status: ${response.status}`);
+        }
+
         const dataObj = await response.json();
 
         globalDataWarga = [];
@@ -2601,14 +2627,19 @@ async function muatSemuaDataAdmin() {
             const namaRumah = String(val.Nama || val.nama || val.name || '').trim();
             const lat = val.Lat !== undefined ? val.Lat : (val.lat || '');
             const lng = val.Lng !== undefined ? val.Lng : (val.lng || '');
-            const hidden = val.Hidden !== undefined ? val.Hidden : (val.hidden || false);
+            
+            const rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
+            const hidden = typeof rawHidden === 'boolean' 
+                ? rawHidden 
+                : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+
             const type = val.Type || val.type || val.Kategori || val.kategori || 'Rumah';
             const foto = val.foto || val.Foto || val['LINK GAMBAR/VIDEO'] || '';
             
-            const kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim();
-            const anggotaKeluarga = String(val.anggotaKeluarga || val.Anggota || val.anggota || '').trim();
-            const noRumah = String(val.noRumah || val.NoRumah || '').trim();
-            const namaTempat = String(val.namaTempat || val.namaTempat || '').trim();
+            const kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || val['Kepala Keluarga'] || '').trim();
+            const anggotaKeluarga = String(val.anggotaKeluarga || val.Anggota || val.anggota || val['Anggota Keluarga'] || '').trim();
+            const noRumah = String(val.noRumah || val.NoRumah || val['No Rumah'] || '').trim();
+            const namaTempat = String(val.namaTempat || val.NamaTempat || val['Nama Tempat'] || '').trim();
 
             // Gabungkan seluruh keyword agar pencarian fleksibel
             const keywordPencarian = `${namaRumah} ${kepalaKeluarga} ${anggotaKeluarga} ${noRumah} ${namaTempat}`.toLowerCase();
@@ -2637,15 +2668,16 @@ async function muatSemuaDataAdmin() {
             }
         });
         
-        document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
-        document.getElementById("stat-total-kk").innerText = totalKK + " KK";
-        document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
+        // Update UI Statistik
+        if (document.getElementById("badge-total-jiwa")) document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
+        if (document.getElementById("stat-total-kk")) document.getElementById("stat-total-kk").innerText = totalKK + " KK";
+        if (document.getElementById("stat-total-jiwa")) document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
 
     } catch (err) {
         console.error("Gagal memuat data admin dari Cloudflare Worker:", err);
-        document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
-        document.getElementById("stat-total-kk").innerText = "0 KK";
-        document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+        if (document.getElementById("badge-total-jiwa")) document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+        if (document.getElementById("stat-total-kk")) document.getElementById("stat-total-kk").innerText = "0 KK";
+        if (document.getElementById("stat-total-jiwa")) document.getElementById("stat-total-jiwa").innerText = "0 Orang";
     }
 }
     
