@@ -1612,53 +1612,79 @@ function initMap() {
         });
     }
 
-    // 2. FUNGSI PENCARIAN LOKASI (MENDUKUNG KEPALA KELUARGA, NO RUMAH, TEMPAT, & ANGGOTA)
-    function cariLokasi() {
-      if (document.activeElement) {
-        document.activeElement.blur();
-      }
+// 2. FUNGSI PENCARIAN LOKASI (MENDUKUNG KEPALA KELUARGA, NO RUMAH, TEMPAT, & ANGGOTA)
+function cariLokasi() {
+  if (document.activeElement) {
+    document.activeElement.blur();
+  }
 
-      var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
-      var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
-      if (!kataKunci) return;
+  var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
+  var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
+  if (!kataKunci) return;
 
-      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+  // Pastikan daftarPin tersedia di skrip admin Anda
+  if (typeof daftarPin === 'undefined' || !Array.isArray(daftarPin)) {
+    console.warn('Variabel daftarPin belum didefinisikan di halaman admin.');
+    alert('Data peta belum siap untuk pencarian.');
+    return;
+  }
 
-      if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10);
-        hasil = daftarPin.find(pin => {
-          var kataKata = pin.nama.split(/[\s,().-]+/);
-          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-        });
-      }
+  // 1. Cocokkan persis dengan nama mentah / identifier
+  var hasil = daftarPin.find(pin => (pin.namaRaw || '').toLowerCase() === kataKunci);
 
-      if (!hasil) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci) || pin.namaRaw.toLowerCase().includes(kataKunci));
-      }
+  // 2. Jika berupa angka (pencarian nomor rumah), cari berdasarkan nomor di dalam teks
+  if (!hasil && /^\d+$/.test(kataKunci)) {
+    var angkaCari = parseInt(kataKunci, 10);
+    hasil = daftarPin.find(pin => {
+      var teksGabungan = ((pin.nama || '') + ' ' + (pin.no_rumah || '') + ' ' + (pin.kategori || '')).toLowerCase();
+      var kataKata = teksGabungan.split(/[\s,().-]+/);
+      return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
+    });
+  }
 
-      if (hasil) {
-        pinHasilPencarian = hasil;
+  // 3. Pencarian fleksibel: mencakup nama, kepala keluarga, nomor rumah, tempat, atau anggota keluarga
+  if (!hasil) {
+    hasil = daftarPin.find(pin => {
+      var namaWarga = (pin.nama || '').toLowerCase();
+      var namaRaw = (pin.namaRaw || '').toLowerCase();
+      var noRumah = (pin.no_rumah || pin.noRumah || '').toLowerCase();
+      var kategoriTempat = (pin.kategori || pin.tempat || '').toLowerCase();
+      var infoAnggota = (pin.anggota || pin.keluarga || '').toLowerCase(); // Jika ada data anggota keluarga tersimpan
 
-        if (!markerGroup.hasLayer(hasil.marker)) {  
-          markerGroup.addLayer(hasil.marker);  
-        }
-        
-        var pointM = map.project([hasil.lat, hasil.lng], 19);
-        var pointC = L.point(pointM.x, pointM.y - 200);
-        map.flyTo(map.unproject(pointC, 19), 19);  
+      return namaWarga.includes(kataKunci) || 
+             namaRaw.includes(kataKunci) || 
+             noRumah.includes(kataKunci) || 
+             kategoriTempat.includes(kataKunci) ||
+             infoAnggota.includes(kataKunci);
+    });
+  }
 
-        map.once('moveend', function() {
-          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+  if (hasil) {
+    // Jika menggunakan markerGroup atau langsung map
+    if (typeof markerGroup !== 'undefined' && hasil.marker && !markerGroup.hasLayer(hasil.marker)) {  
+      markerGroup.addLayer(hasil.marker);  
+    }
+    
+    if (typeof map !== 'undefined' && hasil.lat && hasil.lng) {
+      var pointM = map.project([hasil.lat, hasil.lng], 19);
+      var pointC = L.point(pointM.x, pointM.y - 200);
+      map.flyTo(map.unproject(pointC, 19), 19);  
+
+      map.once('moveend', function() {
+        if (hasil.marker && hasil.marker.getPopup()) {
+          hasil.marker.getPopup().options.autoPan = false;
           hasil.marker.openPopup();
-        });
-      } else {
-        alert("Nama, nomor rumah, atau anggota keluarga tidak ditemukan.");
-      }
+        }
+      });
     }
+  } else {
+    alert("Nama warga, kepala keluarga, nomor rumah, tempat, atau anggota keluarga tidak ditemukan.");
+  }
+}
 
-    function cariNama() { 
-      cariLokasi(); 
-    }
+function cariNama() {  
+  cariLokasi();  
+}
 
     function filterKategori(kat) {
       var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
