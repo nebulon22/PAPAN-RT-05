@@ -1,8 +1,7 @@
-// utils.js - Kumpulan Konfigurasi, Firebase Global, & Fungsi Pendukung RT 05 (Versi Klasik / Tanpa Module)
+// utils.js - Kumpulan Konfigurasi, Firebase Global, & Fungsi Pendukung RT 05
 
 const RT05_CONFIG = {
     GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbz5RqSEYxjwq_wr3ItVkLRexeGWjKLUtxmhVdqbm7kIFdngulFWdBCLU0xqBOichmMQuw/exec",
-    // 🌟 Tambahkan endpoint Cloudflare Worker di sini
     PETA_PROXY_URL: "https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga",
     UPLOADER_URL: "https://rt05-uploader.deny220291.workers.dev/",
     ADMIN_API_URL: "https://rt05-admin-worker.deny220291.workers.dev",
@@ -25,15 +24,39 @@ const RT05_CONFIG = {
 };
 
 // ==========================================
-// INISIALISASI FIREBASE KLASIK (GLOBAL)
+// INISIALISASI FIREBASE V10 + ANONYMOUS AUTH TERPUSAT
 // ==========================================
-let dbRT05 = null;
-if (typeof firebase !== 'undefined') {
-    if (!firebase.apps.length) {
-        firebase.initializeApp(RT05_CONFIG.FIREBASE);
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+const app = initializeApp(RT05_CONFIG.FIREBASE);
+const db = getDatabase(app, RT05_CONFIG.FIREBASE.databaseURL);
+const auth = getAuth(app);
+
+// Autentikasi Anonim Otomatis di Latar Belakang (Transparan)
+onAuthStateChanged(auth, (user) => {
+    if (!user) {
+        signInAnonymously(auth).then(() => {
+            console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
+        }).catch((err) => {
+            console.error("🔴 Gagal Login Anonim:", err);
+        });
+    } else {
+        console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
     }
-    dbRT05 = firebase.database();
-}
+});
+
+// EKSPOS FIREBASE UTILITIES KE GLOBAL WINDOW (Bisa dipanggil di index.html & admin.html)
+window.db = db;
+window.auth = auth;
+window.firebaseRef = ref;
+window.firebaseOnValue = onValue;
+window.firebaseUpdate = update;
+window.firebaseRemove = remove;
+window.firebasePush = push;
+window.firebaseSet = set;
+window.firebaseGet = get;
 
 // ==========================================
 // FUNGSI UTILITY PENDUKUNG & PENCARIAN
@@ -61,7 +84,6 @@ function escapeHTML(str) {
     return String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag));
 }
 
-// Fungsi Pencarian Universal (bisa untuk warga, inventaris, dll)
 function cariLokasi(keyword, daftarData, callbackHasil) {
     if (!keyword || !daftarData) {
         if (callbackHasil) callbackHasil([]);
@@ -69,7 +91,6 @@ function cariLokasi(keyword, daftarData, callbackHasil) {
     }
     const query = keyword.toLowerCase().trim();
     const hasil = daftarData.filter(item => {
-        // Ambil nama dari item.nama, item.namaRaw, item.namaWarga, atau item.nameAsli
         const nama = (item.nama || item.namaRaw || item.namaWarga || item.nameAsli || item.namaBarang || '').toLowerCase();
         const keterangan = (item.keterangan || item.kategori || '').toLowerCase();
         return nama.includes(query) || keterangan.includes(query);
@@ -109,7 +130,6 @@ function getIkonKategori(namaAsli, kategoriManual) {
     return { emoji, kategori, bgStyle };
 }
 
-// Format Tanggal Indonesia
 function formatTanggalIndo(tanggalInput) {
     if (!tanggalInput) return "-";
     const options = { day: 'numeric', month: 'long', year: 'numeric' };
@@ -118,7 +138,6 @@ function formatTanggalIndo(tanggalInput) {
     return date.toLocaleDateString('id-ID', options);
 }
 
-// Toast Notification Melayang
 function tampilkanToast(pesan, tipe = 'sukses') {
     let container = document.getElementById('toast-container-rt05');
     if (!container) {
@@ -177,9 +196,6 @@ window.toggleSenterRonda = async function() {
   }
 };
 
-// ==========================================
-// PENGELOLA MODAL INVENTARIS GLOBAL
-// ==========================================
 function bukaModalInventaris() {
     const modal = document.getElementById('modal-inventaris');
     if (modal) modal.style.display = 'flex';
@@ -190,23 +206,18 @@ function tutupModalInventaris() {
     if (modal) modal.style.display = 'none';
 }
 
-
-// ==========================================
-// EVENT DELEGATION GLOBAL (Pengganti inline onclick untuk Strict CSP)
-// ==========================================
+// Event Delegation & Listener DOM
 document.addEventListener('click', function(e) {
     const target = e.target.closest('[data-click]');
     if (!target) return;
 
     const fnName = target.getAttribute('data-click');
-    const arg = target.getAttribute('data-arg'); // Untuk mengirim argumen sederhana (misal: nominal, jenis filter, dll)
+    const arg = target.getAttribute('data-arg');
 
     if (typeof window[fnName] === 'function') {
         if (arg !== null) {
-            // Jika ada data-arg, kirim nilainya ke fungsi
             window[fnName](arg, target, e);
         } else {
-            // Jika tidak ada argumen, kirim event / elemen target
             window[fnName](e, target);
         }
     } else {
@@ -214,7 +225,6 @@ document.addEventListener('click', function(e) {
     }
 });
 
-// Listener Global untuk Dropdown Select (data-change)
 document.addEventListener('change', function(e) {
   const target = e.target.closest('[data-change]');
   if (!target) return;
@@ -230,7 +240,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (searchInput) {
     searchInput.addEventListener('keypress', function(event) {
       if (event.key === 'Enter') {
-        this.blur(); // Hilangkan fokus keyboard HP
+        this.blur();
         if (typeof jalankanPencarianPeta === 'function') {
           jalankanPencarianPeta();
         }
@@ -239,9 +249,6 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// ==========================================
-// PENGELOLA MODAL FOTO BESAR GLOBAL
-// ==========================================
 window.bukaFotoBesar = function(urlFoto, event) {
   if (event && typeof event.stopPropagation === 'function') {
     event.stopPropagation();
@@ -280,11 +287,8 @@ window.tutupFotoBesar = function() {
   }
 };
 
-// ==========================================
-// DAFTARKAN KE GLOBAL WINDOW
-// ==========================================
+// DAFTARKAN FUNGSI LAIN KE WINDOW GLOBAL
 window.RT05_CONFIG = RT05_CONFIG;
-window.dbRT05 = dbRT05;
 window.perbaikiKoordinat = perbaikiKoordinat;
 window.escapeHTML = escapeHTML;
 window.cariLokasi = cariLokasi;
