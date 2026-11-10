@@ -221,7 +221,7 @@
 
    <!-- KODE BARU: -->
 <div id="search-box">
-  <input type="text" id="searchInput" aria-label="Cari lokasi rumah atau warga" placeholder="Cari nama atau No Rumah..." onkeydown="if(event.key === 'Enter' || event.keyCode === 13) { this.blur(); cariLokasi(); }">
+  <input type="text" id="searchInput" aria-label="Cari lokasi rumah atau warga" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
   <button onclick="cariLokasi()">Cari</button>
 </div>
 
@@ -1610,68 +1610,61 @@ function initMap() {
     });
 }
 
-// 2. FUNGSI PENCARIAN LOKASI PETA ADMIN (PRESISI & SERAGAM DENGAN daftarPin)
+// 2. FUNGSI PENCARIAN LOKASI
 function cariLokasi() {
-    // Tutup keyboard mobile setelah menekan Enter/Cari
-    if (document.activeElement) {
-        document.activeElement.blur();
-    }
+  if (document.activeElement) {
+    document.activeElement.blur();
+  }
 
-    const inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
-    const kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
+  var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
+  var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
+  if (!kataKunci) return;
+
+  // Gunakan fallback jika daftarPin kosong tetapi globalDataWarga atau data peta sudah ada
+  if (!daftarPin || daftarPin.length === 0) {
+    if (typeof muatSemuaDataAdmin === 'function') muatSemuaDataAdmin();
+  }
+
+  var kataKunciAngka = kataKunci.replace(/^0+/, '');
+  var isPureAngka = /^\d+$/.test(kataKunci);
+
+  var hasil = daftarPin.find(pin => {
+    var noRumahClean = String(pin.noRumah || '').replace(/^0+/, '').toLowerCase();
     
-    if (!kataKunci) {
-        alert("Masukkan kata kunci pencarian (Nama, Kepala Keluarga, No. Rumah, atau Tempat)!");
-        return;
+    // Jika input angka, prioritaskan match nomor rumah
+    if (isPureAngka && noRumahClean === kataKunciAngka) {
+      return true;
     }
 
-    if (!daftarPin || daftarPin.length === 0) {
-        alert("Data peta belum selesai dimuat. Silakan tunggu sebentar.");
-        return;
+    // Pencarian fleksibel teks
+    var teksGabungan = `${pin.namaRaw} ${pin.namaTempat} ${pin.kepalaKeluarga} ${pin.anggota} ${pin.noRumah} ${pin.nama} ${pin.kategori}`.toLowerCase();
+    return teksGabungan.includes(kataKunci);
+  });
+
+  if (hasil) {
+    pinHasilPencarian = hasil;
+
+    if (typeof markerGroup !== 'undefined' && hasil.marker && !markerGroup.hasLayer(hasil.marker)) {  
+      markerGroup.addLayer(hasil.marker);  
     }
+    
+    if (typeof map !== 'undefined' && hasil.lat && hasil.lng) {
+      var pointM = map.project([hasil.lat, hasil.lng], 19);
+      var pointC = L.point(pointM.x, pointM.y - 180);
+      map.flyTo(map.unproject(pointC, 19), 19);  
 
-    // Bersihkan angka 0 di depan nomor rumah (misal: "05" -> "5")
-    const keywordBersih = kataKunci.replace(/^0+/, '');
-
-    // Cari match berdasarkan array daftarPin yang sudah dimuat oleh initMap()
-    const match = daftarPin.find(pin => {
-        if (pin.hidden) return false;
-
-        const noRumahClean = (pin.noRumah || '').replace(/^0+/, '');
-        
-        // Cek apakah kata kunci ada di gabungan keyword pencarian ATAU nomor rumah cocok persis
-        return (pin.nama && pin.nama.includes(kataKunci)) || 
-               (noRumahClean && noRumahClean === keywordBersih);
-    });
-
-    if (!match) {
-        alert("❌ Nama warga, kepala keluarga, nomor rumah, atau tempat tidak ditemukan di peta.");
-        return;
+      map.once('moveend', function() {
+        if (hasil.marker && hasil.marker.getPopup()) {
+          hasil.marker.getPopup().options.autoPan = false;
+          hasil.marker.openPopup();
+        }
+      });
     }
-
-    // Tampilkan marker ke peta jika sebelumnya tersembunyi oleh filter
-    if (match.marker && typeof markerGroup !== 'undefined' && !markerGroup.hasLayer(match.marker)) {
-        markerGroup.addLayer(match.marker);
-    }
-
-    // Arahkan kamera Leaflet (flyTo) dan buka popup
-    if (typeof map !== 'undefined' && map && match.lat && match.lng) {
-        // Offset 160px ke atas agar popup tidak tertutup top-panel UI
-        const pointM = map.project([match.lat, match.lng], 19);
-        const pointC = L.point(pointM.x, pointM.y - 160);
-        
-        map.flyTo(map.unproject(pointC, 19), 19);
-
-        map.once('moveend', () => {
-            if (match.marker) {
-                match.marker.openPopup();
-            }
-        });
-    }
+  } else {
+    alert("❌ Nama warga, kepala keluarga, nomor rumah, atau tempat tidak ditemukan di peta.");
+  }
 }
 
-
-    
     function filterKategori(kat) {
       var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
       markerGroup.clearLayers();
@@ -2582,11 +2575,6 @@ async function muatSemuaDataAdmin() {
         globalDataWarga = [];
         listSemuaRumahAdmin = [];
         
-        // Bersihkan layer marker lama jika markerGroup sudah diinisialisasi
-        if (typeof markerGroup !== 'undefined' && markerGroup) {
-            markerGroup.clearLayers();
-        }
-
         let totalKK = 0;
         let totalJiwa = 0;
 
@@ -2603,8 +2591,8 @@ async function muatSemuaDataAdmin() {
 
             const id = key;
             const namaRumah = String(val.Nama || val.nama || val.name || '').trim();
-            const lat = parseFloat(val.Lat !== undefined ? val.Lat : (val.lat || 0));
-            const lng = parseFloat(val.Lng !== undefined ? val.Lng : (val.lng || 0));
+            const lat = val.Lat !== undefined ? val.Lat : (val.lat || '');
+            const lng = val.Lng !== undefined ? val.Lng : (val.lng || '');
             const hidden = val.Hidden !== undefined ? val.Hidden : (val.hidden || false);
             const type = val.Type || val.type || val.Kategori || val.kategori || 'Rumah';
             const foto = val.foto || val.Foto || val['LINK GAMBAR/VIDEO'] || '';
@@ -2612,25 +2600,11 @@ async function muatSemuaDataAdmin() {
             const kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim();
             const anggotaKeluarga = String(val.anggotaKeluarga || val.Anggota || val.anggota || '').trim();
             const noRumah = String(val.noRumah || val.NoRumah || '').trim();
-            const namaTempat = String(val.namaTempat || val.NamaTempat || '').trim();
+            const namaTempat = String(val.namaTempat || val.namaTempat || '').trim();
 
+            // Gabungkan seluruh keyword agar pencarian fleksibel
             const keywordPencarian = `${namaRumah} ${kepalaKeluarga} ${anggotaKeluarga} ${noRumah} ${namaTempat}`.toLowerCase();
 
-            // Buat Instance Marker Leaflet jika ada koordinat & tidak hidden
-            let markerInstance = null;
-            if (lat && lng && !hidden && typeof L !== 'undefined') {
-                markerInstance = L.marker([lat, lng]);
-                
-                // Bind popup standar
-                const popupContent = `<b>${namaRumah || namaTempat}</b>${noRumah ? '<br>No. Rumah: ' + noRumah : ''}`;
-                markerInstance.bindPopup(popupContent);
-
-                if (typeof markerGroup !== 'undefined' && markerGroup) {
-                    markerGroup.addLayer(markerInstance);
-                }
-            }
-
-            // Simpan ke array global (termasuk referensi marker-nya)
             globalDataWarga.push({
                 id: id,
                 nama: namaRumah,
@@ -2643,8 +2617,7 @@ async function muatSemuaDataAdmin() {
                 foto: foto,
                 kepalaKeluarga: kepalaKeluarga,
                 anggotaKeluarga: anggotaKeluarga,
-                keywordPencarian: keywordPencarian,
-                marker: markerInstance // <-- KUNCI: Marker disimpan di sini
+                keywordPencarian: keywordPencarian
             });
 
             if (namaRumah) listSemuaRumahAdmin.push(namaRumah);
