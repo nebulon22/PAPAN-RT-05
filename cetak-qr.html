@@ -127,12 +127,16 @@
         return;
       }
 
-      Object.keys(dataObj).forEach(key => {
+Object.keys(dataObj).forEach(key => {
         const item = dataObj[key];
-        // Ambil nama warga/rumah
-        const namaWarga = item.Nama || item.nama || item.name;
+        
+        // Ganti bagian pengambilan nama ini:
+        const kepalaKeluarga = item.kepalaKeluarga || item.Nama || item.nama || 'Warga';
+        const noRumah = item.noRumah || item.no_rumah || '-';
+        const teksQR = `${kepalaKeluarga} (Rumah no.${noRumah})`;
 
-        if (namaWarga) {
+        // Pastikan pengecekan menggunakan data yang ada
+        if (kepalaKeluarga) {
           // Buat elemen kartu stiker
           const card = document.createElement('div');
           card.className = 'stiker-card';
@@ -140,15 +144,15 @@
           card.innerHTML = `
             <span>Jimpitan RT 05 Kayen</span>
             <div class="qr-box" id="qr-${key}"></div>
-            <h3>${namaWarga}</h3>
+            <h3>${teksQR}</h3>
           `;
 
           container.appendChild(card);
 
-          // Generate QR code dengan teks murni nama warga
+          // Generate QR code dengan format teks: Bejo Nurmantyo (Rumah no.06)
           new QRCode(document.getElementById(`qr-${key}`), {
-            text: namaWarga, // Output teks murni sesuai permintaan
-            width: 100,      // Ukuran pas untuk stiker kotak
+            text: teksQR, // <-- Menggunakan format teks gabungan
+            width: 100,      
             height: 100,
             colorDark : "#000000",
             colorLight : "#ffffff",
