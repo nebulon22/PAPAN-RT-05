@@ -1461,6 +1461,9 @@ var pinHasilPencarian = null;
 // ==========================================
 // PERBAIKAN 1: INIT MAP (Penyusunan data daftarPin yang robust)
 // ==========================================
+// ==========================================
+// 1. INIT MAP (Memastikan daftarPin terisi sempurna)
+// ==========================================
 function initMap() {
   if (map) return;
 
@@ -1482,31 +1485,6 @@ function initMap() {
 
   markerGroup.addTo(map);
 
-  map.on('click', function(e) {
-    if (document.getElementById('modal-form')?.style.display === 'flex' || 
-        document.getElementById('modal-admin-inventaris')?.style.display === 'flex' || 
-        document.getElementById('modal-kelola-warga')?.style.display === 'flex') return;
-    
-    const elTitle = document.getElementById('formTitle');
-    const elNoRumah = document.getElementById('inputNoRumah');
-    const elNamaWarga = document.getElementById('inputNamaWarga');
-    const elLat = document.getElementById('inputLat');
-    const elLng = document.getElementById('inputLng');
-    const elFoto = document.getElementById('inputFoto');
-    const modalForm = document.getElementById('modal-form');
-
-    if (elTitle) elTitle.innerText = "📍 Tambah Data Baru";
-    if (elNoRumah) elNoRumah.value = "";
-    if (elNamaWarga) elNamaWarga.value = "";
-    if (elLat) elLat.value = e.latlng.lat.toFixed(6);
-    if (elLng) elLng.value = e.latlng.lng.toFixed(6);
-    if (elFoto) elFoto.value = "";
-    
-    if (modalForm) {
-      modalForm.style.display = 'flex';
-    }
-  });
-
   const adminToken = localStorage.getItem('adminToken') || '';
 
   fetch(RT05_CONFIG.PETA_PROXY_URL, {
@@ -1519,7 +1497,7 @@ function initMap() {
     .then(response => response.json())
     .then(dataObj => {
       markerGroup.clearLayers();
-      daftarPin = [];
+      window.daftarPin = []; // Pakai window.daftarPin agar pasti terdaftar di scope global
 
       if (!dataObj) return;
 
@@ -1540,51 +1518,32 @@ function initMap() {
           var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
           namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
         }
-        if (!namaTampilAsli) {
-          namaTampilAsli = "Warga RT 05";
-        }
+        if (!namaTampilAsli) namaTampilAsli = "Warga RT 05";
         
-        var rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
-        var rawType = val.Type || val.type || val.Kategori || val.kategori || '';
-        var rawFoto = val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || val.FOTO || '';
-
         var latClean = perbaikiKoordinat(rawLat);
         var lngClean = perbaikiKoordinat(rawLng);
-        
-        var statusHidden = typeof rawHidden === 'boolean' 
-          ? rawHidden 
-          : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
-          
-        var kategoriManual = String(rawType).trim().toLowerCase();
-        var urlFoto = String(rawFoto).trim();
+        var itemLat = parseFloat(latClean);
+        var itemLng = parseFloat(lngClean);
 
-        var item = {
-          id: key,
-          name: namaTampilAsli,
-          lat: parseFloat(latClean),
-          lng: parseFloat(lngClean),
-          hidden: statusHidden,
-          foto: urlFoto,
-          anggota: textAnggota,
-        };
+        if (isNaN(itemLat) || isNaN(itemLng)) return;
 
-        if (isNaN(item.lat) || isNaN(item.lng)) return;
-
-        var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-        var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+        var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${itemLat},${itemLng}`;
+        var urlFoto = String(val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '').trim();
+        var htmlFoto = urlFoto ? `<br><img src="${urlFoto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
 
         var popupContent = `
           <div style="text-align: center; min-width: 180px;">
-            <b>${escapeHTML(item.name)}</b>
+            <b>${escapeHTML(namaTampilAsli)}</b>
             ${htmlFoto}
             <div style="display: flex; gap: 4px; margin-top: 8px;">
                 <a href="${urlRute}" target="_blank" class="btn-rute" style="flex: 1; padding: 4px; font-size: 11px; text-decoration: none; background: #22c55e; color: white; border-radius: 4px; display: inline-block;">📍 Rute</a>
-                <button onclick="bukaModalEditWargaDariPeta('${item.id}')" style="flex: 1; padding: 4px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">✏️ Edit</button>
+                <button onclick="bukaModalEditWargaDariPeta('${key}')" style="flex: 1; padding: 4px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">✏️ Edit</button>
             </div>
           </div>
         `;
         
-        let dataIkon = getIkonKategori(item.name, kategoriManual);
+        let rawType = val.Type || val.type || val.Kategori || val.kategori || '';
+        let dataIkon = getIkonKategori(namaTampilAsli, String(rawType).trim().toLowerCase());
 
         var customIcon = L.divIcon({
           className: 'custom-pin',
@@ -1592,10 +1551,18 @@ function initMap() {
           iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
         });
         
-        var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+        var marker = L.marker([itemLat, itemLng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+        
+        // Simpan properti teks pada objek marker Leaflet sebagai fallback
+        marker.customSearchText = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
+        marker.customNoRumah = noRumah.replace(/^0+/, '').toLowerCase();
+        marker.customLat = itemLat;
+        marker.customLng = itemLng;
 
-        // Simpan field pencarian terstruktur untuk digunakan oleh cariLokasi()
-        daftarPin.push({ 
+        markerGroup.addLayer(marker);
+
+        // PUSH KE ARRAY GLOBAL DAFTARPIN
+        window.daftarPin.push({ 
           id: key,
           namaRaw: namaTampilAsli,
           namaTempat: namaTempat,
@@ -1603,97 +1570,103 @@ function initMap() {
           kepalaKeluarga: kepalaKeluarga,
           anggota: textAnggota,
           marker: marker, 
-          lat: item.lat, 
-          lng: item.lng,
-          hidden: item.hidden,
-          kategori: kategoriManual 
+          lat: itemLat, 
+          lng: itemLng,
+          kategori: String(rawType).trim().toLowerCase()
         });
       });
 
-      filterKategori('semua');
+      console.log("✅ Peta siap. Total daftarPin:", window.daftarPin.length);
     })
     .catch(err => {
-      console.error("Gagal memuat peta via Cloudflare Worker:", err);
+      console.error("Gagal memuat peta:", err);
     });
 }
 
 // ==========================================
-// PERBAIKAN 2: CARI LOKASI (Pencarian fleksibel & Penanganan Popup Presisi)
+// 2. CARI LOKASI (Robust & Fallback ke Leaflet Layer)
 // ==========================================
 function cariLokasi(queryManual) {
   if (document.activeElement) document.activeElement.blur();
 
-  // 1. Ambil kata kunci (bisa dari argumen fungsi atau dari elemen input HTML)
   var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
   var inputVal = inputElem ? inputElem.value : '';
   var kataKunci = String(queryManual !== undefined ? queryManual : inputVal).toLowerCase().trim();
   
   if (!kataKunci) {
-    pinHasilPencarian = null;
-    return null;
+    alert("Silakan masukkan nama warga atau nomor rumah.");
+    return;
   }
 
-  // 2. Pastikan daftarPin tersedia
-  var dataPin = (typeof daftarPin !== 'undefined' && Array.isArray(daftarPin)) ? daftarPin : [];
-
-  if (dataPin.length === 0) {
-    console.warn("⚠️ Data daftarPin masih kosong.");
-    alert("⚠️ Data peta belum siap, silakan coba beberapa saat lagi.");
-    return null;
-  }
+  var targetLat = null;
+  var targetLng = null;
+  var targetMarker = null;
 
   var kataKunciAngka = kataKunci.replace(/^0+/, '');
   var isPureAngka = /^\d+$/.test(kataKunci);
 
-  // 3. Cari pin yang cocok
-  var hasil = dataPin.find(pin => {
-    var noRumahClean = String(pin.noRumah || '').replace(/^0+/, '').toLowerCase();
-    
-    // Pencocokan nomor rumah persis jika input angka
-    if (isPureAngka && noRumahClean === kataKunciAngka) return true;
+  // TRIK 1: Cari dari window.daftarPin
+  var listPin = (typeof window.daftarPin !== 'undefined' && Array.isArray(window.daftarPin)) ? window.daftarPin : [];
 
-    // Pencocokan substring pada teks gabungan
-    var teksGabungan = [
-      pin.namaRaw,
-      pin.namaTempat,
-      pin.kepalaKeluarga,
-      pin.anggota,
-      pin.noRumah,
-      pin.kategori
-    ].map(val => String(val || '')).join(' ').toLowerCase();
+  if (listPin.length > 0) {
+    var hasil = listPin.find(pin => {
+      var noRumahClean = String(pin.noRumah || '').replace(/^0+/, '').toLowerCase();
+      if (isPureAngka && noRumahClean === kataKunciAngka) return true;
 
-    return teksGabungan.includes(kataKunci);
-  });
+      var teksGabungan = [pin.namaRaw, pin.namaTempat, pin.kepalaKeluarga, pin.anggota, pin.noRumah].join(' ').toLowerCase();
+      return teksGabungan.includes(kataKunci);
+    });
 
-  if (hasil) {
-    pinHasilPencarian = hasil;
+    if (hasil) {
+      targetMarker = hasil.marker;
+      targetLat = hasil.lat;
+      targetLng = hasil.lng;
+    }
+  }
 
-    // Tampilkan marker di peta jika tersembunyi akibat filter
-    if (typeof markerGroup !== 'undefined' && hasil.marker) {
-      if (!markerGroup.hasLayer(hasil.marker)) {
-        markerGroup.addLayer(hasil.marker);
+  // TRIK 2 (FALLBACK): Jika daftarPin kosong, cari langsung dari seluruh Marker di Leaflet
+  if (!targetMarker && markerGroup) {
+    markerGroup.eachLayer(function(layer) {
+      if (targetMarker) return; // Jika sudah ketemu, skip
+      
+      var searchTxt = layer.customSearchText || '';
+      var noRmh = layer.customNoRumah || '';
+
+      if (isPureAngka && noRmh === kataKunciAngka) {
+        targetMarker = layer;
+        targetLat = layer.customLat || layer.getLatLng().lat;
+        targetLng = layer.customLng || layer.getLatLng().lng;
+      } else if (searchTxt.includes(kataKunci)) {
+        targetMarker = layer;
+        targetLat = layer.customLat || layer.getLatLng().lat;
+        targetLng = layer.customLng || layer.getLatLng().lng;
       }
-    }
-    
-    // Geser peta dan buka popup
-    if (typeof map !== 'undefined' && map && hasil.lat && hasil.lng) {
-      var pointM = map.project([hasil.lat, hasil.lng], 19);
-      var pointC = L.point(pointM.x, pointM.y - 150);
-      map.flyTo(map.unproject(pointC, 19), 19);  
+    });
+  }
 
-      map.once('moveend', function() {
-        if (hasil.marker && hasil.marker.getPopup()) {
-          hasil.marker.openPopup();
-        }
-      });
+  // EKSEKUSI ANIMASI DAN POPUP
+  if (targetMarker && targetLat && targetLng) {
+    if (!markerGroup.hasLayer(targetMarker)) {
+      markerGroup.addLayer(targetMarker);
     }
-    return hasil;
+
+    var pointM = map.project([targetLat, targetLng], 19);
+    var pointC = L.point(pointM.x, pointM.y - 150);
+    map.flyTo(map.unproject(pointC, 19), 19);  
+
+    map.once('moveend', function() {
+      if (targetMarker.getPopup()) {
+        targetMarker.openPopup();
+      }
+    });
+    
+    return targetMarker;
   } else {
-    alert("❌ Lokasi / Warga tidak ditemukan.");
+    alert("❌ Data '" + kataKunci + "' tidak ditemukan di peta.");
     return null;
   }
 }
-
+    
  // 3. FUNGSI FILTER KATEGORI LOKASI PETA
 // FUNGSI FILTER KATEGORI KHUSUS HALAMAN ADMIN
 function filterKategori(kat) {
