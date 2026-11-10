@@ -1665,46 +1665,54 @@ function cariLokasi() {
   }
 }
 
-    function filterKategori(kat) {
-      var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
-      markerGroup.clearLayers();
+ // 3. FUNGSI FILTER KATEGORI LOKASI PETA
+function filterKategori(kat) {
+  var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
+  
+  if (typeof markerGroup === 'undefined' || typeof daftarPin === 'undefined' || !Array.isArray(daftarPin)) return;
 
-      daftarPin.forEach(function(pin) {
-        if (kategoriPilihan !== 'semua' && pin.hidden) return;
+  markerGroup.clearLayers();
 
-        var teksKategori = String(pin.kategori || '').toLowerCase();
-        var teksNama = String(pin.nama || '').toLowerCase();
-        var isMatch = false;
+  daftarPin.forEach(function(pin) {
+    // 1. Abaikan pin jika memang diset hidden dari database/admin
+    if (pin.hidden) return;
 
-        var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
-                     teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
-                     
-        var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
-                      teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
+    var teksKategori = String(pin.kategori || '').toLowerCase();
+    var teksNama = String(pin.nama || '').toLowerCase();
+    var isMatch = false;
 
-        var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
-                        teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
+    var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
+                 teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+                 
+    var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
+                  teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
 
-        var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
-                           teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+    var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
+                    teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
 
-        if (kategoriPilihan === 'semua') {
-          isMatch = true;
-        } else if (kategoriPilihan === 'kost') {
-          isMatch = isKost;
-        } else if (kategoriPilihan === 'fasum') {
-          isMatch = isFasum;
-        } else if (kategoriPilihan === 'kuliner') {
-          isMatch = isKuliner;
-        } else if (kategoriPilihan === 'minimarket') {
-          isMatch = isMinimarket;
-        }
+    var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
+                       teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
 
-        if (isMatch) {
-          markerGroup.addLayer(pin.marker);
-        }
-      });
+    if (kategoriPilihan === 'semua') {
+      isMatch = true;
+    } else if (kategoriPilihan === 'kost') {
+      isMatch = isKost;
+    } else if (kategoriPilihan === 'fasum') {
+      isMatch = isFasum;
+    } else if (kategoriPilihan === 'kuliner') {
+      isMatch = isKuliner;
+    } else if (kategoriPilihan === 'minimarket') {
+      isMatch = isMinimarket;
+    } else {
+      // Fallback pencarian fleksibel untuk kategori kustom lainnya (misal: "Rumah Warga", "Usaha", dll)
+      isMatch = teksKategori.includes(kategoriPilihan) || teksNama.includes(kategoriPilihan);
     }
+
+    if (isMatch && pin.marker) {
+      markerGroup.addLayer(pin.marker);
+    }
+  });
+}
 
     function toggleCustomFilter() {
       const menu = document.getElementById('menu-filter-options');
