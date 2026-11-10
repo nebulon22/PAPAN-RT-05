@@ -221,8 +221,8 @@
 
    <!-- KODE BARU: -->
 <div id="search-box">
-  <input type="text" id="searchInput" placeholder="Cari nama warga, RT, unit..." onkeypress="jikaEnterPanggilCari(event)">
-  <button type="button" id="btnCari" onclick="prosesPencarian()">Cari</button>
+  <input type="text" id="searchInput" aria-label="Cari lokasi rumah atau warga" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
+  <button onclick="cariLokasi()">Cari</button>
 </div>
 
 <button type="button" onclick="bukaModalIframeQR()" style="display: inline-block; padding: 10px 16px; background: #0288d1; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; width: 100%;">
@@ -1670,40 +1670,7 @@ function cariLokasi() {
     }
 }
 
-// Fungsi untuk memproses pencarian saat tombol Cari diklik
-function prosesPencarian() {
-  const query = document.getElementById('searchInput').value.trim().toLowerCase();
-  if (!query) {
-    alert('Masukkan kata kunci pencarian!');
-    return;
-  }
 
-  // Logika pencarian pada layer Leaflet / Data RT 05
-  let ditemukan = false;
-  
-  // Contoh pencarian pada marker peta yang ada
-  map.eachLayer((layer) => {
-    if (layer.options && layer.options.title) {
-      const nama = layer.options.title.toLowerCase();
-      if (nama.includes(query)) {
-        map.setView(layer.getLatLng(), 19); // Zoom ke lokasi
-        layer.openPopup();
-        ditemukan = true;
-      }
-    }
-  });
-
-  if (!ditemukan) {
-    alert('Data atau lokasi tidak ditemukan!');
-  }
-}
-
-// Opsional: Agar tombol Enter di keyboard input juga memicu fungsi Cari
-function jikaEnterPanggilCari(e) {
-  if (e.key === 'Enter') {
-    prosesPencarian();
-  }
-}
     
     function filterKategori(kat) {
       var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
