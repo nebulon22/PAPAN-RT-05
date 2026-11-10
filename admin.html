@@ -1454,11 +1454,13 @@ if (typeof sesuaikanFormKategori === 'function') {
       window.location.href = "index.html";
     }
 
-// 1. FUNGSI MEMUAT PETA DAN DATA (INIT MAP & FETCH DARI PROXY)
 var map, daftarPin = [], pinRumahAktif = null;
 var markerGroup = L.layerGroup();
 var pinHasilPencarian = null;
 
+// ==========================================
+// PERBAIKAN 1: INIT MAP (Penyusunan data daftarPin yang robust)
+// ==========================================
 function initMap() {
   if (map) return;
 
@@ -1505,10 +1507,8 @@ function initMap() {
     }
   });
 
-  // Ambil token sesi login admin dari localStorage (otomatis terkirim jika sedang di Halaman Admin)
   const adminToken = localStorage.getItem('adminToken') || '';
 
-  // PENGAMBILAN DATA DENGAN DETEKSI KEY YANG FLEKSIBEL VIA WORKER PROXY
   fetch(RT05_CONFIG.PETA_PROXY_URL, {
     method: 'GET',
     headers: {
@@ -1594,17 +1594,14 @@ function initMap() {
         
         var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-        var semuaNilaiObjek = Object.values(val).join(' ');
-        var keywordPencarian = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah} ${semuaNilaiObjek}`.toLowerCase();
-
+        // Simpan field pencarian terstruktur untuk digunakan oleh cariLokasi()
         daftarPin.push({ 
           id: key,
           namaRaw: namaTampilAsli,
-          nama: keywordPencarian, 
-          namaTempat: namaTempat.toLowerCase(),
-          noRumah: noRumah.toLowerCase(),
-          kepalaKeluarga: kepalaKeluarga.toLowerCase(),
-          anggota: textAnggota.toLowerCase(),
+          namaTempat: namaTempat,
+          noRumah: noRumah,
+          kepalaKeluarga: kepalaKeluarga,
+          anggota: textAnggota,
           marker: marker, 
           lat: item.lat, 
           lng: item.lng,
@@ -1613,49 +1610,49 @@ function initMap() {
         });
       });
 
-      // Jalankan filter awal (Akan menyembunyikan pin yang berstatus hidden dari filter utama)
       filterKategori('semua');
     })
     .catch(err => {
       console.error("Gagal memuat peta via Cloudflare Worker:", err);
     });
 }
-    
-// 2. FUNGSI PENCARIAN LOKASI
+
+// ==========================================
+// PERBAIKAN 2: CARI LOKASI (Pencarian fleksibel & Penanganan Popup Presisi)
+// ==========================================
 function cariLokasi() {
   if (document.activeElement) document.activeElement.blur();
 
   var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
   var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
   
-  console.log(`🔎 [Cari Admin] Kata kunci: "${kataKunci}"`);
   if (!kataKunci) return;
 
   var dataPin = (typeof daftarPin !== 'undefined' && Array.isArray(daftarPin)) ? daftarPin : [];
-  console.log(`📦 [Cari Admin] Memeriksa ${dataPin.length} data pin yang tersimpan.`);
 
   if (dataPin.length === 0) {
-    console.error("❌ [Cari Admin Error] daftarPin kosong! Memanggil muat data ulang...");
     if (typeof initMap === 'function') initMap();
     alert("⚠️ Data peta belum siap, silakan coba beberapa saat lagi.");
     return;
   }
 
+  // Bersihkan angka dari nol di depan (misal "05" menjadi "5")
   var kataKunciAngka = kataKunci.replace(/^0+/, '');
   var isPureAngka = /^\d+$/.test(kataKunci);
 
   var hasil = dataPin.find(pin => {
     var noRumahClean = String(pin.noRumah || '').replace(/^0+/, '').toLowerCase();
     
+    // 1. Pencocokan tepat jika query berupa angka nomor rumah
     if (isPureAngka && noRumahClean === kataKunciAngka) return true;
 
+    // 2. Pencocokan substring pada seluruh metadata lokasi
     var teksGabungan = [
       pin.namaRaw,
       pin.namaTempat,
       pin.kepalaKeluarga,
       pin.anggota,
       pin.noRumah,
-      pin.nama,
       pin.kategori
     ].map(val => String(val || '')).join(' ').toLowerCase();
 
@@ -1663,15 +1660,16 @@ function cariLokasi() {
   });
 
   if (hasil) {
-    console.log(`🎯 [Cari Admin Ditemukan] Match pada: "${hasil.namaRaw}"`);
     pinHasilPencarian = hasil;
 
+    // Pastikan marker ditampilkan di peta walaupun sedang difilter
     if (typeof markerGroup !== 'undefined' && hasil.marker) {
       if (!markerGroup.hasLayer(hasil.marker)) {
         markerGroup.addLayer(hasil.marker);
       }
     }
     
+    // Terbang ke lokasi koordinat dengan pergeseran offset vertikal agar popup tidak tertutup header
     if (typeof map !== 'undefined' && hasil.lat && hasil.lng) {
       var pointM = map.project([hasil.lat, hasil.lng], 19);
       var pointC = L.point(pointM.x, pointM.y - 180);
@@ -1685,7 +1683,6 @@ function cariLokasi() {
       });
     }
   } else {
-    console.warn(`❌ [Cari Admin] Kata kunci "${kataKunci}" tidak ditemukan.`);
     alert("❌ Nama warga, kepala keluarga, nomor rumah, atau tempat tidak ditemukan di peta.");
   }
 }
