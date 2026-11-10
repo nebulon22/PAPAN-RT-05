@@ -1615,7 +1615,7 @@ function initMap() {
         });
     }
 
-// 2. FUNGSI PENCARIAN LOKASI (MENDUKUNG KEPALA KELUARGA, NO RUMAH, TEMPAT, & ANGGOTA)
+// 2. FUNGSI PENCARIAN LOKASI YANG LEBIH FLEKSIBEL & AMAN
 function cariLokasi() {
   if (document.activeElement) {
     document.activeElement.blur();
@@ -1623,54 +1623,47 @@ function cariLokasi() {
 
   var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
   var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
-  if (!kataKunci) return;
-
-  // Pastikan daftarPin tersedia di skrip admin Anda
-  if (typeof daftarPin === 'undefined' || !Array.isArray(daftarPin)) {
-    console.warn('Variabel daftarPin belum didefinisikan di halaman admin.');
-    alert('Data peta belum siap untuk pencarian.');
+  
+  if (!kataKunci) {
+    alert("Masukkan kata kunci pencarian terlebih dahulu!");
     return;
   }
 
-  // 1. Cocokkan persis dengan nama mentah / identifier
-  var hasil = daftarPin.find(pin => (pin.namaRaw || '').toLowerCase() === kataKunci);
-
-  // 2. Jika berupa angka (pencarian nomor rumah), cari berdasarkan nomor di dalam teks
-  if (!hasil && /^\d+$/.test(kataKunci)) {
-    var angkaCari = parseInt(kataKunci, 10);
-    hasil = daftarPin.find(pin => {
-      var teksGabungan = ((pin.nama || '') + ' ' + (pin.no_rumah || '') + ' ' + (pin.kategori || '')).toLowerCase();
-      var kataKata = teksGabungan.split(/[\s,().-]+/);
-      return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-    });
+  if (typeof daftarPin === 'undefined' || !Array.isArray(daftarPin) || daftarPin.length === 0) {
+    console.warn('daftarPin masih kosong atau belum dimuat.');
+    alert('Data peta sedang dimuat atau kosong, coba beberapa saat lagi.');
+    return;
   }
 
-  // 3. Pencarian fleksibel: mencakup nama, kepala keluarga, nomor rumah, tempat, atau anggota keluarga
-  if (!hasil) {
-    hasil = daftarPin.find(pin => {
-      var namaWarga = (pin.nama || '').toLowerCase();
-      var namaRaw = (pin.namaRaw || '').toLowerCase();
-      var noRumah = (pin.no_rumah || pin.noRumah || '').toLowerCase();
-      var kategoriTempat = (pin.kategori || pin.tempat || '').toLowerCase();
-      var infoAnggota = (pin.anggota || pin.keluarga || '').toLowerCase(); // Jika ada data anggota keluarga tersimpan
+  console.log("Mencari kata kunci:", kataKunci, "Total data pin:", daftarPin.length);
 
-      return namaWarga.includes(kataKunci) || 
-             namaRaw.includes(kataKunci) || 
-             noRumah.includes(kataKunci) || 
-             kategoriTempat.includes(kataKunci) ||
-             infoAnggota.includes(kataKunci);
-    });
-  }
+  // Cari data di dalam daftarPin berdasarkan kecocokan parsial (.includes) pada semua properti
+  var hasil = daftarPin.find(pin => {
+    var nRaw = (pin.namaRaw || '').toLowerCase();
+    var nKk = (pin.kepalaKeluarga || '').toLowerCase();
+    var nAnggota = (pin.anggota || '').toLowerCase();
+    var nNoRmh = (pin.noRumah || '').toLowerCase();
+    var nTempat = (pin.namaTempat || '').toLowerCase();
+    var nKat = (pin.kategori || '').toLowerCase();
+
+    return nRaw.includes(kataKunci) || 
+           nKk.includes(kataKunci) || 
+           nAnggota.includes(kataKunci) || 
+           nNoRmh.includes(kataKunci) || 
+           nTempat.includes(kataKunci) ||
+           nKat.includes(kataKunci);
+  });
 
   if (hasil) {
-    // Jika menggunakan markerGroup atau langsung map
+    console.log("Data ditemukan:", hasil);
+    
     if (typeof markerGroup !== 'undefined' && hasil.marker && !markerGroup.hasLayer(hasil.marker)) {  
       markerGroup.addLayer(hasil.marker);  
     }
     
     if (typeof map !== 'undefined' && hasil.lat && hasil.lng) {
       var pointM = map.project([hasil.lat, hasil.lng], 19);
-      var pointC = L.point(pointM.x, pointM.y - 200);
+      var pointC = L.point(pointM.x, pointM.y - 200); 
       map.flyTo(map.unproject(pointC, 19), 19);  
 
       map.once('moveend', function() {
@@ -1681,6 +1674,7 @@ function cariLokasi() {
       });
     }
   } else {
+    console.warn("Pencarian tidak cocok dengan item manapun di daftarPin.");
     alert("Nama warga, kepala keluarga, nomor rumah, tempat, atau anggota keluarga tidak ditemukan.");
   }
 }
