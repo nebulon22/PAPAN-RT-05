@@ -1610,9 +1610,9 @@ function initMap() {
     });
 }
 
-
-// 2. FUNGSI PENCARIAN LOKASI PETA ADMIN (KONSISTEN & PRESISI)
+// 2. FUNGSI PENCARIAN LOKASI PETA ADMIN (PRESISI & SERAGAM DENGAN daftarPin)
 function cariLokasi() {
+    // Tutup keyboard mobile setelah menekan Enter/Cari
     if (document.activeElement) {
         document.activeElement.blur();
     }
@@ -1625,20 +1625,22 @@ function cariLokasi() {
         return;
     }
 
-    if (!globalDataWarga || globalDataWarga.length === 0) {
+    if (!daftarPin || daftarPin.length === 0) {
         alert("Data peta belum selesai dimuat. Silakan tunggu sebentar.");
         return;
     }
 
+    // Bersihkan angka 0 di depan nomor rumah (misal: "05" -> "5")
     const keywordBersih = kataKunci.replace(/^0+/, '');
 
-    // Cari match berdasarkan keywordPencarian atau No Rumah
-    const match = globalDataWarga.find(item => {
-        if (item.hidden || !item.lat || !item.lng) return false;
+    // Cari match berdasarkan array daftarPin yang sudah dimuat oleh initMap()
+    const match = daftarPin.find(pin => {
+        if (pin.hidden) return false;
+
+        const noRumahClean = (pin.noRumah || '').replace(/^0+/, '');
         
-        const noRumahClean = item.noRumah.replace(/^0+/, '');
-        
-        return item.keywordPencarian.includes(kataKunci) || 
+        // Cek apakah kata kunci ada di gabungan keyword pencarian ATAU nomor rumah cocok persis
+        return (pin.nama && pin.nama.includes(kataKunci)) || 
                (noRumahClean && noRumahClean === keywordBersih);
     });
 
@@ -1647,15 +1649,16 @@ function cariLokasi() {
         return;
     }
 
-    // Tampilkan marker ke peta jika sempat tersembunyi
+    // Tampilkan marker ke peta jika sebelumnya tersembunyi oleh filter
     if (match.marker && typeof markerGroup !== 'undefined' && !markerGroup.hasLayer(match.marker)) {
         markerGroup.addLayer(match.marker);
     }
 
-    // Zomm/FlyTo ke titik marker dan buka popup
+    // Arahkan kamera Leaflet (flyTo) dan buka popup
     if (typeof map !== 'undefined' && map && match.lat && match.lng) {
+        // Offset 160px ke atas agar popup tidak tertutup top-panel UI
         const pointM = map.project([match.lat, match.lng], 19);
-        const pointC = L.point(pointM.x, pointM.y - 160); // Offset atas 160px
+        const pointC = L.point(pointM.x, pointM.y - 160);
         
         map.flyTo(map.unproject(pointC, 19), 19);
 
