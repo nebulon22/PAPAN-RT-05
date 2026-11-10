@@ -1620,40 +1620,35 @@ function cariLokasi() {
   var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
   if (!kataKunci) return;
 
-  if (typeof daftarPin === 'undefined' || !Array.isArray(daftarPin) || daftarPin.length === 0) {
-    alert('Data peta belum siap atau masih dimuat. Silakan coba beberapa detik lagi.');
-    return;
+  // Gunakan fallback jika daftarPin kosong tetapi globalDataWarga atau data peta sudah ada
+  if (!daftarPin || daftarPin.length === 0) {
+    if (typeof muatSemuaDataAdmin === 'function') muatSemuaDataAdmin();
   }
 
-  var hasil = null;
+  var kataKunciAngka = kataKunci.replace(/^0+/, '');
+  var isPureAngka = /^\d+$/.test(kataKunci);
 
-  // Mode A: Pencarian Nomor Rumah Persis (jika input hanya berupa angka, misal "5" atau "05")
-  if (/^\d+$/.test(kataKunci)) {
-    var angkaCari = kataKunci.replace(/^0+(?=\d)/, '');
-    hasil = daftarPin.find(pin => {
-      var nomorRumah = String(pin.noRumah || '').trim().replace(/^0+(?=\d)/, '');
-      return nomorRumah !== '' && nomorRumah === angkaCari;
-    });
-  }
+  var hasil = daftarPin.find(pin => {
+    var noRumahClean = String(pin.noRumah || '').replace(/^0+/, '').toLowerCase();
+    
+    // Jika input angka, prioritaskan match nomor rumah
+    if (isPureAngka && noRumahClean === kataKunciAngka) {
+      return true;
+    }
 
-  // Mode B: Pencarian Teks / Nama Warga / Anggota Keluarga / Nama Tempat
-  if (!hasil) {
-    hasil = daftarPin.find(pin => {
-      var teksGabungan = `${pin.namaRaw} ${pin.namaTempat} ${pin.kepalaKeluarga} ${pin.anggota} ${pin.noRumah} ${pin.nama} ${pin.kategori}`.toLowerCase();
-      return teksGabungan.includes(kataKunci);
-    });
-  }
+    // Pencarian fleksibel teks
+    var teksGabungan = `${pin.namaRaw} ${pin.namaTempat} ${pin.kepalaKeluarga} ${pin.anggota} ${pin.noRumah} ${pin.nama} ${pin.kategori}`.toLowerCase();
+    return teksGabungan.includes(kataKunci);
+  });
 
   if (hasil) {
     pinHasilPencarian = hasil;
 
-    // Tampilkan marker di peta jika sebelumnya tersembunyi
     if (typeof markerGroup !== 'undefined' && hasil.marker && !markerGroup.hasLayer(hasil.marker)) {  
       markerGroup.addLayer(hasil.marker);  
     }
     
     if (typeof map !== 'undefined' && hasil.lat && hasil.lng) {
-      // Geser titik tengah sedikit ke atas agar popup tidak tertutup UI panel bottom
       var pointM = map.project([hasil.lat, hasil.lng], 19);
       var pointC = L.point(pointM.x, pointM.y - 180);
       map.flyTo(map.unproject(pointC, 19), 19);  
@@ -1666,12 +1661,8 @@ function cariLokasi() {
       });
     }
   } else {
-    alert("❌ Nama warga, kepala keluarga, nomor rumah, atau tempat tidak ditemukan.");
+    alert("❌ Nama warga, kepala keluarga, nomor rumah, atau tempat tidak ditemukan di peta.");
   }
-}
-
-function cariNama() {  
-  cariLokasi();  
 }
 
     function filterKategori(kat) {
