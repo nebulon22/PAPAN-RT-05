@@ -1610,61 +1610,149 @@ function initMap() {
     });
 }
 
-// 2. FUNGSI PENCARIAN LOKASI
-function cariLokasi() {
+// 2. FUNGSI PENCARIAN LOKASI (DENGAN SINKRONISASI DATA FRESH VIA CLOUDFLARE WORKER)
+async function cariLokasi() {
   if (document.activeElement) {
     document.activeElement.blur();
   }
 
   var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
   var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
-  if (!kataKunci) return;
-
-  // Gunakan fallback jika daftarPin kosong tetapi globalDataWarga atau data peta sudah ada
-  if (!daftarPin || daftarPin.length === 0) {
-    if (typeof muatSemuaDataAdmin === 'function') muatSemuaDataAdmin();
+  
+  if (!kataKunci) {
+    alert("Masukkan kata kunci pencarian (Nama, Kepala Keluarga, No. Rumah, atau Tempat)!");
+    return;
   }
 
-  var kataKunciAngka = kataKunci.replace(/^0+/, '');
-  var isPureAngka = /^\d+$/.test(kataKunci);
+  try {
+    // 1. Fetch data langsung dari Cloudflare Worker seperti cariDetailKeluargaAdmin
+    const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+    const dataObj = await response.json();
 
-  var hasil = daftarPin.find(pin => {
-    var noRumahClean = String(pin.noRumah || '').replace(/^0+/, '').toLowerCase();
-    
-    // Jika input angka, prioritaskan match nomor rumah
-    if (isPureAngka && noRumahClean === kataKunciAngka) {
-      return true;
+    if (!dataObj) {
+      alert("Data peta tidak ditemukan atau gagal dimuat dari server.");
+      return;
     }
 
-    // Pencarian fleksibel teks
-    var teksGabungan = `${pin.namaRaw} ${pin.namaTempat} ${pin.kepalaKeluarga} ${pin.anggota} ${pin.noRumah} ${pin.nama} ${pin.kategori}`.toLowerCase();
-    return teksGabungan.includes(kataKunci);
-  });
+    // 2. Olah data mentah dari Worker (Mendukung format Array maupun Objek Key-Value)
+    let daftarWargaWorker = [];
+    const items = Array.isArray(dataObj) ? dataObj : Object.keys(dataObj).map(k => ({ ...dataObj[k], _id: k }));
 
-  if (hasil) {
-    pinHasilPencarian = hasil;
+    items.forEach((val, idx) => {
+      if (!val) return;
 
-    if (typeof markerGroup !== 'undefined' && hasil.marker && !markerGroup.hasLayer(hasil.marker)) {  
-      markerGroup.addLayer(hasil.marker);  
+      var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || val.LAT || '');
+      var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || val.LNG || '');
+
+      var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || val['Kepala Keluarga'] || val.nama || val.Nama || '').trim();
+      var noRumah = String(val.noRumah || val.NoRumah || val['No Rumah'] || val.no_rumah || val.NOMOR_RUMAH || '').trim();
+      var namaTempat = String(val.namaTempat || val.nama || val.Nama || val.name || '').trim();
+      var textAnggota = String(val.Anggota || val.anggota || val.anggotaKeluarga || val['Anggota Keluarga'] || '').trim();
+      var rawType = val.Type || val.type || val.Kategori || val.kategori || '';
+      var rawFoto = val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || val.FOTO || '';
+
+      var namaTampilAsli = namaTempat;
+      if (kepalaKeluarga !== '') {
+        var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
+        namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
+      }
+      if (!namaTampilAsli) {
+        namaTampilAsli = "Warga RT 05";
+      }
+
+      var latClean = parseFloat(perbaikiKoordinat(rawLat));
+      var lngClean = parseFloat(perbaikiKoordinat(rawLng));
+
+      if (isNaN(latClean) || isNaN(lngClean)) return;
+
+      daftarWargaWorker.push({
+        id: val._id || val.id || idx,
+        namaRaw: namaTampilAsli,
+        kepalaKeluarga: kepalaKeluarga,
+        anggota: textAnggota,
+        noRumah: noRumah,
+        namaTempat: namaTempat,
+        kategori: String(rawType).trim().toLowerCase(),
+        lat: latClean,
+        lng: lngClean,
+        foto: String(rawFoto).trim()
+      });
+    });
+
+    // 3. Cari match dengan logika fleksibel (sama seperti cariDetailKeluargaAdmin)
+    const match = daftarWargaWorker.find(row => {
+      const gabungan = `${row.namaRaw} ${row.kepalaKeluarga} ${row.anggota} ${row.noRumah} ${row.namaTempat} ${row.kategori}`.toLowerCase();
+      const noRumahBersih = row.noRumah.replace(/^0+/, '').toLowerCase();
+      const keywordBersih = kataKunci.replace(/^0+/, '');
+
+      return gabungan.includes(kataKunci) || 
+             (noRumahBersih && noRumahBersih === keywordBersih);
+    });
+
+    if (!match) {
+      alert("❌ Nama warga, kepala keluarga, nomor rumah, atau tempat tidak ditemukan di peta.");
+      return;
     }
-    
-    if (typeof map !== 'undefined' && hasil.lat && hasil.lng) {
-      var pointM = map.project([hasil.lat, hasil.lng], 19);
+
+    // 4. Cari marker terkait di objek daftarPin lokal atau buat marker sementara
+    var pinObj = daftarPin.find(pin => String(pin.lat) === String(match.lat) && String(pin.lng) === String(match.lng));
+
+    if (!pinObj) {
+      var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${match.lat},${match.lng}`;
+      var htmlFoto = match.foto ? `<br><img src="${match.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+      var popupContent = `
+        <div style="text-align: center; min-width: 180px;">
+          <b>${escapeHTML(match.namaRaw)}</b>
+          ${htmlFoto}
+          <div style="display: flex; gap: 4px; margin-top: 8px;">
+              <a href="${urlRute}" target="_blank" class="btn-rute" style="flex: 1; padding: 4px; font-size: 11px; text-decoration: none; background: #22c55e; color: white; border-radius: 4px; display: inline-block;">📍 Rute</a>
+              <button onclick="bukaModalEditWargaDariPeta('${match.id}')" style="flex: 1; padding: 4px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">✏️ Edit</button>
+          </div>
+        </div>
+      `;
+
+      let dataIkon = getIkonKategori(match.namaRaw, match.kategori);
+      var customIcon = L.divIcon({
+        className: 'custom-pin',
+        html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
+        iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+      });
+
+      var marker = L.marker([match.lat, match.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+      
+      pinObj = {
+        marker: marker,
+        lat: match.lat,
+        lng: match.lng
+      };
+    }
+
+    // 5. Tampilkan di Leaflet Map & Fly To lokasi
+    pinHasilPencarian = pinObj;
+
+    if (typeof markerGroup !== 'undefined' && pinObj.marker && !markerGroup.hasLayer(pinObj.marker)) {  
+      markerGroup.addLayer(pinObj.marker);  
+    }
+
+    if (typeof map !== 'undefined' && pinObj.lat && pinObj.lng) {
+      var pointM = map.project([pinObj.lat, pinObj.lng], 19);
       var pointC = L.point(pointM.x, pointM.y - 180);
       map.flyTo(map.unproject(pointC, 19), 19);  
 
       map.once('moveend', function() {
-        if (hasil.marker && hasil.marker.getPopup()) {
-          hasil.marker.getPopup().options.autoPan = false;
-          hasil.marker.openPopup();
+        if (pinObj.marker && pinObj.marker.getPopup()) {
+          pinObj.marker.getPopup().options.autoPan = false;
+          pinObj.marker.openPopup();
         }
       });
     }
-  } else {
-    alert("❌ Nama warga, kepala keluarga, nomor rumah, atau tempat tidak ditemukan di peta.");
+
+  } catch (err) {
+    console.error("Gagal melakukan pencarian peta:", err);
+    alert("❌ Gagal terhubung ke Cloudflare Worker saat mencari lokasi.");
   }
 }
-
+    
     function filterKategori(kat) {
       var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
       markerGroup.clearLayers();
