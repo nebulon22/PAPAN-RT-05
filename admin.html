@@ -1631,18 +1631,25 @@ function cariLokasi() {
   // 1. Pencarian persis berdasarkan nama mentah / keyword gabungan
   var hasil = daftarPin.find(pin => (pin.namaRaw || '').toLowerCase() === kataKunci);
 
-  // 2. Jika berupa angka (pencarian nomor rumah), cari berdasarkan angka di dalam teks
-  if (!hasil && /^\d+$/.test(kataKunci)) {
-    var angkaCari = parseInt(kataKunci, 10);
-    hasil = daftarPin.find(pin => {
-      var teksGabungan = ((pin.nama || '') + ' ' + (pin.noRumah || '') + ' ' + (pin.kepalaKeluarga || '')).toLowerCase();
-      var kataKata = teksGabungan.split(/[\s,().-]+/);
-      return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-    });
-  }
+// 2. PRIORITAS PENCARIAN NOMOR RUMAH PERSIS
+if (/^\d+$/.test(kataKunci)) {
+  // Hilangkan nol di depan agar 05 dianggap sama dengan 5
+  var angkaCari = kataKunci.replace(/^0+(?=\d)/, '');
 
-  // 3. Pencarian fleksibel parsial (.includes) mencakup seluruh atribut data
-  if (!hasil) {
+  hasil = daftarPin.find(pin => {
+    var nomorRumah = String(pin.noRumah || '').trim();
+
+    // Normalisasi nomor rumah
+    nomorRumah = nomorRumah.replace(/^0+(?=\d)/, '');
+
+    return nomorRumah !== '' && nomorRumah === angkaCari;
+  });
+}
+
+
+ // 3. Pencarian fleksibel nama dan tempat
+// Tidak digunakan untuk pencarian angka agar 5 tidak cocok dengan 15
+if (!hasil && !/^\d+$/.test(kataKunci)) {
     hasil = daftarPin.find(pin => {
       var teksGabungan = (pin.nama || '') + ' ' + 
                          (pin.namaRaw || '') + ' ' + 
