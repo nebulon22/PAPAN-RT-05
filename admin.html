@@ -2684,7 +2684,6 @@ async function cariDetailKeluargaAdmin() {
     }
 
     try {
-        // 🌟 Mengambil data langsung dari Cloudflare Worker Proxy
         const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
         const dataObj = await response.json();
 
@@ -2699,10 +2698,11 @@ async function cariDetailKeluargaAdmin() {
 
             daftarWargaWorker.push({
                 id: key,
-                noRumah: val.noRumah || '',
-                namaTempat: val.namaTempat || '',
-                kepalaKeluarga: val.kepalaKeluarga || '',
-                anggotaKeluarga: val.anggotaKeluarga || val.Anggota || '',
+                namaLama: String(val.Nama || val.nama || '').trim(),
+                kepalaKeluarga: String(val.kepalaKeluarga || '').trim(),
+                anggotaKeluarga: String(val.anggotaKeluarga || val.Anggota || '').trim(),
+                noRumah: String(val.noRumah || '').trim(),
+                namaTempat: String(val.namaTempat || '').trim(),
                 lat: val.Lat !== undefined ? val.Lat : (val.lat || ''),
                 lng: val.Lng !== undefined ? val.Lng : (val.lng || ''),
                 foto: val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '',
@@ -2710,16 +2710,21 @@ async function cariDetailKeluargaAdmin() {
             });
         });
 
-        // 🔍 Pencarian fleksibel: Mencakup semua atribut tanpa mengandalkan node 'Nama' lama
         const match = daftarWargaWorker.find(row => {
-            const kepala = String(row.kepalaKeluarga || '').toLowerCase();
-            const anggota = String(row.anggotaKeluarga || '').toLowerCase();
-            const noRumah = String(row.noRumah || '').toLowerCase();
-            const namaTempat = String(row.namaTempat || '').toLowerCase();
+            const namaLama = row.namaLama.toLowerCase();
+            const kepala = row.kepalaKeluarga.toLowerCase();
+            const anggota = row.anggotaKeluarga.toLowerCase();
+            const noRumahAsli = row.noRumah.toLowerCase();
+            const noRumahTanpaNol = row.noRumah.replace(/^0+/, '').toLowerCase();
+            const namaTempat = row.namaTempat.toLowerCase();
             
-            return kepala.includes(keyword) || 
+            const keywordBersih = keyword.replace(/^0+/, '');
+
+            return namaLama.includes(keyword) ||
+                   kepala.includes(keyword) || 
                    anggota.includes(keyword) || 
-                   noRumah.includes(keyword) || 
+                   noRumahAsli.includes(keyword) || 
+                   (noRumahTanpaNol && noRumahTanpaNol === keywordBersih) ||
                    namaTempat.includes(keyword);
         });
 
@@ -2728,7 +2733,7 @@ async function cariDetailKeluargaAdmin() {
             return;
         }
 
-        const kepala = match.kepalaKeluarga || match.namaTempat || 'Tanpa Nama';
+        const kepala = match.kepalaKeluarga || match.namaLama || match.namaTempat || 'Tanpa Nama';
         const anggota = match.anggotaKeluarga || '-';
         const labelRumah = match.noRumah ? `Rumah No. ${match.noRumah}` : (match.namaTempat || '-');
         const foto = match.foto || '';
@@ -2754,7 +2759,6 @@ async function cariDetailKeluargaAdmin() {
             </div>
         `;
 
-        // Perbarui juga globalDataWarga agar sinkron jika dibutuhkan fungsi lain
         window.globalDataWarga = daftarWargaWorker;
 
     } catch (err) {
