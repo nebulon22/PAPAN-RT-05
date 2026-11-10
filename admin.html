@@ -178,7 +178,7 @@
   <div id="map"></div>
 
   <!-- Skrip JavaScript diletakkan di bagian bawah sebelum penutup body -->
-  <script src="utils.js"></script>
+  <script type="module" src="utils.js"></script>
   <script>
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
@@ -211,7 +211,7 @@
 
  <!-- BARU: Panggil fungsi logoutAdmin() -->
  <a href="javascript:void(0)" onclick="logoutAdmin()" class="btn-back-floating">⬅️ Mode Warga (Logout)</a>
-  <div id="map"></div>
+
 
   <!-- PANEL ATAS -->
   <div id="top-panel">
@@ -219,15 +219,25 @@
       🟢 Semua Data Ter-sinkron
     </div>
 
-   <!-- KODE BARU: -->
+<!-- KODE BARU: -->
 <div id="search-box">
-  <input type="text" id="searchInput" aria-label="Cari lokasi rumah atau warga" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
-  <button onclick="cariLokasi()">Cari</button>
+  <input type="text" id="searchInput" aria-label="Cari lokasi rumah atau warga" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasiPetaAdmin(); }">
+  <button onclick="cariLokasiPetaAdmin()">Cari</button>
 </div>
 
-    <a href="cetak-qr.html" target="_blank" style="display: inline-block; padding: 10px 16px; background: #0288d1; color: white; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 13px;">
+<button type="button" onclick="bukaModalIframeQR()" style="display: inline-block; padding: 10px 16px; background: #0288d1; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; width: 100%;">
   🖨️ Cetak Stiker QR Jimpitan Warga
-</a>
+</button>
+<!-- MODAL IFRAME CETAK QR (Disamakan ukurannya dengan modal lain) -->
+<div id="modal-iframe-qr" class="modal-bg" onclick="if(event.target.id==='modal-iframe-qr') tutupModalIframeQR()">
+  <div class="modal-content" style="max-width: 650px; width: 92%; height: 85vh; max-height: 85vh; display: flex; flex-direction: column;">
+    <div class="modal-header" style="flex-shrink: 0;">
+      <h3 style="margin: 0; font-size: 16px;">🖨️ Cetak Stiker QR Jimpitan Warga</h3>
+      <button class="close-btn" onclick="tutupModalIframeQR()">&times;</button>
+    </div>
+    <iframe id="iframeQrContent" src="" style="width: 100%; flex: 1; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; box-sizing: border-box;"></iframe>
+  </div>
+</div>
 
    <div class="filter-container">
 <!-- 1. Custom Filter UI (Modern & Minimalis) -->
@@ -555,7 +565,7 @@
           
           <div style="margin-top: 10px;">
             <label style="font-size: 11px; font-weight: bold; color: #475569;">🔒 PIN Khusus Divisi:</label>
-            <input type="password" id="laporanPinDivisi" autocomplete="current-password" maxlength="6" inputmode="numeric" ...>
+            <input type="password" id="laporanPinDivisi" autocomplete="current-password" maxlength="6" inputmode="numeric" placeholder="Masukkan PIN divisi terkait" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 13px; box-sizing: border-box;" required>
           </div>
         </div>
 
@@ -641,7 +651,7 @@
 
       <div class="form-group" style="margin-bottom: 10px;">
         <label style="font-size: 12px; font-weight: bold; color: #333;">Jumlah / Nominal (Rp):</label>
-        <input type="text" id="editNominal" autocomplete="off" inputmode="numeric" ...>
+        <input type="text" id="editNominal" autocomplete="off" inputmode="numeric" placeholder="Contoh: 50.000" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; font-size: 13px; box-sizing: border-box;" oninput="formatRupiahInput(this)" required>
       </div>
 
       <!-- Upload Bukti Transaksi / Nota -->
@@ -1443,230 +1453,265 @@ if (typeof sesuaikanFormKategori === 'function') {
       localStorage.removeItem('admin_login_time');
       window.location.href = "index.html";
     }
-        
-    var map, daftarPin = [], pinRumahAktif = null;
-    var markerGroup = L.layerGroup();
-    var pinHasilPencarian = null;
 
+var map, daftarPin = [], pinRumahAktif = null;
+var markerGroup = L.layerGroup();
+var pinHasilPencarian = null;
+
+// ==========================================
+// PERBAIKAN 1: INIT MAP (Penyusunan data daftarPin yang robust)
+// ==========================================
+// ==========================================
+// 1. INIT MAP (Memastikan daftarPin terisi sempurna)
+// ==========================================
 function initMap() {
-      if (map) return;
+  if (map) return;
 
-      map = L.map('map').setView([-7.7423, 110.3842], 17);
+  map = L.map('map').setView([-7.7423, 110.3842], 17);
 
-      ['modal-form', 'modal-admin-inventaris', 'modal-kelola-warga', 'tab-progker', 'modal-admin-pengumuman', 'modal-laporan'].forEach(id => {
-        const el = document.getElementById(id);
-        if (el) L.DomEvent.disableClickPropagation(el);
-      });
-        
-      L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { 
-        maxZoom: 20, 
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] 
-      }).addTo(map);
+  ['modal-form', 'modal-admin-inventaris', 'modal-kelola-warga', 'tab-progker', 'modal-admin-pengumuman', 'modal-laporan'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) L.DomEvent.disableClickPropagation(el);
+  });
+    
+  L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { 
+    maxZoom: 20, 
+    subdomains: ['mt0', 'mt1', 'mt2', 'mt3'] 
+  }).addTo(map);
 
-      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { 
-        color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 
-      }).addTo(map);
+  L.polygon(RT05_CONFIG.BATAS_WILAYAH, { 
+    color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 
+  }).addTo(map);
 
-      markerGroup.addTo(map);
+  markerGroup.addTo(map);
 
-map.on('click', function(e) {
-        if (document.getElementById('modal-form').style.display === 'flex' || 
-            document.getElementById('modal-admin-inventaris').style.display === 'flex' || 
-            document.getElementById('modal-kelola-warga').style.display === 'flex') return;
-        
-        const elTitle = document.getElementById('formTitle');
-        const elNoRumah = document.getElementById('inputNoRumah');
-        const elNamaWarga = document.getElementById('inputNamaWarga');
-        const elLat = document.getElementById('inputLat');
-        const elLng = document.getElementById('inputLng');
-        const elFoto = document.getElementById('inputFoto');
-        const modalForm = document.getElementById('modal-form');
+  const adminToken = localStorage.getItem('adminToken') || '';
 
-        if (elTitle) elTitle.innerText = "📍 Tambah Data Baru";
-        if (elNoRumah) elNoRumah.value = "";
-        if (elNamaWarga) elNamaWarga.value = "";
-        if (elLat) elLat.value = e.latlng.lat.toFixed(6);
-        if (elLng) elLng.value = e.latlng.lng.toFixed(6);
-        if (elFoto) elFoto.value = "";
-        
-        if (modalForm) {
-          modalForm.style.display = 'flex';
-        }
-      });
-
-      // 🌟 PERBAIKAN: Mengganti listener Firebase langsung dengan fetch ke Cloudflare Worker Worker Proxy
-      fetch(RT05_CONFIG.PETA_PROXY_URL)
-        .then(response => response.json())
-        .then(dataObj => {
-          markerGroup.clearLayers();
-          daftarPin = [];
-
-          if (!dataObj) return;
-
-          Object.keys(dataObj).forEach(key => {
-            const val = dataObj[key];
-            if (!val) return;
-
-            var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || '');
-            var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || '');
-            var rawNama = val.Nama || val.nama || val.name || '';
-            var rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
-            var rawType = val.Type || val.type || val.Kategori || val.kategori || '';
-            var rawFoto = val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '';
-
-            var latClean = perbaikiKoordinat(rawLat);
-            var lngClean = perbaikiKoordinat(rawLng);
-            
-            var statusHidden = typeof rawHidden === 'boolean' 
-              ? rawHidden 
-              : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
-              
-            var kategoriManual = String(rawType).trim().toLowerCase();
-            var urlFoto = String(rawFoto).trim();
-            var namaAsli = String(rawNama).trim();
-
-            var item = {
-              id: key,
-              name: namaAsli,
-              nameAsli: namaAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
-              hidden: statusHidden,
-              foto: urlFoto,
-              anggota: val.Anggota || val.anggota || '',
-            };
-
-            if (isNaN(item.lat) || isNaN(item.lng)) return;
-
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
-
-            var popupContent = `
-              <div style="text-align: center; min-width: 180px;">
-                <b>${escapeHTML(item.name)}</b>
-                ${htmlFoto}
-                <div style="display: flex; gap: 4px; margin-top: 8px;">
-                    <a href="${urlRute}" target="_blank" class="btn-rute" style="flex: 1; padding: 4px; font-size: 11px; text-decoration: none; background: #22c55e; color: white; border-radius: 4px; display: inline-block;">📍 Rute</a>
-                    <button onclick="bukaModalEditWargaDariPeta('${item.id}')" style="flex: 1; padding: 4px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">✏️ Edit</button>
-                </div>
-              </div>
-            `;
-            
-            let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
-
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            
-            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-
-            var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
-
-            daftarPin.push({ 
-              namaRaw: item.nameAsli,
-              nama: item.nameAsli.toLowerCase(), 
-              marker: marker, 
-              lat: item.lat, 
-              lng: item.lng,
-              hidden: item.hidden,
-              kategori: katFinal
-            });
-          });
-
-          filterKategori('semua');
-        })
-        .catch(err => {
-          console.error("Gagal memuat peta via Cloudflare Worker:", err);
-        });
+  fetch(RT05_CONFIG.PETA_PROXY_URL, {
+    method: 'GET',
+    headers: {
+      'X-Admin-Token': adminToken,
+      'Content-Type': 'application/json'
     }
-
-    function filterKategori(kat) {
-      var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
+  })
+    .then(response => response.json())
+    .then(dataObj => {
       markerGroup.clearLayers();
+      window.daftarPin = []; // Pakai window.daftarPin agar pasti terdaftar di scope global
 
-      daftarPin.forEach(function(pin) {
-        if (kategoriPilihan !== 'semua' && pin.hidden) return;
+      if (!dataObj) return;
 
-        var teksKategori = String(pin.kategori || '').toLowerCase();
-        var teksNama = String(pin.nama || '').toLowerCase();
-        var isMatch = false;
+      Object.keys(dataObj).forEach(key => {
+        const val = dataObj[key];
+        if (!val) return;
 
-        var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
-                     teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
-                     
-        var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
-                      teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
+        var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || val.LAT || '');
+        var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || val.LNG || '');
+        
+        var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || val['Kepala Keluarga'] || val.nama || val.Nama || '').trim();
+        var noRumah = String(val.noRumah || val.NoRumah || val['No Rumah'] || val.no_rumah || val.NOMOR_RUMAH || '').trim();
+        var namaTempat = String(val.namaTempat || val.nama || val.Nama || val.name || '').trim();
+        var textAnggota = String(val.Anggota || val.anggota || val.anggotaKeluarga || val['Anggota Keluarga'] || '').trim();
 
-        var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
-                        teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
-
-        var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
-                           teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
-
-        if (kategoriPilihan === 'semua') {
-          isMatch = true;
-        } else if (kategoriPilihan === 'kost') {
-          isMatch = isKost;
-        } else if (kategoriPilihan === 'fasum') {
-          isMatch = isFasum;
-        } else if (kategoriPilihan === 'kuliner') {
-          isMatch = isKuliner;
-        } else if (kategoriPilihan === 'minimarket') {
-          isMatch = isMinimarket;
+        var namaTampilAsli = namaTempat;
+        if (kepalaKeluarga !== '') {
+          var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
+          namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
         }
+        if (!namaTampilAsli) namaTampilAsli = "Warga RT 05";
+        
+        var latClean = perbaikiKoordinat(rawLat);
+        var lngClean = perbaikiKoordinat(rawLng);
+        var itemLat = parseFloat(latClean);
+        var itemLng = parseFloat(lngClean);
 
-        if (isMatch) {
-          markerGroup.addLayer(pin.marker);
+        if (isNaN(itemLat) || isNaN(itemLng)) return;
+
+        var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${itemLat},${itemLng}`;
+        var urlFoto = String(val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '').trim();
+        var htmlFoto = urlFoto ? `<br><img src="${urlFoto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+
+        var popupContent = `
+          <div style="text-align: center; min-width: 180px;">
+            <b>${escapeHTML(namaTampilAsli)}</b>
+            ${htmlFoto}
+            <div style="display: flex; gap: 4px; margin-top: 8px;">
+                <a href="${urlRute}" target="_blank" class="btn-rute" style="flex: 1; padding: 4px; font-size: 11px; text-decoration: none; background: #22c55e; color: white; border-radius: 4px; display: inline-block;">📍 Rute</a>
+                <button onclick="bukaModalEditWargaDariPeta('${key}')" style="flex: 1; padding: 4px; font-size: 11px; background: #3b82f6; color: white; border: none; border-radius: 4px; cursor: pointer;">✏️ Edit</button>
+            </div>
+          </div>
+        `;
+        
+        let rawType = val.Type || val.type || val.Kategori || val.kategori || '';
+        let dataIkon = getIkonKategori(namaTampilAsli, String(rawType).trim().toLowerCase());
+
+        var customIcon = L.divIcon({
+          className: 'custom-pin',
+          html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35);">${dataIkon.emoji}</div>`,
+          iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+        });
+        
+        var marker = L.marker([itemLat, itemLng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+        
+        // Simpan properti teks pada objek marker Leaflet sebagai fallback
+        marker.customSearchText = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
+        marker.customNoRumah = noRumah.replace(/^0+/, '').toLowerCase();
+        marker.customLat = itemLat;
+        marker.customLng = itemLng;
+
+        markerGroup.addLayer(marker);
+
+        // PUSH KE ARRAY GLOBAL DAFTARPIN
+        window.daftarPin.push({ 
+          id: key,
+          namaRaw: namaTampilAsli,
+          namaTempat: namaTempat,
+          noRumah: noRumah,
+          kepalaKeluarga: kepalaKeluarga,
+          anggota: textAnggota,
+          marker: marker, 
+          lat: itemLat, 
+          lng: itemLng,
+          kategori: String(rawType).trim().toLowerCase()
+        });
+      });
+
+      console.log("✅ Peta siap. Total daftarPin:", window.daftarPin.length);
+    })
+    .catch(err => {
+      console.error("Gagal memuat peta:", err);
+    });
+}
+
+window.cariLokasiPetaAdmin = function(queryManual) {
+  if (document.activeElement) document.activeElement.blur();
+
+  var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
+  var inputVal = inputElem ? inputElem.value : '';
+  var kataKunci = String(queryManual !== undefined ? queryManual : inputVal).toLowerCase().trim();
+  
+  if (!kataKunci) {
+    alert("Silakan masukkan kata kunci pencarian!");
+    return null;
+  }
+
+  // Gunakan window.daftarPin
+  var dataPin = (typeof window.daftarPin !== 'undefined' && Array.isArray(window.daftarPin)) ? window.daftarPin : [];
+
+  if (dataPin.length === 0) {
+    alert("⚠️ Data peta belum siap atau masih kosong.");
+    return null;
+  }
+
+  var keywordBersih = kataKunci.replace(/^0+/, '');
+  var isPureAngka = /^\d+$/.test(kataKunci);
+
+  // Pencarian fleksibel mencakup semua properti pin
+  var hasil = dataPin.find(pin => {
+    var namaRaw = String(pin.namaRaw || pin.nameAsli || '').toLowerCase();
+    var namaTeks = String(pin.nama || '').toLowerCase();
+    var namaTempat = String(pin.namaTempat || pin.name || '').toLowerCase();
+    var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
+    var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
+    var noRumahAsli = String(pin.noRumah || '').toLowerCase();
+    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
+    var kategori = String(pin.kategori || '').toLowerCase();
+    
+    if (isPureAngka && noRumahTanpaNol === keywordBersih) return true;
+
+    return namaRaw.includes(kataKunci) ||
+           namaTeks.includes(kataKunci) || 
+           namaTempat.includes(kataKunci) ||
+           kepalaKeluarga.includes(kataKunci) || 
+           anggotaKeluarga.includes(kataKunci) ||
+           noRumahAsli.includes(kataKunci) || 
+           kategori.includes(kataKunci);
+  });
+
+  if (hasil) {
+    pinHasilPencarian = hasil;
+    pinRumahAktif = hasil.marker;
+
+    if (typeof markerGroup !== 'undefined' && markerGroup && hasil.marker) {
+      if (!markerGroup.hasLayer(hasil.marker)) {
+        markerGroup.addLayer(hasil.marker);
+      }
+    }
+
+    if (typeof map !== 'undefined' && map && hasil.lat && hasil.lng) {
+      var pointM = map.project([hasil.lat, hasil.lng], 19);
+      var pointC = L.point(pointM.x, pointM.y - 180);
+      map.flyTo(map.unproject(pointC, 19), 19);
+
+      map.once('moveend', function() {
+        if (hasil.marker && hasil.marker.getPopup()) {
+          hasil.marker.openPopup();
         }
       });
     }
 
-    function cariLokasi() {
-      if (document.activeElement) {
-        document.activeElement.blur();
-      }
+    return hasil;
+  } else {
+    alert("❌ Data '" + kataKunci + "' tidak ditemukan di peta.");
+    return null;
+  }
+};
+    
+   
+ // 3. FUNGSI FILTER KATEGORI LOKASI PETA
+// FUNGSI FILTER KATEGORI KHUSUS HALAMAN ADMIN
+function filterKategori(kat) {
+  var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
+  
+  console.log(`🔍 [Admin Filter] Menjalankan filter: "${kategoriPilihan}"`);
+  
+  if (typeof markerGroup === 'undefined' || typeof daftarPin === 'undefined' || !Array.isArray(daftarPin)) {
+    console.warn("⚠️ [Admin Filter Warning] markerGroup atau daftarPin belum siap.");
+    return;
+  }
 
-      var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
-      var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
-      if (!kataKunci) return;
+  markerGroup.clearLayers();
+  var countTampil = 0;
 
-      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+  daftarPin.forEach(function(pin) {
+    var teksKategori = String(pin.kategori || '').toLowerCase();
+    var teksNama = String(pin.nama || '').toLowerCase();
+    var isMatch = false;
 
-      if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10);
-        hasil = daftarPin.find(pin => {
-          var kataKata = pin.nama.split(/[\s,().-]+/);
-          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-        });
-      }
+    // 🌟 KUNCI UTAMA: Jika filter 'semua', LANGSUNG TAMPILKAN SEMUA TANPA CEK PIN.HIDDEN
+    if (kategoriPilihan === 'semua') {
+      isMatch = true;
+    } else {
+      // Jika memilih kategori spesifik (misal: 'kost', 'fasum'), baru periksa status hidden jika ada
+      if (pin.hidden) return;
 
-      if (!hasil) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci) || pin.namaRaw.toLowerCase().includes(kataKunci));
-      }
+      var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
+                   teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+                   
+      var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
+                    teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
 
-      if (hasil) {
-        pinHasilPencarian = hasil;
+      var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
+                      teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
 
-        if (!markerGroup.hasLayer(hasil.marker)) { 
-          markerGroup.addLayer(hasil.marker); 
-        }
-        
-        var pointM = map.project([hasil.lat, hasil.lng], 19);
-        var pointC = L.point(pointM.x, pointM.y - 200);
-        map.flyTo(map.unproject(pointC, 19), 19); 
+      var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
+                         teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
 
-        map.once('moveend', function() {
-          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-          hasil.marker.openPopup();
-        });
-      } else {
-        alert("Nama atau nomor rumah tidak ditemukan.");
-      }
+      if (kategoriPilihan === 'kost') isMatch = isKost;
+      else if (kategoriPilihan === 'fasum') isMatch = isFasum;
+      else if (kategoriPilihan === 'kuliner') isMatch = isKuliner;
+      else if (kategoriPilihan === 'minimarket') isMatch = isMinimarket;
+      else isMatch = teksKategori.includes(kategoriPilihan) || teksNama.includes(kategoriPilihan);
     }
 
-    function cariNama() { cariLokasi(); }
+    if (isMatch && pin.marker) {
+      markerGroup.addLayer(pin.marker);
+      countTampil++;
+    }
+  });
+
+  console.log(`✅ [Admin Filter Selesai] Ditampilkan di peta: ${countTampil} dari total ${daftarPin.length} pin.`);
+}
 
     function toggleCustomFilter() {
       const menu = document.getElementById('menu-filter-options');
@@ -1724,7 +1769,21 @@ map.on('click', function(e) {
         tutupModalForm();
       }
     }
+function bukaModalIframeQR() {
+  const modal = document.getElementById('modal-iframe-qr');
+  const iframe = document.getElementById('iframeQrContent');
+  
+  if (!iframe.src || iframe.src === '' || iframe.src === window.location.href) {
+    iframe.src = 'cetak-qr.html';
+  }
+  
+  modal.style.display = 'flex';
+}
 
+function tutupModalIframeQR() {
+  document.getElementById('modal-iframe-qr').style.display = 'none';
+}
+    
    function bukaModalPinjamAdmin() {
       if (typeof muatPeminjamanAdmin === 'function') {
         muatPeminjamanAdmin();
@@ -2487,7 +2546,7 @@ async function cetakLaporanSensus() {
         
         printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN REKAPITULASI KEPENDUDUKAN</h2>');
         printWindow.document.write(`<div class="subtitle">Dicetak pada: ${new Date().toLocaleDateString('id-ID', { dateStyle: 'full' })}</div>`);
-        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK} KK</div><div>Total Jiwa / Warga: ${totalJiual || totalJiwa} Orang</div></div>`);
+        printWindow.document.write(`<div class="info-box"><div>Total Keluarga (KK): ${totalKK} KK</div><div>Total Jiwa / Warga: ${totalJiwa} Orang</div></div>`);
         
         printWindow.document.write('<table>');
         printWindow.document.write('<thead><tr><th style="width: 22%;">Nama Rumah / Lokasi</th><th style="width: 28%;">Kepala Keluarga</th><th style="width: 38%;">Anggota Keluarga</th><th style="width: 12%; text-align: center;">Jumlah</th></tr></thead>');
@@ -2513,12 +2572,26 @@ let globalDataWarga = []; // Menyimpan semua data terpadu dari peta_warga berupa
 let listSemuaRumahAdmin = [];
 
 // ==========================================
-// 1. MEMUAT DATA ADMIN DARI 1 NODE (peta_warga)
+// 1. MEMUAT DATA ADMIN SECARA KONSISTEN
 // ==========================================
 async function muatSemuaDataAdmin() {
     try {
-        // 🌟 Mengambil data melalui Cloudflare Worker Proxy
-        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+        // 🌟 1. Ambil token sesi admin dari localStorage
+        const adminToken = localStorage.getItem('adminToken') || '';
+
+        // 🌟 2. Sertakan X-Admin-Token agar Worker memberikan 100% data lokasi utuh tanpa hidden otomatis
+        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, {
+            method: 'GET',
+            headers: {
+                'X-Admin-Token': adminToken,
+                'Content-Type': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error status: ${response.status}`);
+        }
+
         const dataObj = await response.json();
 
         globalDataWarga = [];
@@ -2534,23 +2607,30 @@ async function muatSemuaDataAdmin() {
             return;
         }
 
-        // Iterasi objek data dari Cloudflare Worker
         Object.keys(dataObj).forEach(key => {
             const val = dataObj[key];
             if (!val) return;
 
             const id = key;
-            const namaRumah = val.Nama || val.nama || val.name || '';
+            const namaRumah = String(val.Nama || val.nama || val.name || '').trim();
             const lat = val.Lat !== undefined ? val.Lat : (val.lat || '');
             const lng = val.Lng !== undefined ? val.Lng : (val.lng || '');
-            const hidden = val.Hidden !== undefined ? val.Hidden : (val.hidden || false);
+            
+            const rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
+            const hidden = typeof rawHidden === 'boolean' 
+                ? rawHidden 
+                : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+
             const type = val.Type || val.type || val.Kategori || val.kategori || 'Rumah';
             const foto = val.foto || val.Foto || val['LINK GAMBAR/VIDEO'] || '';
             
-            const kepalaKeluarga = val.kepalaKeluarga || '';
-            const anggotaKeluarga = val.anggotaKeluarga || val.Anggota || '';
-            const noRumah = val.noRumah || '';
-            const namaTempat = val.namaTempat || '';
+            const kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || val['Kepala Keluarga'] || '').trim();
+            const anggotaKeluarga = String(val.anggotaKeluarga || val.Anggota || val.anggota || val['Anggota Keluarga'] || '').trim();
+            const noRumah = String(val.noRumah || val.NoRumah || val['No Rumah'] || '').trim();
+            const namaTempat = String(val.namaTempat || val.NamaTempat || val['Nama Tempat'] || '').trim();
+
+            // Gabungkan seluruh keyword agar pencarian fleksibel
+            const keywordPencarian = `${namaRumah} ${kepalaKeluarga} ${anggotaKeluarga} ${noRumah} ${namaTempat}`.toLowerCase();
 
             globalDataWarga.push({
                 id: id,
@@ -2563,28 +2643,29 @@ async function muatSemuaDataAdmin() {
                 type: type,
                 foto: foto,
                 kepalaKeluarga: kepalaKeluarga,
-                anggotaKeluarga: anggotaKeluarga
+                anggotaKeluarga: anggotaKeluarga,
+                keywordPencarian: keywordPencarian
             });
 
             if (namaRumah) listSemuaRumahAdmin.push(namaRumah);
 
-            if (kepalaKeluarga.trim() !== '') {
+            if (kepalaKeluarga !== '') {
                 totalKK++;
                 let jmlAnggota = anggotaKeluarga ? anggotaKeluarga.split(',').filter(Boolean).length : 0;
                 totalJiwa += (1 + jmlAnggota);
             }
         });
         
-        // Perbarui elemen UI statistik
-        document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
-        document.getElementById("stat-total-kk").innerText = totalKK + " KK";
-        document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
+        // Update UI Statistik
+        if (document.getElementById("badge-total-jiwa")) document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
+        if (document.getElementById("stat-total-kk")) document.getElementById("stat-total-kk").innerText = totalKK + " KK";
+        if (document.getElementById("stat-total-jiwa")) document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
 
     } catch (err) {
         console.error("Gagal memuat data admin dari Cloudflare Worker:", err);
-        document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
-        document.getElementById("stat-total-kk").innerText = "0 KK";
-        document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+        if (document.getElementById("badge-total-jiwa")) document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+        if (document.getElementById("stat-total-kk")) document.getElementById("stat-total-kk").innerText = "0 KK";
+        if (document.getElementById("stat-total-jiwa")) document.getElementById("stat-total-jiwa").innerText = "0 Orang";
     }
 }
     
@@ -2650,7 +2731,7 @@ async function cariDetailKeluargaAdmin() {
     const container = document.getElementById("hasil-cari-warga");
 
     if (!keyword) {
-        alert("Ketikkan nama atau nomor rumah yang ingin dicari!");
+        alert("Ketikkan kata kunci (Nama, Kepala Keluarga, Anggota, No. Rumah, atau Nama Tempat) yang ingin dicari!");
         return;
     }
 
@@ -2660,7 +2741,6 @@ async function cariDetailKeluargaAdmin() {
     }
 
     try {
-        // 🌟 Mengambil data langsung dari Cloudflare Worker Proxy (seperti inisialisasi peta utama)
         const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
         const dataObj = await response.json();
 
@@ -2669,41 +2749,48 @@ async function cariDetailKeluargaAdmin() {
         }
 
         let daftarWargaWorker = [];
-        Object.keys(dataObj).forEach(key => {
-            const val = dataObj[key];
+        
+        // Tangani data baik berupa Array maupun Objek Key-Value
+        const items = Array.isArray(dataObj) ? dataObj : Object.keys(dataObj).map(k => ({ ...dataObj[k], _id: k }));
+
+        items.forEach((val, idx) => {
             if (!val) return;
 
             daftarWargaWorker.push({
-                id: key,
-                nama: val.Nama || val.nama || val.name || '',
-                noRumah: val.noRumah || '',
-                namaTempat: val.namaTempat || '',
-                kepalaKeluarga: val.kepalaKeluarga || '',
-                anggotaKeluarga: val.anggotaKeluarga || val.Anggota || '',
+                id: val._id || val.id || idx,
+                namaLama: String(val.Nama || val.nama || val.name || '').trim(),
+                kepalaKeluarga: String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim(),
+                anggotaKeluarga: String(val.anggotaKeluarga || val.Anggota || val.anggota || '').trim(),
+                noRumah: String(val.noRumah || val.NoRumah || '').trim(),
+                namaTempat: String(val.namaTempat || val.namaTempat || '').trim(),
                 lat: val.Lat !== undefined ? val.Lat : (val.lat || ''),
                 lng: val.Lng !== undefined ? val.Lng : (val.lng || ''),
                 foto: val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '',
-                type: val.Type || val.type || val.Kategori || ''
+                type: val.Type || val.type || val.Kategori || val.kategori || ''
             });
         });
 
-        // Lakukan pencarian berdasarkan keyword (Nama, Kepala Keluarga, Anggota, atau No Rumah)
+        // Cari data yang mengandung keyword (pencocokan substring fleksibel)
         const match = daftarWargaWorker.find(row => {
-            const kepala = String(row.kepalaKeluarga || row.nama || '').toLowerCase();
-            const anggota = String(row.anggotaKeluarga || '').toLowerCase();
-            const rumah = String(row.nama || row.noRumah || '').toLowerCase();
-            
-            return kepala.includes(keyword) || anggota.includes(keyword) || rumah.includes(keyword);
+            const gabungan = `${row.namaLama} ${row.kepalaKeluarga} ${row.anggotaKeluarga} ${row.noRumah} ${row.namaTempat}`.toLowerCase();
+            const noRumahBersih = row.noRumah.replace(/^0+/, '').toLowerCase();
+            const keywordBersih = keyword.replace(/^0+/, '');
+
+            return gabungan.includes(keyword) || 
+                   (noRumahBersih && noRumahBersih === keywordBersih);
         });
 
         if (!match) {
-            container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga atau rumah tidak ditemukan.</p>`;
+            if (container) {
+                container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga, nomor rumah, atau tempat tidak ditemukan.</p>`;
+            }
+            alert("Nama, nomor rumah, atau anggota keluarga tidak ditemukan.");
             return;
         }
 
-        const kepala = match.kepalaKeluarga || match.nama || '-';
-        const anggota = match.anggotaKeluarga || 'Belum ada data anggota keluarga';
-        const labelRumah = match.nama || match.noRumah || '-';
+        const kepala = match.kepalaKeluarga || match.namaLama || match.namaTempat || 'Tanpa Nama';
+        const anggota = match.anggotaKeluarga || '-';
+        const labelRumah = match.noRumah ? `Rumah No. ${match.noRumah}` : (match.namaTempat || '-');
         const foto = match.foto || '';
 
         let htmlKoor = (match.lat && match.lng) 
@@ -2721,16 +2808,15 @@ async function cariDetailKeluargaAdmin() {
                     </button>
                 </div>
                 <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
-                <div style="margin-top: 4px;"><b>Titik Denah / Rumah:</b> ${escapeHTML(labelRumah)}</div>
+                <div style="margin-top: 4px;"><b>Nomor / Keterangan Rumah:</b> ${escapeHTML(labelRumah)}</div>
                 ${htmlFoto}
                 ${htmlKoor}
             </div>
         `;
 
-        // Perbarui juga globalDataWarga agar sinkron jika dibutuhkan fungsi lain
         window.globalDataWarga = daftarWargaWorker;
 
-    } catch (err) { // ✅ Diperbaiki menjadi catch (err) yang benar
+    } catch (err) {
         console.error("Gagal memuat data dari Cloudflare Worker:", err);
         if (container) {
             container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Gagal terhubung ke Cloudflare Worker.</p>`;
@@ -4430,150 +4516,6 @@ function resetFormPengumuman() {
 <link rel="stylesheet" href="all.min.css" media="print" onload="this.media='all'">
 <noscript><link rel="stylesheet" href="all.min.css"></noscript>
 
-<!-- MODULE FIREBASE -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  const app = initializeApp(RT05_CONFIG.FIREBASE);
-  const db = getDatabase(app, RT05_CONFIG.FIREBASE.databaseURL);
-
-  // EKSPOS KE GLOBAL window AGAR BISA DIAKSES OLEH SEMUA FUNGSI DI ATASNYA
-  window.db = db;
-  window.firebaseRef = ref;
-  window.firebaseOnValue = onValue;
-  window.firebaseUpdate = update;
-  window.firebaseRemove = remove;
-  window.firebasePush = push;
-  window.firebaseSet = set;
-  window.firebaseGet = get;
-
-  // Global helper untuk tombol persetujuan chat di dalam modul
-  window.approveUser = (uid) => {
-    update(ref(db, `users/${uid}`), { status: 'aktif' });
-  };
-
-  window.rejectUser = (uid, statusWarga = 'pending') => {
-    const pesan = statusWarga === 'aktif' 
-      ? "PERINGATAN: Yakin ingin menghapus akun warga aktif ini secara permanen?" 
-      : "Hapus / Tolak pendaftaran warga ini?";
-      
-    if (confirm(pesan)) {
-      remove(ref(db, `users/${uid}`));
-    }
-  };
-
-  window.toggleRole = (uid, currentRole) => {
-    const newRole = currentRole === 'admin' ? 'warga' : 'admin';
-    update(ref(db, `users/${uid}`), { role: newRole });
-  };
-
-  // Listener Real-time untuk Chat/Users
-  const usersRef = ref(db, 'users');
-  onValue(usersRef, (snapshot) => {
-    const pendingTable = document.getElementById('pending-users-list');
-    const allUsersTable = document.getElementById('all-users-list');
-    
-    if (!pendingTable || !allUsersTable) return;
-
-    pendingTable.innerHTML = '';
-    allUsersTable.innerHTML = '';
-
-    if (!snapshot.exists()) {
-      pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar.</td></tr>';
-      
-      // Update badge kosong
-      const pBadge = document.getElementById('pending-badge');
-      const tWarga = document.getElementById('total-warga-count');
-      if (pBadge) pBadge.innerText = `0 Pending`;
-      if (tWarga) tWarga.innerText = 0;
-      return;
-    }
-
-    let pendingCount = 0;
-    let totalCount = 0;
-
-    snapshot.forEach((childSnap) => {
-      const u = childSnap.val();
-      const uid = childSnap.key;
-
-      if (u.status === 'pending') {
-        pendingCount++;
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = "1px solid #1e293b";
-        tr.innerHTML = `
-          <td style="padding: 6px;">
-            <strong style="color: #fff; display: block;">${escapeHTML(u.nama)}</strong>
-            <span style="color: #94a3b8; font-size: 10px;">${escapeHTML(u.hunian)}</span>
-          </td>
-          <td style="padding: 6px; text-align: center; white-space: nowrap;">
-            <button onclick="approveUser('${uid}')" style="background-color: #10b981; color: #022c22; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
-              ACC
-            </button>
-            <button onclick="rejectUser('${uid}')" style="background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
-              Tolak
-            </button>
-          </td>
-        `;
-        pendingTable.appendChild(tr);
-      } else if (u.status === 'aktif') {
-        totalCount++;
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = "1px solid #1e293b";
-        
-        const isAdmin = u.role === 'admin';
-        const roleBadge = isAdmin ? 
-          '<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold;">ADMIN</span>' : 
-          '<span style="background: #334155; color: #94a3b8; padding: 1px 4px; border-radius: 3px; font-size: 9px;">WARGA</span>';
-
-        tr.innerHTML = `
-          <td style="padding: 6px;">
-            <strong style="color: #e2e8f0; display: block;">${escapeHTML(u.username || u.nama)} ${roleBadge}</strong>
-            <span style="color: #64748b; font-size: 10px;">${escapeHTML(u.hunian)}</span>
-          </td>
-          <td style="padding: 6px; text-align: center; white-space: nowrap;">
-            <button onclick="toggleRole('${uid}', '${u.role}')" style="background: #334155; color: #cbd5e1; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
-              ${isAdmin ? 'Warga' : 'Jadi Admin'}
-            </button>
-            <button onclick="rejectUser('${uid}', 'aktif')" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
-              ❌Hapus Akun
-            </button>
-          </td>
-        `;
-        allUsersTable.appendChild(tr);
-      }
-    });
-
-    if (pendingCount === 0) {
-      pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar pending.</td></tr>';
-    }
-
-    // Update Badge & Counter di UI
-    const pBadge = document.getElementById('pending-badge');
-    const tWarga = document.getElementById('total-warga-count');
-    const detailsElem = document.getElementById('details-chat-admin');
-
-    if (pBadge) pBadge.innerText = `${pendingCount} Pending`;
-    if (tWarga) tWarga.innerText = totalCount;
-
-    if (detailsElem) {
-      if (pendingCount > 0) {
-        detailsElem.open = true;
-        if (pBadge) {
-          pBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-          pBadge.style.color = '#f87171';
-          pBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-        }
-      } else {
-        detailsElem.open = false;
-        if (pBadge) {
-          pBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.2)';
-          pBadge.style.color = '#fbbf24';
-          pBadge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-        }
-      }
-    }
-  });
-</script>
 </body>
 </html>

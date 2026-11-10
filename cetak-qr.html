@@ -3,16 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
- 
+  
   <title>Cetak Stiker QR Code Jimpitan RT 05</title>
 
   <!-- Pustaka QRCode.js via CDN (Gratis & Tanpa Batas) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
-  <!-- Firebase Compat CDN -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-  <script src="utils.js"></script>
+  <!-- Utils Konfigurasi (berisi RT05_CONFIG) -->
+  <script type="module" src="utils.js"></script>
 
   <style>
     body {
@@ -100,64 +98,71 @@
   <div class="header-print">
     <div>
       <h2 style="margin: 0; font-size: 18px;">🖨️ Generator Stiker QR Code Jimpitan RT 05</h2>
-      <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">Data diambil otomatis dari database <code>peta_warga</code>.</p>
+      <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">Data diambil otomatis dari database <code>peta_warga</code> via Proxy.</p>
     </div>
     <button class="btn-print" onclick="window.print()">🖨️ Cetak / Print Stiker</button>
   </div>
 
   <div id="container-stiker" class="grid-stiker">
-    <div style="grid-column: span 3; text-align: center; padding: 40px; color: #64748b;">⏳ Memuat data warga dari Firebase...</div>
+    <div style="grid-column: span 3; text-align: center; padding: 40px; color: #64748b;">⏳ Memuat data warga...</div>
   </div>
 
 <script>
-  document.addEventListener("DOMContentLoaded", () => {
-    if (!window.dbRT05) {
-      document.getElementById('container-stiker').innerHTML = '<div style="color:red; text-align:center;">❌ Koneksi database belum siap.</div>';
-      return;
-    }
+document.addEventListener("DOMContentLoaded", async () => {
+    const container = document.getElementById('container-stiker');
+    container.innerHTML = '<div style="grid-column: span 3; text-align: center; padding: 40px; color: #64748b;">⏳ Memuat data warga dari server...</div>';
 
-    const petaRef = dbRT05.ref('peta_warga');
-    petaRef.once('value', (snapshot) => {
-      const dataObj = snapshot.val();
-      const container = document.getElementById('container-stiker');
+    try {
+      // Menggunakan endpoint proxy Cloudflare Worker
+      const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+      const dataObj = await response.json();
+      
       container.innerHTML = '';
 
       if (!dataObj) {
-        container.innerHTML = '<div style="text-align:center;">Tidak ada data warga ditemukan di database.</div>';
+        container.innerHTML = '<div style="grid-column: span 3; text-align:center; padding:20px;">Tidak ada data warga ditemukan.</div>';
         return;
       }
 
       Object.keys(dataObj).forEach(key => {
         const item = dataObj[key];
-        // Ambil nama warga/rumah
-        const namaWarga = item.Nama || item.nama || item.name;
+        if (!item) return;
 
-        if (namaWarga) {
-          // Buat elemen kartu stiker
+        // Ambil data kepala keluarga dan no rumah sesuai struktur
+        const kepalaKeluarga = item.kepalaKeluarga || item.Nama || item.nama || '';
+        const noRumah = item.noRumah || item.no_rumah || '-';
+
+        // Format teks murni: Bejo Nurmantyo (Rumah no.06)
+        const teksQR = `${kepalaKeluarga} (Rumah no.${noRumah})`;
+
+        if (kepalaKeluarga) {
           const card = document.createElement('div');
           card.className = 'stiker-card';
 
           card.innerHTML = `
             <span>Jimpitan RT 05 Kayen</span>
             <div class="qr-box" id="qr-${key}"></div>
-            <h3>${namaWarga}</h3>
+            <h3>${teksQR}</h3>
           `;
 
           container.appendChild(card);
 
-          // Generate QR code dengan teks murni nama warga
+          // Generate QR code dengan teks murni
           new QRCode(document.getElementById(`qr-${key}`), {
-            text: namaWarga, // Output teks murni sesuai permintaan
-            width: 100,      // Ukuran pas untuk stiker kotak
-            height: 100,
+            text: teksQR,
+            width: 90,
+            height: 90,
             colorDark : "#000000",
             colorLight : "#ffffff",
             correctLevel : QRCode.CorrectLevel.M
           });
         }
       });
-    });
-  });
+    } catch (err) {
+      console.error("Gagal memuat data QR:", err);
+      container.innerHTML = `<div style="grid-column: span 3; color:red; text-align:center; padding:20px;">❌ Gagal memuat data: ${err.message}</div>`;
+    }
+});
 </script>
 
 </body>

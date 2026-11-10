@@ -34,9 +34,9 @@
   <script src="leaflet.js"></script>
   <script src="leaflet.markercluster.js"></script>
   
-  <!-- Konfigurasi Global & Utils -->
-  <script src="utils.js" defer></script>
-  <script src="setting.js" defer></script>
+<!-- Konfigurasi Global & Utils (Gunakan type="module" untuk utils.js) -->
+<script type="module" src="utils.js"></script>
+<script src="setting.js" defer></script>
 
   
 
@@ -1377,13 +1377,16 @@ function muatDataPetaWarga() {
         for (let i = index; i < batas; i++) {
           var kolom = baris[i];
           
-          // 🌟 Ambil data Kepala Keluarga, No Rumah, dan Nama Tempat secara spesifik
+        // 🌟 Ambil data Kepala Keluarga, No Rumah, Nama Tempat, & Anggota Keluarga
           var kepalaKeluarga = String(kolom.kepalaKeluarga || kolom.KepalaKeluarga || '').trim();
           var noRumah = String(kolom.noRumah || kolom.NoRumah || '').trim();
           var namaTempat = String(kolom.namaTempat || kolom.Nama || kolom.nama || kolom.name || '').trim();
+          
+          // 🌟 PERBAIKAN DI SINI: Tambahkan kolom.anggotaKeluarga
+          var textAnggota = String(kolom.anggotaKeluarga || kolom.Anggota || kolom.anggota || '').trim(); 
+          
           var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
 
-          // 🌟 Tentukan format nama tampil: Kombinasi Kepala Keluarga & No Rumah, atau Nama Tempat jika Fasum/Umum
           var namaTampilAsli = namaTempat;
           if (kepalaKeluarga !== '') {
             var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
@@ -1409,12 +1412,12 @@ function muatDataPetaWarga() {
               lat: parseFloat(latClean),
               lng: parseFloat(lngClean),
               hidden: statusHidden,
-              foto: urlFoto
+              foto: urlFoto,
+              anggota: textAnggota
             };
 
             if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-            // 🌟 Sensor nama depan hanya pada bagian Kepala Keluarga, nomor rumah tetap dibiarkan jelas
             var namaTersensor = sensorNamaDepan(kepalaKeluarga !== '' ? kepalaKeluarga : namaTampilAsli, kategoriManual);
             if (kepalaKeluarga !== '') {
               var formatNoRmhSensor = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
@@ -1436,11 +1439,15 @@ function muatDataPetaWarga() {
             
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
+            // 🌟 Gabungkan teks pencarian agar mencakup Anggota Keluarga
+            var keywordPencarian = `${namaTampilAsli} ${textAnggota} ${noRumah}`.toLowerCase();
+
             daftarPin.push({ 
               namaRaw: namaTampilAsli,
-              nama: namaTampilAsli.toLowerCase(), 
+              nama: keywordPencarian, 
               noRumah: noRumah.toLowerCase(),
               kepalaKeluarga: kepalaKeluarga.toLowerCase(),
+              anggota: textAnggota.toLowerCase(),
               marker: marker, 
               lat: item.lat, 
               lng: item.lng,
@@ -1607,36 +1614,37 @@ window.addEventListener('pageshow', function(event) {
 });
   
 window.jalankanPencarianPeta = function() {
-  var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
+  var inputEl = document.getElementById('searchInput');
+  var kataKunci = String(inputEl ? inputEl.value : '').toLowerCase().trim();
+  
   if (!kataKunci) {
-    alert("Masukkan nama atau nomor rumah yang ingin dicari!");
+    alert("Masukkan kata kunci (Nama, Kepala Keluarga, Anggota Keluarga, Nama Tempat, atau No. Rumah)!");
     return;
   }
 
-  // 🌟 JIKA DATA MASIH KOSONG, TUNGGU SEBENTAR SECARA OTOMATIS
   if (!daftarPin || daftarPin.length === 0) {
-    // Panggil ulang fetch worker sebagai antisipasi
-    if (typeof muatDataPetaWarga === 'function') {
-      muatDataPetaWarga();
-    }
-    
-    // Beri tahu pengguna dan tunggu 1.5 detik lalu coba cari otomatis
-    alert("Memuat data dari server proxy, mohon tunggu sebentar...");
-    setTimeout(() => {
-      window.jalankanPencarianPeta(); // Coba jalankan ulang pencarian otomatis
-    }, 1500);
+    alert("Data peta belum sepenuhnya dimuat, mohon tunggu sebentar...");
     return;
   }
 
+  var keywordBersih = kataKunci.replace(/^0+/, ''); // Toleransi nomor rumah misal "06" jadi "6"
+
+  // 🔍 Pencarian fleksibel mencakup semua atribut properti pada pin
   var hasil = daftarPin.find(pin => {
-    var namaRaw = String(pin.namaRaw || '').toLowerCase();
-    var noRumah = String(pin.noRumah || '').toLowerCase();
+    var teksGabungan = String(pin.nama || '').toLowerCase();
+    var namaTempat = String(pin.namaTempat || '').toLowerCase();
+    var noRumahAsli = String(pin.noRumah || '').toLowerCase();
+    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
     var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
+    var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
     var kategori = String(pin.kategori || '').toLowerCase();
     
-    return namaRaw.includes(kataKunci) || 
-           noRumah.includes(kataKunci) || 
+    return teksGabungan.includes(kataKunci) || 
+           namaTempat.includes(kataKunci) ||
            kepalaKeluarga.includes(kataKunci) || 
+           anggotaKeluarga.includes(kataKunci) ||
+           noRumahAsli.includes(kataKunci) || 
+           (noRumahTanpaNol && noRumahTanpaNol === keywordBersih) ||
            kategori.includes(kataKunci);
   });
 
@@ -1659,7 +1667,7 @@ window.jalankanPencarianPeta = function() {
       hasil.marker.openPopup();
     });
   } else {
-    alert("Nama atau nomor rumah \"" + kataKunci + "\" tidak ditemukan.");
+    alert("Data \"" + kataKunci + "\" tidak ditemukan.");
   }
 };
   
@@ -3572,31 +3580,6 @@ window.simpanWargaBaru = async function() {
 };
   </script>
   
-<!-- 🌟 Inisialisasi Firebase Cepat & Ringan -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
-  if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.FIREBASE) {
-    const app = initializeApp(RT05_CONFIG.FIREBASE);
-    const db = getDatabase(app);
-
-    window.db = db;
-    window.firebaseRef = ref;
-    window.firebaseOnValue = onValue;
-    window.firebaseUpdate = update;
-    window.firebaseRemove = remove;
-    window.firebasePush = push;
-    window.firebaseSet = set;
-    window.firebaseGet = get;
-    window.firebaseLimitToLast = limitToLast;
-    window.firebaseQuery = query;
-
-    window.dispatchEvent(new Event('utilsSiap'));
-    window.dispatchEvent(new Event('firebaseSiapIndex')); // 🌟 Sinyal baru untuk index.html
-  } else {
-    console.error("Konfigurasi RT05_CONFIG.FIREBASE belum dimuat dari setting.js!");
-  }
-</script>
 </body>
 </html>
