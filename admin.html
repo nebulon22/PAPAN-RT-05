@@ -219,10 +219,10 @@
       🟢 Semua Data Ter-sinkron
     </div>
 
-   <!-- KODE BARU: -->
+<!-- KODE BARU: -->
 <div id="search-box">
-  <input type="text" id="searchInput" aria-label="Cari lokasi rumah atau warga" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasi(); }">
-  <button onclick="cariLokasi()">Cari</button>
+  <input type="text" id="searchInput" aria-label="Cari lokasi rumah atau warga" placeholder="Cari nama atau No Rumah..." onkeypress="if(event.key === 'Enter') { this.blur(); cariLokasiPetaAdmin(); }">
+  <button onclick="cariLokasiPetaAdmin()">Cari</button>
 </div>
 
 <button type="button" onclick="bukaModalIframeQR()" style="display: inline-block; padding: 10px 16px; background: #0288d1; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; width: 100%;">
@@ -1583,6 +1583,80 @@ function initMap() {
     });
 }
 
+window.cariLokasiPetaAdmin = function(queryManual) {
+  if (document.activeElement) document.activeElement.blur();
+
+  var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
+  var inputVal = inputElem ? inputElem.value : '';
+  var kataKunci = String(queryManual !== undefined ? queryManual : inputVal).toLowerCase().trim();
+  
+  if (!kataKunci) {
+    alert("Silakan masukkan kata kunci pencarian!");
+    return null;
+  }
+
+  // Gunakan window.daftarPin
+  var dataPin = (typeof window.daftarPin !== 'undefined' && Array.isArray(window.daftarPin)) ? window.daftarPin : [];
+
+  if (dataPin.length === 0) {
+    alert("⚠️ Data peta belum siap atau masih kosong.");
+    return null;
+  }
+
+  var keywordBersih = kataKunci.replace(/^0+/, '');
+  var isPureAngka = /^\d+$/.test(kataKunci);
+
+  // Pencarian fleksibel mencakup semua properti pin
+  var hasil = dataPin.find(pin => {
+    var namaRaw = String(pin.namaRaw || pin.nameAsli || '').toLowerCase();
+    var namaTeks = String(pin.nama || '').toLowerCase();
+    var namaTempat = String(pin.namaTempat || pin.name || '').toLowerCase();
+    var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
+    var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
+    var noRumahAsli = String(pin.noRumah || '').toLowerCase();
+    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
+    var kategori = String(pin.kategori || '').toLowerCase();
+    
+    if (isPureAngka && noRumahTanpaNol === keywordBersih) return true;
+
+    return namaRaw.includes(kataKunci) ||
+           namaTeks.includes(kataKunci) || 
+           namaTempat.includes(kataKunci) ||
+           kepalaKeluarga.includes(kataKunci) || 
+           anggotaKeluarga.includes(kataKunci) ||
+           noRumahAsli.includes(kataKunci) || 
+           kategori.includes(kataKunci);
+  });
+
+  if (hasil) {
+    pinHasilPencarian = hasil;
+    pinRumahAktif = hasil.marker;
+
+    if (typeof markerGroup !== 'undefined' && markerGroup && hasil.marker) {
+      if (!markerGroup.hasLayer(hasil.marker)) {
+        markerGroup.addLayer(hasil.marker);
+      }
+    }
+
+    if (typeof map !== 'undefined' && map && hasil.lat && hasil.lng) {
+      var pointM = map.project([hasil.lat, hasil.lng], 19);
+      var pointC = L.point(pointM.x, pointM.y - 180);
+      map.flyTo(map.unproject(pointC, 19), 19);
+
+      map.once('moveend', function() {
+        if (hasil.marker && hasil.marker.getPopup()) {
+          hasil.marker.openPopup();
+        }
+      });
+    }
+
+    return hasil;
+  } else {
+    alert("❌ Data '" + kataKunci + "' tidak ditemukan di peta.");
+    return null;
+  }
+};
+    
 // ==========================================
 // 2. CARI LOKASI (Robust & Fallback ke Leaflet Layer)
 // ==========================================
