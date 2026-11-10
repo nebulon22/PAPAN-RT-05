@@ -1505,7 +1505,7 @@ function initMap() {
         }
       });
 
-      // 🌟 PENGAMBILAN DATA & PENGGABUNGAN KATA KUNCI PENCARIAN (TERMASUK ANGGOTA KELUARGA)
+// 🌟 PENGAMBILAN DATA DENGAN DETEKSI KEY YANG FLEKSIBEL
       fetch(RT05_CONFIG.PETA_PROXY_URL)
         .then(response => response.json())
         .then(dataObj => {
@@ -1518,15 +1518,15 @@ function initMap() {
             const val = dataObj[key];
             if (!val) return;
 
-            var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || '');
-            var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || '');
+            var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || val.LAT || '');
+            var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || val.LNG || '');
             
-            var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim();
-            var noRumah = String(val.noRumah || val.NoRumah || '').trim();
-            var namaTempat = String(val.namaTempat || val.nama || val.name || '').trim();
-            var textAnggota = String(val.Anggota || val.anggota || val.anggotaKeluarga || '').trim();
+            // Tangkap berbagai kemungkinan penulisan key dari database (case-insensitive & spasi)
+            var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || val['Kepala Keluarga'] || val.nama || val.Nama || '').trim();
+            var noRumah = String(val.noRumah || val.NoRumah || val['No Rumah'] || val.no_rumah || val.NOMOR_RUMAH || '').trim();
+            var namaTempat = String(val.namaTempat || val.namaTempat || val.nama || val.Nama || val.name || '').trim();
+            var textAnggota = String(val.Anggota || val.anggota || val.anggotaKeluarga || val['Anggota Keluarga'] || '').trim();
 
-            // 🌟 Perbaikan: Menyusun namaTampilAsli dan namaAsli dengan benar tanpa rawNama yang undefined
             var namaTampilAsli = namaTempat;
             if (kepalaKeluarga !== '') {
               var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
@@ -1538,7 +1538,7 @@ function initMap() {
             
             var rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
             var rawType = val.Type || val.type || val.Kategori || val.kategori || '';
-            var rawFoto = val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '';
+            var rawFoto = val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || val.FOTO || '';
 
             var latClean = perbaikiKoordinat(rawLat);
             var lngClean = perbaikiKoordinat(rawLng);
@@ -1549,12 +1549,10 @@ function initMap() {
               
             var kategoriManual = String(rawType).trim().toLowerCase();
             var urlFoto = String(rawFoto).trim();
-            var namaAsli = namaTampilAsli; // Menggunakan namaTampilAsli yang sudah aman
 
             var item = {
               id: key,
-              name: namaAsli,
-              nameAsli: namaAsli,
+              name: namaTampilAsli,
               lat: parseFloat(latClean),
               lng: parseFloat(lngClean),
               hidden: statusHidden,
@@ -1578,7 +1576,7 @@ function initMap() {
               </div>
             `;
             
-            let dataIkon = getIkonKategori(item.nameAsli, kategoriManual);
+            let dataIkon = getIkonKategori(item.name, kategoriManual);
 
             var customIcon = L.divIcon({
               className: 'custom-pin',
@@ -1588,10 +1586,9 @@ function initMap() {
             
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-            var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
-
-            // Gabungkan semua keyword agar pencarian umum mencakup semuanya
-            var keywordPencarian = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
+            // Gabungkan seluruh nilai properti objek `val` mentah + variabel terurai untuk pencarian foolproof
+            var semuaNilaiObjek = Object.values(val).join(' ');
+            var keywordPencarian = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah} ${semuaNilaiObjek}`.toLowerCase();
 
             daftarPin.push({ 
               namaRaw: namaTampilAsli,
@@ -1613,8 +1610,7 @@ function initMap() {
         .catch(err => {
           console.error("Gagal memuat peta via Cloudflare Worker:", err);
         });
-    }
-
+  
 // 2. FUNGSI PENCARIAN LOKASI (DISAMAKAN DENGAN HALAMAN INDEX)
 function cariLokasi() {
   if (document.activeElement) {
