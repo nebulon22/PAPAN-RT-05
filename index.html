@@ -1377,11 +1377,14 @@ function muatDataPetaWarga() {
         for (let i = index; i < batas; i++) {
           var kolom = baris[i];
           
-          // 🌟 Ambil data Kepala Keluarga, No Rumah, Nama Tempat, & Anggota Keluarga
+        // 🌟 Ambil data Kepala Keluarga, No Rumah, Nama Tempat, & Anggota Keluarga
           var kepalaKeluarga = String(kolom.kepalaKeluarga || kolom.KepalaKeluarga || '').trim();
           var noRumah = String(kolom.noRumah || kolom.NoRumah || '').trim();
           var namaTempat = String(kolom.namaTempat || kolom.Nama || kolom.nama || kolom.name || '').trim();
-          var textAnggota = String(kolom.Anggota || kolom.anggota || '').trim(); 
+          
+          // 🌟 PERBAIKAN DI SINI: Tambahkan kolom.anggotaKeluarga
+          var textAnggota = String(kolom.anggotaKeluarga || kolom.Anggota || kolom.anggota || '').trim(); 
+          
           var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
 
           var namaTampilAsli = namaTempat;
@@ -1615,7 +1618,7 @@ window.jalankanPencarianPeta = function() {
   var kataKunci = String(inputEl ? inputEl.value : '').toLowerCase().trim();
   
   if (!kataKunci) {
-    alert("Masukkan kata kunci (Nama, Kepala Keluarga, Anggota, atau No. Rumah) yang ingin dicari!");
+    alert("Masukkan kata kunci (Nama, Kepala Keluarga, Anggota Keluarga, Nama Tempat, atau No. Rumah)!");
     return;
   }
 
@@ -1629,7 +1632,7 @@ window.jalankanPencarianPeta = function() {
   // 🔍 Pencarian fleksibel mencakup semua atribut properti pada pin
   var hasil = daftarPin.find(pin => {
     var teksGabungan = String(pin.nama || '').toLowerCase();
-    var namaRaw = String(pin.namaRaw || '').toLowerCase();
+    var namaTempat = String(pin.namaTempat || '').toLowerCase();
     var noRumahAsli = String(pin.noRumah || '').toLowerCase();
     var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
     var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
@@ -1637,7 +1640,7 @@ window.jalankanPencarianPeta = function() {
     var kategori = String(pin.kategori || '').toLowerCase();
     
     return teksGabungan.includes(kataKunci) || 
-           namaRaw.includes(kataKunci) ||
+           namaTempat.includes(kataKunci) ||
            kepalaKeluarga.includes(kataKunci) || 
            anggotaKeluarga.includes(kataKunci) ||
            noRumahAsli.includes(kataKunci) || 
