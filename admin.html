@@ -1453,7 +1453,8 @@ if (typeof sesuaikanFormKategori === 'function') {
       localStorage.removeItem('admin_login_time');
       window.location.href = "index.html";
     }
-        
+
+// 1. FUNGSI MEMUAT PETA DAN DATA (INIT MAP & FETCH DARI PROXY)
     var map, daftarPin = [], pinRumahAktif = null;
     var markerGroup = L.layerGroup();
     var pinHasilPencarian = null;
@@ -1479,7 +1480,7 @@ function initMap() {
 
       markerGroup.addTo(map);
 
-map.on('click', function(e) {
+      map.on('click', function(e) {
         if (document.getElementById('modal-form').style.display === 'flex' || 
             document.getElementById('modal-admin-inventaris').style.display === 'flex' || 
             document.getElementById('modal-kelola-warga').style.display === 'flex') return;
@@ -1504,7 +1505,7 @@ map.on('click', function(e) {
         }
       });
 
-      // 🌟 PERBAIKAN: Mengganti listener Firebase langsung dengan fetch ke Cloudflare Worker Worker Proxy
+      // 🌟 PENGAMBILAN DATA & PENGGABUNGAN KATA KUNCI PENCARIAN (TERMASUK ANGGOTA KELUARGA)
       fetch(RT05_CONFIG.PETA_PROXY_URL)
         .then(response => response.json())
         .then(dataObj => {
@@ -1519,7 +1520,18 @@ map.on('click', function(e) {
 
             var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || '');
             var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || '');
-            var rawNama = val.Nama || val.nama || val.name || '';
+            
+            var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim();
+            var noRumah = String(val.noRumah || val.NoRumah || '').trim();
+            var namaTempat = String(val.namaTempat || val.nama || val.name || '').trim();
+            var textAnggota = String(val.Anggota || val.anggota || '').trim();
+
+            var rawNama = namaTempat;
+            if (kepalaKeluarga !== '') {
+              var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
+              rawNama = `${kepalaKeluarga}${formatNoRmh}`;
+            }
+            
             var rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
             var rawType = val.Type || val.type || val.Kategori || val.kategori || '';
             var rawFoto = val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '';
@@ -1543,7 +1555,7 @@ map.on('click', function(e) {
               lng: parseFloat(lngClean),
               hidden: statusHidden,
               foto: urlFoto,
-              anggota: val.Anggota || val.anggota || '',
+              anggota: textAnggota,
             };
 
             if (isNaN(item.lat) || isNaN(item.lng)) return;
@@ -1574,9 +1586,12 @@ map.on('click', function(e) {
 
             var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
 
+            // Menggabungkan seluruh data (nama, nomor rumah, anggota keluarga) untuk pencarian yang akurat
+            var keywordPencarian = `${rawNama} ${textAnggota} ${noRumah}`.toLowerCase();
+
             daftarPin.push({ 
-              namaRaw: item.nameAsli,
-              nama: item.nameAsli.toLowerCase(), 
+              namaRaw: rawNama,
+              nama: keywordPencarian, 
               marker: marker, 
               lat: item.lat, 
               lng: item.lng,
@@ -1590,6 +1605,54 @@ map.on('click', function(e) {
         .catch(err => {
           console.error("Gagal memuat peta via Cloudflare Worker:", err);
         });
+    }
+
+    // 2. FUNGSI PENCARIAN LOKASI (MENDUKUNG KEPALA KELUARGA, NO RUMAH, TEMPAT, & ANGGOTA)
+    function cariLokasi() {
+      if (document.activeElement) {
+        document.activeElement.blur();
+      }
+
+      var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
+      var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
+      if (!kataKunci) return;
+
+      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
+
+      if (!hasil && /^\d+$/.test(kataKunci)) {
+        var angkaCari = parseInt(kataKunci, 10);
+        hasil = daftarPin.find(pin => {
+          var kataKata = pin.nama.split(/[\s,().-]+/);
+          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
+        });
+      }
+
+      if (!hasil) {
+        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci) || pin.namaRaw.toLowerCase().includes(kataKunci));
+      }
+
+      if (hasil) {
+        pinHasilPencarian = hasil;
+
+        if (!markerGroup.hasLayer(hasil.marker)) {  
+          markerGroup.addLayer(hasil.marker);  
+        }
+        
+        var pointM = map.project([hasil.lat, hasil.lng], 19);
+        var pointC = L.point(pointM.x, pointM.y - 200);
+        map.flyTo(map.unproject(pointC, 19), 19);  
+
+        map.once('moveend', function() {
+          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+          hasil.marker.openPopup();
+        });
+      } else {
+        alert("Nama, nomor rumah, atau anggota keluarga tidak ditemukan.");
+      }
+    }
+
+    function cariNama() { 
+      cariLokasi(); 
     }
 
     function filterKategori(kat) {
@@ -1632,51 +1695,6 @@ map.on('click', function(e) {
         }
       });
     }
-
-    function cariLokasi() {
-      if (document.activeElement) {
-        document.activeElement.blur();
-      }
-
-      var inputElem = document.getElementById('inputCari') || document.getElementById('searchInput');
-      var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
-      if (!kataKunci) return;
-
-      var hasil = daftarPin.find(pin => pin.namaRaw.toLowerCase() === kataKunci);
-
-      if (!hasil && /^\d+$/.test(kataKunci)) {
-        var angkaCari = parseInt(kataKunci, 10);
-        hasil = daftarPin.find(pin => {
-          var kataKata = pin.nama.split(/[\s,().-]+/);
-          return kataKata.some(kata => /^\d+$/.test(kata) && parseInt(kata, 10) === angkaCari);
-        });
-      }
-
-      if (!hasil) {
-        hasil = daftarPin.find(pin => pin.nama.includes(kataKunci) || pin.namaRaw.toLowerCase().includes(kataKunci));
-      }
-
-      if (hasil) {
-        pinHasilPencarian = hasil;
-
-        if (!markerGroup.hasLayer(hasil.marker)) { 
-          markerGroup.addLayer(hasil.marker); 
-        }
-        
-        var pointM = map.project([hasil.lat, hasil.lng], 19);
-        var pointC = L.point(pointM.x, pointM.y - 200);
-        map.flyTo(map.unproject(pointC, 19), 19); 
-
-        map.once('moveend', function() {
-          if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-          hasil.marker.openPopup();
-        });
-      } else {
-        alert("Nama atau nomor rumah tidak ditemukan.");
-      }
-    }
-
-    function cariNama() { cariLokasi(); }
 
     function toggleCustomFilter() {
       const menu = document.getElementById('menu-filter-options');
