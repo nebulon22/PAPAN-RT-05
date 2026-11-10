@@ -1368,99 +1368,99 @@ function muatDataPetaWarga() {
         }
       });
 
-var index = 0;
-    var chunkSize = 20;
+      var index = 0;
+      var chunkSize = 20;
 
-    function prosesChunk() {
-      var batas = Math.min(index + chunkSize, baris.length);
-      
-      for (let i = index; i < batas; i++) {
-        var kolom = baris[i];
+      function prosesChunk() {
+        var batas = Math.min(index + chunkSize, baris.length);
         
-        // 🌟 Ambil data Kepala Keluarga, No Rumah, Nama Tempat, & Anggota Keluarga
-        var kepalaKeluarga = String(kolom.kepalaKeluarga || kolom.KepalaKeluarga || '').trim();
-        var noRumah = String(kolom.noRumah || kolom.NoRumah || '').trim();
-        var namaTempat = String(kolom.namaTempat || kolom.Nama || kolom.nama || kolom.name || '').trim();
-        var textAnggota = String(kolom.Anggota || kolom.anggota || '').trim(); // 🌟 Tambahan untuk Anggota
-        var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
-
-        var namaTampilAsli = namaTempat;
-        if (kepalaKeluarga !== '') {
-          var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
-          namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
-        }
-
-        if (namaTampilAsli !== '') {
-          var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
-          var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
-          var latClean = perbaikiKoordinat(rawLat);
-          var lngClean = perbaikiKoordinat(rawLng);
+        for (let i = index; i < batas; i++) {
+          var kolom = baris[i];
           
-          var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
-          var statusHidden = typeof rawHidden === 'boolean' 
-            ? rawHidden 
-            : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+          // 🌟 Ambil data Kepala Keluarga, No Rumah, Nama Tempat, & Anggota Keluarga
+          var kepalaKeluarga = String(kolom.kepalaKeluarga || kolom.KepalaKeluarga || '').trim();
+          var noRumah = String(kolom.noRumah || kolom.NoRumah || '').trim();
+          var namaTempat = String(kolom.namaTempat || kolom.Nama || kolom.nama || kolom.name || '').trim();
+          var textAnggota = String(kolom.Anggota || kolom.anggota || '').trim(); 
+          var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
 
-          var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
-          
-          var item = {
-            name: namaTampilAsli,
-            nameAsli: namaTampilAsli,
-            lat: parseFloat(latClean),
-            lng: parseFloat(lngClean),
-            hidden: statusHidden,
-            foto: urlFoto,
-            anggota: textAnggota
-          };
-
-          if (isNaN(item.lat) || isNaN(item.lng)) continue;
-
-          var namaTersensor = sensorNamaDepan(kepalaKeluarga !== '' ? kepalaKeluarga : namaTampilAsli, kategoriManual);
+          var namaTampilAsli = namaTempat;
           if (kepalaKeluarga !== '') {
-            var formatNoRmhSensor = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
-            namaTersensor = `${namaTersensor}${formatNoRmhSensor}`;
+            var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
+            namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
           }
 
-          var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-          var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
-          
-          var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-          
-          var dataIkon = getIkonKategori(namaTampilAsli, kategoriManual);
+          if (namaTampilAsli !== '') {
+            var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
+            var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
+            var latClean = perbaikiKoordinat(rawLat);
+            var lngClean = perbaikiKoordinat(rawLng);
+            
+            var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
+            var statusHidden = typeof rawHidden === 'boolean' 
+              ? rawHidden 
+              : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
 
-          var customIcon = L.divIcon({
-            className: 'custom-pin',
-            html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-            iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-          });
-          
-          var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+            var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
+            
+            var item = {
+              name: namaTampilAsli,
+              nameAsli: namaTampilAsli,
+              lat: parseFloat(latClean),
+              lng: parseFloat(lngClean),
+              hidden: statusHidden,
+              foto: urlFoto,
+              anggota: textAnggota
+            };
 
-          // 🌟 Gabungkan teks pencarian agar mencakup Anggota Keluarga
-          var keywordPencarian = `${namaTampilAsli} ${textAnggota} ${noRumah}`.toLowerCase();
+            if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-          daftarPin.push({ 
-            namaRaw: namaTampilAsli,
-            nama: keywordPencarian, // Sekarang mencakup Kepala Keluarga, Tempat, No Rumah, & Anggota Keluarga!
-            noRumah: noRumah.toLowerCase(),
-            kepalaKeluarga: kepalaKeluarga.toLowerCase(),
-            anggota: textAnggota.toLowerCase(),
-            marker: marker, 
-            lat: item.lat, 
-            lng: item.lng,
-            hidden: item.hidden,
-            kategori: kategoriManual || dataIkon.kategori 
-          });
+            var namaTersensor = sensorNamaDepan(kepalaKeluarga !== '' ? kepalaKeluarga : namaTampilAsli, kategoriManual);
+            if (kepalaKeluarga !== '') {
+              var formatNoRmhSensor = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
+              namaTersensor = `${namaTersensor}${formatNoRmhSensor}`;
+            }
 
-          if (statusHidden) continue;
+            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
+            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
+            
+            var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+            
+            var dataIkon = getIkonKategori(namaTampilAsli, kategoriManual);
 
-          if (typeof markerGroup !== 'undefined' && markerGroup) {
-            markerGroup.addLayer(marker);
-          } else {
-            marker.addTo(map);
+            var customIcon = L.divIcon({
+              className: 'custom-pin',
+              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
+            });
+            
+            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+
+            // 🌟 Gabungkan teks pencarian agar mencakup Anggota Keluarga
+            var keywordPencarian = `${namaTampilAsli} ${textAnggota} ${noRumah}`.toLowerCase();
+
+            daftarPin.push({ 
+              namaRaw: namaTampilAsli,
+              nama: keywordPencarian, 
+              noRumah: noRumah.toLowerCase(),
+              kepalaKeluarga: kepalaKeluarga.toLowerCase(),
+              anggota: textAnggota.toLowerCase(),
+              marker: marker, 
+              lat: item.lat, 
+              lng: item.lng,
+              hidden: item.hidden,
+              kategori: kategoriManual || dataIkon.kategori 
+            });
+
+            if (statusHidden) continue;
+
+            if (typeof markerGroup !== 'undefined' && markerGroup) {
+              markerGroup.addLayer(marker);
+            } else {
+              marker.addTo(map);
+            }
           }
         }
-      }
 
         index = batas;
 
