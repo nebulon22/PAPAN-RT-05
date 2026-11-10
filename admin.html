@@ -1623,40 +1623,53 @@ function initMap() {
     
 // 2. FUNGSI PENCARIAN LOKASI
 function cariLokasi() {
-  if (document.activeElement) {
-    document.activeElement.blur();
-  }
+  if (document.activeElement) document.activeElement.blur();
 
   var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
   var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
+  
+  console.log(`🔎 [Cari Admin] Kata kunci: "${kataKunci}"`);
   if (!kataKunci) return;
 
-  // Gunakan fallback jika daftarPin kosong tetapi globalDataWarga atau data peta sudah ada
-  if (!daftarPin || daftarPin.length === 0) {
-    if (typeof muatSemuaDataAdmin === 'function') muatSemuaDataAdmin();
+  var dataPin = (typeof daftarPin !== 'undefined' && Array.isArray(daftarPin)) ? daftarPin : [];
+  console.log(`📦 [Cari Admin] Memeriksa ${dataPin.length} data pin yang tersimpan.`);
+
+  if (dataPin.length === 0) {
+    console.error("❌ [Cari Admin Error] daftarPin kosong! Memanggil muat data ulang...");
+    if (typeof initMap === 'function') initMap();
+    alert("⚠️ Data peta belum siap, silakan coba beberapa saat lagi.");
+    return;
   }
 
   var kataKunciAngka = kataKunci.replace(/^0+/, '');
   var isPureAngka = /^\d+$/.test(kataKunci);
 
-  var hasil = daftarPin.find(pin => {
+  var hasil = dataPin.find(pin => {
     var noRumahClean = String(pin.noRumah || '').replace(/^0+/, '').toLowerCase();
     
-    // Jika input angka, prioritaskan match nomor rumah
-    if (isPureAngka && noRumahClean === kataKunciAngka) {
-      return true;
-    }
+    if (isPureAngka && noRumahClean === kataKunciAngka) return true;
 
-    // Pencarian fleksibel teks
-    var teksGabungan = `${pin.namaRaw} ${pin.namaTempat} ${pin.kepalaKeluarga} ${pin.anggota} ${pin.noRumah} ${pin.nama} ${pin.kategori}`.toLowerCase();
+    var teksGabungan = [
+      pin.namaRaw,
+      pin.namaTempat,
+      pin.kepalaKeluarga,
+      pin.anggota,
+      pin.noRumah,
+      pin.nama,
+      pin.kategori
+    ].map(val => String(val || '')).join(' ').toLowerCase();
+
     return teksGabungan.includes(kataKunci);
   });
 
   if (hasil) {
+    console.log(`🎯 [Cari Admin Ditemukan] Match pada: "${hasil.namaRaw}"`);
     pinHasilPencarian = hasil;
 
-    if (typeof markerGroup !== 'undefined' && hasil.marker && !markerGroup.hasLayer(hasil.marker)) {  
-      markerGroup.addLayer(hasil.marker);  
+    if (typeof markerGroup !== 'undefined' && hasil.marker) {
+      if (!markerGroup.hasLayer(hasil.marker)) {
+        markerGroup.addLayer(hasil.marker);
+      }
     }
     
     if (typeof map !== 'undefined' && hasil.lat && hasil.lng) {
@@ -1672,57 +1685,64 @@ function cariLokasi() {
       });
     }
   } else {
+    console.warn(`❌ [Cari Admin] Kata kunci "${kataKunci}" tidak ditemukan.`);
     alert("❌ Nama warga, kepala keluarga, nomor rumah, atau tempat tidak ditemukan di peta.");
   }
 }
 
  // 3. FUNGSI FILTER KATEGORI LOKASI PETA
+// FUNGSI FILTER KATEGORI KHUSUS HALAMAN ADMIN
 function filterKategori(kat) {
   var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
   
-  if (typeof markerGroup === 'undefined' || typeof daftarPin === 'undefined' || !Array.isArray(daftarPin)) return;
+  console.log(`🔍 [Admin Filter] Menjalankan filter: "${kategoriPilihan}"`);
+  
+  if (typeof markerGroup === 'undefined' || typeof daftarPin === 'undefined' || !Array.isArray(daftarPin)) {
+    console.warn("⚠️ [Admin Filter Warning] markerGroup atau daftarPin belum siap.");
+    return;
+  }
 
   markerGroup.clearLayers();
+  var countTampil = 0;
 
   daftarPin.forEach(function(pin) {
-    // 1. Abaikan pin jika memang diset hidden dari database/admin
-    if (pin.hidden) return;
-
     var teksKategori = String(pin.kategori || '').toLowerCase();
     var teksNama = String(pin.nama || '').toLowerCase();
     var isMatch = false;
 
-    var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
-                 teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
-                 
-    var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
-                  teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
-
-    var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
-                    teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
-
-    var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
-                       teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
-
+    // 🌟 KUNCI UTAMA: Jika filter 'semua', LANGSUNG TAMPILKAN SEMUA TANPA CEK PIN.HIDDEN
     if (kategoriPilihan === 'semua') {
       isMatch = true;
-    } else if (kategoriPilihan === 'kost') {
-      isMatch = isKost;
-    } else if (kategoriPilihan === 'fasum') {
-      isMatch = isFasum;
-    } else if (kategoriPilihan === 'kuliner') {
-      isMatch = isKuliner;
-    } else if (kategoriPilihan === 'minimarket') {
-      isMatch = isMinimarket;
     } else {
-      // Fallback pencarian fleksibel untuk kategori kustom lainnya (misal: "Rumah Warga", "Usaha", dll)
-      isMatch = teksKategori.includes(kategoriPilihan) || teksNama.includes(kategoriPilihan);
+      // Jika memilih kategori spesifik (misal: 'kost', 'fasum'), baru periksa status hidden jika ada
+      if (pin.hidden) return;
+
+      var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
+                   teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
+                   
+      var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
+                    teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
+
+      var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
+                      teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
+
+      var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
+                         teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+
+      if (kategoriPilihan === 'kost') isMatch = isKost;
+      else if (kategoriPilihan === 'fasum') isMatch = isFasum;
+      else if (kategoriPilihan === 'kuliner') isMatch = isKuliner;
+      else if (kategoriPilihan === 'minimarket') isMatch = isMinimarket;
+      else isMatch = teksKategori.includes(kategoriPilihan) || teksNama.includes(kategoriPilihan);
     }
 
     if (isMatch && pin.marker) {
       markerGroup.addLayer(pin.marker);
+      countTampil++;
     }
   });
+
+  console.log(`✅ [Admin Filter Selesai] Ditampilkan di peta: ${countTampil} dari total ${daftarPin.length} pin.`);
 }
 
     function toggleCustomFilter() {
