@@ -1620,33 +1620,39 @@ function initMap() {
 // ==========================================
 // PERBAIKAN 2: CARI LOKASI (Pencarian fleksibel & Penanganan Popup Presisi)
 // ==========================================
-function cariLokasi() {
+function cariLokasi(queryManual) {
   if (document.activeElement) document.activeElement.blur();
 
+  // 1. Ambil kata kunci (bisa dari argumen fungsi atau dari elemen input HTML)
   var inputElem = document.getElementById('searchInput') || document.getElementById('inputCari');
-  var kataKunci = String(inputElem ? inputElem.value : '').toLowerCase().trim();
+  var inputVal = inputElem ? inputElem.value : '';
+  var kataKunci = String(queryManual !== undefined ? queryManual : inputVal).toLowerCase().trim();
   
-  if (!kataKunci) return;
+  if (!kataKunci) {
+    pinHasilPencarian = null;
+    return null;
+  }
 
+  // 2. Pastikan daftarPin tersedia
   var dataPin = (typeof daftarPin !== 'undefined' && Array.isArray(daftarPin)) ? daftarPin : [];
 
   if (dataPin.length === 0) {
-    if (typeof initMap === 'function') initMap();
+    console.warn("⚠️ Data daftarPin masih kosong.");
     alert("⚠️ Data peta belum siap, silakan coba beberapa saat lagi.");
-    return;
+    return null;
   }
 
-  // Bersihkan angka dari nol di depan (misal "05" menjadi "5")
   var kataKunciAngka = kataKunci.replace(/^0+/, '');
   var isPureAngka = /^\d+$/.test(kataKunci);
 
+  // 3. Cari pin yang cocok
   var hasil = dataPin.find(pin => {
     var noRumahClean = String(pin.noRumah || '').replace(/^0+/, '').toLowerCase();
     
-    // 1. Pencocokan tepat jika query berupa angka nomor rumah
+    // Pencocokan nomor rumah persis jika input angka
     if (isPureAngka && noRumahClean === kataKunciAngka) return true;
 
-    // 2. Pencocokan substring pada seluruh metadata lokasi
+    // Pencocokan substring pada teks gabungan
     var teksGabungan = [
       pin.namaRaw,
       pin.namaTempat,
@@ -1662,28 +1668,29 @@ function cariLokasi() {
   if (hasil) {
     pinHasilPencarian = hasil;
 
-    // Pastikan marker ditampilkan di peta walaupun sedang difilter
+    // Tampilkan marker di peta jika tersembunyi akibat filter
     if (typeof markerGroup !== 'undefined' && hasil.marker) {
       if (!markerGroup.hasLayer(hasil.marker)) {
         markerGroup.addLayer(hasil.marker);
       }
     }
     
-    // Terbang ke lokasi koordinat dengan pergeseran offset vertikal agar popup tidak tertutup header
-    if (typeof map !== 'undefined' && hasil.lat && hasil.lng) {
+    // Geser peta dan buka popup
+    if (typeof map !== 'undefined' && map && hasil.lat && hasil.lng) {
       var pointM = map.project([hasil.lat, hasil.lng], 19);
-      var pointC = L.point(pointM.x, pointM.y - 180);
+      var pointC = L.point(pointM.x, pointM.y - 150);
       map.flyTo(map.unproject(pointC, 19), 19);  
 
       map.once('moveend', function() {
         if (hasil.marker && hasil.marker.getPopup()) {
-          hasil.marker.getPopup().options.autoPan = false;
           hasil.marker.openPopup();
         }
       });
     }
+    return hasil;
   } else {
-    alert("❌ Nama warga, kepala keluarga, nomor rumah, atau tempat tidak ditemukan di peta.");
+    alert("❌ Lokasi / Warga tidak ditemukan.");
+    return null;
   }
 }
 
