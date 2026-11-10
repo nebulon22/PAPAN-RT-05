@@ -1521,17 +1521,20 @@ function initMap() {
             var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || '');
             var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || '');
             
-          var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim();
-          var noRumah = String(val.noRumah || val.NoRumah || '').trim();
-          var namaTempat = String(val.namaTempat || val.nama || val.name || '').trim();
-          var textAnggota = String(val.Anggota || val.anggota || val.anggotaKeluarga || '').trim();
+            var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim();
+            var noRumah = String(val.noRumah || val.NoRumah || '').trim();
+            var namaTempat = String(val.namaTempat || val.nama || val.name || '').trim();
+            var textAnggota = String(val.Anggota || val.anggota || val.anggotaKeluarga || '').trim();
 
-          // 🌟 Definisikan namaTampilAsli dengan benar di sini
-          var namaTampilAsli = namaTempat;
-          if (kepalaKeluarga !== '') {
-            var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
-            namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
-          }
+            // 🌟 Perbaikan: Menyusun namaTampilAsli dan namaAsli dengan benar tanpa rawNama yang undefined
+            var namaTampilAsli = namaTempat;
+            if (kepalaKeluarga !== '') {
+              var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
+              namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
+            }
+            if (!namaTampilAsli) {
+              namaTampilAsli = "Warga RT 05";
+            }
             
             var rawHidden = val.Hidden !== undefined ? val.Hidden : val.hidden;
             var rawType = val.Type || val.type || val.Kategori || val.kategori || '';
@@ -1546,7 +1549,7 @@ function initMap() {
               
             var kategoriManual = String(rawType).trim().toLowerCase();
             var urlFoto = String(rawFoto).trim();
-            var namaAsli = String(rawNama).trim();
+            var namaAsli = namaTampilAsli; // Menggunakan namaTampilAsli yang sudah aman
 
             var item = {
               id: key,
@@ -1587,22 +1590,22 @@ function initMap() {
 
             var katFinal = (kategoriManual || (dataIkon && dataIkon.kategori) || '').toLowerCase();
 
-// Gabungkan semua keyword agar pencarian umum mencakup semuanya
-          var keywordPencarian = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
+            // Gabungkan semua keyword agar pencarian umum mencakup semuanya
+            var keywordPencarian = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
 
-          daftarPin.push({ 
-            namaRaw: namaTampilAsli,
-            nama: keywordPencarian, 
-            namaTempat: namaTempat.toLowerCase(),
-            noRumah: noRumah.toLowerCase(),
-            kepalaKeluarga: kepalaKeluarga.toLowerCase(),
-            anggota: textAnggota.toLowerCase(),
-            marker: marker, 
-            lat: item.lat, 
-            lng: item.lng,
-            hidden: item.hidden,
-            kategori: kategoriManual 
-          });
+            daftarPin.push({ 
+              namaRaw: namaTampilAsli,
+              nama: keywordPencarian, 
+              namaTempat: namaTempat.toLowerCase(),
+              noRumah: noRumah.toLowerCase(),
+              kepalaKeluarga: kepalaKeluarga.toLowerCase(),
+              anggota: textAnggota.toLowerCase(),
+              marker: marker, 
+              lat: item.lat, 
+              lng: item.lng,
+              hidden: item.hidden,
+              kategori: kategoriManual 
+            });
           });
 
           filterKategori('semua');
