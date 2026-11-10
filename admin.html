@@ -2711,17 +2711,20 @@ async function cariDetailKeluargaAdmin() {
         }
 
         let daftarWargaWorker = [];
-        Object.keys(dataObj).forEach(key => {
-            const val = dataObj[key];
+        
+        // Tangani data baik berupa Array maupun Objek Key-Value
+        const items = Array.isArray(dataObj) ? dataObj : Object.keys(dataObj).map(k => ({ ...dataObj[k], _id: k }));
+
+        items.forEach((val, idx) => {
             if (!val) return;
 
             daftarWargaWorker.push({
-                id: key,
+                id: val._id || val.id || idx,
                 namaLama: String(val.Nama || val.nama || val.name || '').trim(),
                 kepalaKeluarga: String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim(),
                 anggotaKeluarga: String(val.anggotaKeluarga || val.Anggota || val.anggota || '').trim(),
                 noRumah: String(val.noRumah || val.NoRumah || '').trim(),
-                namaTempat: String(val.namaTempat || '').trim(),
+                namaTempat: String(val.namaTempat || val.namaTempat || '').trim(),
                 lat: val.Lat !== undefined ? val.Lat : (val.lat || ''),
                 lng: val.Lng !== undefined ? val.Lng : (val.lng || ''),
                 foto: val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '',
@@ -2729,26 +2732,21 @@ async function cariDetailKeluargaAdmin() {
             });
         });
 
+        // Cari data yang mengandung keyword (pencocokan substring fleksibel)
         const match = daftarWargaWorker.find(row => {
-            const namaLama = row.namaLama.toLowerCase();
-            const kepala = row.kepalaKeluarga.toLowerCase();
-            const anggota = row.anggotaKeluarga.toLowerCase();
-            const noRumahAsli = row.noRumah.toLowerCase();
-            const noRumahTanpaNol = row.noRumah.replace(/^0+/, '').toLowerCase();
-            const namaTempat = row.namaTempat.toLowerCase();
-            
+            const gabungan = `${row.namaLama} ${row.kepalaKeluarga} ${row.anggotaKeluarga} ${row.noRumah} ${row.namaTempat}`.toLowerCase();
+            const noRumahBersih = row.noRumah.replace(/^0+/, '').toLowerCase();
             const keywordBersih = keyword.replace(/^0+/, '');
 
-            return namaLama.includes(keyword) ||
-                   kepala.includes(keyword) || 
-                   anggota.includes(keyword) || 
-                   noRumahAsli.includes(keyword) || 
-                   (noRumahTanpaNol && noRumahTanpaNol === keywordBersih) ||
-                   namaTempat.includes(keyword);
+            return gabungan.includes(keyword) || 
+                   (noRumahBersih && noRumahBersih === keywordBersih);
         });
 
         if (!match) {
-            container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga, nomor rumah, atau tempat tidak ditemukan.</p>`;
+            if (container) {
+                container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga, nomor rumah, atau tempat tidak ditemukan.</p>`;
+            }
+            alert("Nama, nomor rumah, atau anggota keluarga tidak ditemukan.");
             return;
         }
 
