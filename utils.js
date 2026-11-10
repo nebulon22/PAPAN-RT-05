@@ -27,7 +27,7 @@ const RT05_CONFIG = {
 // INISIALISASI FIREBASE V10 + ANONYMOUS AUTH TERPUSAT
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, onValue, update, remove, push, set, get } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+import { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const app = initializeApp(RT05_CONFIG.FIREBASE);
@@ -48,6 +48,7 @@ onAuthStateChanged(auth, (user) => {
 });
 
 // EKSPOS FIREBASE UTILITIES KE GLOBAL WINDOW (Bisa dipanggil di index.html & admin.html)
+// Ekspos ke window
 window.db = db;
 window.auth = auth;
 window.firebaseRef = ref;
@@ -57,6 +58,8 @@ window.firebaseRemove = remove;
 window.firebasePush = push;
 window.firebaseSet = set;
 window.firebaseGet = get;
+window.firebaseLimitToLast = limitToLast;
+window.firebaseQuery = query;
 
 // ==========================================
 // FUNGSI UTILITY PENDUKUNG & PENCARIAN
