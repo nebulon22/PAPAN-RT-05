@@ -2555,11 +2555,10 @@ let globalDataWarga = []; // Menyimpan semua data terpadu dari peta_warga berupa
 let listSemuaRumahAdmin = [];
 
 // ==========================================
-// 1. MEMUAT DATA ADMIN DARI 1 NODE (peta_warga)
+// 1. MEMUAT DATA ADMIN SECARA KONSISTEN
 // ==========================================
 async function muatSemuaDataAdmin() {
     try {
-        // 🌟 Mengambil data melalui Cloudflare Worker Proxy
         const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
         const dataObj = await response.json();
 
@@ -2576,23 +2575,25 @@ async function muatSemuaDataAdmin() {
             return;
         }
 
-        // Iterasi objek data dari Cloudflare Worker
         Object.keys(dataObj).forEach(key => {
             const val = dataObj[key];
             if (!val) return;
 
             const id = key;
-            const namaRumah = val.Nama || val.nama || val.name || '';
+            const namaRumah = String(val.Nama || val.nama || val.name || '').trim();
             const lat = val.Lat !== undefined ? val.Lat : (val.lat || '');
             const lng = val.Lng !== undefined ? val.Lng : (val.lng || '');
             const hidden = val.Hidden !== undefined ? val.Hidden : (val.hidden || false);
             const type = val.Type || val.type || val.Kategori || val.kategori || 'Rumah';
             const foto = val.foto || val.Foto || val['LINK GAMBAR/VIDEO'] || '';
             
-            const kepalaKeluarga = val.kepalaKeluarga || '';
-            const anggotaKeluarga = val.anggotaKeluarga || val.Anggota || '';
-            const noRumah = val.noRumah || '';
-            const namaTempat = val.namaTempat || '';
+            const kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim();
+            const anggotaKeluarga = String(val.anggotaKeluarga || val.Anggota || val.anggota || '').trim();
+            const noRumah = String(val.noRumah || val.NoRumah || '').trim();
+            const namaTempat = String(val.namaTempat || val.namaTempat || '').trim();
+
+            // Gabungkan seluruh keyword agar pencarian fleksibel
+            const keywordPencarian = `${namaRumah} ${kepalaKeluarga} ${anggotaKeluarga} ${noRumah} ${namaTempat}`.toLowerCase();
 
             globalDataWarga.push({
                 id: id,
@@ -2605,19 +2606,19 @@ async function muatSemuaDataAdmin() {
                 type: type,
                 foto: foto,
                 kepalaKeluarga: kepalaKeluarga,
-                anggotaKeluarga: anggotaKeluarga
+                anggotaKeluarga: anggotaKeluarga,
+                keywordPencarian: keywordPencarian
             });
 
             if (namaRumah) listSemuaRumahAdmin.push(namaRumah);
 
-            if (kepalaKeluarga.trim() !== '') {
+            if (kepalaKeluarga !== '') {
                 totalKK++;
                 let jmlAnggota = anggotaKeluarga ? anggotaKeluarga.split(',').filter(Boolean).length : 0;
                 totalJiwa += (1 + jmlAnggota);
             }
         });
         
-        // Perbarui elemen UI statistik
         document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
         document.getElementById("stat-total-kk").innerText = totalKK + " KK";
         document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
@@ -2716,15 +2717,15 @@ async function cariDetailKeluargaAdmin() {
 
             daftarWargaWorker.push({
                 id: key,
-                namaLama: String(val.Nama || val.nama || '').trim(),
-                kepalaKeluarga: String(val.kepalaKeluarga || '').trim(),
-                anggotaKeluarga: String(val.anggotaKeluarga || val.Anggota || '').trim(),
-                noRumah: String(val.noRumah || '').trim(),
+                namaLama: String(val.Nama || val.nama || val.name || '').trim(),
+                kepalaKeluarga: String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim(),
+                anggotaKeluarga: String(val.anggotaKeluarga || val.Anggota || val.anggota || '').trim(),
+                noRumah: String(val.noRumah || val.NoRumah || '').trim(),
                 namaTempat: String(val.namaTempat || '').trim(),
                 lat: val.Lat !== undefined ? val.Lat : (val.lat || ''),
                 lng: val.Lng !== undefined ? val.Lng : (val.lng || ''),
                 foto: val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '',
-                type: val.Type || val.type || val.Kategori || ''
+                type: val.Type || val.type || val.Kategori || val.kategori || ''
             });
         });
 
