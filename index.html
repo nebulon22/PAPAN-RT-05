@@ -1611,7 +1611,9 @@ window.addEventListener('pageshow', function(event) {
 });
   
 window.jalankanPencarianPeta = function() {
-  var kataKunci = String(document.getElementById('searchInput').value || '').toLowerCase().trim();
+  var inputEl = document.getElementById('searchInput');
+  var kataKunci = String(inputEl ? inputEl.value : '').toLowerCase().trim();
+  
   if (!kataKunci) {
     alert("Masukkan kata kunci (Nama, Kepala Keluarga, Anggota, No. Rumah, atau Kategori) yang ingin dicari!");
     return;
@@ -1630,18 +1632,20 @@ window.jalankanPencarianPeta = function() {
     return;
   }
 
-  // 🔍 Pencarian fleksibel mencakup semua atribut properti pada pin
-  var keywordBersih = kataKunci.replace(/^0+/, ''); // Untuk toleransi nomor rumah misal "06" jadi "6"
+  var keywordBersih = kataKunci.replace(/^0+/, ''); // Toleransi nomor rumah misal "06" jadi "6"
 
+  // 🔍 Pencarian fleksibel mencakup semua atribut properti pada pin
   var hasil = daftarPin.find(pin => {
-    var namaRaw = String(pin.namaRaw || pin.nama || '').toLowerCase();
+    var teksGabungan = String(pin.nama || '').toLowerCase();
+    var namaRaw = String(pin.namaRaw || '').toLowerCase();
     var noRumahAsli = String(pin.noRumah || '').toLowerCase();
     var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
     var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
-    var anggotaKeluarga = String(pin.anggotaKeluarga || pin.Anggota || '').toLowerCase();
-    var kategori = String(pin.kategori || pin.type || '').toLowerCase();
+    var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
+    var kategori = String(pin.kategori || '').toLowerCase();
     
-    return namaRaw.includes(kataKunci) || 
+    return teksGabungan.includes(kataKunci) || 
+           namaRaw.includes(kataKunci) ||
            kepalaKeluarga.includes(kataKunci) || 
            anggotaKeluarga.includes(kataKunci) ||
            noRumahAsli.includes(kataKunci) || 
