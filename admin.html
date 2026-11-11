@@ -1446,13 +1446,20 @@ if (typeof sesuaikanFormKategori === 'function') {
   }
 });
 
-    function logoutAdmin() {
-      localStorage.removeItem('authAdmin');
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('verifiedPin');
-      localStorage.removeItem('admin_login_time');
-      window.location.href = "index.html";
-    }
+function logoutAdmin() {
+  // 1. Hapus token kunci lama
+  localStorage.removeItem('authAdmin');
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('verifiedPin');
+  localStorage.removeItem('admin_login_time');
+
+  // 2. 🌟 HAPUS JUGA TOKEN & PIN BARU (Diselaraskan dengan Worker Proxy & Uploader)
+  localStorage.removeItem('rt05_admin_token');
+  localStorage.removeItem('rt05_admin_pin');
+
+  // 3. Arahkan kembali ke halaman utama
+  window.location.href = "index.html";
+}
 
 var map, daftarPin = [], pinRumahAktif = null;
 var markerGroup = L.layerGroup();
