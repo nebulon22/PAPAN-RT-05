@@ -1327,7 +1327,7 @@ function initPetaDanData() {
   window.addEventListener('utilsSiap', initPetaDanData);
 
 function muatDataPetaWarga() {
-  // 🌟 Ambil endpoint secara aman langsung dari RT05_CONFIG di utils.js
+  // 🌟 Ambil endpoint secara aman dari RT05_CONFIG
   const endpointPeta = window.RT05_CONFIG && window.RT05_CONFIG.PETA_PROXY_URL;
   
   if (!endpointPeta) {
@@ -1335,8 +1335,15 @@ function muatDataPetaWarga() {
     return;
   }
 
-  // 1. Ambil data melalui Cloudflare Worker proxy secara aman
-  fetch(endpointPeta)
+  // 🌟 AMBIL TOKEN ADMIN JIKA ADA (Agar Admin bisa melihat seluruh rumah)
+  const adminToken = localStorage.getItem('rt05_admin_token') || localStorage.getItem('adminToken') || '';
+  const headers = { 'Content-Type': 'application/json' };
+  if (adminToken) {
+    headers['X-Admin-Token'] = adminToken;
+  }
+
+  // 1. Ambil data melalui Cloudflare Worker proxy secara aman dengan Header Admin
+  fetch(endpointPeta, { method: 'GET', headers: headers })
     .then(response => {
       if (!response.ok) {
         throw new Error("Gagal mengambil data dari server proxy.");
@@ -1355,14 +1362,16 @@ function muatDataPetaWarga() {
       }
 
       markerGroup.clearLayers();
-      daftarPin = [];
+      
+      // 🌟 PASTI KAN daftarPin & daftarDataPeta TERBUKA KE WINDOW GLOBAL UNTUK SEARCH BOX
+      window.daftarPin = [];
+      window.daftarDataPeta = [];
 
       if (!dataObj) return;
 
       var baris = [];
       Object.keys(dataObj).forEach(key => {
         var item = dataObj[key];
-        // Mendukung pengecekan properti data lama maupun baru
         if (item && (item.nama || item.name || item.Nama || item.kepalaKeluarga)) {
           baris.push(item);
         }
@@ -1377,14 +1386,10 @@ function muatDataPetaWarga() {
         for (let i = index; i < batas; i++) {
           var kolom = baris[i];
           
-        // 🌟 Ambil data Kepala Keluarga, No Rumah, Nama Tempat, & Anggota Keluarga
           var kepalaKeluarga = String(kolom.kepalaKeluarga || kolom.KepalaKeluarga || '').trim();
           var noRumah = String(kolom.noRumah || kolom.NoRumah || '').trim();
           var namaTempat = String(kolom.namaTempat || kolom.Nama || kolom.nama || kolom.name || '').trim();
-          
-          // 🌟 PERBAIKAN DI SINI: Tambahkan kolom.anggotaKeluarga
           var textAnggota = String(kolom.anggotaKeluarga || kolom.Anggota || kolom.anggota || '').trim(); 
-          
           var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
 
           var namaTampilAsli = namaTempat;
@@ -1418,7 +1423,11 @@ function muatDataPetaWarga() {
 
             if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-            var namaTersensor = sensorNamaDepan(kepalaKeluarga !== '' ? kepalaKeluarga : namaTampilAsli, kategoriManual);
+            // Sensor nama hanya untuk publik/warga biasa jika ada fungsi sensor
+            var namaTersensor = typeof sensorNamaDepan === 'function' 
+              ? sensorNamaDepan(kepalaKeluarga !== '' ? kepalaKeluarga : namaTampilAsli, kategoriManual)
+              : (kepalaKeluarga !== '' ? kepalaKeluarga : namaTampilAsli);
+
             if (kepalaKeluarga !== '') {
               var formatNoRmhSensor = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
               namaTersensor = `${namaTersensor}${formatNoRmhSensor}`;
@@ -1439,10 +1448,10 @@ function muatDataPetaWarga() {
             
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-            // 🌟 Teks pencarian HANYA berisi Nama Tempat/Kepala Keluarga + Anggota Keluarga (TANPA nomor rumah bawaan)
             var keywordPencarian = `${namaTempat} ${kepalaKeluarga} ${textAnggota}`.toLowerCase();
 
-            daftarPin.push({ 
+            // 🌟 Simpan ke Window Global
+            window.daftarPin.push({ 
               namaRaw: namaTampilAsli,
               nama: keywordPencarian, 
               noRumah: noRumah.toLowerCase(),
@@ -1455,6 +1464,7 @@ function muatDataPetaWarga() {
               kategori: kategoriManual || dataIkon.kategori 
             });
 
+            // Abaikan penancapan pin di peta jika disembunyikan oleh Worker (untuk warga biasa)
             if (statusHidden) continue;
 
             if (typeof markerGroup !== 'undefined' && markerGroup) {
@@ -1474,6 +1484,9 @@ function muatDataPetaWarga() {
             setTimeout(prosesChunk, 4);
           }
         } else {
+          // Salin ke daftarDataPeta agar fungsi cariLokasi() di utils.js bekerja
+          window.daftarDataPeta = window.daftarPin;
+          
           if (typeof filterKategori === 'function') {
             filterKategori('awal');
           }
@@ -1614,6 +1627,9 @@ window.addEventListener('pageshow', function(event) {
   }
 });
   
+// ==========================================
+// 2. FUNGSI PENCARIAN DI SEARCH BOX (GLOBAL)
+// ==========================================
 window.jalankanPencarianPeta = function(e) {
   // Stop propagasi agar event tidak memicu listener lain
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
@@ -1622,25 +1638,33 @@ window.jalankanPencarianPeta = function(e) {
   var inputEl = document.getElementById('searchInput');
   var kataKunci = String(inputEl ? inputEl.value : '').toLowerCase().trim();
   
+  // 🌟 JIKA DIPANGGIL SECARA OTOMATIS SAAT AWAL LOAD DENGAN INPUT KOSONG -> SILENT RETURN
+  // TAPI JIKA ENGAN DISENGADJA DIKLIK WARGA (Event 'click') DENGAN INPUT KOSONG -> TAMPILKAN TOAST
   if (!kataKunci) {
-    tampilkanToast("Masukkan kata kunci!", "warning"); // Opsional: Pakai toast agar tidak muncul alert bawaan browser
+    if (e && (e.type === 'click' || e.type === 'submit')) {
+      tampilkanToast("Masukkan kata kunci!", "warning");
+    }
     return;
   }
 
-  if (!daftarPin || daftarPin.length === 0) {
-    alert("Data peta belum sepenuhnya dimuat, mohon tunggu sebentar...");
+  // Gunakan data pin dari Window Global
+  const targetDaftar = window.daftarPin || (typeof daftarPin !== 'undefined' ? daftarPin : []);
+
+  if (!targetDaftar || targetDaftar.length === 0) {
+    tampilkanToast("Data peta belum sepenuhnya dimuat, mohon tunggu sebentar...", "warning");
     return;
   }
 
   var keywordBersih = kataKunci.replace(/^0+/, '');
   var isPureAngka = /^\d+$/.test(kataKunci);
 
-  var hasil = daftarPin.find(pin => {
+  // Cari pin lokasi yang cocok (by nama, no rumah, kepala keluarga, anggota, atau kategori)
+  var hasil = targetDaftar.find(pin => {
     var noRumahAsli = String(pin.noRumah || '').toLowerCase().trim();
     var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
     
     if (isPureAngka) {
-      return noRumahTanpaNol === keywordBersih;
+      return noRumahTanpaNol === keywordBersih || noRumahAsli === kataKunci;
     }
 
     var teksNama = String(pin.nama || '').toLowerCase();
@@ -1657,15 +1681,19 @@ window.jalankanPencarianPeta = function(e) {
   });
 
   if (hasil) {
-    if (typeof pinRumahAktif !== 'undefined' && pinRumahAktif) {  
-      map.removeLayer(pinRumahAktif);  
-      pinRumahAktif = null;  
-    }
-    if (!map.hasLayer(hasil.marker)) {
-      hasil.marker.addTo(map);
-      pinRumahAktif = hasil.marker;
+    // Bersihkan marker highlight aktif sebelumnya jika ada
+    if (window.pinRumahAktif && map.hasLayer(window.pinRumahAktif)) {  
+      map.removeLayer(window.pinRumahAktif);  
+      window.pinRumahAktif = null;  
     }
 
+    // Tampilkan marker hasil pencarian jika belum ada di map
+    if (!map.hasLayer(hasil.marker)) {
+      hasil.marker.addTo(map);
+      window.pinRumahAktif = hasil.marker;
+    }
+
+    // Arahkan kamera peta melayang (flyTo) dengan offset posisi popup 200px
     var pointM = map.project([hasil.lat, hasil.lng], 19);
     var pointC = L.point(pointM.x, pointM.y - 200);
     map.flyTo(map.unproject(pointC, 19), 19);
@@ -1674,8 +1702,8 @@ window.jalankanPencarianPeta = function(e) {
       if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
       hasil.marker.openPopup();
     });
+
   } else {
-    // Dipanggil hanya 1x saja
     tampilkanToast("Data \"" + kataKunci + "\" tidak ditemukan.", "error");
   }
 };
