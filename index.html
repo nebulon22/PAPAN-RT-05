@@ -1439,8 +1439,8 @@ function muatDataPetaWarga() {
             
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-            // 🌟 Gabungkan teks pencarian agar mencakup Anggota Keluarga
-            var keywordPencarian = `${namaTampilAsli} ${textAnggota} ${noRumah}`.toLowerCase();
+            // 🌟 Teks pencarian HANYA berisi Nama Tempat/Kepala Keluarga + Anggota Keluarga (TANPA nomor rumah bawaan)
+            var keywordPencarian = `${namaTempat} ${kepalaKeluarga} ${textAnggota}`.toLowerCase();
 
             daftarPin.push({ 
               namaRaw: namaTampilAsli,
@@ -1627,28 +1627,28 @@ window.jalankanPencarianPeta = function() {
     return;
   }
 
-  var keywordBersih = kataKunci.replace(/^0+/, ''); // Hilangkan nol di depan (misal "05" -> "5")
-  var isPureAngka = /^\d+$/.test(kataKunci);      // Cek apakah input murni angka
+  var keywordBersih = kataKunci.replace(/^0+/, ''); // Hilangkan angka 0 di depan (misal "05" -> "5")
+  var isPureAngka = /^\d+$/.test(kataKunci);      // Cek apakah pencarian murni berupa angka
 
-  // 🔍 Pencarian fleksibel & presisi
+  // 🔍 Pencarian dengan logika terpisah antara Nomor Rumah & Nama
   var hasil = daftarPin.find(pin => {
     var noRumahAsli = String(pin.noRumah || '').toLowerCase().trim();
     var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
     
-    // 🌟 1. Jika pencarian berupa ANGKA MURNI, cari yang nomor rumahnya COCOK PERSIS
-    if (isPureAngka && noRumahTanpaNol !== '') {
-      if (noRumahTanpaNol === keywordBersih) return true;
+    // 🌟 1. Jika pengguna mengetik ANGKA MURNI (seperti "5"), COCOKKAN PERSIS DENGAN NOMOR RUMAH
+    if (isPureAngka) {
+      return noRumahTanpaNol === keywordBersih;
     }
 
-    // 🌟 2. Pencarian teks biasa (Nama, Anggota, Tempat, Kategori)
-    var teksGabungan = String(pin.nama || '').toLowerCase();
-    var namaTempat = String(pin.namaTempat || '').toLowerCase();
+    // 🌟 2. Jika pengguna mengetik NAMA/TEKS, gunakan pencarian parsial (includes)
+    var teksNama = String(pin.nama || '').toLowerCase();
+    var namaRaw = String(pin.namaRaw || '').toLowerCase();
     var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
     var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
     var kategori = String(pin.kategori || '').toLowerCase();
     
-    return teksGabungan.includes(kataKunci) || 
-           namaTempat.includes(kataKunci) ||
+    return teksNama.includes(kataKunci) || 
+           namaRaw.includes(kataKunci) ||
            kepalaKeluarga.includes(kataKunci) || 
            anggotaKeluarga.includes(kataKunci) ||
            kategori.includes(kataKunci);
