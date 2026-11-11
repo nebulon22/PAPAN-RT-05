@@ -1627,14 +1627,22 @@ window.jalankanPencarianPeta = function() {
     return;
   }
 
-  var keywordBersih = kataKunci.replace(/^0+/, ''); // Toleransi nomor rumah misal "06" jadi "6"
+  var keywordBersih = kataKunci.replace(/^0+/, ''); // Hilangkan nol di depan (misal "05" -> "5")
+  var isPureAngka = /^\d+$/.test(kataKunci);      // Cek apakah input murni angka
 
-  // 🔍 Pencarian fleksibel mencakup semua atribut properti pada pin
+  // 🔍 Pencarian fleksibel & presisi
   var hasil = daftarPin.find(pin => {
+    var noRumahAsli = String(pin.noRumah || '').toLowerCase().trim();
+    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
+    
+    // 🌟 1. Jika pencarian berupa ANGKA MURNI, cari yang nomor rumahnya COCOK PERSIS
+    if (isPureAngka && noRumahTanpaNol !== '') {
+      if (noRumahTanpaNol === keywordBersih) return true;
+    }
+
+    // 🌟 2. Pencarian teks biasa (Nama, Anggota, Tempat, Kategori)
     var teksGabungan = String(pin.nama || '').toLowerCase();
     var namaTempat = String(pin.namaTempat || '').toLowerCase();
-    var noRumahAsli = String(pin.noRumah || '').toLowerCase();
-    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
     var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
     var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
     var kategori = String(pin.kategori || '').toLowerCase();
@@ -1643,8 +1651,6 @@ window.jalankanPencarianPeta = function() {
            namaTempat.includes(kataKunci) ||
            kepalaKeluarga.includes(kataKunci) || 
            anggotaKeluarga.includes(kataKunci) ||
-           noRumahAsli.includes(kataKunci) || 
-           (noRumahTanpaNol && noRumahTanpaNol === keywordBersih) ||
            kategori.includes(kataKunci);
   });
 
