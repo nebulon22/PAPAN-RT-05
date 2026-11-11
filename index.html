@@ -1255,13 +1255,13 @@ window.addEventListener('firebaseSiapIndex', initMainPageChatListener);
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
-  var map; 
+var map; 
   var daftarPin = [];
   var dataKeuangan = [];
   var pinRumahAktif = null;
-  var isDataReady = false; // 🌟 PASTIKAN VARIABEL INI ADA DI SINI
+  var isDataReady = false;
   
-function initPetaDanData() {
+  function initPetaDanData() {
     // 1. Render Peta Leaflet secara sinkron dan instan begitu DOM & Leaflet siap
     if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
       let container = L.DomUtil.get('map');
@@ -1296,35 +1296,22 @@ function initPetaDanData() {
       }, 150);
     }
     
-    // 2. Ambil data peta warga lewat worker secara independen dengan timeout
+    // 2. Ambil data peta warga (hanya set isDataReady jika fungsi dipanggil)
     if (map && !isDataReady) {
-      isDataReady = true;
-      
-      setTimeout(() => {
-        if (typeof muatDataPetaWarga === 'function') {
-          muatDataPetaWarga();
-        }
-      }, 300);
+      if (typeof muatDataPetaWarga === 'function') {
+        isDataReady = true;
+        muatDataPetaWarga();
+      }
     }
 
-    // 3. Sinkronisasi jimpitan offline yang membutuhkan Firebase
+    // 3. Sinkronisasi jimpitan offline & badge
     if (window.db && typeof window.firebaseRef === 'function') {
       if (navigator.onLine) kirimDataPendingJimpitan();
     }
-    // 🌟 Tambahkan baris ini agar pemantau badge langsung berjalan
     if (typeof muatBadgeInfoRT === 'function') {
       muatBadgeInfoRT();
     }
   }
-
-  
-  // Eksekusi secepat mungkin berdasarkan status dokumen saat ini
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initPetaDanData();
-  } else {
-    document.addEventListener('DOMContentLoaded', initPetaDanData);
-  }
-  window.addEventListener('utilsSiap', initPetaDanData);
 
 function muatDataPetaWarga() {
   // 🌟 Ambil endpoint secara aman dari RT05_CONFIG
@@ -3605,8 +3592,15 @@ window.simpanWargaBaru = async function() {
     alert('❌ Gagal menyimpan data: ' + err.message);
   }
 };
-  </script>
-  
+  // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
+  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+    initPetaDanData();
+  } else {
+    document.addEventListener('DOMContentLoaded', initPetaDanData);
+  }
+  window.addEventListener('utilsSiap', initPetaDanData);
 
-</body>
+  
+  </script>
+  </body>
 </html>
