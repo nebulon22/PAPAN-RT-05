@@ -4152,7 +4152,7 @@ function editPengumuman(id) {
   });
 }
 
-// 📢 Simpan / Terbitkan Pengumuman Baru (Upload file & Simpan ke Firebase dilakukan sekaligus)
+// 📢 Simpan / Terbitkan Pengumuman Baru (Upload file & Simpan via Worker Admin Proxy)
 async function simpanPengumumanAdmin() {
   const tglInput = document.getElementById('pengumumanTanggal').value;
   const judul = document.getElementById('pengumumanJudul').value.trim();
@@ -4189,11 +4189,12 @@ async function simpanPengumumanAdmin() {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
-      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
-      let response = await fetch(workerUrl, {
+      // Menggunakan RT05_CONFIG.UPLOADER_URL
+      const uploaderUrl = RT05_CONFIG.UPLOADER_URL || "https://rt05-uploader.deny220291.workers.dev/";
+      let response = await fetch(uploaderUrl, {
         method: "POST",
         headers: {
-          "X-File-Name": "pengumuman_" + Date.now() + "_" + file.name,
+          "X-File-Name": encodeURIComponent("pengumuman_" + Date.now() + "_" + file.name),
           "Content-Type": file.type || "application/octet-stream"
         },
         body: file
@@ -4204,14 +4205,14 @@ async function simpanPengumumanAdmin() {
 
       if (result.success && result.url) {
         let urlAwal = new URL(result.url);
-        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain baru
+        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain R2
       } else {
         throw new Error(result.error || "Gagal mengunggah file media.");
       }
     }
 
-    // 🌟 2. SIMPAN KE FIREBASE
-    if (btn) { btn.innerText = "⏳ Menyimpan ke Firebase..."; }
+    // 🌟 2. SIMPAN KE DATABASE MELALUI CLOUDFLARE WORKER ADMIN
+    if (btn) { btn.innerText = "⏳ Menyimpan ke Database..."; }
 
     // Jika currentEditPengumumanId ada isinya, berarti pakai ID lama (Update). Jika null, buat ID baru.
     const pengumumanId = (typeof currentEditPengumumanId !== 'undefined' && currentEditPengumumanId) ? currentEditPengumumanId : ('info_' + Date.now());
@@ -4229,12 +4230,33 @@ async function simpanPengumumanAdmin() {
       timestamp: Date.now()
     };
 
-    const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
-    await window.firebaseSet(targetRef, payload);
+    // 🔒 Ambil PIN Admin & URL Worker Admin dari Utils
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+    const workerAdminUrl = RT05_CONFIG.ADMIN_API_URL;
+
+    // Kirim request PUT untuk menulis/memperbarui node pengumuman/{id}
+    const responseProxy = await fetch(workerAdminUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: `pengumuman/${pengumumanId}`,
+        method: "PUT",
+        data: payload
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan pengumuman via Worker Admin.");
+    }
 
     currentEditPengumumanId = null; // Reset mode edit
 
-    alert("✅ Pengumuman berhasil diperbarui/diterbitkan ke Firebase!");
+    alert("✅ Pengumuman berhasil diperbarui/diterbitkan!");
     
     // Reset form
     document.getElementById('formInputPengumuman').reset();
@@ -4257,7 +4279,7 @@ async function simpanPengumumanAdmin() {
     if (typeof muatDaftarPengumumanAdmin === 'function') muatDaftarPengumumanAdmin();
 
   } catch (err) {
-    alert("❌ Gagal menyimpan ke Firebase: " + err.message);
+    alert("❌ Gagal menyimpan pengumuman: " + err.message);
   } finally {
     if (btn) {
       btn.disabled = false;
