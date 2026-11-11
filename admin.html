@@ -7,7 +7,7 @@
   <title>Admin - Denah, Inventaris, & Keuangan RT 05</title>
   
   <!-- PWA & Theme Color -->
-  <link rel="manifest" href="manifest.json?v=1.6.6">
+  <link rel="manifest" href="manifest.json?v=1.6.9">
   <meta name="theme-color" content="#0288d1">
 
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
@@ -1264,55 +1264,156 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
       perbaruiIndikatorSyncAdmin();
     });
 
+
+    function verifikasiPin() {
+    const pin = document.getElementById("adminPin")?.value;
+    if (pin === RT05_CONFIG.ADMIN_PIN) {
+        simpanSesiAdmin();
+        
+        // 🟢 Set token rahasia admin ke localStorage saat PIN benar
+        if (RT05_CONFIG.ADMIN_SECRET_TOKEN) {
+            localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
+        }
+        
+        bukaAkses();
+        pilihanAdmin.style.display = 'block';
+        alert("Akses Admin Diberikan!");
+    } else {
+        alert("PIN Admin Salah!");
+    }
+}
+// ==========================================
+// KELOLA SESI & AUTHENTICATION ADMIN
+// ==========================================
+
+// 1. Simpan Sesi & Token Admin ke LocalStorage
+function simpanSesiAdmin(token, pin) {
+  const session = {
+    timestamp: new Date().getTime()
+  };
+  localStorage.setItem("rt05_admin_session", JSON.stringify(session));
+  localStorage.setItem("authAdmin", "true");
+  localStorage.setItem("admin_login_time", Date.now().toString());
+
+  // 🌟 SIMPAN PIN ADMIN KE STORAGE
+  if (pin) {
+    localStorage.setItem("adminPin", pin);
+    localStorage.setItem("rt05_admin_pin", pin);
+    sessionStorage.setItem("adminPin", pin);
+  }
+
+  if (token) {
+    localStorage.setItem("adminToken", token);
+    localStorage.setItem("rt05_admin_token", token);
+  } else if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.ADMIN_SECRET_TOKEN) {
+    localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
+  }
+}
+
+// 2. Periksa Status Sesi (24 Jam)
+function periksaSesiAdmin() {
+  const session = localStorage.getItem("rt05_admin_session") || localStorage.getItem("authAdmin");
+  if (!session) return false;
+
+  const sessionData = localStorage.getItem("rt05_admin_session");
+  if (sessionData) {
+    const data = JSON.parse(sessionData);
+    const sekarang = new Date().getTime();
+    // Masa berlaku 24 jam
+    if (sekarang - data.timestamp > 24 * 60 * 60 * 1000) {
+      logoutAdminSilent();
+      return false;
+    }
+  }
+  return true;
+}
+
+// 3. Eksekusi Login via API Worker
 async function cekLogin() {
-    const input = document.getElementById('adminPin').value.trim();
-    const errorMsg = document.getElementById('loginError');
+  const inputPin = document.getElementById('adminPin').value.trim();
 
-    if (!input) {
-        if (errorMsg) errorMsg.innerText = "⚠️ Masukkan PIN terlebih dahulu.";
-        return;
-    }
+  if (!inputPin) {
+    alert("⚠️ Masukkan PIN terlebih dahulu.");
+    return;
+  }
 
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'verify-pin',
+        pin: inputPin
+      })
+    });
+
+    const textResult = await response.text();
+    let result;
     try {
-        // 🌟 Gunakan RT05_CONFIG.ADMIN_API_URL agar menembak langsung ke Cloudflare Worker, 
-        // bukan ke domain pages lokal.
-        const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                action: 'verify-pin', // Kita beri penanda aksi jika diperlukan, atau langsung kirim pin
-                pin: input 
-            })
-        });
-
-        // Ambil teks dulu untuk mengantisipasi jika respons bukan JSON
-        const textResult = await response.text();
-        let result;
-        try {
-            result = JSON.parse(textResult);
-        } catch (e) {
-            throw new Error("Respon server bukan JSON valid: " + textResult);
-        }
-
-        if (response.ok && result.success) {
-            localStorage.setItem('authAdmin', 'true');
-            localStorage.setItem('adminToken', result.token || ('rt05-admin-' + Date.now()));
-            localStorage.setItem('admin_login_time', Date.now().toString());
-
-            document.getElementById('adminPin').value = '';
-            if (errorMsg) errorMsg.innerText = "";
-
-            if (typeof bukaAkses === 'function') {
-                bukaAkses();
-            }
-        } else {
-            alert("❌ " + (result.error || result.message || "PIN salah! Akses ditolak."));
-            document.getElementById('adminPin').value = '';
-        }
-    } catch (error) {
-        console.error("Gagal verifikasi PIN:", error);
-        alert("❌ Terjadi kesalahan jaringan / URL API Worker keliru.");
+      result = JSON.parse(textResult);
+    } catch (e) {
+      throw new Error("Respon server bukan JSON valid: " + textResult);
     }
+
+if (response.ok && result.success) {
+      // 🌟 Oper inputPin sebagai parameter kedua
+      simpanSesiAdmin(result.token || ('rt05-admin-' + Date.now()), inputPin);
+      
+      // Buka Antarmuka Peta & Admin
+      bukaAkses();
+    } else {
+      alert("❌ " + (result.error || result.message || "PIN salah! Akses ditolak."));
+      document.getElementById('adminPin').value = '';
+    }
+  } catch (error) {
+    console.error("Gagal verifikasi PIN:", error);
+    alert("❌ Terjadi kesalahan jaringan / URL API Worker keliru.");
+  }
+}
+
+// 4. Buka Antarmuka Admin (Sembunyikan Overlay Login & Inisialisasi Peta)
+function bukaAkses() {
+  const overlay = document.getElementById('login-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = 'auto';
+
+  const inputPin = document.getElementById('adminPin');
+  if (inputPin) inputPin.value = '';
+
+  initMap();
+
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 200);
+
+  setTimeout(() => {
+    muatSemuaDataAdmin();
+  }, 500);
+}
+
+// 5. Logout Bersih (Pindah ke Mode Warga)
+function logoutAdmin() {
+  // Hapus semua penanda login & token admin
+  localStorage.removeItem('authAdmin');
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('verifiedPin');
+  localStorage.removeItem('admin_login_time');
+  localStorage.removeItem('rt05_admin_session');
+  localStorage.removeItem('rt05_admin_token');
+  localStorage.removeItem('rt05_admin_pin');
+
+  // Redirect ke halaman index/warga
+  window.location.href = "index.html";
+}
+
+function logoutAdminSilent() {
+  localStorage.removeItem('authAdmin');
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('verifiedPin');
+  localStorage.removeItem('admin_login_time');
+  localStorage.removeItem('rt05_admin_session');
+  localStorage.removeItem('rt05_admin_token');
+  localStorage.removeItem('rt05_admin_pin');
 }
 
     // 🌟 Buat fungsi baru ini untuk memunculkan overlay login admin
@@ -1333,49 +1434,6 @@ async function cekLogin() {
       }
     }
 
-    function bukaAkses() {
-      document.getElementById('login-overlay').style.display = 'none';
-      document.body.style.overflow = 'auto';
-      
-      // Perbaikan: gunakan ID adminPin yang benar agar tidak error
-      const inputPin = document.getElementById('adminPin');
-      if (inputPin) inputPin.value = '';
-
-      initMap();
-
-      setTimeout(() => {
-        if (map) map.invalidateSize();
-      }, 200);
-
-      setTimeout(() => {
-        muatSemuaDataAdmin();
-      }, 500);
-    }
-
-    
-    function periksaSesiAdmin() {
-      const isAuth = localStorage.getItem('authAdmin') === 'true';
-      const token = localStorage.getItem('adminToken');
-      const loginTime = parseInt(localStorage.getItem('admin_login_time') || '0', 10);
-      
-      const BATAS_WAKTU = 30 * 60 * 1000;
-      const waktuSekarang = Date.now();
-
-      if (isAuth && token && (waktuSekarang - loginTime > BATAS_WAKTU)) {
-        localStorage.removeItem('authAdmin');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('admin_login_time');
-        alert("⏱️ Sesi login Anda telah berakhir (30 menit). Silakan masukkan PIN kembali.");
-        return false;
-      }
-
-      if (isAuth && token) {
-        bukaAkses();
-        return true;
-      }
-
-      return false;
-    }
 
 document.getElementById('dataForm').addEventListener('submit', async function(e) {
   e.preventDefault();
@@ -1446,13 +1504,7 @@ if (typeof sesuaikanFormKategori === 'function') {
   }
 });
 
-    function logoutAdmin() {
-      localStorage.removeItem('authAdmin');
-      localStorage.removeItem('adminToken');
-      localStorage.removeItem('verifiedPin');
-      localStorage.removeItem('admin_login_time');
-      window.location.href = "index.html";
-    }
+
 
 var map, daftarPin = [], pinRumahAktif = null;
 var markerGroup = L.layerGroup();
@@ -2336,19 +2388,46 @@ window.simpanPerubahanWargaBaru = async function(e) {
       btn.innerText = "⏳ Menyimpan ke Database...";
     }
 
-    const updates = {};
-    updates[`warga_baru/${id}/nama`] = nama;
-    updates[`warga_baru/${id}/noRumah`] = noRumah;
-    updates[`warga_baru/${id}/hp`] = hp;
-    updates[`warga_baru/${id}/status`] = status;
-    updates[`warga_baru/${id}/cerita`] = cerita;
-    updates[`warga_baru/${id}/foto`] = fotoFinalUrl; // Menyimpan URL foto R2 baru
+    // 🔒 1. Susun objek data yang akan diperbarui
+    const dataUpdate = {
+      nama: nama,
+      noRumah: noRumah,
+      hp: hp,
+      status: status,
+      cerita: cerita,
+      foto: fotoFinalUrl,
+      updatedAt: Date.now()
+    };
 
-    await window.firebaseUpdate(window.firebaseRef(window.db), updates);
-    
+// 🔒 2. Ambil PIN Admin dan URL Worker Admin dari RT05_CONFIG (utils.js)
+const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+
+// Menggunakan ADMIN_API_URL sesuai definisi di utils.js Anda
+const workerAdminUrl = RT05_CONFIG.ADMIN_API_URL;
+
+// 🔒 3. Kirim update melalui Worker Admin Proxy (PATCH)
+const responseProxy = await fetch(workerAdminUrl, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    pin: pinAdmin,
+    path: `warga_baru/${id}`, // atau `peta_warga/${idWarga}`
+    method: "PATCH",
+    data: dataUpdate
+  })
+});
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan perubahan warga baru via Worker Admin.");
+    }
+
     alert('✅ Data warga baru & foto berhasil diperbarui!');
     tutupModalEditWargaBaru();
-    
+
     if (typeof bukaModalWargaBaruAdmin === 'function') {
       bukaModalWargaBaruAdmin();
     }
@@ -3014,18 +3093,27 @@ async function prosesUploadR2Universal(jenisTarget = 'warga') {
     const ekstensi = file.name.split('.').pop() || 'jpg';
     const namaFileKustom = `${jenisTarget}_${Date.now()}.${ekstensi}`;
 
-    // Kirim ke Cloudflare Worker (menggunakan config terpusat)
+    // 🌟 1. Ambil PIN Admin tersimpan dari LocalStorage / input admin
+    const adminPin = localStorage.getItem('rt05_admin_pin') || (window.CURRENT_ADMIN_PIN || '');
+
+    // 🌟 2. Kirim ke Cloudflare Worker (termasuk header X-Admin-Pin)
     const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
       method: "POST",
       headers: {
-        "X-File-Name": encodeURIComponent(namaFileKustom),
+        "X-File-Name": namaFileKustom,
+        "X-Admin-Pin": adminPin, // 👈 PENTING: Diselaraskan dengan proteksi ADMIN_PIN Worker
         "Content-Type": file.type || "application/octet-stream"
       },
       body: file
     });
 
     const textResult = await response.text();
-    let result = JSON.parse(textResult);
+    let result;
+    try {
+      result = JSON.parse(textResult);
+    } catch (e) {
+      throw new Error("Respon dari server uploader bukan JSON valid: " + textResult);
+    }
 
     if (result.success && result.url) {
       let urlAwal = new URL(result.url);
@@ -3210,8 +3298,27 @@ async function simpanPerubahanWarga(event) {
       dataUpdate.anggotaKeluarga = ""; // Dikosongkan
     }
 
-    const refItem = window.firebaseRef(window.db, `peta_warga/${idWarga}`);
-    await window.firebaseUpdate(refItem, dataUpdate);
+   // 🔒 PROSES UPDATE MELALUI CLOUDFLARE WORKER ADMIN (Via RT05_CONFIG)
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: `peta_warga/${idWarga}`,
+        method: "PATCH",
+        data: dataUpdate
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal meng-update data via Worker Admin.");
+    }
 
     if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
     tutupModalEditWarga();
@@ -3371,20 +3478,23 @@ function clearInputCariWarga() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    if (typeof perbaruiIndikatorSyncAdmin === 'function') perbaruiIndikatorSyncAdmin();
-    if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
-    
-    muatSemuaDataAdmin();  
+  if (typeof perbaruiIndikatorSyncAdmin === 'function') perbaruiIndikatorSyncAdmin();
+  if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
 
-    if (typeof periksaSesiAdmin === 'function' && periksaSesiAdmin()) {
-        if (typeof muatDataProgker === 'function') muatDataProgker();
-    } else {
-        setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
-    }
+  // Cek apakah sesi masih valid
+  if (periksaSesiAdmin()) {
+    bukaAkses();
+    if (typeof muatDataProgker === 'function') muatDataProgker();
+  } else {
+    // Tampilkan overlay login jika belum terautentikasi
+    const overlay = document.getElementById('login-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
+  }
 
-    if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
-        kirimDataPendingAdmin();
-    }
+  if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
+    kirimDataPendingAdmin();
+  }
 });
 
    function bukaModalLaporan() {
@@ -4049,7 +4159,7 @@ function editPengumuman(id) {
   });
 }
 
-// 📢 Simpan / Terbitkan Pengumuman Baru (Upload file & Simpan ke Firebase dilakukan sekaligus)
+// 📢 Simpan / Terbitkan Pengumuman Baru (Upload file & Simpan via Worker Admin Proxy)
 async function simpanPengumumanAdmin() {
   const tglInput = document.getElementById('pengumumanTanggal').value;
   const judul = document.getElementById('pengumumanJudul').value.trim();
@@ -4086,11 +4196,12 @@ async function simpanPengumumanAdmin() {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
-      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
-      let response = await fetch(workerUrl, {
+      // Menggunakan RT05_CONFIG.UPLOADER_URL
+      const uploaderUrl = RT05_CONFIG.UPLOADER_URL || "https://rt05-uploader.deny220291.workers.dev/";
+      let response = await fetch(uploaderUrl, {
         method: "POST",
         headers: {
-          "X-File-Name": "pengumuman_" + Date.now() + "_" + file.name,
+          "X-File-Name": encodeURIComponent("pengumuman_" + Date.now() + "_" + file.name),
           "Content-Type": file.type || "application/octet-stream"
         },
         body: file
@@ -4101,14 +4212,14 @@ async function simpanPengumumanAdmin() {
 
       if (result.success && result.url) {
         let urlAwal = new URL(result.url);
-        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain baru
+        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain R2
       } else {
         throw new Error(result.error || "Gagal mengunggah file media.");
       }
     }
 
-    // 🌟 2. SIMPAN KE FIREBASE
-    if (btn) { btn.innerText = "⏳ Menyimpan ke Firebase..."; }
+    // 🌟 2. SIMPAN KE DATABASE MELALUI CLOUDFLARE WORKER ADMIN
+    if (btn) { btn.innerText = "⏳ Menyimpan ke Database..."; }
 
     // Jika currentEditPengumumanId ada isinya, berarti pakai ID lama (Update). Jika null, buat ID baru.
     const pengumumanId = (typeof currentEditPengumumanId !== 'undefined' && currentEditPengumumanId) ? currentEditPengumumanId : ('info_' + Date.now());
@@ -4126,12 +4237,33 @@ async function simpanPengumumanAdmin() {
       timestamp: Date.now()
     };
 
-    const targetRef = window.firebaseRef(window.db, 'pengumuman/' + pengumumanId);
-    await window.firebaseSet(targetRef, payload);
+    // 🔒 Ambil PIN Admin & URL Worker Admin dari Utils
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+    const workerAdminUrl = RT05_CONFIG.ADMIN_API_URL;
+
+    // Kirim request PUT untuk menulis/memperbarui node pengumuman/{id}
+    const responseProxy = await fetch(workerAdminUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: `pengumuman/${pengumumanId}`,
+        method: "PUT",
+        data: payload
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan pengumuman via Worker Admin.");
+    }
 
     currentEditPengumumanId = null; // Reset mode edit
 
-    alert("✅ Pengumuman berhasil diperbarui/diterbitkan ke Firebase!");
+    alert("✅ Pengumuman berhasil diperbarui/diterbitkan!");
     
     // Reset form
     document.getElementById('formInputPengumuman').reset();
@@ -4154,7 +4286,7 @@ async function simpanPengumumanAdmin() {
     if (typeof muatDaftarPengumumanAdmin === 'function') muatDaftarPengumumanAdmin();
 
   } catch (err) {
-    alert("❌ Gagal menyimpan ke Firebase: " + err.message);
+    alert("❌ Gagal menyimpan pengumuman: " + err.message);
   } finally {
     if (btn) {
       btn.disabled = false;

@@ -1,8 +1,7 @@
 // utils.js - Kumpulan Konfigurasi, Firebase Global, & Fungsi Pendukung RT 05
 
 const RT05_CONFIG = {
-    GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbz5RqSEYxjwq_wr3ItVkLRexeGWjKLUtxmhVdqbm7kIFdngulFWdBCLU0xqBOichmMQuw/exec",
-    PETA_PROXY_URL: "https://rt05-peta-proxy.deny220291.workers.dev/api/peta-warga",
+    PETA_PROXY_URL: "https://peta.papan05.my.id", 
     UPLOADER_URL: "https://rt05-uploader.deny220291.workers.dev/",
     ADMIN_API_URL: "https://rt05-admin-worker.deny220291.workers.dev",
     FIREBASE: {
@@ -28,27 +27,43 @@ const RT05_CONFIG = {
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+  getAuth, 
+  initializeAuth, 
+  browserLocalPersistence, 
+  browserSessionPersistence, 
+  inMemoryPersistence, 
+  signInAnonymously, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const app = initializeApp(RT05_CONFIG.FIREBASE);
 const db = getDatabase(app, RT05_CONFIG.FIREBASE.databaseURL);
-const auth = getAuth(app);
 
-// Autentikasi Anonim Otomatis di Latar Belakang (Transparan)
+// Inisialisasi Auth Langsung Menggunakan Persistence (Tanpa Memicu GAPI Iframe)
+let auth;
+try {
+  auth = initializeAuth(app, {
+    persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]
+  });
+} catch (e) {
+  auth = getAuth(app);
+}
+
+// Autentikasi Anonim Otomatis di Latar Belakang
 onAuthStateChanged(auth, (user) => {
-    if (!user) {
-        signInAnonymously(auth).then(() => {
-            console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
-        }).catch((err) => {
-            console.error("🔴 Gagal Login Anonim:", err);
-        });
-    } else {
-        console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
-    }
+  if (!user) {
+    signInAnonymously(auth).then(() => {
+      console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
+    }).catch((err) => {
+      console.error("🔴 Gagal Login Anonim:", err);
+    });
+  } else {
+    console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
+  }
 });
 
-// EKSPOS FIREBASE UTILITIES KE GLOBAL WINDOW (Bisa dipanggil di index.html & admin.html)
-// Ekspos ke window
+// EKSPOS UTILITIES DARI MODULE KE GLOBAL WINDOW
 window.db = db;
 window.auth = auth;
 window.firebaseRef = ref;
@@ -146,20 +161,20 @@ function tampilkanToast(pesan, tipe = 'sukses') {
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container-rt05';
-        container.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;';
+        container.style.cssText = 'position: fixed; top: 140px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;';
         document.body.appendChild(container);
     }
 
     const toast = document.createElement('div');
     const bg = tipe === 'error' ? '#ef4444' : (tipe === 'warning' ? '#f59e0b' : '#10b981');
-    toast.style.cssText = `background: ${bg}; color: white; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease; transform: translateY(10px); pointer-events: auto;`;
+    toast.style.cssText = `background: ${bg}; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.25); opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease; transform: translateY(-10px); pointer-events: auto; text-align: center; max-width: 85vw;`;
     toast.innerText = pesan;
 
     container.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; }, 10);
     setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.transform = 'translateY(10px)';
+        toast.style.transform = 'translateY(-10px)';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
@@ -290,8 +305,7 @@ window.tutupFotoBesar = function() {
   }
 };
 
-// Tambahkan di bagian bawah utils.js
-// 1. Helper Global untuk Tombol Persetujuan Chat Warga
+// Helper Global untuk Tombol Persetujuan Chat Warga
 window.approveUser = (uid) => {
   window.firebaseUpdate(window.firebaseRef(window.db, `users/${uid}`), { status: 'aktif' });
 };
@@ -311,7 +325,7 @@ window.toggleRole = (uid, currentRole) => {
   window.firebaseUpdate(window.firebaseRef(window.db, `users/${uid}`), { role: newRole });
 };
 
-// 2. Real-time Listener untuk Manajemen User/Chat Warga
+// Real-time Listener untuk Manajemen User/Chat Warga
 export function inisialisasiListenerUsersAdmin() {
   const pendingTable = document.getElementById('pending-users-list');
   const allUsersTable = document.getElementById('all-users-list');
@@ -418,12 +432,12 @@ export function inisialisasiListenerUsersAdmin() {
   });
 }
 
-// Panggil otomatis saat dokumen selesai dimuat di admin.html
+// Panggil otomatis saat dokumen selesai dimuat
 document.addEventListener('DOMContentLoaded', () => {
   inisialisasiListenerUsersAdmin();
 });
 
-// DAFTARKAN FUNGSI LAIN KE WINDOW GLOBAL
+// DAFTARKAN SEMUA FUNGSI KE WINDOW GLOBAL
 window.RT05_CONFIG = RT05_CONFIG;
 window.perbaikiKoordinat = perbaikiKoordinat;
 window.escapeHTML = escapeHTML;
