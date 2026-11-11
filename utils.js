@@ -146,20 +146,22 @@ function tampilkanToast(pesan, tipe = 'sukses') {
     if (!container) {
         container = document.createElement('div');
         container.id = 'toast-container-rt05';
-        container.style.cssText = 'position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;';
+        // 🟢 Dipindah ke bagian atas (top: 140px agar berada persis di bawah kolom pencarian)
+        container.style.cssText = 'position: fixed; top: 140px; left: 50%; transform: translateX(-50%); z-index: 9999; display: flex; flex-direction: column; gap: 8px; align-items: center; pointer-events: none;';
         document.body.appendChild(container);
     }
 
     const toast = document.createElement('div');
     const bg = tipe === 'error' ? '#ef4444' : (tipe === 'warning' ? '#f59e0b' : '#10b981');
-    toast.style.cssText = `background: ${bg}; color: white; padding: 10px 20px; border-radius: 30px; font-size: 13px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.15); opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease; transform: translateY(10px); pointer-events: auto;`;
+    // 🟢 Animasi turun melayang dari atas
+    toast.style.cssText = `background: ${bg}; color: white; padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: bold; box-shadow: 0 4px 12px rgba(0,0,0,0.25); opacity: 0; transition: opacity 0.3s ease, transform 0.3s ease; transform: translateY(-10px); pointer-events: auto; text-align: center; max-width: 85vw;`;
     toast.innerText = pesan;
 
     container.appendChild(toast);
     setTimeout(() => { toast.style.opacity = '1'; toast.style.transform = 'translateY(0)'; }, 10);
     setTimeout(() => {
         toast.style.opacity = '0';
-        toast.style.transform = 'translateY(10px)';
+        toast.style.transform = 'translateY(-10px)';
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
