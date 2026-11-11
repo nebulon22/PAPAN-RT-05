@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.6.6';   
+const CACHE_NAME = 'rt-kayen-v1.6.7';   
 
 // 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
