@@ -2,7 +2,7 @@
 
 const RT05_CONFIG = {
     GAS_WEB_APP_URL: "https://script.google.com/macros/s/AKfycbz5RqSEYxjwq_wr3ItVkLRexeGWjKLUtxmhVdqbm7kIFdngulFWdBCLU0xqBOichmMQuw/exec",
-    PETA_PROXY_URL: "https://rt05-peta-proxy.deny220291.workers.dev", // 🌟 Sudah tanpa /api/peta-warga
+    PETA_PROXY_URL: "https://peta.papan05.my.id", // 
     UPLOADER_URL: "https://rt05-uploader.deny220291.workers.dev/",
     ADMIN_API_URL: "https://rt05-admin-worker.deny220291.workers.dev",
     FIREBASE: {
