@@ -3425,20 +3425,23 @@ function clearInputCariWarga() {
 }
 
 document.addEventListener("DOMContentLoaded", () => {
-    if (typeof perbaruiIndikatorSyncAdmin === 'function') perbaruiIndikatorSyncAdmin();
-    if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
-    
-    muatSemuaDataAdmin();  
+  if (typeof perbaruiIndikatorSyncAdmin === 'function') perbaruiIndikatorSyncAdmin();
+  if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
 
-    if (typeof periksaSesiAdmin === 'function' && periksaSesiAdmin()) {
-        if (typeof muatDataProgker === 'function') muatDataProgker();
-    } else {
-        setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
-    }
+  // Cek apakah sesi masih valid
+  if (periksaSesiAdmin()) {
+    bukaAkses();
+    if (typeof muatDataProgker === 'function') muatDataProgker();
+  } else {
+    // Tampilkan overlay login jika belum terautentikasi
+    const overlay = document.getElementById('login-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
+  }
 
-    if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
-        kirimDataPendingAdmin();
-    }
+  if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
+    kirimDataPendingAdmin();
+  }
 });
 
    function bukaModalLaporan() {
