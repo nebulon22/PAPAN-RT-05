@@ -1264,56 +1264,7 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
       perbaruiIndikatorSyncAdmin();
     });
 
-async function cekLogin() {
-    const input = document.getElementById('adminPin').value.trim();
-    const errorMsg = document.getElementById('loginError');
 
-    if (!input) {
-        if (errorMsg) errorMsg.innerText = "⚠️ Masukkan PIN terlebih dahulu.";
-        return;
-    }
-
-    try {
-        // 🌟 Gunakan RT05_CONFIG.ADMIN_API_URL agar menembak langsung ke Cloudflare Worker, 
-        // bukan ke domain pages lokal.
-        const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ 
-                action: 'verify-pin', // Kita beri penanda aksi jika diperlukan, atau langsung kirim pin
-                pin: input 
-            })
-        });
-
-        // Ambil teks dulu untuk mengantisipasi jika respons bukan JSON
-        const textResult = await response.text();
-        let result;
-        try {
-            result = JSON.parse(textResult);
-        } catch (e) {
-            throw new Error("Respon server bukan JSON valid: " + textResult);
-        }
-
-        if (response.ok && result.success) {
-            localStorage.setItem('authAdmin', 'true');
-            localStorage.setItem('adminToken', result.token || ('rt05-admin-' + Date.now()));
-            localStorage.setItem('admin_login_time', Date.now().toString());
-
-            document.getElementById('adminPin').value = '';
-            if (errorMsg) errorMsg.innerText = "";
-
-            if (typeof bukaAkses === 'function') {
-                bukaAkses();
-            }
-        } else {
-            alert("❌ " + (result.error || result.message || "PIN salah! Akses ditolak."));
-            document.getElementById('adminPin').value = '';
-        }
-    } catch (error) {
-        console.error("Gagal verifikasi PIN:", error);
-        alert("❌ Terjadi kesalahan jaringan / URL API Worker keliru.");
-    }
-}
     function verifikasiPin() {
     const pin = document.getElementById("adminPin")?.value;
     if (pin === RT05_CONFIG.ADMIN_PIN) {
@@ -1331,16 +1282,131 @@ async function cekLogin() {
         alert("PIN Admin Salah!");
     }
 }
-    function simpanSesiAdmin() {
-    const session = {
-        timestamp: new Date().getTime()
-    };
-    localStorage.setItem("rt05_admin_session", JSON.stringify(session));
-    
-    // 🟢 SIMPAN TOKEN ADMIN (Agar selaras dengan logoutAdmin & Worker Proxy)
-    if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.ADMIN_SECRET_TOKEN) {
-        localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
+// ==========================================
+// KELOLA SESI & AUTHENTICATION ADMIN
+// ==========================================
+
+// 1. Simpan Sesi & Token Admin ke LocalStorage
+function simpanSesiAdmin(token) {
+  const session = {
+    timestamp: new Date().getTime()
+  };
+  localStorage.setItem("rt05_admin_session", JSON.stringify(session));
+  localStorage.setItem("authAdmin", "true");
+  localStorage.setItem("admin_login_time", Date.now().toString());
+
+  if (token) {
+    localStorage.setItem("adminToken", token);
+    localStorage.setItem("rt05_admin_token", token);
+  } else if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.ADMIN_SECRET_TOKEN) {
+    localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
+  }
+}
+
+// 2. Periksa Status Sesi (24 Jam)
+function periksaSesiAdmin() {
+  const session = localStorage.getItem("rt05_admin_session") || localStorage.getItem("authAdmin");
+  if (!session) return false;
+
+  const sessionData = localStorage.getItem("rt05_admin_session");
+  if (sessionData) {
+    const data = JSON.parse(sessionData);
+    const sekarang = new Date().getTime();
+    // Masa berlaku 24 jam
+    if (sekarang - data.timestamp > 24 * 60 * 60 * 1000) {
+      logoutAdminSilent();
+      return false;
     }
+  }
+  return true;
+}
+
+// 3. Eksekusi Login via API Worker
+async function cekLogin() {
+  const inputPin = document.getElementById('adminPin').value.trim();
+
+  if (!inputPin) {
+    alert("⚠️ Masukkan PIN terlebih dahulu.");
+    return;
+  }
+
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'verify-pin',
+        pin: inputPin
+      })
+    });
+
+    const textResult = await response.text();
+    let result;
+    try {
+      result = JSON.parse(textResult);
+    } catch (e) {
+      throw new Error("Respon server bukan JSON valid: " + textResult);
+    }
+
+    if (response.ok && result.success) {
+      // Simpan Sesi & Token
+      simpanSesiAdmin(result.token || ('rt05-admin-' + Date.now()));
+      
+      // Buka Antarmuka Peta & Admin
+      bukaAkses();
+    } else {
+      alert("❌ " + (result.error || result.message || "PIN salah! Akses ditolak."));
+      document.getElementById('adminPin').value = '';
+    }
+  } catch (error) {
+    console.error("Gagal verifikasi PIN:", error);
+    alert("❌ Terjadi kesalahan jaringan / URL API Worker keliru.");
+  }
+}
+
+// 4. Buka Antarmuka Admin (Sembunyikan Overlay Login & Inisialisasi Peta)
+function bukaAkses() {
+  const overlay = document.getElementById('login-overlay');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = 'auto';
+
+  const inputPin = document.getElementById('adminPin');
+  if (inputPin) inputPin.value = '';
+
+  initMap();
+
+  setTimeout(() => {
+    if (map) map.invalidateSize();
+  }, 200);
+
+  setTimeout(() => {
+    muatSemuaDataAdmin();
+  }, 500);
+}
+
+// 5. Logout Bersih (Pindah ke Mode Warga)
+function logoutAdmin() {
+  // Hapus semua penanda login & token admin
+  localStorage.removeItem('authAdmin');
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('verifiedPin');
+  localStorage.removeItem('admin_login_time');
+  localStorage.removeItem('rt05_admin_session');
+  localStorage.removeItem('rt05_admin_token');
+  localStorage.removeItem('rt05_admin_pin');
+
+  // Redirect ke halaman index/warga
+  window.location.href = "index.html";
+}
+
+function logoutAdminSilent() {
+  localStorage.removeItem('authAdmin');
+  localStorage.removeItem('adminToken');
+  localStorage.removeItem('verifiedPin');
+  localStorage.removeItem('admin_login_time');
+  localStorage.removeItem('rt05_admin_session');
+  localStorage.removeItem('rt05_admin_token');
+  localStorage.removeItem('rt05_admin_pin');
 }
 
     // 🌟 Buat fungsi baru ini untuk memunculkan overlay login admin
@@ -1361,50 +1427,6 @@ async function cekLogin() {
       }
     }
 
-    function bukaAkses() {
-      document.getElementById('login-overlay').style.display = 'none';
-      document.body.style.overflow = 'auto';
-      
-      // Perbaikan: gunakan ID adminPin yang benar agar tidak error
-      const inputPin = document.getElementById('adminPin');
-      if (inputPin) inputPin.value = '';
-
-      initMap();
-
-      setTimeout(() => {
-        if (map) map.invalidateSize();
-      }, 200);
-
-      setTimeout(() => {
-        muatSemuaDataAdmin();
-      }, 500);
-    }
-
-    function periksaSesiAdmin() {
-    const session = localStorage.getItem("rt05_admin_session");
-    if (!session) return false;
-
-    const data = JSON.parse(session);
-    const sekarang = new Date().getTime();
-
-    // Sesi 24 jam
-    if (sekarang - data.timestamp < 24 * 60 * 60 * 1000) {
-        // 🟢 Pastikan token admin tetap ada di localStorage selama sesi valid
-        if (RT05_CONFIG.ADMIN_SECRET_TOKEN && !localStorage.getItem("rt05_admin_token")) {
-            localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
-        }
-        return true;
-    } else {
-        localStorage.removeItem("rt05_admin_session");
-        localStorage.removeItem("rt05_admin_token"); // 🟢 Hapus jika sesi kadaluarsa
-        return false;
-    }
-}
-    function keluarAdmin() {
-    localStorage.removeItem("rt05_admin_session");
-    localStorage.removeItem("rt05_admin_token"); // 🟢 Hapus token saat logout
-    location.reload();
-}
 
 document.getElementById('dataForm').addEventListener('submit', async function(e) {
   e.preventDefault();
@@ -1475,20 +1497,7 @@ if (typeof sesuaikanFormKategori === 'function') {
   }
 });
 
-function logoutAdmin() {
-  // 1. Hapus token kunci lama
-  localStorage.removeItem('authAdmin');
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('verifiedPin');
-  localStorage.removeItem('admin_login_time');
 
-  // 2. 🌟 HAPUS JUGA TOKEN & PIN BARU (Diselaraskan dengan Worker Proxy & Uploader)
-  localStorage.removeItem('rt05_admin_token');
-  localStorage.removeItem('rt05_admin_pin');
-
-  // 3. Arahkan kembali ke halaman utama
-  window.location.href = "index.html";
-}
 
 var map, daftarPin = [], pinRumahAktif = null;
 var markerGroup = L.layerGroup();
