@@ -7,13 +7,16 @@
   <title>Inventaris Perkakas RT 05</title>
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
 
-  <!-- 1. WAJIB: Muat Firebase Versi Compat (App, Auth, & Database) -->
+  <!-- 1. WAJIB PARSE KONFIGURASI DULU (setting.js) -->
+  <script src="./setting.js"></script>
+
+  <!-- 2. Firebase SDK Compat -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
-  <!-- 2. Muat utils.js & setting.js untuk konfigurasi RT05_CONFIG -->
-  <script src="./setting.js"></script>
+  <!-- 3. utils.js (Modul opsional jika digunakan di tempat lain) -->
+  <script type="module" src="utils.js"></script>
 
   <style>
     body { font-family: sans-serif; margin: 0; padding: 16px; background-color: #f9fafb; color: #333; }
@@ -56,43 +59,43 @@
     }
   }
 
-  function inisialisasiFirebaseDanMuatData() {
-    const container = document.getElementById("daftar-inventaris");  
-    if (!container) return;
+function inisialisasiFirebaseDanMuatData() {
+  const container = document.getElementById("daftar-inventaris");  
+  if (!container) return;
 
-    container.innerHTML = `<div style="text-align:center; padding: 20px; color: #666;">⏳ Memuat inventaris dari Firebase...</div>`;
-
-    try {
-      let app;
-      if (!firebase.apps.length) {
-        if (typeof RT05_CONFIG === 'undefined' || !RT05_CONFIG.FIREBASE) {
-          console.error("RT05_CONFIG tidak ditemukan!");
-          container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Konfigurasi Firebase (setting.js) tidak ditemukan.</div>`;
-          return;
-        }
-        app = firebase.initializeApp(RT05_CONFIG.FIREBASE);
-      } else {
-        app = firebase.app();
-      }
-
-      // 🌟 PERBAIKAN UTAMA: Lakukan Auth Anonim Otomatis di SDK Compat
-      firebase.auth().onAuthStateChanged((user) => {
-        if (!user) {
-          firebase.auth().signInAnonymously().catch((err) => {
-            console.error("🔴 Gagal Login Anonim di Inventaris:", err);
-          });
-        } else {
-          console.log("🟢 Sesi Auth Inventaris Aktif. UID:", user.uid);
-          // Eksekusi pembacaan data HANYA saat sesi Auth terkonfirmasi aktif
-          eksekusiAmbilData(app);
-        }
-      });
-
-    } catch (err) {
-      console.error("Error inisialisasi inventaris:", err);
-      container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Terjadi kesalahan sistem.</div>`;
-    }
+  // Jika RT05_CONFIG belum termuat sempurna, tunggu 100ms lalu coba lagi
+  if (typeof RT05_CONFIG === 'undefined' || !RT05_CONFIG.FIREBASE) {
+    console.warn("Menunggu RT05_CONFIG dimuat...");
+    setTimeout(inisialisasiFirebaseDanMuatData, 100);
+    return;
   }
+
+  container.innerHTML = `<div style="text-align:center; padding: 20px; color: #666;">⏳ Memuat inventaris dari Firebase...</div>`;
+
+  try {
+    let app;
+    if (!firebase.apps.length) {
+      app = firebase.initializeApp(RT05_CONFIG.FIREBASE);
+    } else {
+      app = firebase.app();
+    }
+
+    firebase.auth().onAuthStateChanged((user) => {
+      if (!user) {
+        firebase.auth().signInAnonymously().catch((err) => {
+          console.error("🔴 Gagal Login Anonim di Inventaris:", err);
+        });
+      } else {
+        console.log("🟢 Sesi Auth Inventaris Aktif. UID:", user.uid);
+        eksekusiAmbilData(app);
+      }
+    });
+
+  } catch (err) {
+    console.error("Error inisialisasi inventaris:", err);
+    container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Terjadi kesalahan sistem.</div>`;
+  }
+}
 
   // 🌟 Fungsi khusus untuk mengambil data setelah Auth berhasil
   function eksekusiAmbilData(app) {
