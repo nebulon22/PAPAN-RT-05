@@ -56,7 +56,7 @@
     }
   }
 
-function inisialisasiFirebaseDanMuatData() {
+  function inisialisasiFirebaseDanMuatData() {
     const container = document.getElementById("daftar-inventaris");  
     if (!container) return;
 
@@ -75,46 +75,62 @@ function inisialisasiFirebaseDanMuatData() {
         app = firebase.app();
       }
 
-      const db = firebase.database(app);
-      const inventarisRef = db.ref('inventaris');
-      const peminjamanRef = db.ref('peminjaman');
-
-      console.log("Mulai mengambil data dari Firebase...");
-
-      // Mengambil data dengan batas waktu (timeout) 8 detik agar tidak menggantung terus
-      const fetchWithTimeout = (promise, ms) => {
-        let timeoutId;
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error("Timeout koneksi Firebase")), ms);
-        });
-        return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
-      };
-
-      Promise.all([
-        fetchWithTimeout(inventarisRef.once('value'), 8000),
-        fetchWithTimeout(peminjamanRef.once('value'), 8000)
-      ]).then(([snapInv, snapPem]) => {
-        console.log("Data berhasil diambil dari Firebase!");
-        let daftarPerkakas = [];
-        let daftarPinjaman = [];
-
-        if (snapInv.exists()) {
-          snapInv.forEach(child => { daftarPerkakas.push(child.val()); });
+      // 🌟 PERBAIKAN UTAMA: Lakukan Auth Anonim Otomatis di SDK Compat
+      firebase.auth().onAuthStateChanged((user) => {
+        if (!user) {
+          firebase.auth().signInAnonymously().catch((err) => {
+            console.error("🔴 Gagal Login Anonim di Inventaris:", err);
+          });
+        } else {
+          console.log("🟢 Sesi Auth Inventaris Aktif. UID:", user.uid);
+          // Eksekusi pembacaan data HANYA saat sesi Auth terkonfirmasi aktif
+          eksekusiAmbilData(app);
         }
-        if (snapPem.exists()) {
-          snapPem.forEach(child => { daftarPinjaman.push(child.val()); });
-        }
-
-        renderHTML({ perkakas: daftarPerkakas, peminjaman: daftarPinjaman });
-      }).catch(error => {
-        console.error("Gagal atau timeout saat memuat data:", error);
-        container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data. Periksa aturan database Firebase Anda.</div>`;
       });
 
     } catch (err) {
       console.error("Error inisialisasi inventaris:", err);
       container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Terjadi kesalahan sistem.</div>`;
     }
+  }
+
+  // 🌟 Fungsi khusus untuk mengambil data setelah Auth berhasil
+  function eksekusiAmbilData(app) {
+    const container = document.getElementById("daftar-inventaris");
+    const db = firebase.database(app);
+    const inventarisRef = db.ref('inventaris');
+    const peminjamanRef = db.ref('peminjaman');
+
+    console.log("Mulai mengambil data inventaris dari Firebase...");
+
+    const fetchWithTimeout = (promise, ms) => {
+      let timeoutId;
+      const timeoutPromise = new Promise((_, reject) => {
+        timeoutId = setTimeout(() => reject(new Error("Timeout koneksi Firebase")), ms);
+      });
+      return Promise.race([promise, timeoutPromise]).finally(() => clearTimeout(timeoutId));
+    };
+
+    Promise.all([
+      fetchWithTimeout(inventarisRef.once('value'), 8000),
+      fetchWithTimeout(peminjamanRef.once('value'), 8000)
+    ]).then(([snapInv, snapPem]) => {
+      console.log("Data inventaris berhasil diambil dari Firebase!");
+      let daftarPerkakas = [];
+      let daftarPinjaman = [];
+
+      if (snapInv.exists()) {
+        snapInv.forEach(child => { daftarPerkakas.push(child.val()); });
+      }
+      if (snapPem.exists()) {
+        snapPem.forEach(child => { daftarPinjaman.push(child.val()); });
+      }
+
+      renderHTML({ perkakas: daftarPerkakas, peminjaman: daftarPinjaman });
+    }).catch(error => {
+      console.error("Gagal atau timeout saat memuat data:", error);
+      container.innerHTML = `<div style="color: #dc2626; text-align:center; padding: 20px;">❌ Gagal memuat data. Periksa aturan database Firebase Anda.</div>`;
+    });
   }
 
   function renderHTML(data) {
