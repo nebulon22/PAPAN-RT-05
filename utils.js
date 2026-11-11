@@ -28,34 +28,42 @@ const RT05_CONFIG = {
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { getAuth, initializeAuth, browserLocalPersistence, browserSessionPersistence, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { 
+  getAuth, 
+  initializeAuth, 
+  browserLocalPersistence, 
+  browserSessionPersistence, 
+  inMemoryPersistence, 
+  signInAnonymously, 
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const app = initializeApp(RT05_CONFIG.FIREBASE);
 const db = getDatabase(app, RT05_CONFIG.FIREBASE.databaseURL);
 
-// Inisialisasi Auth dengan proteksi persistence tanpa perlu gapi iframe popup
+// 🌟 Inisialisasi Auth Langsung Menggunakan Persistence (Tanpa Memicu GAPI Iframe)
 let auth;
 try {
-    auth = getAuth(app);
+  auth = initializeAuth(app, {
+    persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]
+  });
 } catch (e) {
-    auth = initializeAuth(app, {
-        persistence: [browserLocalPersistence, browserSessionPersistence]
-    });
+  // Jika app sudah memiliki instance Auth yang aktif sebelumnya
+  auth = getAuth(app);
 }
 
 // Autentikasi Anonim Otomatis di Latar Belakang (Transparan)
 onAuthStateChanged(auth, (user) => {
-    if (!user) {
-        signInAnonymously(auth).then(() => {
-            console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
-        }).catch((err) => {
-            console.error("🔴 Gagal Login Anonim:", err);
-        });
-    } else {
-        console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
-    }
+  if (!user) {
+    signInAnonymously(auth).then(() => {
+      console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
+    }).catch((err) => {
+      console.error("🔴 Gagal Login Anonim:", err);
+    });
+  } else {
+    console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
+  }
 });
-
 // EKSPOS FIREBASE UTILITIES KE GLOBAL WINDOW (Bisa dipanggil di index.html & admin.html)
 // Ekspos ke window
 window.db = db;
