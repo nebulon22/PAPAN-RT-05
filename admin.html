@@ -1287,13 +1287,20 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
 // ==========================================
 
 // 1. Simpan Sesi & Token Admin ke LocalStorage
-function simpanSesiAdmin(token) {
+function simpanSesiAdmin(token, pin) {
   const session = {
     timestamp: new Date().getTime()
   };
   localStorage.setItem("rt05_admin_session", JSON.stringify(session));
   localStorage.setItem("authAdmin", "true");
   localStorage.setItem("admin_login_time", Date.now().toString());
+
+  // 🌟 SIMPAN PIN ADMIN KE STORAGE
+  if (pin) {
+    localStorage.setItem("adminPin", pin);
+    localStorage.setItem("rt05_admin_pin", pin);
+    sessionStorage.setItem("adminPin", pin);
+  }
 
   if (token) {
     localStorage.setItem("adminToken", token);
@@ -1348,9 +1355,9 @@ async function cekLogin() {
       throw new Error("Respon server bukan JSON valid: " + textResult);
     }
 
-    if (response.ok && result.success) {
-      // Simpan Sesi & Token
-      simpanSesiAdmin(result.token || ('rt05-admin-' + Date.now()));
+if (response.ok && result.success) {
+      // 🌟 Oper inputPin sebagai parameter kedua
+      simpanSesiAdmin(result.token || ('rt05-admin-' + Date.now()), inputPin);
       
       // Buka Antarmuka Peta & Admin
       bukaAkses();
