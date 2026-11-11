@@ -1314,6 +1314,34 @@ async function cekLogin() {
         alert("❌ Terjadi kesalahan jaringan / URL API Worker keliru.");
     }
 }
+    function verifikasiPin() {
+    const pin = document.getElementById("adminPin")?.value;
+    if (pin === RT05_CONFIG.ADMIN_PIN) {
+        simpanSesiAdmin();
+        
+        // 🟢 Set token rahasia admin ke localStorage saat PIN benar
+        if (RT05_CONFIG.ADMIN_SECRET_TOKEN) {
+            localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
+        }
+        
+        bukaAkses();
+        pilihanAdmin.style.display = 'block';
+        alert("Akses Admin Diberikan!");
+    } else {
+        alert("PIN Admin Salah!");
+    }
+}
+    function simpanSesiAdmin() {
+    const session = {
+        timestamp: new Date().getTime()
+    };
+    localStorage.setItem("rt05_admin_session", JSON.stringify(session));
+    
+    // 🟢 SIMPAN TOKEN ADMIN (Agar selaras dengan logoutAdmin & Worker Proxy)
+    if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.ADMIN_SECRET_TOKEN) {
+        localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
+    }
+}
 
     // 🌟 Buat fungsi baru ini untuk memunculkan overlay login admin
     function bukaFormLoginAdmin() {
@@ -1352,30 +1380,31 @@ async function cekLogin() {
       }, 500);
     }
 
-    
     function periksaSesiAdmin() {
-      const isAuth = localStorage.getItem('authAdmin') === 'true';
-      const token = localStorage.getItem('adminToken');
-      const loginTime = parseInt(localStorage.getItem('admin_login_time') || '0', 10);
-      
-      const BATAS_WAKTU = 30 * 60 * 1000;
-      const waktuSekarang = Date.now();
+    const session = localStorage.getItem("rt05_admin_session");
+    if (!session) return false;
 
-      if (isAuth && token && (waktuSekarang - loginTime > BATAS_WAKTU)) {
-        localStorage.removeItem('authAdmin');
-        localStorage.removeItem('adminToken');
-        localStorage.removeItem('admin_login_time');
-        alert("⏱️ Sesi login Anda telah berakhir (30 menit). Silakan masukkan PIN kembali.");
-        return false;
-      }
+    const data = JSON.parse(session);
+    const sekarang = new Date().getTime();
 
-      if (isAuth && token) {
-        bukaAkses();
+    // Sesi 24 jam
+    if (sekarang - data.timestamp < 24 * 60 * 60 * 1000) {
+        // 🟢 Pastikan token admin tetap ada di localStorage selama sesi valid
+        if (RT05_CONFIG.ADMIN_SECRET_TOKEN && !localStorage.getItem("rt05_admin_token")) {
+            localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
+        }
         return true;
-      }
-
-      return false;
+    } else {
+        localStorage.removeItem("rt05_admin_session");
+        localStorage.removeItem("rt05_admin_token"); // 🟢 Hapus jika sesi kadaluarsa
+        return false;
     }
+}
+    function keluarAdmin() {
+    localStorage.removeItem("rt05_admin_session");
+    localStorage.removeItem("rt05_admin_token"); // 🟢 Hapus token saat logout
+    location.reload();
+}
 
 document.getElementById('dataForm').addEventListener('submit', async function(e) {
   e.preventDefault();
