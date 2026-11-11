@@ -2381,19 +2381,46 @@ window.simpanPerubahanWargaBaru = async function(e) {
       btn.innerText = "⏳ Menyimpan ke Database...";
     }
 
-    const updates = {};
-    updates[`warga_baru/${id}/nama`] = nama;
-    updates[`warga_baru/${id}/noRumah`] = noRumah;
-    updates[`warga_baru/${id}/hp`] = hp;
-    updates[`warga_baru/${id}/status`] = status;
-    updates[`warga_baru/${id}/cerita`] = cerita;
-    updates[`warga_baru/${id}/foto`] = fotoFinalUrl; // Menyimpan URL foto R2 baru
+    // 🔒 1. Susun objek data yang akan diperbarui
+    const dataUpdate = {
+      nama: nama,
+      noRumah: noRumah,
+      hp: hp,
+      status: status,
+      cerita: cerita,
+      foto: fotoFinalUrl,
+      updatedAt: Date.now()
+    };
 
-    await window.firebaseUpdate(window.firebaseRef(window.db), updates);
-    
+// 🔒 2. Ambil PIN Admin dan URL Worker Admin dari RT05_CONFIG (utils.js)
+const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+
+// Menggunakan ADMIN_API_URL sesuai definisi di utils.js Anda
+const workerAdminUrl = RT05_CONFIG.ADMIN_API_URL;
+
+// 🔒 3. Kirim update melalui Worker Admin Proxy (PATCH)
+const responseProxy = await fetch(workerAdminUrl, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json"
+  },
+  body: JSON.stringify({
+    pin: pinAdmin,
+    path: `warga_baru/${id}`, // atau `peta_warga/${idWarga}`
+    method: "PATCH",
+    data: dataUpdate
+  })
+});
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan perubahan warga baru via Worker Admin.");
+    }
+
     alert('✅ Data warga baru & foto berhasil diperbarui!');
     tutupModalEditWargaBaru();
-    
+
     if (typeof bukaModalWargaBaruAdmin === 'function') {
       bukaModalWargaBaruAdmin();
     }
@@ -3264,8 +3291,27 @@ async function simpanPerubahanWarga(event) {
       dataUpdate.anggotaKeluarga = ""; // Dikosongkan
     }
 
-    const refItem = window.firebaseRef(window.db, `peta_warga/${idWarga}`);
-    await window.firebaseUpdate(refItem, dataUpdate);
+   // 🔒 PROSES UPDATE MELALUI CLOUDFLARE WORKER ADMIN (Via RT05_CONFIG)
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: `peta_warga/${idWarga}`,
+        method: "PATCH",
+        data: dataUpdate
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal meng-update data via Worker Admin.");
+    }
 
     if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
     tutupModalEditWarga();
