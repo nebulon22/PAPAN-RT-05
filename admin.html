@@ -3014,18 +3014,27 @@ async function prosesUploadR2Universal(jenisTarget = 'warga') {
     const ekstensi = file.name.split('.').pop() || 'jpg';
     const namaFileKustom = `${jenisTarget}_${Date.now()}.${ekstensi}`;
 
-    // Kirim ke Cloudflare Worker (menggunakan config terpusat)
+    // 🌟 1. Ambil PIN Admin tersimpan dari LocalStorage / input admin
+    const adminPin = localStorage.getItem('rt05_admin_pin') || (window.CURRENT_ADMIN_PIN || '');
+
+    // 🌟 2. Kirim ke Cloudflare Worker (termasuk header X-Admin-Pin)
     const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
       method: "POST",
       headers: {
-        "X-File-Name": encodeURIComponent(namaFileKustom),
+        "X-File-Name": namaFileKustom,
+        "X-Admin-Pin": adminPin, // 👈 PENTING: Diselaraskan dengan proteksi ADMIN_PIN Worker
         "Content-Type": file.type || "application/octet-stream"
       },
       body: file
     });
 
     const textResult = await response.text();
-    let result = JSON.parse(textResult);
+    let result;
+    try {
+      result = JSON.parse(textResult);
+    } catch (e) {
+      throw new Error("Respon dari server uploader bukan JSON valid: " + textResult);
+    }
 
     if (result.success && result.url) {
       let urlAwal = new URL(result.url);
