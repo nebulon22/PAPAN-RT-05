@@ -28,11 +28,20 @@ const RT05_CONFIG = {
 // ==========================================
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
 import { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+import { getAuth, initializeAuth, browserLocalPersistence, browserSessionPersistence, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 const app = initializeApp(RT05_CONFIG.FIREBASE);
 const db = getDatabase(app, RT05_CONFIG.FIREBASE.databaseURL);
-const auth = getAuth(app);
+
+// Inisialisasi Auth dengan proteksi persistence tanpa perlu gapi iframe popup
+let auth;
+try {
+    auth = getAuth(app);
+} catch (e) {
+    auth = initializeAuth(app, {
+        persistence: [browserLocalPersistence, browserSessionPersistence]
+    });
+}
 
 // Autentikasi Anonim Otomatis di Latar Belakang (Transparan)
 onAuthStateChanged(auth, (user) => {
