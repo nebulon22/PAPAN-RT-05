@@ -4130,25 +4130,43 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
     // ==========================================
     // PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
     // ==========================================
-   function bukaModalPengumumanAdmin() {
-      // 1. Bersihkan form & status terlebih dahulu saat modal dibuka
-      const form = document.getElementById('formInputPengumuman');
-      if (form) form.reset();
-      
-      const fileInput = document.getElementById('inputUploadPengumuman');
-      if (fileInput) fileInput.value = '';
+  function bukaModalPengumumanAdmin() {
+  // 0. Reset status edit agar kembali ke mode tambah baru
+  currentEditPengumumanId = null;
 
-      const statusEl = document.getElementById('statusUploadPengumuman');
-      if (statusEl) {
-        statusEl.innerText = '';
-        statusEl.style.display = 'none'; // Sembunyikan teks status
-      }
-
-      // 2. Set tanggal default & tampilkan modal
-      document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
-      document.getElementById('modal-admin-pengumuman').style.display = 'flex';
-      muatDaftarPengumumanAdmin();
+  // 1. Bersihkan form, kembalikan warna kuning & status saat modal dibuka
+  const form = document.getElementById('formInputPengumuman');
+  if (form) {
+    form.reset();
+    form.style.background = '#fef3c7';
+    form.style.borderColor = '#fde68a';
+    const headerForm = form.querySelector('div');
+    if (headerForm) {
+      headerForm.innerHTML = '➕ Input Pengumuman / Event Baru';
+      headerForm.style.color = '#b45309';
     }
+  }
+
+  const btnSimpan = document.getElementById('btnSimpanPengumuman');
+  if (btnSimpan) {
+    btnSimpan.innerText = '💾 Terbitkan Pengumuman';
+    btnSimpan.style.background = '#d97706';
+  }
+
+  const fileInput = document.getElementById('inputUploadPengumuman');
+  if (fileInput) fileInput.value = '';
+
+  const statusEl = document.getElementById('statusUploadPengumuman');
+  if (statusEl) {
+    statusEl.innerText = '';
+    statusEl.style.display = 'none'; // Sembunyikan teks status
+  }
+
+  // 2. Set tanggal default & tampilkan modal
+  document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-admin-pengumuman').style.display = 'flex';
+  muatDaftarPengumumanAdmin();
+}
 
     function tutupModalPengumumanAdmin() {
       document.getElementById('modal-admin-pengumuman').style.display = 'none';
@@ -4250,20 +4268,34 @@ function editPengumuman(id) {
         document.getElementById('pengumumanFoto').value = val.foto || '';
       }
 
-      // 🌟 TAMBAHKAN INI: Bersihkan input file & sembunyikan teks status saat masuk mode edit
+      // Bersihkan input file & sembunyikan teks status saat masuk mode edit
       const fileInput = document.getElementById('inputUploadPengumuman');
-      if (fileInput) fileInput.value = ''; // Kosongkan pilihan file
+      if (fileInput) fileInput.value = '';
 
       const statusEl = document.getElementById('statusUploadPengumuman');
       if (statusEl) {
-        statusEl.innerText = ''; // Hapus teks "File baru siap..."
-        statusEl.style.display = 'none'; // Sembunyikan elemen statusnya
+        statusEl.innerText = '';
+        statusEl.style.display = 'none';
+      }
+
+      // Ubah tampilan form & tombol sebagai penanda Mode Edit (tanpa alert)
+      const form = document.getElementById('formInputPengumuman');
+      if (form) {
+        form.style.background = '#eff6ff';
+        form.style.borderColor = '#93c5fd';
+        const headerForm = form.querySelector('div');
+        if (headerForm) {
+          headerForm.innerHTML = '✏️ Mode Edit Pengumuman (Ubah data lalu klik Simpan)';
+          headerForm.style.color = '#1d4ed8';
+        }
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
       const btnSimpan = document.getElementById('btnSimpanPengumuman');
-      if (btnSimpan) btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
-
-      alert("Mode Edit Aktif: Silakan ubah data lalu klik Simpan Perubahan.");
+      if (btnSimpan) {
+        btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
+        btnSimpan.style.background = "#2563eb";
+      }
     }
   });
 }
