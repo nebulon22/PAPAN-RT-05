@@ -1148,8 +1148,9 @@ function formatRupiahInput(el) {
   }
   el.value = Number(value).toLocaleString('id-ID');
 }
+    
 async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "POST") {
-  const pinAdmin = prompt("🔒 Masukkan PIN Admin RT 05 untuk menyimpan perubahan:");
+  const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin') || prompt("🔒 Masukkan PIN Admin RT 05 untuk menyimpan perubahan:");
   if (!pinAdmin) {
     alert("Simpan dibatalkan: PIN Admin wajib diisi.");
     return false;
@@ -1295,22 +1296,25 @@ async function kirimDataPendingAdmin() {
     });
 
 
-    function verifikasiPin() {
-    const pin = document.getElementById("adminPin")?.value;
-    if (pin === RT05_CONFIG.ADMIN_PIN) {
-        simpanSesiAdmin();
-        
-        // 🟢 Set token rahasia admin ke localStorage saat PIN benar
-        if (RT05_CONFIG.ADMIN_SECRET_TOKEN) {
-            localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
-        }
-        
-        bukaAkses();
-        pilihanAdmin.style.display = 'block';
-        alert("Akses Admin Diberikan!");
-    } else {
-        alert("PIN Admin Salah!");
+function verifikasiPin() {
+  const pin = document.getElementById("adminPin")?.value;
+  if (pin === RT05_CONFIG.ADMIN_PIN) {
+    // Simpan PIN ke sesi agar tidak diminta ulang saat edit/simpan data
+    sessionStorage.setItem("adminPin", pin);
+    localStorage.setItem("rt05_admin_pin", pin);
+
+    simpanSesiAdmin();
+    
+    if (RT05_CONFIG.ADMIN_SECRET_TOKEN) {
+      localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
     }
+    
+    bukaAkses();
+    pilihanAdmin.style.display = 'block';
+    alert("Akses Admin Diberikan!");
+  } else {
+    alert("PIN Admin Salah!");
+  }
 }
 // ==========================================
 // KELOLA SESI & AUTHENTICATION ADMIN
@@ -4378,8 +4382,24 @@ const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
       timestamp: Date.now()
     };
 
-    // 🔒 Ambil PIN Admin & URL Worker Admin dari Utils
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+// 🔒 Ambil PIN Admin & URL Worker Admin dari Sesi / Utils
+    const pinAdmin = sessionStorage.getItem('adminPin') 
+                  || localStorage.getItem('rt05_admin_pin') 
+                  || localStorage.getItem('adminPin') 
+                  || prompt('Masukkan PIN Admin:');
+                  
+    const tokenAdmin = localStorage.getItem('rt05_admin_token') 
+                    || (typeof RT05_CONFIG !== 'undefined' ? RT05_CONFIG.ADMIN_SECRET_TOKEN : '');
+
+    if (!pinAdmin) {
+      alert("Simpan dibatalkan: PIN Admin tidak ditemukan.");
+      return;
+    }
+
+    // Pastikan tersimpan di sesi agar aksi berikutnya tidak meminta ulang
+    sessionStorage.setItem('adminPin', pinAdmin);
+    localStorage.setItem('rt05_admin_pin', pinAdmin);
+
     const workerAdminUrl = RT05_CONFIG.ADMIN_API_URL;
 
     // Kirim request PUT untuk menulis/memperbarui node pengumuman/{id}
@@ -4390,6 +4410,7 @@ const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
       },
       body: JSON.stringify({
         pin: pinAdmin,
+        token: tokenAdmin,
         path: `pengumuman/${pengumumanId}`,
         method: "PUT",
         data: payload
