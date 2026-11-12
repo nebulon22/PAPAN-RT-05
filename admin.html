@@ -22,6 +22,9 @@
 
   <style>
     html, body { margin: 0; padding: 0; height: 100%; font-family: sans-serif; overflow: hidden; }
+    @view-transition {
+  navigation: auto;
+  }
     #map { width: 100%; height: 100vh; }
     
     #login-overlay {
@@ -209,8 +212,15 @@
   </div>
 </div>
 
- <!-- BARU: Panggil fungsi logoutAdmin() -->
- <a href="javascript:void(0)" onclick="logoutAdmin()" class="btn-back-floating">⬅️ Mode Warga (Logout)</a>
+<!-- Tombol Pindah ke Peta Warga (Sesi Admin Tetap Aktif) & Tombol Logout Terpisah -->
+<div class="btn-back-floating" style="background: transparent; box-shadow: none; padding: 0; display: flex; gap: 6px;">
+  <a href="index.html" style="background: #0288d1; color: white; padding: 8px 12px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+    ⬅️ Peta Warga
+  </a>
+  <button type="button" onclick="logoutAdmin()" style="background: #dc2626; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+    🚪 Logout
+  </button>
+</div>
 
 
   <!-- PANEL ATAS -->
@@ -295,90 +305,6 @@
   <button type="button" class="btn-filter" style="flex: 1; background: #f59e0b; color: white; border-color: #d97706;" onclick="bukaModalPengumumanAdmin()">
     📢 Kelola Pengumuman
   </button>
-</div>
-
-<!-- Modal Kelola Pengumuman -->
-<div id="modal-admin-pengumuman" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-pengumuman') tutupModalPengumumanAdmin()">
-  <div class="modal-content" style="max-width: 500px; width: 92%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; background: #ffffff; border-radius: 12px; box-sizing: border-box;">
-    
-    <!-- HEADER MODAL (Tetap di atas) -->
-    <div class="modal-header" style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
-      <h3 style="margin:0; font-size:15px;">📢 Form Input & Arsip Pengumuman</h3>
-      <button class="close-btn" onclick="tutupModalPengumumanAdmin()">&times;</button>
-    </div>
-    
-    <!-- 🌟 WADAH UTAMA BER-SCROLL (Form & Tabel berada di sini agar bisa digulir ke bawah) -->
-    <div style="flex: 1; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 10px;">
-
-      <!-- Form Tambah/Edit Pengumuman Baru -->
-      <form id="formInputPengumuman" style="background: #fef3c7; padding: 10px; border-radius: 8px; border: 1px solid #fde68a; flex-shrink: 0;">
-        <div style="font-weight: bold; font-size: 12px; color: #b45309; margin-bottom: 8px;">➕ Input Pengumuman / Event Baru</div>
-        
-        <div class="form-group" style="margin-bottom: 8px;">
-          <label for="pengumumanTanggal" style="font-size: 11px; font-weight: bold;">Tanggal Acara / Kegiatan:</label>
-          <input type="date" id="pengumumanTanggal" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 8px;">
-          <label for="pengumumanJudul" style="font-size: 11px; font-weight: bold;">Judul Kegiatan / Event:</label>
-          <input type="text" id="pengumumanJudul" placeholder="Contoh: Kerja Bakti / Arisan RT" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 8px;">
-          <label for="pengumumanDetail" style="font-size: 11px; font-weight: bold;">Detail & Catatan Informasi:</label>
-          <textarea id="pengumumanDetail" rows="2" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 8px; position: relative;">
-          <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Ketik Nama Warga / Pilih):</label>
-          <input type="text" id="pengumumanLokasi" placeholder="Ketik nama warga (misal: Bejo)..." autocomplete="off" oninput="cariLokasiPengumuman(this.value)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-          <div id="hasilPencarianLokasi" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 140px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
-          <input type="hidden" id="pengumumanLat" value="">
-          <input type="hidden" id="pengumumanLng" value="">
-        </div>
-
-        <div class="form-group" style="margin-bottom: 8px;">
-          <label for="inputUploadPengumuman" style="font-size: 11px; font-weight: bold;">📁 Upload Poster / Foto / Video (Cloudflare R2):</label>
-          <!-- onchange diubah agar hanya menampilkan teks status, tidak langsung upload -->
-          <input type="file" id="inputUploadPengumuman" accept="image/*,video/*" style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 2px;" onchange="document.getElementById('statusUploadPengumuman').style.display='block'; document.getElementById('statusUploadPengumuman').innerHTML = '<i>✓ File baru siap. Akan diupload saat Terbitkan Pengumuman ditekan.</i>';">
-          <div id="statusUploadPengumuman" style="font-size: 10px; color: #2563eb; display: none; margin-top: 2px;"></div>
-        </div>
-
-        <div class="form-group" style="margin-bottom: 8px;">
-          <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
-          <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
-        </div>
-
-        <button type="button" data-click="simpanPengumumanAdmin" id="btnSimpanPengumuman" style="width: 100%; padding: 7px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">
-          💾 Terbitkan Pengumuman
-        </button>
-      </form>
-
-      <!-- Daftar Pengumuman & Tombol Edit/Arsip (Ditambahkan overflow: hidden agar sudut tabel tidak tembus) -->
-      <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; flex-shrink: 0; overflow: hidden;">
-        <h4 style="margin: 0 0 6px 0; font-size: 12px; color: #374151;">📋 Daftar Pengumuman & Status Arsip:</h4>
-        <div style="max-height: 180px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
-          <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
-            <thead>
-              <tr style="background: #111827; color: white; position: sticky; top: 0; z-index: 5;">
-                <th style="padding: 6px;">Kegiatan</th>
-                <th style="padding: 6px; text-align: center;">Status</th>
-                <th style="padding: 6px; text-align: center;">Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="tabel-pengumuman-admin">
-              <tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat data...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- Tombol Tutup di Bawah (Tetap menempel di bawah modal) -->
-    <button type="button" onclick="tutupModalPengumumanAdmin()" style="width: 100%; margin-top: 8px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; flex-shrink: 0;">Tutup</button>
-  
-  </div>
 </div>
     
     <!-- Section Persetujuan Chat Warga Ringkas -->
@@ -1121,6 +1047,89 @@
       </form>
     </div>
   </div>
+
+<!-- Modal Kelola Pengumuman (Sudah sejajar dengan modal Progker) -->
+<div id="modal-admin-pengumuman" class="modal-bg" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100dvh; background: rgba(15, 23, 42, 0.65); z-index: 9999; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box;" onclick="if(event.target.id==='modal-admin-pengumuman') tutupModalPengumumanAdmin()">
+  <div class="modal-content" style="width: 100%; max-width: 560px; height: 88dvh; max-height: 88dvh; padding: 16px; display: flex; flex-direction: column; overflow: hidden; background: #ffffff; border-radius: 14px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+    <!-- HEADER MODAL (Tetap di atas) -->
+    <div class="modal-header" style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+      <h3 style="margin:0; font-size:15px;">📢 Form Input & Arsip Pengumuman</h3>
+      <button class="close-btn" onclick="tutupModalPengumumanAdmin()">&times;</button>
+    </div>
+    
+    <!-- 🌟 WADAH UTAMA BER-SCROLL (Form & Tabel berada di sini agar bisa digulir ke bawah) -->
+    <div style="flex: 1; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 10px;">
+
+      <!-- Form Tambah/Edit Pengumuman Baru -->
+      <form id="formInputPengumuman" style="background: #fef3c7; padding: 10px; border-radius: 8px; border: 1px solid #fde68a; flex-shrink: 0;">
+        <div style="font-weight: bold; font-size: 12px; color: #b45309; margin-bottom: 8px;">➕ Input Pengumuman / Event Baru</div>
+        
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanTanggal" style="font-size: 11px; font-weight: bold;">Tanggal Acara / Kegiatan:</label>
+          <input type="date" id="pengumumanTanggal" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanJudul" style="font-size: 11px; font-weight: bold;">Judul Kegiatan / Event:</label>
+          <input type="text" id="pengumumanJudul" placeholder="Contoh: Kerja Bakti / Arisan RT" required style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanDetail" style="font-size: 11px; font-weight: bold;">Detail & Catatan Informasi:</label>
+          <textarea id="pengumumanDetail" rows="2" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px; position: relative;">
+          <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Ketik Nama Warga / Pilih):</label>
+          <input type="text" id="pengumumanLokasi" placeholder="Ketik nama warga (misal: Bejo)..." autocomplete="off" oninput="cariLokasiPengumuman(this.value)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+          <div id="hasilPencarianLokasi" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 140px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
+          <input type="hidden" id="pengumumanLat" value="">
+          <input type="hidden" id="pengumumanLng" value="">
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="inputUploadPengumuman" style="font-size: 11px; font-weight: bold;">📁 Upload Poster / Foto / Video (Cloudflare R2):</label>
+          <!-- onchange diubah agar hanya menampilkan teks status, tidak langsung upload -->
+          <input type="file" id="inputUploadPengumuman" accept="image/*,video/*" style="width: 100%; padding: 6px; font-size: 11px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; margin-bottom: 2px;" onchange="document.getElementById('statusUploadPengumuman').style.display='block'; document.getElementById('statusUploadPengumuman').innerHTML = '<i>✓ File baru siap. Akan diupload saat Terbitkan Pengumuman ditekan.</i>';">
+          <div id="statusUploadPengumuman" style="font-size: 10px; color: #2563eb; display: none; margin-top: 2px;"></div>
+        </div>
+
+        <div class="form-group" style="margin-bottom: 8px;">
+          <label for="pengumumanFoto" style="font-size: 11px; font-weight: bold;">URL Poster / Flyer / Foto (Opsional):</label>
+          <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+        </div>
+
+        <button type="button" data-click="simpanPengumumanAdmin" id="btnSimpanPengumuman" style="width: 100%; padding: 7px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">
+          💾 Terbitkan Pengumuman
+        </button>
+      </form>
+
+      <!-- Daftar Pengumuman & Tombol Edit/Arsip (Ditambahkan overflow: hidden agar sudut tabel tidak tembus) -->
+      <div style="background: #fff; border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px; flex-shrink: 0; overflow: hidden;">
+        <h4 style="margin: 0 0 6px 0; font-size: 12px; color: #374151;">📋 Daftar Pengumuman & Status Arsip:</h4>
+        <div style="max-height: 180px; overflow-y: auto; border: 1px solid #e5e7eb; border-radius: 6px;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 11px; text-align: left;">
+            <thead>
+              <tr style="background: #111827; color: white; position: sticky; top: 0; z-index: 5;">
+                <th style="padding: 6px;">Kegiatan</th>
+                <th style="padding: 6px; text-align: center;">Status</th>
+                <th style="padding: 6px; text-align: center;">Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tabel-pengumuman-admin">
+              <tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat data...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Tombol Tutup di Bawah (Tetap menempel di bawah modal) -->
+    <button type="button" onclick="tutupModalPengumumanAdmin()" style="width: 100%; margin-top: 8px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; flex-shrink: 0;">Tutup</button>
+  
+  </div>
+</div>
     
  <!-- JAVASCRIPT LOGIC SCRIPT UTAMA -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
@@ -1210,40 +1219,61 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
       }
     }
 
-   async function kirimDataPendingAdmin() {
-      if (sedangMengirimAdmin) return;
+async function kirimDataPendingAdmin() {
+  if (sedangMengirimAdmin) return;
+  
+  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+  if (antrean.length === 0) {
+    perbaruiIndikatorSyncAdmin();
+    return;
+  }
+
+  const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin');
+  if (!pinAdmin) {
+    console.warn("Sinkronisasi tertunda: PIN Admin belum tersedia di sesi ini.");
+    return;
+  }
+
+  sedangMengirimAdmin = true;
+  perbaruiIndikatorSyncAdmin();
+
+  let sisaAntrean = [];
+
+  for (let item of antrean) {
+    try {
+      const nodeTujuan = item.targetNode || 'peta_warga'; 
       
-      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-      if (antrean.length === 0) {
-        perbaruiIndikatorSyncAdmin();
-        return;
-      }
-
-      sedangMengirimAdmin = true;
-      perbaruiIndikatorSyncAdmin();
-
-      let sisaAntrean = [];
-
-      for (let item of antrean) {
-        try {
-          const nodeTujuan = item.targetNode || 'peta_warga'; 
-          const dbRef = window.firebaseRef(window.db, nodeTujuan);
-          
-          await window.firebasePush(dbRef, {
+      const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          pin: pinAdmin,
+          path: nodeTujuan,
+          method: "POST", // Menggunakan POST di Worker agar setara dengan firebasePush (auto-generate ID)
+          data: {
             ...item.payload,
             timestamp: Date.now()
-          });
-        } catch (err) {
-          console.warn("Gagal menyinkronkan ke Firebase:", err);
-          sisaAntrean.push(item);
-        }
+          }
+        })
+      });
+
+      const hasil = await response.json();
+      if (!response.ok || !hasil.success) {
+        throw new Error(hasil.error || hasil.message || "Gagal menyimpan melalui Worker");
       }
 
-      localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
-      sedangMengirimAdmin = false;
-      perbaruiIndikatorSyncAdmin();
+    } catch (err) {
+      console.warn("Gagal menyinkronkan ke Worker:", err);
+      sisaAntrean.push(item);
     }
+  }
 
+  localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
+  sedangMengirimAdmin = false;
+  perbaruiIndikatorSyncAdmin();
+}
     function simpanPayloadKeAntrean(label, payload) {
       let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
       payload.token = payload.token || localStorage.getItem('adminToken') || '';
@@ -1393,7 +1423,8 @@ function bukaAkses() {
 
 // 5. Logout Bersih (Pindah ke Mode Warga)
 function logoutAdmin() {
-  // Hapus semua penanda login & token admin
+  if (!confirm("Yakin ingin logout dari Mode Admin?")) return;
+
   localStorage.removeItem('authAdmin');
   localStorage.removeItem('adminToken');
   localStorage.removeItem('verifiedPin');
@@ -1401,8 +1432,9 @@ function logoutAdmin() {
   localStorage.removeItem('rt05_admin_session');
   localStorage.removeItem('rt05_admin_token');
   localStorage.removeItem('rt05_admin_pin');
+  localStorage.removeItem('adminPin');
+  sessionStorage.removeItem('adminPin');
 
-  // Redirect ke halaman index/warga
   window.location.href = "index.html";
 }
 
@@ -2240,41 +2272,78 @@ window.simpanSemuaPeminjamanAdmin = async function() {
 window.togglePanelWargaBaruAdmin = function() {
   const container = document.getElementById('containerDaftarWargaBaru');
   const menuUtama = document.getElementById('menuUtamaSensus');
+  const badge = document.getElementById('badge-warga-baru-count');
   if (!container || !menuUtama) return;
 
   if (container.style.display === 'none' || !container.style.display) {
     container.style.display = 'block';
-    menuUtama.style.display = 'none'; // Sembunyikan unduh CSV & kolom cari warga
+    menuUtama.style.display = 'none';
     bukaModalWargaBaruAdmin();
   } else {
     container.style.display = 'none';
-    menuUtama.style.display = 'block'; // Munculkan kembali saat ditutup
+    menuUtama.style.display = 'block';
+    if (badge) badge.innerText = 'Buka ▾';
   }
 };
 
-window.bukaModalWargaBaruAdmin = function() {
+window.bukaModalWargaBaruAdmin = async function() {
   const listContainer = document.getElementById('listWargaBaruContent');
   if (!listContainer) return;
 
   listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #64748b; padding: 10px;">⏳ Memuat data...</div>';
 
-  const dbRef = window.firebaseRef(window.db, 'warga_baru');
-  
-  window.firebaseOnValue(dbRef, (snapshot) => {
-    const data = snapshot.val();
-    let html = '';
-
-    if (!data) {
-      listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #94a3b8; padding: 10px;">Belum ada laporan warga baru / tamu masuk.</div>';
+  try {
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin') || prompt('Masukkan PIN Admin:');
+    
+    if (!pinAdmin) {
+      listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">⚠️ PIN Admin diperlukan untuk melihat data.</div>';
       return;
     }
 
-    let totalLaporan = Object.keys(data).length;
-    const badgeCount = document.getElementById('badge-warga-baru-count');
-    if (badgeCount) badgeCount.innerText = `${totalLaporan} Laporan ▴`;
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: "warga_baru",
+        method: "GET"
+      })
+    });
 
-    Object.keys(data).forEach((key) => {
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari server.");
+    }
+
+   const data = hasilProxy.result;
+    const badgeCount = document.getElementById('badge-warga-baru-count');
+
+    if (!data || Object.keys(data).length === 0) {
+      listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #94a3b8; padding: 10px;">Belum ada laporan warga baru / tamu masuk.</div>';
+      if (badgeCount) badgeCount.innerText = `0 Laporan ▴`;
+      return;
+    }
+
+    const keys = Object.keys(data);
+    if (badgeCount) badgeCount.innerText = `${keys.length} Laporan ▴`;
+
+    let html = '';
+    // Urutkan dari yang terbaru (jika ada timestamp/key)
+    keys.reverse().forEach((key) => {
       const item = data[key];
+      if (!item) return;
+
+      // Amankan karakter kutip agar tidak merusak parameter onclick
+      const safeNama = escapeHTML(item.nama || '').replace(/'/g, "\\'");
+      const safeNoRumah = escapeHTML(item.noRumah || '').replace(/'/g, "\\'");
+      const safeHp = escapeHTML(item.hp || '').replace(/'/g, "\\'");
+      const safeStatus = escapeHTML(item.status || '').replace(/'/g, "\\'");
+      const safeCerita = escapeHTML(item.cerita || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
+      const safeFoto = escapeHTML(item.foto || '').replace(/'/g, "\\'");
+
       html += `
         <div style="background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 11px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -2286,7 +2355,7 @@ window.bukaModalWargaBaruAdmin = function() {
           <div style="margin-bottom: 6px; color: #475569;">💬 <strong>Cerita:</strong> ${escapeHTML(item.cerita || '-')}</div>
           
           <div style="display: flex; justify-content: flex-end; gap: 4px;">
-            <button type="button" onclick="editWargaBaruAdmin('${key}', '${escapeHTML(item.nama || '')}', '${escapeHTML(item.noRumah || '')}', '${escapeHTML(item.hp || '')}', '${escapeHTML(item.status || '')}', '${escapeHTML(item.cerita || '')}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
+            <button type="button" onclick="editWargaBaruAdmin('${key}', '${safeNama}', '${safeNoRumah}', '${safeHp}', '${safeStatus}', '${safeCerita}', '${safeFoto}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
             <button type="button" onclick="hapusWargaBaruAdmin('${key}')" style="padding: 3px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">🗑️ Hapus</button>
           </div>
         </div>
@@ -2294,17 +2363,24 @@ window.bukaModalWargaBaruAdmin = function() {
     });
 
     listContainer.innerHTML = html;
-  }, { onlyOnce: true });
+
+  } catch (err) {
+    console.error("Error memuat warga baru:", err);
+    listContainer.innerHTML = `<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">❌ Gagal memuat: ${escapeHTML(err.message)}</div>`;
+  }
 };
 
 // ✏️ Buka Modal Edit Warga Baru
-window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita) {
+window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita, foto) {
   document.getElementById('editWargaBaruId').value = id;
   document.getElementById('editWargaBaruNama').value = nama || '';
   document.getElementById('editWargaBaruNoRumah').value = noRumah || '';
   document.getElementById('editWargaBaruHp').value = hp || '';
   document.getElementById('editWargaBaruStatus').value = status || 'Kontrakan';
   document.getElementById('editWargaBaruCerita').value = cerita || '';
+
+  const inputFotoLama = document.getElementById('editWargaBaruFoto');
+  if (inputFotoLama) inputFotoLama.value = foto || '';
 
   const modal = document.getElementById('modal-edit-warga-baru');
   if (modal) modal.style.display = 'flex';
@@ -2316,7 +2392,7 @@ window.tutupModalEditWargaBaru = function() {
   if (modal) modal.style.display = 'none';
 };
 
-// 💾 Simpan Perubahan Data Warga Baru ke Firebase
+// 💾 Simpan Perubahan Data Warga Baru via Cloudflare Worker Admin
 window.simpanPerubahanWargaBaru = async function(e) {
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
@@ -2338,7 +2414,6 @@ window.simpanPerubahanWargaBaru = async function(e) {
     btn.innerText = "⏳ Memproses...";
   }
 
-  // Ambil URL foto lama dari input tersembunyi/teks jika ada
   const inputFotoLama = document.getElementById('editWargaBaruFoto'); 
   let fotoFinalUrl = inputFotoLama ? inputFotoLama.value : '';
 
@@ -2346,7 +2421,7 @@ window.simpanPerubahanWargaBaru = async function(e) {
   const statusDiv = document.getElementById('statusSemiManual');
 
   try {
-    // Jika ada file baru yang dipilih, buat nama file kustom lalu upload ke R2
+    // 1. Upload foto baru ke R2 melalui Worker Uploader jika ada
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       if (statusDiv) {
         statusDiv.innerHTML = "⏳ Mengompres & mengunggah foto baru ke R2...";
@@ -2358,12 +2433,10 @@ window.simpanPerubahanWargaBaru = async function(e) {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
-      // Buat penamaan file kustom yang unik untuk warga baru
       const namaClean = nama.replace(/[^a-zA-Z0-9]/g, '_');
       const ekstensi = file.name.split('.').pop() || 'jpg';
       const namaFileKustom = `wargabaru_${namaClean}_${Date.now()}.${ekstensi}`;
 
-      // 🌟 Menggunakan konfigurasi terpusat dari utils.js
       let response = await fetch(RT05_CONFIG.UPLOADER_URL, {
         method: "POST",
         headers: {
@@ -2378,7 +2451,7 @@ window.simpanPerubahanWargaBaru = async function(e) {
 
       if (result.success && result.url) {
         let urlAwal = new URL(result.url);
-        fotoFinalUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain R2
+        fotoFinalUrl = "https://storage.papan05.my.id" + urlAwal.pathname;
       } else {
         throw new Error(result.error || "Gagal mengunggah foto baru.");
       }
@@ -2388,7 +2461,7 @@ window.simpanPerubahanWargaBaru = async function(e) {
       btn.innerText = "⏳ Menyimpan ke Database...";
     }
 
-    // 🔒 1. Susun objek data yang akan diperbarui
+    // 2. Susun payload & kirim PATCH via Worker Admin
     const dataUpdate = {
       nama: nama,
       noRumah: noRumah,
@@ -2399,30 +2472,25 @@ window.simpanPerubahanWargaBaru = async function(e) {
       updatedAt: Date.now()
     };
 
-// 🔒 2. Ambil PIN Admin dan URL Worker Admin dari RT05_CONFIG (utils.js)
-const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
 
-// Menggunakan ADMIN_API_URL sesuai definisi di utils.js Anda
-const workerAdminUrl = RT05_CONFIG.ADMIN_API_URL;
-
-// 🔒 3. Kirim update melalui Worker Admin Proxy (PATCH)
-const responseProxy = await fetch(workerAdminUrl, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    pin: pinAdmin,
-    path: `warga_baru/${id}`, // atau `peta_warga/${idWarga}`
-    method: "PATCH",
-    data: dataUpdate
-  })
-});
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: `warga_baru/${id}`,
+        method: "PATCH",
+        data: dataUpdate
+      })
+    });
 
     const hasilProxy = await responseProxy.json();
 
     if (!hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan perubahan warga baru via Worker Admin.");
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan perubahan via Worker Admin.");
     }
 
     alert('✅ Data warga baru & foto berhasil diperbarui!');
@@ -2441,24 +2509,64 @@ const responseProxy = await fetch(workerAdminUrl, {
   }
 };
 
-// 🗑️ Fungsi Hapus Laporan Warga Baru oleh Admin
+// 🗑️ Fungsi Hapus Laporan Warga Baru via Cloudflare Worker Admin
 window.hapusWargaBaruAdmin = async function(id) {
-  if (confirm("Yakin ingin menghapus laporan warga/tamu ini?")) {
-    try {
-      await window.firebaseRemove(window.firebaseRef(window.db, `warga_baru/${id}`));
-      alert('🗑️ Laporan berhasil dihapus.');
-      window.bukaModalWargaBaruAdmin();
-    } catch (err) {
-      alert('❌ Gagal menghapus: ' + err);
+  if (!confirm("Yakin ingin menghapus laporan warga/tamu ini?")) return;
+
+  try {
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: `warga_baru/${id}`,
+        method: "DELETE"
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus data via Worker Admin.");
     }
+
+    alert('🗑️ Laporan berhasil dihapus.');
+    window.bukaModalWargaBaruAdmin();
+  } catch (err) {
+    alert('❌ Gagal menghapus: ' + err.message);
   }
 };
 
-// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV)
+// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV) via Cloudflare Worker Admin
 window.exportWargaBaruToCSV = async function() {
   try {
-    const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'warga_baru'));
-    if (!snapshot.exists()) {
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+    if (!pinAdmin) return;
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: "warga_baru",
+        method: "GET"
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari Worker Admin.");
+    }
+
+    const rawData = hasilProxy.data;
+    if (!rawData || Object.keys(rawData).length === 0) {
       alert("Tidak ada data laporan warga baru di database.");
       return;
     }
@@ -2466,17 +2574,17 @@ window.exportWargaBaruToCSV = async function() {
     let rowsData = [];
     let total = 0;
 
-    snapshot.forEach(child => {
-      const data = child.val();
+    Object.keys(rawData).forEach(key => {
+      const data = rawData[key];
       if (!data) return;
       total++;
 
-      const nama = (data.nama || '-').replace(/"/g, '""');
-      const noRumah = (data.noRumah || '-').replace(/"/g, '""');
-      const hp = (data.hp || '-').replace(/"/g, '""');
-      const status = (data.status || '-').replace(/"/g, '""');
-      const cerita = (data.cerita || '-').replace(/"/g, '""');
-      const tanggal = (data.tanggal || '-').replace(/"/g, '""');
+      const nama = String(data.nama || '-').replace(/"/g, '""');
+      const noRumah = String(data.noRumah || '-').replace(/"/g, '""');
+      const hp = String(data.hp || '-').replace(/"/g, '""');
+      const status = String(data.status || '-').replace(/"/g, '""');
+      const cerita = String(data.cerita || '-').replace(/"/g, '""');
+      const tanggal = String(data.tanggal || '-').replace(/"/g, '""');
 
       rowsData.push(`"${nama}";"${noRumah}";"${hp}";"${status}";"${cerita}";"${tanggal}"`);
     });
@@ -2500,11 +2608,12 @@ window.exportWargaBaruToCSV = async function() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   } catch (err) {
     alert("Gagal mengunduh data warga baru: " + err.message);
   }
 };
-
+    
 async function ambilDataWargaWorker() {
     const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
     return await response.json();
@@ -3642,16 +3751,16 @@ async function prosesUploadBuktiKeR2() {
       file = await kompresGambar(file, 1200, 0.8);
     }
 
-    const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+const workerUrl = RT05_CONFIG.UPLOADER_URL;
     const response = await fetch(workerUrl, {
       method: "POST",
       headers: {
-        "X-File-Name": "nota_" + Date.now() + "_" + file.name,
+        "X-File-Name": encodeURIComponent("nota_" + Date.now() + "_" + file.name),
         "Content-Type": file.type || "application/octet-stream"
       },
       body: file
     });
-
+    
     const textResult = await response.text();
     let result = JSON.parse(textResult);
 
@@ -3869,11 +3978,11 @@ window.prosesUploadBuktiEditAdmin = async function() {
     }
     
     // 2. Gunakan Worker utama Anda yang lebih stabil & ringan (Tanpa JSON/Base64)
-    const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+const workerUrl = RT05_CONFIG.UPLOADER_URL;
     let response = await fetch(workerUrl, {
       method: "POST",
       headers: {
-        "X-File-Name": "nota_edit_" + Date.now() + "_" + file.name,
+        "X-File-Name": encodeURIComponent("nota_edit_" + Date.now() + "_" + file.name),
         "Content-Type": file.type || "application/octet-stream"
       },
       body: file
@@ -3962,11 +4071,11 @@ window.simpanPerubahanKeuanganAdmin = async function() {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
-      const workerUrl = "https://rt05-uploader.deny220291.workers.dev/";
+const workerUrl = RT05_CONFIG.UPLOADER_URL;
       let response = await fetch(workerUrl, {
         method: "POST",
         headers: {
-          "X-File-Name": "nota_edit_" + Date.now() + "_" + file.name,
+          "X-File-Name": encodeURIComponent("nota_edit_" + Date.now() + "_" + file.name),
           "Content-Type": file.type || "application/octet-stream"
         },
         body: file
@@ -4021,25 +4130,43 @@ window.simpanPerubahanKeuanganAdmin = async function() {
     // ==========================================
     // PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
     // ==========================================
-   function bukaModalPengumumanAdmin() {
-      // 1. Bersihkan form & status terlebih dahulu saat modal dibuka
-      const form = document.getElementById('formInputPengumuman');
-      if (form) form.reset();
-      
-      const fileInput = document.getElementById('inputUploadPengumuman');
-      if (fileInput) fileInput.value = '';
+  function bukaModalPengumumanAdmin() {
+  // 0. Reset status edit agar kembali ke mode tambah baru
+  currentEditPengumumanId = null;
 
-      const statusEl = document.getElementById('statusUploadPengumuman');
-      if (statusEl) {
-        statusEl.innerText = '';
-        statusEl.style.display = 'none'; // Sembunyikan teks status
-      }
-
-      // 2. Set tanggal default & tampilkan modal
-      document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
-      document.getElementById('modal-admin-pengumuman').style.display = 'flex';
-      muatDaftarPengumumanAdmin();
+  // 1. Bersihkan form, kembalikan warna kuning & status saat modal dibuka
+  const form = document.getElementById('formInputPengumuman');
+  if (form) {
+    form.reset();
+    form.style.background = '#fef3c7';
+    form.style.borderColor = '#fde68a';
+    const headerForm = form.querySelector('div');
+    if (headerForm) {
+      headerForm.innerHTML = '➕ Input Pengumuman / Event Baru';
+      headerForm.style.color = '#b45309';
     }
+  }
+
+  const btnSimpan = document.getElementById('btnSimpanPengumuman');
+  if (btnSimpan) {
+    btnSimpan.innerText = '💾 Terbitkan Pengumuman';
+    btnSimpan.style.background = '#d97706';
+  }
+
+  const fileInput = document.getElementById('inputUploadPengumuman');
+  if (fileInput) fileInput.value = '';
+
+  const statusEl = document.getElementById('statusUploadPengumuman');
+  if (statusEl) {
+    statusEl.innerText = '';
+    statusEl.style.display = 'none'; // Sembunyikan teks status
+  }
+
+  // 2. Set tanggal default & tampilkan modal
+  document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
+  document.getElementById('modal-admin-pengumuman').style.display = 'flex';
+  muatDaftarPengumumanAdmin();
+}
 
     function tutupModalPengumumanAdmin() {
       document.getElementById('modal-admin-pengumuman').style.display = 'none';
@@ -4141,20 +4268,34 @@ function editPengumuman(id) {
         document.getElementById('pengumumanFoto').value = val.foto || '';
       }
 
-      // 🌟 TAMBAHKAN INI: Bersihkan input file & sembunyikan teks status saat masuk mode edit
+      // Bersihkan input file & sembunyikan teks status saat masuk mode edit
       const fileInput = document.getElementById('inputUploadPengumuman');
-      if (fileInput) fileInput.value = ''; // Kosongkan pilihan file
+      if (fileInput) fileInput.value = '';
 
       const statusEl = document.getElementById('statusUploadPengumuman');
       if (statusEl) {
-        statusEl.innerText = ''; // Hapus teks "File baru siap..."
-        statusEl.style.display = 'none'; // Sembunyikan elemen statusnya
+        statusEl.innerText = '';
+        statusEl.style.display = 'none';
+      }
+
+      // Ubah tampilan form & tombol sebagai penanda Mode Edit (tanpa alert)
+      const form = document.getElementById('formInputPengumuman');
+      if (form) {
+        form.style.background = '#eff6ff';
+        form.style.borderColor = '#93c5fd';
+        const headerForm = form.querySelector('div');
+        if (headerForm) {
+          headerForm.innerHTML = '✏️ Mode Edit Pengumuman (Ubah data lalu klik Simpan)';
+          headerForm.style.color = '#1d4ed8';
+        }
+        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
 
       const btnSimpan = document.getElementById('btnSimpanPengumuman');
-      if (btnSimpan) btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
-
-      alert("Mode Edit Aktif: Silakan ubah data lalu klik Simpan Perubahan.");
+      if (btnSimpan) {
+        btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
+        btnSimpan.style.background = "#2563eb";
+      }
     }
   });
 }
@@ -4197,7 +4338,7 @@ async function simpanPengumumanAdmin() {
       }
 
       // Menggunakan RT05_CONFIG.UPLOADER_URL
-      const uploaderUrl = RT05_CONFIG.UPLOADER_URL || "https://rt05-uploader.deny220291.workers.dev/";
+const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
       let response = await fetch(uploaderUrl, {
         method: "POST",
         headers: {
