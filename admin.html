@@ -1452,13 +1452,15 @@ async function periksaSesiAdminViaWorker() {
     const result = await response.json();
     if (response.ok && result.success) {
       return true;
-    } else {
+    } else if (response.status === 401 || response.status === 403 || result.code === 'SESSION_EXPIRED') {
       bersihkanStorageAdmin();
+      return false;
+    } else {
+      console.warn("Worker mengembalikan status non-auth:", response.status, result);
       return false;
     }
   } catch (err) {
     console.warn("Gagal memvalidasi sesi ke Worker:", err);
-    // Jika offline tapi token masih ada di sessionStorage, izinkan akses baca sementara
     return !navigator.onLine && Boolean(token);
   }
 }
