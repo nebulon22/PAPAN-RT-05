@@ -3800,24 +3800,51 @@ window.simpanLaporanDivisi = async function() {
     }
   }
 
-  // 🌟 4. SIMPAN DATA KE FIREBASE
+// 🌟 4. SIMPAN DATA KE FIREBASE MELALUI ADMIN WORKER PROXY
   if (btn) { btn.innerText = "⏳ Menyimpan ke Database..."; }
 
   const parts = tglInput.split('-');
   const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const laporanId = 'keu_' + Date.now();
 
   const payload = {
+    id: laporanId,
     tanggal: tglFormatted,
     divisi: divisi,
     keterangan: ket,
     tipe: String(jenis).toUpperCase().includes('KELUAR') ? 'KELUAR' : 'MASUK',
-    nominal: parseInt(nominal),
-    foto: finalUrlFoto
+    nominal: parseInt(nominal, 10),
+    foto: finalUrlFoto,
+    timestamp: Date.now()
   };
 
   try {
-    const newRef = window.firebasePush(window.firebaseRef(window.db, 'keuangan'));
-    await window.firebaseSet(newRef, payload);
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: `keuangan/${laporanId}`,
+        method: "PUT",
+        data: payload
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan laporan via Worker Admin.");
+    }
 
     alert('✅ Laporan Keuangan ' + divisi + ' berhasil disimpan ke database!');
     tutupModalLaporan();
@@ -3827,7 +3854,6 @@ window.simpanLaporanDivisi = async function() {
   } finally {
     if (btn) { btn.disabled = false; btn.innerText = "📤 Kirim Laporan Keuangan"; }
   }
-};
 
 async function prosesUploadBuktiKeR2() {
   const fileInput = document.getElementById('laporanInputFoto');
