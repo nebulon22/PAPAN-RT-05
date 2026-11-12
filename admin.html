@@ -4286,44 +4286,23 @@ function tutupModalPengumumanAdmin() {
 }
 
 // 1. Muat Daftar Pengumuman via Cloudflare Worker (GET)
+// 1. Muat Daftar Pengumuman langsung dari DATABASE_URL (REST API)
 async function muatDaftarPengumumanAdmin() {
   const container = document.getElementById('tabel-pengumuman-admin');
   if (!container) return;
 
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) return;
-
-  container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">⏳ Memuat pengumuman dari Worker...</td></tr>`;
+  container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">⏳ Memuat pengumuman...</td></tr>`;
 
   try {
-    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: "pengumuman",
-        method: "GET"
-      })
-    });
+    const dbUrl = `${RT05_CONFIG.DATABASE_URL}/pengumuman.json?t=${Date.now()}`;
+    const response = await fetch(dbUrl);
 
-    const hasil = await response.json();
-
-    if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status} saat mengambil data pengumuman.`);
     }
 
-    if (!response.ok || !hasil.success) {
-      throw new Error(hasil.error || hasil.message || "Gagal mengambil data pengumuman.");
-    }
-
-    const dataObj = hasil.data || {};
-    cacheDaftarPengumumanAdmin = dataObj;
+    const dataObj = (await response.json()) || {};
+    cacheDaftarPengumumanAdmin = dataObj; // Simpan ke cache lokal untuk fitur Edit instan
 
     const keys = Object.keys(dataObj);
     if (keys.length === 0) {
@@ -4341,7 +4320,7 @@ async function muatDaftarPengumumanAdmin() {
     let html = '';
     sortedKeys.forEach(key => {
       const item = dataObj[key];
-      if (item) {
+      if (item && typeof item === 'object') {
         const judul = item.judul || '-';
         const tanggal = item.tanggal || '';
         const status = String(item.status || 'AKTIF').toUpperCase().trim();
@@ -4371,7 +4350,7 @@ async function muatDaftarPengumumanAdmin() {
       }
     });
 
-    container.innerHTML = html;
+    container.innerHTML = html || `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
   } catch (error) {
     console.error("Gagal memuat pengumuman admin:", error);
     container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: red;">❌ Gagal memuat data: ${escapeHTML(error.message)}</td></tr>`;
@@ -4382,29 +4361,14 @@ async function muatDaftarPengumumanAdmin() {
 async function editPengumuman(id) {
   let val = cacheDaftarPengumumanAdmin[id];
 
+  // Jika cache lokal belum terisi, ambil langsung dari DATABASE_URL (REST API)
   if (!val) {
-    const sessionToken = sessionStorage.getItem('rt05_session_token');
-    if (!sessionToken) return;
-
     try {
-      const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${sessionToken}`
-        },
-        body: JSON.stringify({
-          sessionToken: sessionToken,
-          path: `pengumuman/${id}`,
-          method: "GET"
-        })
-      });
-      const hasil = await res.json();
-      if (hasil.success && hasil.data) {
-        val = hasil.data;
-      }
+      const res = await fetch(`${RT05_CONFIG.DATABASE_URL}/pengumuman/${id}.json?t=${Date.now()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      val = await res.json();
     } catch (err) {
-      alert("❌ Gagal mengambil detail pengumuman dari Worker: " + err.message);
+      alert("❌ Gagal mengambil detail pengumuman: " + err.message);
       return;
     }
   }
