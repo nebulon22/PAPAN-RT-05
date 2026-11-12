@@ -1150,9 +1150,11 @@ function formatRupiahInput(el) {
 }
     
 async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "POST") {
-  const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin') || prompt("🔒 Masukkan PIN Admin RT 05 untuk menyimpan perubahan:");
-  if (!pinAdmin) {
-    alert("Simpan dibatalkan: PIN Admin wajib diisi.");
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login kembali.");
+    bersihkanStorageAdmin();
+    document.getElementById('login-overlay').style.display = 'flex';
     return false;
   }
 
@@ -1160,24 +1162,28 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
     const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
-        path: pathTujuan,      // Contoh: "peta_warga/item_1" atau "inventaris"
-        method: metodeHttp,    // "POST" atau "PUT"
+        sessionToken: sessionToken,
+        path: pathTujuan,
+        method: metodeHttp,
         data: payloadData
       })
     });
 
     const hasil = await response.json();
-
-    if (hasil.success) {
-      return true;
-    } else {
-      alert("❌ Gagal: " + (hasil.error || "PIN Salah atau Terjadi Kesalahan"));
+    if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      bersihkanStorageAdmin();
+      window.location.reload();
       return false;
     }
+
+    if (hasil.success) return true;
+    alert("❌ Gagal: " + (hasil.error || "Terjadi Kesalahan"));
+    return false;
   } catch (err) {
     alert("❌ Kesalahan Jaringan / Worker: " + err.message);
     return false;
@@ -1354,58 +1360,35 @@ async function verifikasiPin() {
   }
 }
 // ==========================================
-// KELOLA SESI & AUTHENTICATION ADMIN
+// KELOLA SESI & AUTHENTICATION ADMIN (100% VIA WORKER)
 // ==========================================
 
-// 1. Simpan Sesi & Token Admin ke LocalStorage
-function simpanSesiAdmin(token, pin) {
-  const session = {
-    timestamp: new Date().getTime()
-  };
-  localStorage.setItem("rt05_admin_session", JSON.stringify(session));
-  localStorage.setItem("authAdmin", "true");
-  localStorage.setItem("admin_login_time", Date.now().toString());
-
-  // 🌟 SIMPAN PIN ADMIN KE STORAGE
-  if (pin) {
-    localStorage.setItem("adminPin", pin);
-    localStorage.setItem("rt05_admin_pin", pin);
-    sessionStorage.setItem("adminPin", pin);
-  }
-
-  if (token) {
-    localStorage.setItem("adminToken", token);
-    localStorage.setItem("rt05_admin_token", token);
-  } else if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.ADMIN_SECRET_TOKEN) {
-    localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
-  }
+// 1. Bersihkan seluruh sisa storage lama maupun baru
+function bersihkanStorageAdmin() {
+  const keysLocal = [
+    'authAdmin', 'adminToken', 'verifiedPin', 'admin_login_time',
+    'rt05_admin_session', 'rt05_admin_token', 'rt05_admin_pin', 'adminPin'
+  ];
+  keysLocal.forEach(k => localStorage.removeItem(k));
+  
+  sessionStorage.removeItem('adminPin');
+  sessionStorage.removeItem('rt05_session_token');
 }
 
-// 2. Periksa Status Sesi (24 Jam)
-function periksaSesiAdmin() {
-  const session = localStorage.getItem("rt05_admin_session") || localStorage.getItem("authAdmin");
-  if (!session) return false;
-
-  const sessionData = localStorage.getItem("rt05_admin_session");
-  if (sessionData) {
-    const data = JSON.parse(sessionData);
-    const sekarang = new Date().getTime();
-    // Masa berlaku 24 jam
-    if (sekarang - data.timestamp > 24 * 60 * 60 * 1000) {
-      logoutAdminSilent();
-      return false;
-    }
-  }
-  return true;
-}
-
-// 3. Eksekusi Login via API Worker
+// 2. Eksekusi Login murni melalui Worker
 async function cekLogin() {
-  const inputPin = document.getElementById('adminPin').value.trim();
+  const inputPinEl = document.getElementById('adminPin');
+  const btnSubmit = document.querySelector('#login-overlay button[type="submit"]');
+  const inputPin = inputPinEl ? inputPinEl.value.trim() : '';
 
   if (!inputPin) {
     alert("⚠️ Masukkan PIN terlebih dahulu.");
     return;
+  }
+
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerText = '⏳ Memverifikasi...';
   }
 
   try {
@@ -1413,43 +1396,78 @@ async function cekLogin() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'verify-pin',
+        action: 'login', // Pastikan Worker menangani action 'login' (atau 'verify-pin') dan mengembalikan sessionToken
         pin: inputPin
       })
     });
 
-    const textResult = await response.text();
-    let result;
-    try {
-      result = JSON.parse(textResult);
-    } catch (e) {
-      throw new Error("Respon server bukan JSON valid: " + textResult);
-    }
+    const result = await response.json();
 
-if (response.ok && result.success) {
-      // 🌟 Oper inputPin sebagai parameter kedua
-      simpanSesiAdmin(result.token || ('rt05-admin-' + Date.now()), inputPin);
-      
-      // Buka Antarmuka Peta & Admin
+    if (response.ok && result.success && (result.sessionToken || result.token)) {
+      // Hapus seluruh PIN mentah dari memori/storage
+      bersihkanStorageAdmin();
+      if (inputPinEl) inputPinEl.value = '';
+
+      // Simpan HANYA token sesi dari Worker di sessionStorage
+      const tokenAktif = result.sessionToken || result.token;
+      sessionStorage.setItem('rt05_session_token', tokenAktif);
+
       bukaAkses();
     } else {
       alert("❌ " + (result.error || result.message || "PIN salah! Akses ditolak."));
-      document.getElementById('adminPin').value = '';
+      if (inputPinEl) {
+        inputPinEl.value = '';
+        inputPinEl.focus();
+      }
     }
   } catch (error) {
-    console.error("Gagal verifikasi PIN:", error);
-    alert("❌ Terjadi kesalahan jaringan / URL API Worker keliru.");
+    console.error("Gagal verifikasi PIN ke Worker:", error);
+    alert("❌ Gagal terhubung ke server autentikasi Worker.");
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerText = 'Buka Kunci';
+    }
   }
 }
 
-// 4. Buka Antarmuka Admin (Sembunyikan Overlay Login & Inisialisasi Peta)
+// 3. Validasi Sesi Langsung ke Worker saat Halaman Dimuat / Di-refresh
+async function periksaSesiAdminViaWorker() {
+  const token = sessionStorage.getItem('rt05_session_token');
+  if (!token) return false;
+
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        action: 'verify-session',
+        sessionToken: token
+      })
+    });
+
+    const result = await response.json();
+    if (response.ok && result.success) {
+      return true;
+    } else {
+      bersihkanStorageAdmin();
+      return false;
+    }
+  } catch (err) {
+    console.warn("Gagal memvalidasi sesi ke Worker:", err);
+    // Jika offline tapi token masih ada di sessionStorage, izinkan akses baca sementara
+    return !navigator.onLine && Boolean(token);
+  }
+}
+
+// 4. Buka Antarmuka Admin
 function bukaAkses() {
   const overlay = document.getElementById('login-overlay');
   if (overlay) overlay.style.display = 'none';
   document.body.style.overflow = 'auto';
-
-  const inputPin = document.getElementById('adminPin');
-  if (inputPin) inputPin.value = '';
 
   initMap();
 
@@ -1459,26 +1477,41 @@ function bukaAkses() {
 
   setTimeout(() => {
     muatSemuaDataAdmin();
-  }, 500);
+    if (typeof muatDataProgker === 'function') muatDataProgker();
+    if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
+    if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
+      kirimDataPendingAdmin();
+    }
+  }, 400);
 }
 
-// 5. Logout Bersih (Pindah ke Mode Warga)
-function logoutAdmin() {
+// 5. Logout Bersih (Cabut Sesi di Worker + Bersihkan Browser)
+async function logoutAdmin() {
   if (!confirm("Yakin ingin logout dari Mode Admin?")) return;
 
-  localStorage.removeItem('authAdmin');
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('verifiedPin');
-  localStorage.removeItem('admin_login_time');
-  localStorage.removeItem('rt05_admin_session');
-  localStorage.removeItem('rt05_admin_token');
-  localStorage.removeItem('rt05_admin_pin');
-  localStorage.removeItem('adminPin');
-  sessionStorage.removeItem('adminPin');
+  const token = sessionStorage.getItem('rt05_session_token');
+  if (token && navigator.onLine) {
+    try {
+      await fetch(RT05_CONFIG.ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'logout',
+          sessionToken: token
+        })
+      });
+    } catch (e) {
+      console.warn("Gagal mengirim request logout ke Worker:", e);
+    }
+  }
 
+  bersihkanStorageAdmin();
   window.location.href = "index.html";
 }
-
+    
 function logoutAdminSilent() {
   localStorage.removeItem('authAdmin');
   localStorage.removeItem('adminToken');
@@ -3627,23 +3660,32 @@ function clearInputCariWarga() {
     if (inputEl) inputEl.focus();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (typeof perbaruiIndikatorSyncAdmin === 'function') perbaruiIndikatorSyncAdmin();
-  if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
-
-  // Cek apakah sesi masih valid
-  if (periksaSesiAdmin()) {
-    bukaAkses();
-    if (typeof muatDataProgker === 'function') muatDataProgker();
-  } else {
-    // Tampilkan overlay login jika belum terautentikasi
-    const overlay = document.getElementById('login-overlay');
-    if (overlay) overlay.style.display = 'flex';
-    setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
+document.addEventListener("DOMContentLoaded", async () => {
+  // 1. Inisialisasi indikator status offline/online (aman dijalankan sebelum login)
+  if (typeof perbaruiIndikatorSyncAdmin === 'function') {
+    perbaruiIndikatorSyncAdmin();
   }
 
-  if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
-    kirimDataPendingAdmin();
+  // 2. Validasi sesi langsung ke Worker sebelum memuat data apa pun
+  const sesiValid = await periksaSesiAdminViaWorker();
+
+  if (sesiValid) {
+    // 3. Jika token valid di Worker, baru buka akses & muat semua data admin
+    bukaAkses();
+
+    if (typeof muatPeminjamanAdmin === 'function') {
+      muatPeminjamanAdmin();
+    }
+
+    if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
+      kirimDataPendingAdmin();
+    }
+  } else {
+    // 4. Jika belum login atau token kedaluwarsa, kunci layar & tahan semua request data
+    const overlay = document.getElementById('login-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
   }
 });
 
