@@ -3735,6 +3735,15 @@ window.simpanLaporanDivisi = async function() {
     return;
   }
 
+  // Ambil token sesi admin
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
   const btn = document.getElementById('btnSimpanLaporan');
   if (btn) { btn.disabled = true; btn.innerText = "⏳ Memproses Laporan..."; }
 
@@ -3742,7 +3751,7 @@ window.simpanLaporanDivisi = async function() {
   const fileInput = document.getElementById('laporanInputFoto');
   const statusDiv = document.getElementById('statusUploadBukti');
 
-  // 🌟 3. PROSES UPLOAD FOTO DIJALANKAN DI SINI (Hanya saat tombol kirim ditekan)
+  // 🌟 3. PROSES UPLOAD FOTO DIJALANKAN DI SINI (Dengan Header Authorization)
   if (fileInput && fileInput.files.length > 0) {
     if (statusDiv) {
       statusDiv.innerHTML = "⏳ Mengompres & mengunggah nota ke R2...";
@@ -3750,25 +3759,25 @@ window.simpanLaporanDivisi = async function() {
     }
 
     let file = fileInput.files[0];
-   try {
+    try {
       if (typeof kompresGambar === 'function') {
         file = await kompresGambar(file, 1200, 0.8);
       }
-      // Mengambil URL dari konfigurasi terpusat di utils.js
       const workerUrl = RT05_CONFIG.UPLOADER_URL; 
       const response = await fetch(workerUrl, {
-  method: "POST",
-  headers: {
-    "X-File-Name": file.name ? encodeURIComponent(file.name) : "nota.jpg",
-    "Content-Type": file.type || "application/octet-stream"
-  },
-  body: file
-});
+        method: "POST",
+        headers: {
+          "X-File-Name": encodeURIComponent("nota_" + Date.now() + "_" + (file.name || "nota.jpg")),
+          "Content-Type": file.type || "application/octet-stream",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: file
+      });
       
       const textResult = await response.text();
       let result = JSON.parse(textResult);
 
-      if (result.success && result.url) {
+      if (response.ok && result.success && result.url) {
         let urlAwal = new URL(result.url);
         finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
         
@@ -3787,7 +3796,7 @@ window.simpanLaporanDivisi = async function() {
       }
       alert("Gagal mengunggah foto bukti. Pengiriman laporan dibatalkan.");
       if (btn) { btn.disabled = false; btn.innerText = "📤 Kirim Laporan Keuangan"; }
-      return; // Hentikan proses jika upload foto gagal
+      return;
     }
   }
 
@@ -3827,6 +3836,13 @@ async function prosesUploadBuktiKeR2() {
 
   if (!fileInput || fileInput.files.length === 0) return;
 
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    statusDiv.innerHTML = `❌ Sesi admin habis. Silakan login ulang.`;
+    statusDiv.style.color = "#dc2626";
+    return;
+  }
+
   let file = fileInput.files[0];
   statusDiv.innerHTML = "⏳ Mengompres & mengunggah nota ke R2...";
   statusDiv.style.color = "#d97706";
@@ -3836,12 +3852,13 @@ async function prosesUploadBuktiKeR2() {
       file = await kompresGambar(file, 1200, 0.8);
     }
 
-const workerUrl = RT05_CONFIG.UPLOADER_URL;
+    const workerUrl = RT05_CONFIG.UPLOADER_URL;
     const response = await fetch(workerUrl, {
       method: "POST",
       headers: {
         "X-File-Name": encodeURIComponent("nota_" + Date.now() + "_" + file.name),
-        "Content-Type": file.type || "application/octet-stream"
+        "Content-Type": file.type || "application/octet-stream",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: file
     });
@@ -3849,12 +3866,11 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
     const textResult = await response.text();
     let result = JSON.parse(textResult);
 
-    if (result.success && result.url) {
-      // 🌟 MANIPULASI DOMAIN KE CUSTOM DOMAIN R2
+    if (response.ok && result.success && result.url) {
       let urlAwal = new URL(result.url);
       let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
 
-      urlTarget.value = urlFinal;
+      if (urlTarget) urlTarget.value = urlFinal;
       statusDiv.innerHTML = `✅ Bukti berhasil diunggah! <button type="button" data-click="bukaFotoBesar" data-arg="${urlFinal}" style="background:none; border:none; color:#2563eb; text-decoration:underline; font-size:10.5px; padding:0; cursor:pointer;">Lihat Nota</button>`;
       statusDiv.style.color = "#10b981";
     } else {
