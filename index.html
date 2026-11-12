@@ -1550,13 +1550,16 @@ function bukaInfoSmooth(event, targetUrl) {
   const btn = event.currentTarget;
   btn.style.transform = "scale(0.95)";
 
-  document.body.style.transition = "opacity 0.18s ease-in-out, transform 0.18s ease-in-out";
-  document.body.style.opacity = "0";
-  document.body.style.transform = "translateY(-4px)";
-
-  setTimeout(() => {
-    window.location.href = targetUrl;
-  }, 180);
+  // Gunakan View Transition bawaan browser modern agar perpindahan mulus tanpa layar putih
+  if (document.startViewTransition) {
+    document.startViewTransition(() => {
+      window.location.href = targetUrl;
+    });
+  } else {
+    setTimeout(() => {
+      window.location.href = targetUrl;
+    }, 80);
+  }
 }
 
 // Taruh tepat di bawahnya seperti ini:
