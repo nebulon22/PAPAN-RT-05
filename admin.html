@@ -4094,24 +4094,31 @@ window.prosesUploadBuktiEditAdmin = async function() {
   const hiddenUrl = document.getElementById('editFotoUrl');
 
   if (!fileInput.files || fileInput.files.length === 0) return;
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    statusDiv.innerHTML = '❌ Sesi admin habis. Silakan login ulang.';
+    statusDiv.style.color = '#dc2626';
+    return;
+  }
+
   let file = fileInput.files[0];
 
   statusDiv.innerHTML = '⏳ Sedang mengompres & mengunggah nota...';
   statusDiv.style.color = '#d97706';
 
   try {
-    // 1. Jalankan kompresi otomatis (Sama seperti form lainnya)
     if (typeof kompresGambar === 'function') {
       file = await kompresGambar(file, 1200, 0.8);
     }
     
-    // 2. Gunakan Worker utama Anda yang lebih stabil & ringan (Tanpa JSON/Base64)
-const workerUrl = RT05_CONFIG.UPLOADER_URL;
+    const workerUrl = RT05_CONFIG.UPLOADER_URL;
     let response = await fetch(workerUrl, {
       method: "POST",
       headers: {
         "X-File-Name": encodeURIComponent("nota_edit_" + Date.now() + "_" + file.name),
-        "Content-Type": file.type || "application/octet-stream"
+        "Content-Type": file.type || "application/octet-stream",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: file
     });
@@ -4119,8 +4126,7 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
     const textResult = await response.text();
     let result = JSON.parse(textResult);
 
-    if (result.success && result.url) {
-      // 3. Modifikasi langsung ke Custom Domain Anda
+    if (response.ok && result.success && result.url) {
       let urlAwal = new URL(result.url);
       let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
 
@@ -4147,7 +4153,7 @@ window.simpanPerubahanKeuanganAdmin = async function() {
   let nominal = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
   let pinInput = document.getElementById('editPinDivisi').value.trim();
   
-  let fotoUrl = document.getElementById('editFotoUrl').value; // Mengambil URL foto lama/yang sudah ada
+  let fotoUrl = document.getElementById('editFotoUrl').value;
 
   if (!tglInput || !divisi || !keterangan || nominal <= 0) {
     alert("Mohon lengkapi semua data dengan benar!");
@@ -4181,12 +4187,21 @@ window.simpanPerubahanKeuanganAdmin = async function() {
     return;
   }
 
+  // Ambil token sesi admin
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
   const btn = document.getElementById('btnSimpanEditAdmin');
   const statusDiv = document.getElementById('statusUploadBuktiEdit');
   if (btn) { btn.disabled = true; btn.innerText = '⏳ Memproses...'; }
 
   try {
-    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG SAAT TOMBOL DIKLIK
+    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG DENGAN AUTHORIZATION
     const fileInput = document.getElementById('editInputFoto');
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       if (statusDiv) {
@@ -4199,12 +4214,13 @@ window.simpanPerubahanKeuanganAdmin = async function() {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
-const workerUrl = RT05_CONFIG.UPLOADER_URL;
+      const workerUrl = RT05_CONFIG.UPLOADER_URL;
       let response = await fetch(workerUrl, {
         method: "POST",
         headers: {
           "X-File-Name": encodeURIComponent("nota_edit_" + Date.now() + "_" + file.name),
-          "Content-Type": file.type || "application/octet-stream"
+          "Content-Type": file.type || "application/octet-stream",
+          "Authorization": `Bearer ${sessionToken}`
         },
         body: file
       });
@@ -4212,23 +4228,22 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
       let textResult = await response.text();
       let result = JSON.parse(textResult);
 
-      if (result.success && result.url) {
+      if (response.ok && result.success && result.url) {
         let urlAwal = new URL(result.url);
-        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan custom domain baru
+        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname;
       } else {
         throw new Error(result.error || "Gagal unggah file baru");
       }
     }
 
-    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE
+    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE MELALUI ADMIN WORKER PROXY (PATCH)
     if (btn) { btn.innerText = '⏳ Menyimpan ke Database...'; }
 
     let parts = tglInput.split('-');
     let tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
     let tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
 
-    const refItem = window.firebaseRef(window.db, `keuangan/${idKeuanganSedangDiedit}`);
-    await window.firebaseUpdate(refItem, {
+    const updatePayload = {
       tanggal: tanggalRapi,
       tgl: tanggalRapi,
       divisi: divisi,
@@ -4237,13 +4252,44 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
       keterangan: keterangan,
       ket: keterangan,
       nominal: nominal,
-      foto: fotoUrl
+      foto: fotoUrl,
+      updatedAt: Date.now()
+    };
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: `keuangan/${idKeuanganSedangDiedit}`,
+        method: "PATCH",
+        data: updatePayload
+      })
     });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memperbarui data via Worker Admin.");
+    }
 
     alert("✅ Data keuangan & nota berhasil diperbarui!");
     window.tutupModalEditAdmin();
     if (typeof muatDataKelolaKeuanganAdmin === 'function') {
       muatDataKelolaKeuanganAdmin();
+    }
+    if (typeof muatDataKeuangan === 'function') {
+      muatDataKeuangan();
     }
   } catch (err) {
     alert("❌ Gagal memperbarui data: " + err.message);
