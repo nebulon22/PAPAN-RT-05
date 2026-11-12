@@ -1217,40 +1217,61 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
       }
     }
 
-   async function kirimDataPendingAdmin() {
-      if (sedangMengirimAdmin) return;
+async function kirimDataPendingAdmin() {
+  if (sedangMengirimAdmin) return;
+  
+  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+  if (antrean.length === 0) {
+    perbaruiIndikatorSyncAdmin();
+    return;
+  }
+
+  const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin');
+  if (!pinAdmin) {
+    console.warn("Sinkronisasi tertunda: PIN Admin belum tersedia di sesi ini.");
+    return;
+  }
+
+  sedangMengirimAdmin = true;
+  perbaruiIndikatorSyncAdmin();
+
+  let sisaAntrean = [];
+
+  for (let item of antrean) {
+    try {
+      const nodeTujuan = item.targetNode || 'peta_warga'; 
       
-      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-      if (antrean.length === 0) {
-        perbaruiIndikatorSyncAdmin();
-        return;
-      }
-
-      sedangMengirimAdmin = true;
-      perbaruiIndikatorSyncAdmin();
-
-      let sisaAntrean = [];
-
-      for (let item of antrean) {
-        try {
-          const nodeTujuan = item.targetNode || 'peta_warga'; 
-          const dbRef = window.firebaseRef(window.db, nodeTujuan);
-          
-          await window.firebasePush(dbRef, {
+      const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          pin: pinAdmin,
+          path: nodeTujuan,
+          method: "POST", // Menggunakan POST di Worker agar setara dengan firebasePush (auto-generate ID)
+          data: {
             ...item.payload,
             timestamp: Date.now()
-          });
-        } catch (err) {
-          console.warn("Gagal menyinkronkan ke Firebase:", err);
-          sisaAntrean.push(item);
-        }
+          }
+        })
+      });
+
+      const hasil = await response.json();
+      if (!response.ok || !hasil.success) {
+        throw new Error(hasil.error || hasil.message || "Gagal menyimpan melalui Worker");
       }
 
-      localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
-      sedangMengirimAdmin = false;
-      perbaruiIndikatorSyncAdmin();
+    } catch (err) {
+      console.warn("Gagal menyinkronkan ke Worker:", err);
+      sisaAntrean.push(item);
     }
+  }
 
+  localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
+  sedangMengirimAdmin = false;
+  perbaruiIndikatorSyncAdmin();
+}
     function simpanPayloadKeAntrean(label, payload) {
       let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
       payload.token = payload.token || localStorage.getItem('adminToken') || '';
