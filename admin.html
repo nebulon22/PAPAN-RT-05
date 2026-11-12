@@ -2244,11 +2244,11 @@ window.togglePanelWargaBaruAdmin = function() {
 
   if (container.style.display === 'none' || !container.style.display) {
     container.style.display = 'block';
-    menuUtama.style.display = 'none'; // Sembunyikan unduh CSV & kolom cari warga
+    menuUtama.style.display = 'none';
     bukaModalWargaBaruAdmin();
   } else {
     container.style.display = 'none';
-    menuUtama.style.display = 'block'; // Munculkan kembali saat ditutup
+    menuUtama.style.display = 'block';
   }
 };
 
@@ -2266,6 +2266,8 @@ window.bukaModalWargaBaruAdmin = function() {
 
     if (!data) {
       listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #94a3b8; padding: 10px;">Belum ada laporan warga baru / tamu masuk.</div>';
+      const badgeCount = document.getElementById('badge-warga-baru-count');
+      if (badgeCount) badgeCount.innerText = `0 Laporan ▴`;
       return;
     }
 
@@ -2286,7 +2288,7 @@ window.bukaModalWargaBaruAdmin = function() {
           <div style="margin-bottom: 6px; color: #475569;">💬 <strong>Cerita:</strong> ${escapeHTML(item.cerita || '-')}</div>
           
           <div style="display: flex; justify-content: flex-end; gap: 4px;">
-            <button type="button" onclick="editWargaBaruAdmin('${key}', '${escapeHTML(item.nama || '')}', '${escapeHTML(item.noRumah || '')}', '${escapeHTML(item.hp || '')}', '${escapeHTML(item.status || '')}', '${escapeHTML(item.cerita || '')}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
+            <button type="button" onclick="editWargaBaruAdmin('${key}', '${escapeHTML(item.nama || '')}', '${escapeHTML(item.noRumah || '')}', '${escapeHTML(item.hp || '')}', '${escapeHTML(item.status || '')}', '${escapeHTML(item.cerita || '')}', '${escapeHTML(item.foto || '')}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
             <button type="button" onclick="hapusWargaBaruAdmin('${key}')" style="padding: 3px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">🗑️ Hapus</button>
           </div>
         </div>
@@ -2298,13 +2300,16 @@ window.bukaModalWargaBaruAdmin = function() {
 };
 
 // ✏️ Buka Modal Edit Warga Baru
-window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita) {
+window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita, foto) {
   document.getElementById('editWargaBaruId').value = id;
   document.getElementById('editWargaBaruNama').value = nama || '';
   document.getElementById('editWargaBaruNoRumah').value = noRumah || '';
   document.getElementById('editWargaBaruHp').value = hp || '';
   document.getElementById('editWargaBaruStatus').value = status || 'Kontrakan';
   document.getElementById('editWargaBaruCerita').value = cerita || '';
+
+  const inputFotoLama = document.getElementById('editWargaBaruFoto');
+  if (inputFotoLama) inputFotoLama.value = foto || '';
 
   const modal = document.getElementById('modal-edit-warga-baru');
   if (modal) modal.style.display = 'flex';
@@ -2316,7 +2321,7 @@ window.tutupModalEditWargaBaru = function() {
   if (modal) modal.style.display = 'none';
 };
 
-// 💾 Simpan Perubahan Data Warga Baru ke Firebase
+// 💾 Simpan Perubahan Data Warga Baru via Cloudflare Worker Admin
 window.simpanPerubahanWargaBaru = async function(e) {
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
@@ -2338,7 +2343,6 @@ window.simpanPerubahanWargaBaru = async function(e) {
     btn.innerText = "⏳ Memproses...";
   }
 
-  // Ambil URL foto lama dari input tersembunyi/teks jika ada
   const inputFotoLama = document.getElementById('editWargaBaruFoto'); 
   let fotoFinalUrl = inputFotoLama ? inputFotoLama.value : '';
 
@@ -2346,7 +2350,7 @@ window.simpanPerubahanWargaBaru = async function(e) {
   const statusDiv = document.getElementById('statusSemiManual');
 
   try {
-    // Jika ada file baru yang dipilih, buat nama file kustom lalu upload ke R2
+    // 1. Upload foto baru ke R2 melalui Worker Uploader jika ada
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       if (statusDiv) {
         statusDiv.innerHTML = "⏳ Mengompres & mengunggah foto baru ke R2...";
@@ -2358,12 +2362,10 @@ window.simpanPerubahanWargaBaru = async function(e) {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
-      // Buat penamaan file kustom yang unik untuk warga baru
       const namaClean = nama.replace(/[^a-zA-Z0-9]/g, '_');
       const ekstensi = file.name.split('.').pop() || 'jpg';
       const namaFileKustom = `wargabaru_${namaClean}_${Date.now()}.${ekstensi}`;
 
-      // 🌟 Menggunakan konfigurasi terpusat dari utils.js
       let response = await fetch(RT05_CONFIG.UPLOADER_URL, {
         method: "POST",
         headers: {
@@ -2378,7 +2380,7 @@ window.simpanPerubahanWargaBaru = async function(e) {
 
       if (result.success && result.url) {
         let urlAwal = new URL(result.url);
-        fotoFinalUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain R2
+        fotoFinalUrl = "https://storage.papan05.my.id" + urlAwal.pathname;
       } else {
         throw new Error(result.error || "Gagal mengunggah foto baru.");
       }
@@ -2388,7 +2390,7 @@ window.simpanPerubahanWargaBaru = async function(e) {
       btn.innerText = "⏳ Menyimpan ke Database...";
     }
 
-    // 🔒 1. Susun objek data yang akan diperbarui
+    // 2. Susun payload & kirim PATCH via Worker Admin
     const dataUpdate = {
       nama: nama,
       noRumah: noRumah,
@@ -2399,30 +2401,25 @@ window.simpanPerubahanWargaBaru = async function(e) {
       updatedAt: Date.now()
     };
 
-// 🔒 2. Ambil PIN Admin dan URL Worker Admin dari RT05_CONFIG (utils.js)
-const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
 
-// Menggunakan ADMIN_API_URL sesuai definisi di utils.js Anda
-const workerAdminUrl = RT05_CONFIG.ADMIN_API_URL;
-
-// 🔒 3. Kirim update melalui Worker Admin Proxy (PATCH)
-const responseProxy = await fetch(workerAdminUrl, {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"
-  },
-  body: JSON.stringify({
-    pin: pinAdmin,
-    path: `warga_baru/${id}`, // atau `peta_warga/${idWarga}`
-    method: "PATCH",
-    data: dataUpdate
-  })
-});
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: `warga_baru/${id}`,
+        method: "PATCH",
+        data: dataUpdate
+      })
+    });
 
     const hasilProxy = await responseProxy.json();
 
     if (!hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan perubahan warga baru via Worker Admin.");
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan perubahan via Worker Admin.");
     }
 
     alert('✅ Data warga baru & foto berhasil diperbarui!');
@@ -2441,24 +2438,64 @@ const responseProxy = await fetch(workerAdminUrl, {
   }
 };
 
-// 🗑️ Fungsi Hapus Laporan Warga Baru oleh Admin
+// 🗑️ Fungsi Hapus Laporan Warga Baru via Cloudflare Worker Admin
 window.hapusWargaBaruAdmin = async function(id) {
-  if (confirm("Yakin ingin menghapus laporan warga/tamu ini?")) {
-    try {
-      await window.firebaseRemove(window.firebaseRef(window.db, `warga_baru/${id}`));
-      alert('🗑️ Laporan berhasil dihapus.');
-      window.bukaModalWargaBaruAdmin();
-    } catch (err) {
-      alert('❌ Gagal menghapus: ' + err);
+  if (!confirm("Yakin ingin menghapus laporan warga/tamu ini?")) return;
+
+  try {
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: `warga_baru/${id}`,
+        method: "DELETE"
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus data via Worker Admin.");
     }
+
+    alert('🗑️ Laporan berhasil dihapus.');
+    window.bukaModalWargaBaruAdmin();
+  } catch (err) {
+    alert('❌ Gagal menghapus: ' + err.message);
   }
 };
 
-// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV)
+// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV) via Cloudflare Worker Admin
 window.exportWargaBaruToCSV = async function() {
   try {
-    const snapshot = await window.firebaseGet(window.firebaseRef(window.db, 'warga_baru'));
-    if (!snapshot.exists()) {
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+    if (!pinAdmin) return;
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: "warga_baru",
+        method: "GET"
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari Worker Admin.");
+    }
+
+    const rawData = hasilProxy.data;
+    if (!rawData || Object.keys(rawData).length === 0) {
       alert("Tidak ada data laporan warga baru di database.");
       return;
     }
@@ -2466,17 +2503,17 @@ window.exportWargaBaruToCSV = async function() {
     let rowsData = [];
     let total = 0;
 
-    snapshot.forEach(child => {
-      const data = child.val();
+    Object.keys(rawData).forEach(key => {
+      const data = rawData[key];
       if (!data) return;
       total++;
 
-      const nama = (data.nama || '-').replace(/"/g, '""');
-      const noRumah = (data.noRumah || '-').replace(/"/g, '""');
-      const hp = (data.hp || '-').replace(/"/g, '""');
-      const status = (data.status || '-').replace(/"/g, '""');
-      const cerita = (data.cerita || '-').replace(/"/g, '""');
-      const tanggal = (data.tanggal || '-').replace(/"/g, '""');
+      const nama = String(data.nama || '-').replace(/"/g, '""');
+      const noRumah = String(data.noRumah || '-').replace(/"/g, '""');
+      const hp = String(data.hp || '-').replace(/"/g, '""');
+      const status = String(data.status || '-').replace(/"/g, '""');
+      const cerita = String(data.cerita || '-').replace(/"/g, '""');
+      const tanggal = String(data.tanggal || '-').replace(/"/g, '""');
 
       rowsData.push(`"${nama}";"${noRumah}";"${hp}";"${status}";"${cerita}";"${tanggal}"`);
     });
@@ -2500,11 +2537,12 @@ window.exportWargaBaruToCSV = async function() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
   } catch (err) {
     alert("Gagal mengunduh data warga baru: " + err.message);
   }
 };
-
+    
 async function ambilDataWargaWorker() {
     const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
     return await response.json();
