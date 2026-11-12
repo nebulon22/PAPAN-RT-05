@@ -4351,11 +4351,18 @@ async function simpanPengumumanAdmin() {
   const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
   const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
   
-  let fotoUrl = document.getElementById('pengumumanFoto').value.trim(); // URL lama / manual
+  let fotoUrl = document.getElementById('pengumumanFoto').value.trim();
   const fileInput = document.getElementById('inputUploadPengumuman');
 
   if (!judul || !tglInput) {
     alert("Mohon isi tanggal dan judul pengumuman!");
+    return;
+  }
+
+  // 🔒 Cek Session Token Admin sebelum memproses upload maupun simpan database
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin telah habis atau tidak ditemukan. Silakan login ulang.");
     return;
   }
 
@@ -4373,18 +4380,17 @@ async function simpanPengumumanAdmin() {
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       let file = fileInput.files[0];
       
-      // Kompres gambar agar ringan sebelum di-upload
       if (typeof kompresGambar === 'function') {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
-      // Menggunakan RT05_CONFIG.UPLOADER_URL
-const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
+      const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
       let response = await fetch(uploaderUrl, {
         method: "POST",
         headers: {
           "X-File-Name": encodeURIComponent("pengumuman_" + Date.now() + "_" + file.name),
-          "Content-Type": file.type || "application/octet-stream"
+          "Content-Type": file.type || "application/octet-stream",
+          "Authorization": `Bearer ${sessionToken}` // Ikut menyertakan token sesi
         },
         body: file
       });
@@ -4394,7 +4400,7 @@ const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
 
       if (result.success && result.url) {
         let urlAwal = new URL(result.url);
-        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain R2
+        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname;
       } else {
         throw new Error(result.error || "Gagal mengunggah file media.");
       }
@@ -4403,7 +4409,6 @@ const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
     // 🌟 2. SIMPAN KE DATABASE MELALUI CLOUDFLARE WORKER ADMIN
     if (btn) { btn.innerText = "⏳ Menyimpan ke Database..."; }
 
-    // Jika currentEditPengumumanId ada isinya, berarti pakai ID lama (Update). Jika null, buat ID baru.
     const pengumumanId = (typeof currentEditPengumumanId !== 'undefined' && currentEditPengumumanId) ? currentEditPengumumanId : ('info_' + Date.now());
     
     const payload = {
@@ -4419,35 +4424,13 @@ const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
       timestamp: Date.now()
     };
 
-// 🔒 Ambil PIN Admin & URL Worker Admin dari Sesi / Utils
-    const pinAdmin = sessionStorage.getItem('adminPin') 
-                  || localStorage.getItem('rt05_admin_pin') 
-                  || localStorage.getItem('adminPin') 
-                  || prompt('Masukkan PIN Admin:');
-                  
-    const tokenAdmin = localStorage.getItem('rt05_admin_token') 
-                    || (typeof RT05_CONFIG !== 'undefined' ? RT05_CONFIG.ADMIN_SECRET_TOKEN : '');
-
-    if (!pinAdmin) {
-      alert("Simpan dibatalkan: PIN Admin tidak ditemukan.");
-      return;
-    }
-
-    // Pastikan tersimpan di sesi agar aksi berikutnya tidak meminta ulang
-    sessionStorage.setItem('adminPin', pinAdmin);
-    localStorage.setItem('rt05_admin_pin', pinAdmin);
-
-    const workerAdminUrl = RT05_CONFIG.ADMIN_API_URL;
-
-    // Kirim request PUT untuk menulis/memperbarui node pengumuman/{id}
-    const responseProxy = await fetch(workerAdminUrl, {
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        pin: pinAdmin,
-        token: tokenAdmin,
+        sessionToken: sessionToken,
         path: `pengumuman/${pengumumanId}`,
         method: "PUT",
         data: payload
@@ -4464,16 +4447,25 @@ const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
 
     alert("✅ Pengumuman berhasil diperbarui/diterbitkan!");
     
-    // Reset form
-    document.getElementById('formInputPengumuman').reset();
+    // Reset form & kembalikan tampilan ke mode input baru (warna kuning)
+    const form = document.getElementById('formInputPengumuman');
+    if (form) {
+      form.reset();
+      form.style.background = '#fef3c7';
+      form.style.borderColor = '#fde68a';
+      const headerForm = form.querySelector('div');
+      if (headerForm) {
+        headerForm.innerHTML = '➕ Input Pengumuman / Event Baru';
+        headerForm.style.color = '#b45309';
+      }
+    }
+
     if (document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
     if (document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
     
-    // Hilangkan teks status upload jika ada
     const statusEl = document.getElementById('statusUploadPengumuman');
     if (statusEl) statusEl.style.display = 'none';
 
-    // Scroll ke atas
     const modalBody = document.querySelector('.modal-body') || document.getElementById('formInputPengumuman');
     if (modalBody && modalBody.scrollTo) {
       modalBody.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4490,6 +4482,7 @@ const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
     if (btn) {
       btn.disabled = false;
       btn.innerText = "💾 Terbitkan Pengumuman";
+      btn.style.background = "#d97706";
     }
   }
 }
