@@ -209,8 +209,15 @@
   </div>
 </div>
 
- <!-- BARU: Panggil fungsi logoutAdmin() -->
- <a href="javascript:void(0)" onclick="logoutAdmin()" class="btn-back-floating">⬅️ Mode Warga (Logout)</a>
+<!-- Tombol Pindah ke Peta Warga (Sesi Admin Tetap Aktif) & Tombol Logout Terpisah -->
+<div class="btn-back-floating" style="background: transparent; box-shadow: none; padding: 0; display: flex; gap: 6px;">
+  <a href="index.html" style="background: #0288d1; color: white; padding: 8px 12px; border-radius: 20px; text-decoration: none; font-weight: bold; font-size: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+    ⬅️ Peta Warga
+  </a>
+  <button type="button" onclick="logoutAdmin()" style="background: #dc2626; color: white; border: none; padding: 8px 12px; border-radius: 20px; font-weight: bold; font-size: 12px; cursor: pointer; box-shadow: 0 2px 6px rgba(0,0,0,0.3);">
+    🚪 Logout
+  </button>
+</div>
 
 
   <!-- PANEL ATAS -->
@@ -1393,7 +1400,8 @@ function bukaAkses() {
 
 // 5. Logout Bersih (Pindah ke Mode Warga)
 function logoutAdmin() {
-  // Hapus semua penanda login & token admin
+  if (!confirm("Yakin ingin logout dari Mode Admin?")) return;
+
   localStorage.removeItem('authAdmin');
   localStorage.removeItem('adminToken');
   localStorage.removeItem('verifiedPin');
@@ -1401,8 +1409,9 @@ function logoutAdmin() {
   localStorage.removeItem('rt05_admin_session');
   localStorage.removeItem('rt05_admin_token');
   localStorage.removeItem('rt05_admin_pin');
+  localStorage.removeItem('adminPin');
+  sessionStorage.removeItem('adminPin');
 
-  // Redirect ke halaman index/warga
   window.location.href = "index.html";
 }
 
