@@ -4,6 +4,7 @@ const RT05_CONFIG = {
     PETA_PROXY_URL: "https://peta.papan05.my.id", 
     UPLOADER_URL: "https://uploader.papan05.my.id",
     ADMIN_API_URL: "https://admin-worker.papan05.my.id",
+    DATABASE_URL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
     FIREBASE: {
         apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
         authDomain: "papan05-21a56.firebaseapp.com",
