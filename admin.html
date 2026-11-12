@@ -1296,24 +1296,61 @@ async function kirimDataPendingAdmin() {
     });
 
 
-function verifikasiPin() {
-  const pin = document.getElementById("adminPin")?.value;
-  if (pin === RT05_CONFIG.ADMIN_PIN) {
-    // Simpan PIN ke sesi agar tidak diminta ulang saat edit/simpan data
-    sessionStorage.setItem("adminPin", pin);
-    localStorage.setItem("rt05_admin_pin", pin);
+async function verifikasiPin() {
+  const inputPinEl = document.getElementById("adminPin");
+  const pin = inputPinEl?.value?.trim();
+  
+  if (!pin) {
+    alert("⚠️ Masukkan PIN Admin terlebih dahulu!");
+    return;
+  }
 
-    simpanSesiAdmin();
-    
-    if (RT05_CONFIG.ADMIN_SECRET_TOKEN) {
-      localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
+  // Opsional: Beri indikator loading pada tombol login jika ada
+  const btnLogin = document.querySelector('#loginBox button, button[onclick*="verifikasiPin"]');
+  const teksAsli = btnLogin ? btnLogin.innerText : '';
+  if (btnLogin) {
+    btnLogin.disabled = true;
+    btnLogin.innerText = '⏳ Memverifikasi...';
+  }
+
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "login",
+        pin: pin
+      })
+    });
+
+    const hasil = await response.json();
+
+    if (response.ok && hasil.success && hasil.sessionToken) {
+      // 1. Bersihkan input PIN & sisa PIN lama dari storage browser
+      inputPinEl.value = "";
+      sessionStorage.removeItem("adminPin");
+      localStorage.removeItem("rt05_admin_pin");
+      localStorage.removeItem("adminPin");
+
+      // 2. Simpan HANYA Signed Session Token (berlaku 4 jam) di sessionStorage
+      sessionStorage.setItem("rt05_session_token", hasil.sessionToken);
+
+      simpanSesiAdmin();
+      bukaAkses();
+      if (typeof pilihanAdmin !== 'undefined' && pilihanAdmin) {
+        pilihanAdmin.style.display = 'block';
+      }
+      alert("✅ Akses Admin Diberikan!");
+    } else {
+      alert("❌ " + (hasil.error || hasil.message || "PIN Admin Salah!"));
     }
-    
-    bukaAkses();
-    pilihanAdmin.style.display = 'block';
-    alert("Akses Admin Diberikan!");
-  } else {
-    alert("PIN Admin Salah!");
+  } catch (err) {
+    alert("❌ Gagal terhubung ke server Worker: " + err.message);
+  } finally {
+    if (btnLogin) {
+      btnLogin.disabled = false;
+      btnLogin.innerText = teksAsli;
+    }
   }
 }
 // ==========================================
