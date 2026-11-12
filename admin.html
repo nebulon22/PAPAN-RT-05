@@ -4926,11 +4926,22 @@ async function toggleStatusPengumuman(idUnik, statusBaru) {
     }
 
     
-    function simpanDataProgker(e) {
-      e.preventDefault();
+async function simpanDataProgker(e) {
+      if (e) e.preventDefault();
+
+      const sessionToken = sessionStorage.getItem('rt05_session_token');
+      if (!sessionToken) {
+        alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        window.location.reload();
+        return;
+      }
+
       var btn = document.getElementById('btnSimpanProgker');
-      btn.disabled = true;
-      btn.innerText = 'Menyimpan...';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⏳ Menyimpan...';
+      }
 
       var status = document.getElementById('progkerStatus').value;
       var kegiatan = document.getElementById('progkerKegiatan').value;
@@ -4959,22 +4970,49 @@ async function toggleStatusPengumuman(idUnik, statusBaru) {
         Detail: detail,
         detail: detail,
         Tanggal: new Date().toLocaleDateString('id-ID'),
-        tanggal: new Date().toLocaleDateString('id-ID')
+        tanggal: new Date().toLocaleDateString('id-ID'),
+        updatedAt: Date.now()
       };
 
-      const targetRef = window.firebaseRef(window.db, 'progker_rab/' + progkerId);
-      window.firebaseSet(targetRef, payload)
-        .then(() => {
-          btn.disabled = false;
-          btn.innerText = '💾 Simpan Program Kerja';
-          tutupModalFormProgker();
-          alert('✅ Program Kerja berhasil disimpan ke Firebase!');
-        })
-        .catch((err) => {
-          btn.disabled = false;
-          btn.innerText = '💾 Simpan Program Kerja';
-          alert('❌ Gagal menyimpan program kerja: ' + err.message);
+      try {
+        const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({
+            sessionToken: sessionToken,
+            path: `progker_rab/${progkerId}`,
+            method: "PUT",
+            data: payload
+          })
         });
+
+        const hasilProxy = await responseProxy.json();
+
+        if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+          if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+          alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+          window.location.reload();
+          return;
+        }
+
+        if (!responseProxy.ok || !hasilProxy.success) {
+          throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan program kerja via Worker Admin.");
+        }
+
+        tutupModalFormProgker();
+        alert('✅ Program Kerja berhasil disimpan ke database!');
+        if (typeof muatDataProgker === 'function') muatDataProgker();
+      } catch (err) {
+        alert('❌ Gagal menyimpan program kerja: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = '💾 Simpan Program Kerja';
+        }
+      }
     }
 
     function bukaModalFormProgker() {
@@ -5004,17 +5042,49 @@ async function toggleStatusPengumuman(idUnik, statusBaru) {
       document.getElementById('modal-form-progker').style.display = 'flex';
     }
 
-    function hapusProgker(id) {
+async function hapusProgker(id) {
       if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
 
-      const targetRef = window.firebaseRef(window.db, 'progker_rab/' + id);
-      window.firebaseRemove(targetRef)
-        .then(() => {
-          alert('🗑️ Program kerja berhasil dihapus.');
-        })
-        .catch((err) => {
-          alert('❌ Gagal menghapus: ' + err.message);
+      const sessionToken = sessionStorage.getItem('rt05_session_token');
+      if (!sessionToken) {
+        alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        window.location.reload();
+        return;
+      }
+
+      try {
+        const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({
+            sessionToken: sessionToken,
+            path: `progker_rab/${id}`,
+            method: "DELETE"
+          })
         });
+
+        const hasilProxy = await responseProxy.json();
+
+        if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+          if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+          alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+          window.location.reload();
+          return;
+        }
+
+        if (!responseProxy.ok || !hasilProxy.success) {
+          throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus program kerja via Worker Admin.");
+        }
+
+        alert('🗑️ Program kerja berhasil dihapus.');
+        if (typeof muatDataProgker === 'function') muatDataProgker();
+      } catch (err) {
+        alert('❌ Gagal menghapus: ' + err.message);
+      }
     }
 
     function tutupTabProgker() {
