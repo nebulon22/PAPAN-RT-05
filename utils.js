@@ -2,7 +2,7 @@
 
 const RT05_CONFIG = {
     PETA_PROXY_URL: "https://peta.papan05.my.id", 
-    UPLOADER_URL: "https://rt05-uploader.deny220291.workers.dev/",
+    UPLOADER_URL: "https://uploader.papan05.my.id",
     ADMIN_API_URL: "https://admin-worker.papan05.my.id",
     FIREBASE: {
         apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
