@@ -2249,6 +2249,7 @@ window.simpanSemuaPeminjamanAdmin = async function() {
 window.togglePanelWargaBaruAdmin = function() {
   const container = document.getElementById('containerDaftarWargaBaru');
   const menuUtama = document.getElementById('menuUtamaSensus');
+  const badge = document.getElementById('badge-warga-baru-count');
   if (!container || !menuUtama) return;
 
   if (container.style.display === 'none' || !container.style.display) {
@@ -2258,34 +2259,68 @@ window.togglePanelWargaBaruAdmin = function() {
   } else {
     container.style.display = 'none';
     menuUtama.style.display = 'block';
+    if (badge) badge.innerText = 'Buka ▾';
   }
 };
 
-window.bukaModalWargaBaruAdmin = function() {
+window.bukaModalWargaBaruAdmin = async function() {
   const listContainer = document.getElementById('listWargaBaruContent');
   if (!listContainer) return;
 
   listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #64748b; padding: 10px;">⏳ Memuat data...</div>';
 
-  const dbRef = window.firebaseRef(window.db, 'warga_baru');
-  
-  window.firebaseOnValue(dbRef, (snapshot) => {
-    const data = snapshot.val();
-    let html = '';
+  try {
+    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin') || prompt('Masukkan PIN Admin:');
+    
+    if (!pinAdmin) {
+      listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">⚠️ PIN Admin diperlukan untuk melihat data.</div>';
+      return;
+    }
 
-    if (!data) {
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        pin: pinAdmin,
+        path: "warga_baru",
+        method: "GET"
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (!hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari server.");
+    }
+
+    const data = hasilProxy.data;
+    const badgeCount = document.getElementById('badge-warga-baru-count');
+
+    if (!data || Object.keys(data).length === 0) {
       listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #94a3b8; padding: 10px;">Belum ada laporan warga baru / tamu masuk.</div>';
-      const badgeCount = document.getElementById('badge-warga-baru-count');
       if (badgeCount) badgeCount.innerText = `0 Laporan ▴`;
       return;
     }
 
-    let totalLaporan = Object.keys(data).length;
-    const badgeCount = document.getElementById('badge-warga-baru-count');
-    if (badgeCount) badgeCount.innerText = `${totalLaporan} Laporan ▴`;
+    const keys = Object.keys(data);
+    if (badgeCount) badgeCount.innerText = `${keys.length} Laporan ▴`;
 
-    Object.keys(data).forEach((key) => {
+    let html = '';
+    // Urutkan dari yang terbaru (jika ada timestamp/key)
+    keys.reverse().forEach((key) => {
       const item = data[key];
+      if (!item) return;
+
+      // Amankan karakter kutip agar tidak merusak parameter onclick
+      const safeNama = escapeHTML(item.nama || '').replace(/'/g, "\\'");
+      const safeNoRumah = escapeHTML(item.noRumah || '').replace(/'/g, "\\'");
+      const safeHp = escapeHTML(item.hp || '').replace(/'/g, "\\'");
+      const safeStatus = escapeHTML(item.status || '').replace(/'/g, "\\'");
+      const safeCerita = escapeHTML(item.cerita || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
+      const safeFoto = escapeHTML(item.foto || '').replace(/'/g, "\\'");
+
       html += `
         <div style="background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 11px;">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
@@ -2297,7 +2332,7 @@ window.bukaModalWargaBaruAdmin = function() {
           <div style="margin-bottom: 6px; color: #475569;">💬 <strong>Cerita:</strong> ${escapeHTML(item.cerita || '-')}</div>
           
           <div style="display: flex; justify-content: flex-end; gap: 4px;">
-            <button type="button" onclick="editWargaBaruAdmin('${key}', '${escapeHTML(item.nama || '')}', '${escapeHTML(item.noRumah || '')}', '${escapeHTML(item.hp || '')}', '${escapeHTML(item.status || '')}', '${escapeHTML(item.cerita || '')}', '${escapeHTML(item.foto || '')}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
+            <button type="button" onclick="editWargaBaruAdmin('${key}', '${safeNama}', '${safeNoRumah}', '${safeHp}', '${safeStatus}', '${safeCerita}', '${safeFoto}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
             <button type="button" onclick="hapusWargaBaruAdmin('${key}')" style="padding: 3px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">🗑️ Hapus</button>
           </div>
         </div>
@@ -2305,7 +2340,11 @@ window.bukaModalWargaBaruAdmin = function() {
     });
 
     listContainer.innerHTML = html;
-  }, { onlyOnce: true });
+
+  } catch (err) {
+    console.error("Error memuat warga baru:", err);
+    listContainer.innerHTML = `<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">❌ Gagal memuat: ${escapeHTML(err.message)}</div>`;
+  }
 };
 
 // ✏️ Buka Modal Edit Warga Baru
