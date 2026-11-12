@@ -1544,23 +1544,28 @@ function sensorNamaDepan(namaAsli, kategori) {
   return bagianInfoRumah !== '' ? `${namaTersensor} ${bagianInfoRumah}` : namaTersensor;
 }
 
-  function bukaInfoSmooth(event, targetUrl) {
-  event.preventDefault(); // Mencegah pindah halaman secara langsung/kaku
+function bukaInfoSmooth(event, targetUrl) {
+  event.preventDefault();
 
-  // Berikan efek klik membal (scale down tipis) agar terasa interaktif
   const btn = event.currentTarget;
   btn.style.transform = "scale(0.95)";
 
-  // Berikan efek fade-out halus pada seluruh body index
   document.body.style.transition = "opacity 0.18s ease-in-out, transform 0.18s ease-in-out";
   document.body.style.opacity = "0";
   document.body.style.transform = "translateY(-4px)";
 
-  // Pindah ke halaman pengumuman setelah animasi selesai (180 milidetik)
   setTimeout(() => {
     window.location.href = targetUrl;
   }, 180);
 }
+
+// Taruh tepat di bawahnya seperti ini:
+window.addEventListener('pageshow', function(event) {
+  document.body.style.transition = "none";
+  document.body.style.opacity = "1";
+  document.body.style.transform = "none";
+});
+  
 // 🌟 Fungsi untuk Memantau & Menampilkan Badge Jumlah Info RT Aktif di Index
 function muatBadgeInfoRT() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
