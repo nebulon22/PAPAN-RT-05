@@ -2362,27 +2362,33 @@ window.togglePanelWargaBaruAdmin = function() {
   }
 };
 
+// ✏️ Wrapper agar data tetap utuh (tidak rusak oleh kutip/enter/simbol HTML) saat tombol Edit diklik
+window.bukaEditWargaBaruEncoded = function(encodedStr) {
+  const d = JSON.parse(decodeURIComponent(encodedStr));
+  window.editWargaBaruAdmin(d.id, d.nama, d.noRumah, d.hp, d.status, d.cerita, d.foto);
+};
+
 window.bukaModalWargaBaruAdmin = async function() {
   const listContainer = document.getElementById('listWargaBaruContent');
   if (!listContainer) return;
 
   listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #64748b; padding: 10px;">⏳ Memuat data...</div>';
 
-  try {
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin') || prompt('Masukkan PIN Admin:');
-    
-    if (!pinAdmin) {
-      listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">⚠️ PIN Admin diperlukan untuk melihat data.</div>';
-      return;
-    }
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">⚠️ Sesi admin habis. Silakan login ulang.</div>';
+    return;
+  }
 
+  try {
     const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
+        sessionToken: sessionToken,
         path: "warga_baru",
         method: "GET"
       })
@@ -2390,11 +2396,18 @@ window.bukaModalWargaBaruAdmin = async function() {
 
     const hasilProxy = await responseProxy.json();
 
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
     if (!hasilProxy.success) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari server.");
     }
 
-   const data = hasilProxy.result;
+    const data = hasilProxy.result || hasilProxy.data;
     const badgeCount = document.getElementById('badge-warga-baru-count');
 
     if (!data || Object.keys(data).length === 0) {
@@ -2407,18 +2420,20 @@ window.bukaModalWargaBaruAdmin = async function() {
     if (badgeCount) badgeCount.innerText = `${keys.length} Laporan ▴`;
 
     let html = '';
-    // Urutkan dari yang terbaru (jika ada timestamp/key)
     keys.reverse().forEach((key) => {
       const item = data[key];
       if (!item) return;
 
-      // Amankan karakter kutip agar tidak merusak parameter onclick
-      const safeNama = escapeHTML(item.nama || '').replace(/'/g, "\\'");
-      const safeNoRumah = escapeHTML(item.noRumah || '').replace(/'/g, "\\'");
-      const safeHp = escapeHTML(item.hp || '').replace(/'/g, "\\'");
-      const safeStatus = escapeHTML(item.status || '').replace(/'/g, "\\'");
-      const safeCerita = escapeHTML(item.cerita || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
-      const safeFoto = escapeHTML(item.foto || '').replace(/'/g, "\\'");
+      // Encode objek data secara utuh untuk dilempar ke modal Edit
+      const encodedData = encodeURIComponent(JSON.stringify({
+        id: key,
+        nama: item.nama || '',
+        noRumah: item.noRumah || '',
+        hp: item.hp || '',
+        status: item.status || 'Kontrakan',
+        cerita: item.cerita || '',
+        foto: item.foto || ''
+      })).replace(/'/g, "%27");
 
       html += `
         <div style="background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 11px;">
@@ -2431,8 +2446,8 @@ window.bukaModalWargaBaruAdmin = async function() {
           <div style="margin-bottom: 6px; color: #475569;">💬 <strong>Cerita:</strong> ${escapeHTML(item.cerita || '-')}</div>
           
           <div style="display: flex; justify-content: flex-end; gap: 4px;">
-            <button type="button" onclick="editWargaBaruAdmin('${key}', '${safeNama}', '${safeNoRumah}', '${safeHp}', '${safeStatus}', '${safeCerita}', '${safeFoto}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
-            <button type="button" onclick="hapusWargaBaruAdmin('${key}')" style="padding: 3px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">🗑️ Hapus</button>
+            <button type="button" onclick="bukaEditWargaBaruEncoded('${encodedData}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
+            <button type="button" onclick="hapusWargaBaruAdmin('${escapeHTML(key).replace(/'/g, "\\'")}')" style="padding: 3px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">🗑️ Hapus</button>
           </div>
         </div>
       `;
@@ -2446,29 +2461,7 @@ window.bukaModalWargaBaruAdmin = async function() {
   }
 };
 
-// ✏️ Buka Modal Edit Warga Baru
-window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita, foto) {
-  document.getElementById('editWargaBaruId').value = id;
-  document.getElementById('editWargaBaruNama').value = nama || '';
-  document.getElementById('editWargaBaruNoRumah').value = noRumah || '';
-  document.getElementById('editWargaBaruHp').value = hp || '';
-  document.getElementById('editWargaBaruStatus').value = status || 'Kontrakan';
-  document.getElementById('editWargaBaruCerita').value = cerita || '';
-
-  const inputFotoLama = document.getElementById('editWargaBaruFoto');
-  if (inputFotoLama) inputFotoLama.value = foto || '';
-
-  const modal = document.getElementById('modal-edit-warga-baru');
-  if (modal) modal.style.display = 'flex';
-};
-
-// ❌ Tutup Modal Edit Warga Baru
-window.tutupModalEditWargaBaru = function() {
-  const modal = document.getElementById('modal-edit-warga-baru');
-  if (modal) modal.style.display = 'none';
-};
-
-// 💾 Simpan Perubahan Data Warga Baru via Cloudflare Worker Admin
+// 💾 Simpan Perubahan Data Warga Baru via Session Token
 window.simpanPerubahanWargaBaru = async function(e) {
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
@@ -2485,6 +2478,14 @@ window.simpanPerubahanWargaBaru = async function(e) {
     return;
   }
 
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
   if (btn) {
     btn.disabled = true;
     btn.innerText = "⏳ Memproses...";
@@ -2497,7 +2498,6 @@ window.simpanPerubahanWargaBaru = async function(e) {
   const statusDiv = document.getElementById('statusSemiManual');
 
   try {
-    // 1. Upload foto baru ke R2 melalui Worker Uploader jika ada
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       if (statusDiv) {
         statusDiv.innerHTML = "⏳ Mengompres & mengunggah foto baru ke R2...";
@@ -2517,7 +2517,8 @@ window.simpanPerubahanWargaBaru = async function(e) {
         method: "POST",
         headers: {
           "X-File-Name": encodeURIComponent(namaFileKustom),
-          "Content-Type": file.type || "application/octet-stream"
+          "Content-Type": file.type || "application/octet-stream",
+          "Authorization": `Bearer ${sessionToken}`
         },
         body: file
       });
@@ -2533,11 +2534,8 @@ window.simpanPerubahanWargaBaru = async function(e) {
       }
     }
 
-    if (btn) {
-      btn.innerText = "⏳ Menyimpan ke Database...";
-    }
+    if (btn) btn.innerText = "⏳ Menyimpan ke Database...";
 
-    // 2. Susun payload & kirim PATCH via Worker Admin
     const dataUpdate = {
       nama: nama,
       noRumah: noRumah,
@@ -2548,15 +2546,14 @@ window.simpanPerubahanWargaBaru = async function(e) {
       updatedAt: Date.now()
     };
 
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
-
     const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
+        sessionToken: sessionToken,
         path: `warga_baru/${id}`,
         method: "PATCH",
         data: dataUpdate
@@ -2564,6 +2561,13 @@ window.simpanPerubahanWargaBaru = async function(e) {
     });
 
     const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
 
     if (!hasilProxy.success) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan perubahan via Worker Admin.");
@@ -2585,26 +2589,40 @@ window.simpanPerubahanWargaBaru = async function(e) {
   }
 };
 
-// 🗑️ Fungsi Hapus Laporan Warga Baru via Cloudflare Worker Admin
+// 🗑️ Fungsi Hapus Laporan Warga Baru via Session Token
 window.hapusWargaBaruAdmin = async function(id) {
   if (!confirm("Yakin ingin menghapus laporan warga/tamu ini?")) return;
 
-  try {
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
 
+  try {
     const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
+        sessionToken: sessionToken,
         path: `warga_baru/${id}`,
         method: "DELETE"
       })
     });
 
     const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
 
     if (!hasilProxy.success) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus data via Worker Admin.");
@@ -2617,19 +2635,25 @@ window.hapusWargaBaruAdmin = async function(id) {
   }
 };
 
-// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV) via Cloudflare Worker Admin
+// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV) via Session Token
 window.exportWargaBaruToCSV = async function() {
-  try {
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
-    if (!pinAdmin) return;
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
 
+  try {
     const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
+        sessionToken: sessionToken,
         path: "warga_baru",
         method: "GET"
       })
@@ -2637,11 +2661,18 @@ window.exportWargaBaruToCSV = async function() {
 
     const hasilProxy = await responseProxy.json();
 
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
     if (!hasilProxy.success) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari Worker Admin.");
     }
 
-    const rawData = hasilProxy.data;
+    const rawData = hasilProxy.result || hasilProxy.data;
     if (!rawData || Object.keys(rawData).length === 0) {
       alert("Tidak ada data laporan warga baru di database.");
       return;
@@ -2689,7 +2720,30 @@ window.exportWargaBaruToCSV = async function() {
     alert("Gagal mengunduh data warga baru: " + err.message);
   }
 };
+
     
+// ✏️ Buka Modal Edit Warga Baru
+window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita, foto) {
+  document.getElementById('editWargaBaruId').value = id;
+  document.getElementById('editWargaBaruNama').value = nama || '';
+  document.getElementById('editWargaBaruNoRumah').value = noRumah || '';
+  document.getElementById('editWargaBaruHp').value = hp || '';
+  document.getElementById('editWargaBaruStatus').value = status || 'Kontrakan';
+  document.getElementById('editWargaBaruCerita').value = cerita || '';
+
+  const inputFotoLama = document.getElementById('editWargaBaruFoto');
+  if (inputFotoLama) inputFotoLama.value = foto || '';
+
+  const modal = document.getElementById('modal-edit-warga-baru');
+  if (modal) modal.style.display = 'flex';
+};
+
+// ❌ Tutup Modal Edit Warga Baru
+window.tutupModalEditWargaBaru = function() {
+  const modal = document.getElementById('modal-edit-warga-baru');
+  if (modal) modal.style.display = 'none';
+};
+
 async function ambilDataWargaWorker() {
     const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
     return await response.json();
