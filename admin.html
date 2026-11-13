@@ -807,58 +807,79 @@
     </div>
   </div>
 
-         <!-- PANEL EDIT DATA LOKASI -->
+<!-- PANEL EDIT DATA LOKASI (BERLAKU UNTUK EDIT DARI DAFTAR MAUPUN PIN PETA) -->
 <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
   <div class="modal-content" style="max-width: 400px; width: 90%; max-height: 85vh; overflow-y: auto; padding-bottom: 20px;">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
       <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Lokasi / Warga</h3>
-      <button class="close-btn" onclick="tutupModalEditWarga()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
+      <button type="button" class="close-btn" onclick="tutupModalEditWarga()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
     </div>
 
-<form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
-  <input type="hidden" id="editWargaId">
+    <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
+      <input type="hidden" id="editWargaId">
 
-  <!-- Kategori Bangunan -->
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Kategori Bangunan:</label>
-    <select id="editWargaKategori" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" onchange="toggleFieldKategoriEdit()">
-      <option value="Rumah">🏠 Rumah Warga</option>
-      <option value="Kost">🛏️ Kost / Kontrakan</option>
-      <option value="Fasum">🏛️ Fasum / Pos / Tempat Ibadah</option>
-      <option value="Kuliner">🍽️ Kuliner / Warung</option>
-      <option value="Minimarket">🏪 Minimarket / Toko</option>
-    </select>
-  </div>
+      <!-- Kategori Bangunan -->
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Kategori Bangunan:</label>
+        <select id="editWargaKategori" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" onchange="toggleFieldKategoriEdit()">
+          <option value="Rumah">🏠 Rumah Warga</option>
+          <option value="Kost">🛏️ Kost / Kontrakan</option>
+          <option value="Fasum">🏛️ Fasum / Pos / Tempat Ibadah</option>
+          <option value="Kuliner">🍽️ Kuliner / Warung</option>
+          <option value="Minimarket">🏪 Minimarket / Toko</option>
+        </select>
+      </div>
 
-  <!-- 🌟 CONTAINER DINAMIS EDIT -->
-  <div id="containerEditDinamis">
-    <!-- Diisi otomatis oleh fungsi toggleFieldKategoriEdit() -->
-  </div>
+      <!-- CONTAINER DINAMIS EDIT -->
+      <div id="containerEditDinamis">
+        <!-- Diisi otomatis oleh fungsi toggleFieldKategoriEdit() -->
+      </div>
 
-  <!-- Pilih File Baru -->
-  <div class="form-group" style="margin-bottom: 12px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
-    <div style="margin-top: 4px;">
-      <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; width: 100%;" onchange="handlePilihFileBaru(this)">
-    </div>
-    <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
-  </div>
+      <!-- Koordinat Pin Peta (Otomatis terisi baik dari daftar maupun klik pin) -->
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+          <label style="font-size: 12px; font-weight: bold; color: #374151;">Latitude:</label>
+          <input type="text" id="editWargaLat" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+        </div>
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+          <label style="font-size: 12px; font-weight: bold; color: #374151;">Longitude:</label>
+          <input type="text" id="editWargaLng" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+        </div>
+      </div>
 
-  <!-- Kolom URL Foto -->
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media:</label>
-    <input type="text" id="editWargaFotoURL" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-  </div>
+      <!-- Status Tampil di Peta -->
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Tampilkan di Peta?</label>
+        <select id="editWargaHidden" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+          <option value="FALSE">Ya (Tampil di Peta)</option>
+          <option value="TRUE">Tidak (Sembunyikan)</option>
+        </select>
+      </div>
 
-  <div style="display: flex; gap: 8px;">
-    <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
-      💾 Simpan Perubahan
-    </button>
-    <button type="button" onclick="tutupModalEditWarga()" style="padding: 10px 14px; background: #94a3b8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
-      Batal
-    </button>
-  </div>
-</form>
+      <!-- Pilih File Baru -->
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
+        <div style="margin-top: 4px;">
+          <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; width: 100%;" onchange="handlePilihFileBaru(this)">
+        </div>
+        <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
+      </div>
+
+      <!-- Kolom URL Foto -->
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media:</label>
+        <input type="text" id="editWargaFotoURL" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          💾 Simpan Perubahan
+        </button>
+        <button type="button" onclick="tutupModalEditWarga()" style="padding: 10px 14px; background: #94a3b8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          Batal
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -1722,18 +1743,20 @@ function initMap() {
         markerGroup.addLayer(marker);
 
         // PUSH KE ARRAY GLOBAL DAFTARPIN
-        window.daftarPin.push({ 
-          id: key,
-          namaRaw: namaTampilAsli,
-          namaTempat: namaTempat,
-          noRumah: noRumah,
-          kepalaKeluarga: kepalaKeluarga,
-          anggota: textAnggota,
-          marker: marker, 
-          lat: itemLat, 
-          lng: itemLng,
-          kategori: String(rawType).trim().toLowerCase()
-        });
+window.daftarPin.push({ 
+  id: key, 
+  namaRaw: namaTampilAsli, 
+  namaTempat: namaTempat, 
+  noRumah: noRumah, 
+  kepalaKeluarga: kepalaKeluarga, 
+  anggota: textAnggota, 
+  foto: urlFoto,
+  hidden: Boolean(val.Hidden || val.hidden),
+  marker: marker, 
+  lat: itemLat, 
+  lng: itemLng, 
+  kategori: String(rawType).trim().toLowerCase() 
+});
       });
 
       console.log("✅ Peta siap. Total daftarPin:", window.daftarPin.length);
@@ -3141,72 +3164,271 @@ async function cariDetailKeluargaAdmin() {
         }
     }
 }
+
+    
+let currentEditWargaData = null;
+
 function bukaModalEditWargaAdminById(id) {
-    const data = globalDataWarga.find(item => String(item.id) === String(id));
-    if (!data) return;
+  // Cari di globalDataWarga terlebih dahulu, fallback ke window.daftarPin jika dibuka langsung dari peta
+  let data = (typeof globalDataWarga !== 'undefined' && Array.isArray(globalDataWarga))
+    ? globalDataWarga.find(item => String(item.id) === String(id))
+    : null;
 
-    const inputId = document.getElementById('editWargaId');
-    if (inputId) inputId.value = data.id;
-
-    // 🌟 1. Set nilai dropdown kategori bangunan secara aman
-    const selectKategori = document.getElementById('editWargaKategori');
-    if (selectKategori) {
-        const dbType = String(data.type || data.Type || 'Rumah').toLowerCase();
-        let matched = false;
-        for (let option of selectKategori.options) {
-            if (option.value.toLowerCase() === dbType) {
-                selectKategori.value = option.value;
-                matched = true;
-                break;
-            }
-        }
-        if (!matched) selectKategori.value = 'Rumah'; 
+  if (!data && typeof window.daftarPin !== 'undefined' && Array.isArray(window.daftarPin)) {
+    const pinItem = window.daftarPin.find(p => String(p.id) === String(id));
+    if (pinItem) {
+      data = {
+        id: pinItem.id,
+        type: pinItem.kategori || 'Rumah',
+        namaTempat: pinItem.namaTempat || pinItem.namaRaw || '',
+        kepalaKeluarga: pinItem.kepalaKeluarga || '',
+        anggotaKeluarga: pinItem.anggota || '',
+        noRumah: pinItem.noRumah || '',
+        lat: pinItem.lat || '',
+        lng: pinItem.lng || '',
+        hidden: pinItem.hidden || false,
+        foto: pinItem.foto || ''
+      };
     }
+  }
 
-    // 🌟 2. Jalankan fungsi toggle/atur tampilan form berdasarkan kategori yang terpilih
-    if (typeof toggleFieldKategoriEdit === 'function') {
-        toggleFieldKategoriEdit();
+  if (!data) {
+    alert('⚠️ Data lokasi tidak ditemukan.');
+    return;
+  }
+
+  currentEditWargaData = data;
+
+  const inputId = document.getElementById('editWargaId');
+  if (inputId) inputId.value = data.id;
+
+  // 1. Set dropdown kategori bangunan
+  const selectKategori = document.getElementById('editWargaKategori');
+  if (selectKategori) {
+    const dbType = String(data.type || data.Type || 'Rumah').toLowerCase();
+    let matched = false;
+    for (let option of selectKategori.options) {
+      if (option.value.toLowerCase() === dbType) {
+        selectKategori.value = option.value;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) selectKategori.value = 'Rumah';
+  }
+
+  // 2. Render form dinamis & isi nilainya
+  if (typeof toggleFieldKategoriEdit === 'function') {
+    toggleFieldKategoriEdit();
+  }
+  isiNilaiFormEditWarga(data);
+
+  // 3. Isi Koordinat & Status Tampil Peta
+  const elLat = document.getElementById('editWargaLat');
+  if (elLat) elLat.value = data.lat !== undefined ? data.lat : '';
+
+  const elLng = document.getElementById('editWargaLng');
+  if (elLng) elLng.value = data.lng !== undefined ? data.lng : '';
+
+  const elHidden = document.getElementById('editWargaHidden');
+  if (elHidden) {
+    const isHidden = data.hidden === true || String(data.hidden).toUpperCase() === 'TRUE';
+    elHidden.value = isHidden ? 'TRUE' : 'FALSE';
+  }
+
+  // 4. Set Foto & Preview
+  const inputFoto = document.getElementById('editWargaFotoURL');
+  const preview = document.getElementById('previewFotoRumah');
+  const fotoVal = data.foto || data.Foto || '';
+
+  if (inputFoto) inputFoto.value = fotoVal;
+  if (preview) {
+    if (fotoVal) {
+      preview.src = fotoVal;
+      preview.style.display = 'inline-block';
     } else {
-        // Fallback manual jika fungsi toggle belum terpanggil
-        const kategori = String(data.type || data.Type || '').toLowerCase();
-        const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
-        const groupKeluarga = document.getElementById('groupFieldKeluarga');
-        if (groupKeluarga) {
-            groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
-        }
+      preview.style.display = 'none';
+    }
+  }
+
+  // 5. Tampilkan modal
+  const modal = document.getElementById('modal-edit-warga');
+  if (modal) modal.style.display = 'flex';
+}
+
+function isiNilaiFormEditWarga(data) {
+  if (!data) return;
+
+  // Field Mode Rumah
+  const elNama = document.getElementById('editWargaNama');
+  if (elNama) elNama.value = data.kepalaKeluarga || '';
+
+  const elAnggota = document.getElementById('editWargaAnggota');
+  if (elAnggota) elAnggota.value = data.anggotaKeluarga || data.Anggota || '';
+
+  // Field Mode Non-Rumah (Kost, Fasum, Kuliner, Minimarket)
+  const elNamaTempat = document.getElementById('editNamaTempat');
+  if (elNamaTempat) elNamaTempat.value = data.namaTempat || data.Nama || data.nama || '';
+
+  const elNamaPemilik = document.getElementById('editNamaPemilik');
+  if (elNamaPemilik) elNamaPemilik.value = data.kepalaKeluarga || data.pemilik || '';
+
+  // Field Nomor Rumah / Bangunan (dipakai di kedua mode)
+  const elNoRumah = document.getElementById('editWargaNoRumah');
+  if (elNoRumah) elNoRumah.value = data.noRumah || '';
+}
+
+function bukaModalEditWargaDariPeta(id) {
+  if (map) map.closePopup();
+  bukaModalEditWargaAdminById(id);
+}
+
+async function simpanPerubahanWarga(event) {
+  event.preventDefault();
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert('⚠️ Sesi admin habis. Silakan login ulang.');
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
+  const idWarga = document.getElementById('editWargaId').value;
+  const btnSimpan = document.getElementById('btnSimpanEditWarga');
+
+  btnSimpan.disabled = true;
+  btnSimpan.innerText = '⏳ Sedang Memproses...';
+
+  try {
+    let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
+
+    // 1. Upload file baru jika admin memilih file dari perangkat
+    if (typeof fileBaruDipilih !== 'undefined' && fileBaruDipilih !== null) {
+      const statusEl = document.getElementById('statusSemiManual');
+      if (statusEl) statusEl.innerHTML = '<i>⏳ Sedang mengompres & mengupload foto baru...</i>';
+
+      let fileToUpload = fileBaruDipilih;
+      if (typeof kompresGambar === 'function' && fileToUpload.type.startsWith('image/')) {
+        fileToUpload = await kompresGambar(fileToUpload, 1200, 0.8);
+      }
+
+      const noRumahVal = document.getElementById('editWargaNoRumah')
+        ? document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_')
+        : idWarga;
+      const ekstensi = fileToUpload.name.split('.').pop() || 'jpg';
+      const namaFileKustom = `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`;
+
+      const responseUpload = await fetch(RT05_CONFIG.UPLOADER_URL, {
+        method: 'POST',
+        headers: {
+          'X-File-Name': encodeURIComponent(namaFileKustom),
+          'Content-Type': fileToUpload.type || 'application/octet-stream',
+          'Authorization': `Bearer ${sessionToken}`
+        },
+        body: fileToUpload
+      });
+
+      const hasilUpload = await responseUpload.json();
+      if (responseUpload.ok && (hasilUpload.success || hasilUpload.url)) {
+        const urlAwal = new URL(hasilUpload.url);
+        finalUrlFoto = 'https://storage.papan05.my.id' + urlAwal.pathname;
+      } else {
+        throw new Error(hasilUpload.error || 'Gagal mengupload file ke cloud storage.');
+      }
     }
 
-    // 🌟 3. Set input nilai keluarga dan alamat secara aman (menggunakan pengaman if)
-    const elNama = document.getElementById('editWargaNama');
-    if (elNama) elNama.value = data.kepalaKeluarga || '';
+    // 2. Susun payload sesuai kategori (diselaraskan dengan toggleFieldKategoriEdit)
+    const kategoriInput = document.getElementById('editWargaKategori').value;
+    const isRumah = kategoriInput.toLowerCase().includes('rumah');
+    const noRumahInput = document.getElementById('editWargaNoRumah')
+      ? document.getElementById('editWargaNoRumah').value.trim()
+      : '';
 
-    const elAnggota = document.getElementById('editWargaAnggota');
-    if (elAnggota) elAnggota.value = data.anggotaKeluarga || data.Anggota || '';
+    const latInput = document.getElementById('editWargaLat') ? document.getElementById('editWargaLat').value.trim() : '';
+    const lngInput = document.getElementById('editWargaLng') ? document.getElementById('editWargaLng').value.trim() : '';
+    const hiddenInput = document.getElementById('editWargaHidden') ? document.getElementById('editWargaHidden').value === 'TRUE' : false;
 
-    const elNoRumah = document.getElementById('editWargaNoRumah');
-    if (elNoRumah) elNoRumah.value = data.noRumah || '';
+    let dataUpdate = {
+      Type: kategoriInput,
+      noRumah: noRumahInput,
+      Lat: latInput,
+      Lng: lngInput,
+      Hidden: hiddenInput,
+      foto: finalUrlFoto,
+      updatedAt: Date.now()
+    };
 
-    const elNamaTempat = document.getElementById('editWargaNamaTempat');
-    if (elNamaTempat) elNamaTempat.value = data.namaTempat || data.Nama || data.nama || '';
-    
-    // Set Foto & Preview
-    const inputFoto = document.getElementById('editWargaFotoURL');
-    const preview = document.getElementById('previewFotoRumah');
-    
-    const fotoVal = data.foto || data.Foto || '';
-    if (inputFoto) inputFoto.value = fotoVal;
-    if (preview) {
-        if (fotoVal) {
-            preview.src = fotoVal;
-            preview.style.display = 'inline-block';
-        } else {
-            preview.style.display = 'none';
-        }
+    if (isRumah) {
+      const kepalaKeluarga = document.getElementById('editWargaNama') ? document.getElementById('editWargaNama').value.trim() : '';
+      const anggotaKeluarga = document.getElementById('editWargaAnggota') ? document.getElementById('editWargaAnggota').value.trim() : '';
+
+      dataUpdate.kepalaKeluarga = kepalaKeluarga;
+      dataUpdate.anggotaKeluarga = anggotaKeluarga;
+      dataUpdate.namaTempat = kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : (noRumahInput ? `No ${noRumahInput}` : 'Rumah Warga');
+      dataUpdate.Nama = dataUpdate.namaTempat;
+    } else {
+      // Kost, Fasum, Kuliner, Minimarket
+      const namaTempat = document.getElementById('editNamaTempat') ? document.getElementById('editNamaTempat').value.trim() : '';
+      const namaPemilik = document.getElementById('editNamaPemilik') ? document.getElementById('editNamaPemilik').value.trim() : '';
+
+      dataUpdate.namaTempat = namaTempat || kategoriInput;
+      dataUpdate.Nama = dataUpdate.namaTempat;
+      dataUpdate.kepalaKeluarga = namaPemilik;
+      dataUpdate.anggotaKeluarga = '';
     }
 
-    // 🌟 4. Tampilkan modal edit
-    const modal = document.getElementById('modal-edit-warga');
-    if (modal) modal.style.display = 'flex';
+    // 3. Kirim PATCH via Worker Admin menggunakan Session Token
+    btnSimpan.innerText = '⏳ Menyimpan ke Database...';
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: `peta_warga/${idWarga}`,
+        method: 'PATCH',
+        data: dataUpdate
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert('⚠️ Sesi telah kedaluwarsa. Silakan login ulang.');
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || 'Gagal meng-update data via Worker Admin.');
+    }
+
+    if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
+    tutupModalEditWarga();
+    alert('✅ Perubahan data lokasi berhasil disimpan!');
+
+    // 4. Muat ulang data statistik & perbarui pin di peta
+    if (typeof muatSemuaDataAdmin === 'function') {
+      await muatSemuaDataAdmin();
+    }
+    if (map) {
+      map.remove();
+      map = null;
+      initMap();
+    }
+
+  } catch (error) {
+    console.error(error);
+    alert('❌ Terjadi kesalahan: ' + error.message);
+  } finally {
+    btnSimpan.disabled = false;
+    btnSimpan.innerText = '💾 Simpan Perubahan';
+  }
 }
 
 // --- FORM TAMBAH LOKASI DINAMIS ---
@@ -3291,12 +3513,13 @@ function toggleFieldKategoriEdit(kategoriVal = null) {
       </div>
     `;
   }
+
+  // Isi ulang data saat ini jika admin mengganti kategori di tengah proses edit
+  if (typeof currentEditWargaData !== 'undefined' && currentEditWargaData && typeof isiNilaiFormEditWarga === 'function') {
+    isiNilaiFormEditWarga(currentEditWargaData);
+  }
 }
     
-function bukaModalEditWargaDariPeta(id) {
-    if (map) map.closePopup();
-    bukaModalEditWargaAdminById(id);
-}
 
 async function prosesUploadR2Universal(jenisTarget = 'warga') {
   // Tentukan elemen berdasarkan jenis target
@@ -3465,116 +3688,7 @@ function handlePilihFileBaru(inputElement) {
   }
 }
 
-// 2. Dipanggil saat tombol "Simpan Perubahan" ditekan
-async function simpanPerubahanWarga(event) {
-  event.preventDefault();
-  
-  const idWarga = document.getElementById('editWargaId').value;
-  const btnSimpan = document.getElementById('btnSimpanEditWarga');
-  
-  btnSimpan.disabled = true;
-  btnSimpan.innerText = 'Sedang Memproses...';
 
-  try {
-    let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
-
-    // Proses upload file baru jika dipilih
-    if (typeof fileBaruDipilih !== 'undefined' && fileBaruDipilih !== null) {
-      document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file baru ke cloud storage...</i>';
-      
-      const noRumahVal = document.getElementById('editWargaNoRumah') ? document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_') : idWarga;
-      const ekstensi = fileBaruDipilih.name.split('.').pop() || 'jpg';
-      const namaFileKustom = `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`;
-
-      const responseUpload = await fetch(RT05_CONFIG.UPLOADER_URL, {
-        method: 'POST',
-        headers: {
-          "X-File-Name": encodeURIComponent(namaFileKustom),
-          "Content-Type": fileBaruDipilih.type || "application/octet-stream"
-        },
-        body: fileBaruDipilih
-      });
-
-      const hasilUpload = await responseUpload.json();
-      if (hasilUpload.success || hasilUpload.url) {
-        let urlAwal = new URL(hasilUpload.url);
-        finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
-      } else {
-        throw new Error('Gagal mengupload file ke cloud storage.');
-      }
-    }
-
-    const kategoriInput = document.getElementById('editWargaKategori').value;
-    const isRumah = kategoriInput.toLowerCase().includes('rumah') || kategoriInput.toLowerCase().includes('kost');
-
-    const noRumahInput = document.getElementById('editWargaNoRumah') ? document.getElementById('editWargaNoRumah').value.trim() : '';
-    
-    let dataUpdate = {
-      Type: kategoriInput,
-      noRumah: noRumahInput,
-      foto: finalUrlFoto,
-      updatedAt: Date.now()
-    };
-
-    // 🌟 Ambil nilai secara aman berdasarkan jenis kategori
-    if (isRumah) {
-      const kepalaKeluarga = document.getElementById('editWargaNama') ? document.getElementById('editWargaNama').value.trim() : '';
-      const anggotaKeluarga = document.getElementById('editWargaAnggota') ? document.getElementById('editWargaAnggota').value.trim() : '';
-      const namaRumah = document.getElementById('editNamaRumah') ? document.getElementById('editNamaRumah').value.trim() : '';
-
-      dataUpdate.kepalaKeluarga = kepalaKeluarga;
-      dataUpdate.anggotaKeluarga = anggotaKeluarga;
-      dataUpdate.namaTempat = namaRumah || (kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : `No ${noRumahInput}`);
-      dataUpdate.Nama = dataUpdate.namaTempat;
-    } else {
-      // Untuk Kuliner, Fasum, Minimarket, dll.
-      const namaTempat = document.getElementById('editNamaTempat') ? document.getElementById('editNamaTempat').value.trim() : '';
-      const namaPemilik = document.getElementById('editNamaPemilik') ? document.getElementById('editNamaPemilik').value.trim() : '';
-
-      dataUpdate.namaTempat = namaTempat || kategoriInput;
-      dataUpdate.Nama = dataUpdate.namaTempat;
-      dataUpdate.kepalaKeluarga = namaPemilik; // Disimpan sebagai nama pemilik/pengelola
-      dataUpdate.anggotaKeluarga = ""; // Dikosongkan
-    }
-
-   // 🔒 PROSES UPDATE MELALUI CLOUDFLARE WORKER ADMIN (Via RT05_CONFIG)
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
-
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        pin: pinAdmin,
-        path: `peta_warga/${idWarga}`,
-        method: "PATCH",
-        data: dataUpdate
-      })
-    });
-
-    const hasilProxy = await responseProxy.json();
-
-    if (!hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal meng-update data via Worker Admin.");
-    }
-
-    if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
-    tutupModalEditWarga();
-    alert('✅ Perubahan data dan foto berhasil disimpan!');
-    
-    if (typeof muatSemuaDataAdmin === 'function') {
-      muatSemuaDataAdmin();
-    }
-
-  } catch (error) {
-    console.error(error);
-    alert('❌ Terjadi kesalahan: ' + error.message);
-  } finally {
-    btnSimpan.disabled = false;
-    btnSimpan.innerText = '💾 Simpan Perubahan';
-  }
-}
 
 // Fungsi reset saat modal ditutup
 function tutupModalEditWarga() {
