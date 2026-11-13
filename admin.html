@@ -4649,75 +4649,71 @@ function tutupModalPengumumanAdmin() {
   resetFormPengumumanKeModeBaru();
 }
 
-// 1. Muat Daftar Pengumuman via Cloudflare Worker (GET)
-// 1. Muat Daftar Pengumuman langsung dari DATABASE_URL (REST API)
+// 1. Muat Daftar & Arsip Pengumuman via Worker Admin
 async function muatDaftarPengumumanAdmin() {
-  const container = document.getElementById('tabel-pengumuman-admin');
-  if (!container) return;
+  const tbody = document.getElementById('tabel-pengumuman-admin');
+  if (!tbody) return;
 
-  container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">⏳ Memuat pengumuman...</td></tr>`;
+  tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:12px;">⏳ Memuat daftar pengumuman...</td></tr>`;
 
   try {
-    const dbUrl = `${RT05_CONFIG.DATABASE_URL}/pengumuman.json?t=${Date.now()}`;
-    const response = await fetch(dbUrl);
+    const sessionToken = sessionStorage.getItem('rt05_session_token');
+    const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "pengumuman",
+        method: "GET"
+      })
+    });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status} saat mengambil data pengumuman.`);
+    const jsonWorker = await res.json();
+    if (!res.ok || !jsonWorker.success) {
+      throw new Error(jsonWorker.error || `HTTP ${res.status} saat mengambil data pengumuman.`);
     }
 
-    const dataObj = (await response.json()) || {};
-    cacheDaftarPengumumanAdmin = dataObj; // Simpan ke cache lokal untuk fitur Edit instan
+    const data = jsonWorker.result || {};
+    cacheDaftarPengumumanAdmin = data;
 
-    const keys = Object.keys(dataObj);
+    const keys = Object.keys(data);
     if (keys.length === 0) {
-      container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Belum ada pengumuman tersimpan.</td></tr>`;
       return;
     }
 
-    // Urutkan pengumuman terbaru di atas berdasarkan timestamp
-    const sortedKeys = keys.sort((a, b) => {
-      const tsA = dataObj[a]?.timestamp || 0;
-      const tsB = dataObj[b]?.timestamp || 0;
-      return tsB - tsA;
-    });
+    // Urutkan dari yang terbaru (berdasarkan createdAt / timestamp / key)
+    keys.sort((a, b) => (data[b]?.createdAt || 0) - (data[a]?.createdAt || 0));
 
-    let html = '';
-    sortedKeys.forEach(key => {
-      const item = dataObj[key];
-      if (item && typeof item === 'object') {
-        const judul = item.judul || '-';
-        const tanggal = item.tanggal || '';
-        const status = String(item.status || 'AKTIF').toUpperCase().trim();
-        const isAktif = status === 'AKTIF';
+    tbody.innerHTML = keys.map(id => {
+      const item = data[id];
+      if (!item) return '';
+      const isArsip = item.status === 'arsip' || item.arsip === true;
+      const badgeStatus = isArsip
+        ? `<span style="background:#f3f4f6; color:#4b5563; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">📦 Arsip</span>`
+        : `<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">🟢 Aktif</span>`;
 
-        html += `
-          <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
-            <td style="padding: 6px;">
-              <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
-              <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(tanggal)}</div>
-            </td>
-            <td style="padding: 6px; text-align: center;">
-              <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
-                ${isAktif ? 'AKTIF' : 'ARSIP'}
-              </span>
-            </td>
-            <td style="padding: 6px; text-align: center; white-space: nowrap;">
-              <button onclick="editPengumuman('${key}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; background: #3b82f6; color: white; margin-right: 4px;">
-                ✏️ Edit
-              </button>
-              <button onclick="toggleStatusPengumuman('${key}', '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
-                ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
-              </button>
-            </td>
-          </tr>
-        `;
-      }
-    });
+      return `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 8px 6px;">
+            <div style="font-weight: bold; color: #1e293b;">${escapeHTML(item.judul || '(Tanpa Judul)')}</div>
+            <div style="font-size: 10.5px; color: #64748b;">📅 ${escapeHTML(item.tanggal || '-')} ${item.lokasi ? '• 📍 ' + escapeHTML(item.lokasi) : ''}</div>
+          </td>
+          <td style="padding: 8px 6px; text-align: center;">${badgeStatus}</td>
+          <td style="padding: 8px 6px; text-align: right; white-space: nowrap;">
+            <button type="button" onclick="editPengumuman('${escapeHTML(id)}')" style="background:#2563eb; color:white; border:none; border-radius:4px; padding:4px 7px; font-size:10.5px; cursor:pointer; margin-right:3px;">✏️ Edit</button>
+            <button type="button" onclick="hapusPengumumanAdmin('${escapeHTML(id)}')" style="background:#dc2626; color:white; border:none; border-radius:4px; padding:4px 7px; font-size:10.5px; cursor:pointer;">🗑️</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
 
-    container.innerHTML = html || `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
-  } catch (error) {
-    console.error("Gagal memuat pengumuman admin:", error);
-    container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: red;">❌ Gagal memuat data: ${escapeHTML(error.message)}</td></tr>`;
+  } catch (err) {
+    console.error("Gagal memuat pengumuman admin:", err);
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#dc2626; padding:12px;">❌ Gagal memuat data: ${escapeHTML(err.message)}</td></tr>`;
   }
 }
 
@@ -4725,12 +4721,28 @@ async function muatDaftarPengumumanAdmin() {
 async function editPengumuman(id) {
   let val = cacheDaftarPengumumanAdmin[id];
 
-  // Jika cache lokal belum terisi, ambil langsung dari DATABASE_URL (REST API)
+  // Jika cache lokal belum terisi, ambil melalui Worker Admin
   if (!val) {
     try {
-      const res = await fetch(`${RT05_CONFIG.DATABASE_URL}/pengumuman/${id}.json?t=${Date.now()}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      val = await res.json();
+      const sessionToken = sessionStorage.getItem('rt05_session_token');
+      const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({
+          sessionToken: sessionToken,
+          path: `pengumuman/${id}`,
+          method: "GET"
+        })
+      });
+
+      const jsonWorker = await res.json();
+      if (!res.ok || !jsonWorker.success) {
+        throw new Error(jsonWorker.error || `HTTP ${res.status}`);
+      }
+      val = jsonWorker.result;
     } catch (err) {
       alert("❌ Gagal mengambil detail pengumuman: " + err.message);
       return;
@@ -4796,7 +4808,6 @@ async function editPengumuman(id) {
     btnSimpan.style.background = "#2563eb";
   }
 }
-
 // 3. Simpan / Update Pengumuman via Worker Admin Proxy
 async function simpanPengumumanAdmin() {
   const tglInput = document.getElementById('pengumumanTanggal').value;
