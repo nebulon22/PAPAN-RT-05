@@ -1256,9 +1256,10 @@ async function kirimDataPendingAdmin() {
     return;
   }
 
-  const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin');
-  if (!pinAdmin) {
-    console.warn("Sinkronisasi tertunda: PIN Admin belum tersedia di sesi ini.");
+  // ✅ Ambil sessionToken dari sessionStorage (bukan lagi pinAdmin)
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    console.warn("Sinkronisasi tertunda: Sesi Admin belum aktif.");
     return;
   }
 
@@ -1274,10 +1275,11 @@ async function kirimDataPendingAdmin() {
       const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
         },
         body: JSON.stringify({
-          pin: pinAdmin,
+          sessionToken: sessionToken, // Opsional jika Worker juga membaca dari body
           path: nodeTujuan,
           method: "POST", // Menggunakan POST di Worker agar setara dengan firebasePush (auto-generate ID)
           data: {
@@ -1286,6 +1288,15 @@ async function kirimDataPendingAdmin() {
           }
         })
       });
+
+      // Jika sesi kedaluwarsa di tengah jalan, hentikan loop & kunci ulang
+      if (response.status === 401 || response.status === 403) {
+        sisaAntrean.push(item);
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        alert('⚠️ Sesi admin telah berakhir saat sinkronisasi. Silakan login kembali.');
+        location.reload();
+        return;
+      }
 
       const hasil = await response.json();
       if (!response.ok || !hasil.success) {
@@ -1302,15 +1313,26 @@ async function kirimDataPendingAdmin() {
   sedangMengirimAdmin = false;
   perbaruiIndikatorSyncAdmin();
 }
-    function simpanPayloadKeAntrean(label, payload) {
-      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-      payload.token = payload.token || localStorage.getItem('adminToken') || '';
-      antrean.push({ label: label, payload: payload, time: Date.now() });
-      localStorage.setItem('antrean_admin', JSON.stringify(antrean));
-      perbaruiIndikatorSyncAdmin();
-      alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
-      kirimDataPendingAdmin();
-    }
+function simpanPayloadKeAntrean(label, payload, targetNode = 'peta_warga') {
+  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+  
+  // Hapus properti token lama jika terbawa di dalam payload agar data bersih
+  if (payload && payload.token) {
+    delete payload.token;
+  }
+
+  antrean.push({ 
+    label: label, 
+    targetNode: targetNode,
+    payload: payload, 
+    time: Date.now() 
+  });
+  
+  localStorage.setItem('antrean_admin', JSON.stringify(antrean));
+  perbaruiIndikatorSyncAdmin();
+  alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
+  kirimDataPendingAdmin();
+}
 
     window.addEventListener('online', () => {
       console.log("Jaringan online kembali. Mengirim data admin pending...");
@@ -1604,25 +1626,24 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
 
       payload.Nama = namaTempat || kategoriVal;
       payload.namaTempat = namaTempat || kategoriVal;
-      payload.kepalaKeluarga = namaPemilik; // Disimpan sebagai nama pemilik/pengelola usaha
+      payload.kepalaKeluarga = namaPemilik;
       payload.noRumah = noBangunan;
-      payload.anggotaKeluarga = ""; // Dikosongkan untuk non-rumah
+      payload.anggotaKeluarga = "";
     }
 
-    // Membuat node baru otomatis di Firebase
-    const newRef = window.firebasePush(window.firebaseRef(window.db, 'peta_warga'));
-    await window.firebaseSet(newRef, payload);
+    // ✅ Kirim via Worker Proxy menggunakan sessionToken
+    await kirimDataViaAdminWorker('peta_warga', payload, 'POST');
 
     btn.innerText = '💾 Simpan Data Lokasi';
     btn.disabled = false;
-    alert('✅ Data lokasi baru berhasil disimpan ke Firebase!');
+    alert('✅ Data lokasi baru berhasil disimpan!');
     tutupModalForm();
     document.getElementById('dataForm').reset();
     
-// Kembalikan form dinamis ke state awal (Rumah) setelah reset
-if (typeof sesuaikanFormKategori === 'function') {
-  sesuaikanFormKategori();
-}
+    // Kembalikan form dinamis ke state awal (Rumah) setelah reset
+    if (typeof sesuaikanFormKategori === 'function') {
+      sesuaikanFormKategori();
+    }
     
     muatSemuaDataAdmin();
 
@@ -3022,17 +3043,25 @@ let listSemuaRumahAdmin = [];
 // ==========================================
 async function muatSemuaDataAdmin() {
     try {
-        // 🌟 1. Ambil token sesi admin dari localStorage
-        const adminToken = localStorage.getItem('adminToken') || '';
+        // 🌟 1. Ambil sessionToken aktif dari sessionStorage
+        const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
 
-        // 🌟 2. Sertakan X-Admin-Token agar Worker memberikan 100% data lokasi utuh tanpa hidden otomatis
+        // 🌟 2. Sertakan header Authorization Bearer agar Worker mengenali sesi admin & memberikan 100% data (termasuk yang Hidden)
         const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, {
             method: 'GET',
             headers: {
-                'X-Admin-Token': adminToken,
+                'Authorization': `Bearer ${sessionToken}`,
                 'Content-Type': 'application/json'
             }
         });
+
+        // Jika sesi ditolak / kedaluwarsa, bersihkan & kunci ulang halaman
+        if (response.status === 401 || response.status === 403) {
+            if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+            alert('⚠️ Sesi admin telah berakhir. Silakan login kembali.');
+            location.reload();
+            return;
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP error status: ${response.status}`);
@@ -3047,9 +3076,9 @@ async function muatSemuaDataAdmin() {
         let totalJiwa = 0;
 
         if (!dataObj) {
-            document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
-            document.getElementById("stat-total-kk").innerText = "0 KK";
-            document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+            if (document.getElementById("badge-total-jiwa")) document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+            if (document.getElementById("stat-total-kk")) document.getElementById("stat-total-kk").innerText = "0 KK";
+            if (document.getElementById("stat-total-jiwa")) document.getElementById("stat-total-jiwa").innerText = "0 Orang";
             return;
         }
 
