@@ -1345,63 +1345,7 @@ function simpanPayloadKeAntrean(label, payload, targetNode = 'peta_warga') {
     });
 
 
-async function verifikasiPin() {
-  const inputPinEl = document.getElementById("adminPin");
-  const pin = inputPinEl?.value?.trim();
-  
-  if (!pin) {
-    alert("⚠️ Masukkan PIN Admin terlebih dahulu!");
-    return;
-  }
 
-  // Opsional: Beri indikator loading pada tombol login jika ada
-  const btnLogin = document.querySelector('#loginBox button, button[onclick*="verifikasiPin"]');
-  const teksAsli = btnLogin ? btnLogin.innerText : '';
-  if (btnLogin) {
-    btnLogin.disabled = true;
-    btnLogin.innerText = '⏳ Memverifikasi...';
-  }
-
-  try {
-    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        action: "login",
-        pin: pin
-      })
-    });
-
-    const hasil = await response.json();
-
-    if (response.ok && hasil.success && hasil.sessionToken) {
-      // 1. Bersihkan input PIN & sisa PIN lama dari storage browser
-      inputPinEl.value = "";
-      sessionStorage.removeItem("adminPin");
-      localStorage.removeItem("rt05_admin_pin");
-      localStorage.removeItem("adminPin");
-
-      // 2. Simpan HANYA Signed Session Token (berlaku 4 jam) di sessionStorage
-      sessionStorage.setItem("rt05_session_token", hasil.sessionToken);
-
-      simpanSesiAdmin();
-      bukaAkses();
-      if (typeof pilihanAdmin !== 'undefined' && pilihanAdmin) {
-        pilihanAdmin.style.display = 'block';
-      }
-      alert("✅ Akses Admin Diberikan!");
-    } else {
-      alert("❌ " + (hasil.error || hasil.message || "PIN Admin Salah!"));
-    }
-  } catch (err) {
-    alert("❌ Gagal terhubung ke server Worker: " + err.message);
-  } finally {
-    if (btnLogin) {
-      btnLogin.disabled = false;
-      btnLogin.innerText = teksAsli;
-    }
-  }
-}
 // ==========================================
 // KELOLA SESI & AUTHENTICATION ADMIN (100% VIA WORKER)
 // ==========================================
@@ -3669,6 +3613,13 @@ async function prosesUploadR2Universal(jenisTarget = 'warga') {
     return;
   }
 
+  // Ambil session token dari sessionStorage
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    return;
+  }
+
   // Set status loading
   if (isSemiManual) {
     statusEl.innerHTML = "⏳ Sedang mengkompres & mengunggah file ke R2...";
@@ -3689,15 +3640,12 @@ async function prosesUploadR2Universal(jenisTarget = 'warga') {
     const ekstensi = file.name.split('.').pop() || 'jpg';
     const namaFileKustom = `${jenisTarget}_${Date.now()}.${ekstensi}`;
 
-    // 🌟 1. Ambil PIN Admin tersimpan dari LocalStorage / input admin
-    const adminPin = localStorage.getItem('rt05_admin_pin') || (window.CURRENT_ADMIN_PIN || '');
-
-    // 🌟 2. Kirim ke Cloudflare Worker (termasuk header X-Admin-Pin)
+    // Kirim ke Cloudflare Worker menggunakan Bearer Session Token
     const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
       method: "POST",
       headers: {
-        "X-File-Name": namaFileKustom,
-        "X-Admin-Pin": adminPin, // 👈 PENTING: Diselaraskan dengan proteksi ADMIN_PIN Worker
+        "X-File-Name": encodeURIComponent(namaFileKustom),
+        "Authorization": `Bearer ${sessionToken}`,
         "Content-Type": file.type || "application/octet-stream"
       },
       body: file
@@ -3715,12 +3663,11 @@ async function prosesUploadR2Universal(jenisTarget = 'warga') {
       let urlAwal = new URL(result.url);
       let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
 
-      // Masukkan ke input target form warga
-      const inputUrlTarget = document.getElementById('editWargaFoto');
-      if (inputUrlTarget) inputUrlTarget.value = urlFinal;
-
-      // Preview gambar khusus warga
+      // Masukkan ke input target form warga (hanya jika target bukan semimanual)
       if (!isSemiManual) {
+        const inputUrlTarget = document.getElementById('editWargaFoto');
+        if (inputUrlTarget) inputUrlTarget.value = urlFinal;
+
         const preview = document.getElementById('previewFotoRumah');
         if (preview) {
           preview.src = urlFinal;
