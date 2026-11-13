@@ -108,12 +108,30 @@ function cariLokasi(keyword, daftarData, callbackHasil) {
         if (callbackHasil) callbackHasil([]);
         return [];
     }
-    const query = keyword.toLowerCase().trim();
+    const query = String(keyword).toLowerCase().trim();
+    const queryAngka = query.replace(/^0+/, '');
+    const isPureAngka = /^\d+$/.test(query);
+
     const hasil = daftarData.filter(item => {
-        const nama = (item.nama || item.namaRaw || item.namaWarga || item.nameAsli || item.namaBarang || '').toLowerCase();
-        const keterangan = (item.keterangan || item.kategori || '').toLowerCase();
-        return nama.includes(query) || keterangan.includes(query);
+        const nama = String(item.nama || item.namaRaw || item.namaWarga || item.nameAsli || item.namaBarang || '').toLowerCase();
+        const namaTempat = String(item.namaTempat || item.name || '').toLowerCase();
+        const kepalaKeluarga = String(item.kepalaKeluarga || '').toLowerCase();
+        const anggota = String(item.anggota || item.anggotaKeluarga || '').toLowerCase();
+        const noRumah = String(item.noRumah || '').toLowerCase();
+        const noRumahTanpaNol = noRumah.replace(/^0+/, '');
+        const keterangan = String(item.keterangan || item.kategori || '').toLowerCase();
+
+        // Jika pencarian berupa angka murni (misal "43"), prioritaskan kecocokan nomor rumah/bangunan persis
+        if (isPureAngka && noRumahTanpaNol === queryAngka) return true;
+
+        return nama.includes(query) ||
+               namaTempat.includes(query) ||
+               kepalaKeluarga.includes(query) ||
+               anggota.includes(query) ||
+               noRumah.includes(query) ||
+               keterangan.includes(query);
     });
+
     if (callbackHasil) callbackHasil(hasil);
     return hasil;
 }
