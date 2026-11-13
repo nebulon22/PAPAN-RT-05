@@ -2042,47 +2042,92 @@ window.toggleFormStok = function() {
       }
     }
 
-    let cachePerkakas = [];
+let cachePerkakas = [];
     let cachePeminjaman = [];
 
+    // Helper internal khusus inventaris agar konsisten dengan Worker Admin Anda
+    async function requestWorkerInventaris(pathTujuan, metodeHttp = "GET", payloadData = null) {
+      const sessionToken = sessionStorage.getItem('rt05_session_token');
+      if (!sessionToken) {
+        alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        window.location.reload();
+        throw new Error("SESSION_EXPIRED");
+      }
+
+      const bodyReq = {
+        sessionToken: sessionToken,
+        path: pathTujuan,
+        method: metodeHttp
+      };
+      if (payloadData !== null) {
+        bodyReq.data = payloadData;
+      }
+
+      const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify(bodyReq)
+      });
+
+      const hasilProxy = await responseProxy.json();
+
+      if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+        window.location.reload();
+        throw new Error("SESSION_EXPIRED");
+      }
+
+      if (!responseProxy.ok || !hasilProxy.success) {
+        throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memproses permintaan melalui Worker Admin.");
+      }
+
+      return hasilProxy.result !== undefined ? hasilProxy.result : hasilProxy.data;
+    }
+
+    // 1. Muat Data Inventaris & Peminjaman Aktif via Worker
     async function muatPeminjamanAdmin() {
       const container = document.getElementById("tabel-peminjaman-admin");
       if (!container) return;
 
       container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data perkakas...</td></tr>`;
 
-      const inventarisRef = window.firebaseRef(window.db, 'inventaris');
-      const peminjamanRef = window.firebaseRef(window.db, 'peminjaman');
+      try {
+        const [dataInv, dataPem] = await Promise.all([
+          requestWorkerInventaris('inventaris', 'GET'),
+          requestWorkerInventaris('peminjaman', 'GET')
+        ]);
 
-      Promise.all([
-        window.firebaseGet(inventarisRef),
-        window.firebaseGet(peminjamanRef)
-      ]).then(([snapInv, snapPem]) => {
         let perkakas = [];
         let peminjaman = [];
 
-        if (snapInv.exists()) {
-          snapInv.forEach(child => {
-            const val = child.val();
+        if (dataInv && typeof dataInv === 'object') {
+          Object.keys(dataInv).forEach(key => {
+            const val = dataInv[key];
             if (val) {
               perkakas.push({
-                id: child.key,
+                id: key,
                 nama: val.namaBarang || val.nama || '',
-                total: val.totalStok !== undefined ? val.totalStok : (val.total || 0),
-                foto: val.fotoUrl || val.foto || ''
+                total: val.totalStok !== undefined ? Number(val.totalStok) : Number(val.total || 0),
+                foto: val.fotoUrl || val.foto || '',
+                raw: val
               });
             }
           });
         }
 
-        if (snapPem.exists()) {
-          snapPem.forEach(child => {
-            const val = child.val();
+        if (dataPem && typeof dataPem === 'object') {
+          Object.keys(dataPem).forEach(key => {
+            const val = dataPem[key];
             if (val) {
               peminjaman.push([
-                child.key,
+                key,
                 val.peminjam || '',
-                val.barang || '',
+                val.barang || val.namaBarang || '',
                 val.jumlah || 1,
                 val.tgl || '',
                 val.status || 'Dipinjam'
@@ -2095,10 +2140,11 @@ window.toggleFormStok = function() {
         cachePeminjaman = peminjaman;
         renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
 
-      }).catch(err => {
-        console.error("Gagal memuat data inventaris dari Firebase:", err);
-        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Gagal memuat data dari database.</td></tr>`;
-      });
+      } catch (err) {
+        if (err.message === "SESSION_EXPIRED") return;
+        console.error("Gagal memuat data inventaris dari Worker:", err);
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Gagal memuat data: ${escapeHTML(err.message)}</td></tr>`;
+      }
     }
 
     function renderTabelDanDropdown(perkakas, peminjaman) {
@@ -2106,17 +2152,15 @@ window.toggleFormStok = function() {
       const selectBarang = document.getElementById("pinjamPilihBarang");
       const selectBarangStok = document.getElementById("stokPilihBarang");
 
-      if (perkakas && perkakas.length > 0) {
-        if (selectBarang) {
-          selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-            perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
-        }
+      if (selectBarang) {
+        selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
+          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa: ${item.total})</option>`).join('');
+      }
 
-        if (selectBarangStok) {
-          selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
-            `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
-            perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa Stok: ${item.total})</option>`).join('');
-        }
+      if (selectBarangStok) {
+        selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
+          `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
+          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa Stok: ${item.total})</option>`).join('');
       }
       
       const pinjamanAktif = peminjaman.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
@@ -2132,253 +2176,301 @@ window.toggleFormStok = function() {
           <td style="padding: 6px;">${escapeHTML(row[2])}</td>
           <td style="padding: 6px; text-align: center; font-weight: bold;">${escapeHTML(row[3])}</td>
           <td style="padding: 6px; text-align: center;">
-            <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
+            <button onclick="prosesPengembalian('${escapeHTML(row[0])}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
               ↩️ Dikembalikan
             </button>
           </td>
         </tr>
       `).join('');
     }
-    
-   
 
-   async function simpanBarangStokAdmin() {
-    const pilihPilihan = document.getElementById('stokPilihBarang').value;
-    const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
-    const jenisAksi = document.getElementById('stokJenisAksi').value;
-    const jumlahUnit = parseInt(document.getElementById('stokJumlahTotal').value, 10);
-    
-    let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
-
-    if (!namaBarang || isNaN(jumlahUnit) || jumlahUnit <= 0) {
-      alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
-      return;
-    }
-
-    const btn = document.querySelector('#formStokBarang button');
-    if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
-
-    try {
-      const inventarisRef = window.firebaseRef(window.db, 'inventaris');
-      const snapshot = await window.firebaseGet(inventarisRef);
+    // 2. Tambah Barang Baru & Edit Jumlah Stok Perkakas via Worker (PUT / PATCH)
+    async function simpanBarangStokAdmin() {
+      const pilihPilihan = document.getElementById('stokPilihBarang').value;
+      const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
+      const jenisAksi = document.getElementById('stokJenisAksi').value;
+      const jumlahUnit = parseInt(document.getElementById('stokJumlahTotal').value, 10);
       
-      let targetKey = null;
-      let dataBarangLama = null;
+      let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
 
-      if (snapshot.exists()) {
-        snapshot.forEach(child => {
-          const val = child.val();
-          const namaDb = val.namaBarang || val.nama || '';
-          if (namaDb.toLowerCase() === namaBarang.toLowerCase()) {
-            targetKey = child.key;
-            dataBarangLama = val;
-          }
-        });
+      if (!namaBarang || isNaN(jumlahUnit) || jumlahUnit < 0 || (jenisAksi !== 'set' && jumlahUnit <= 0)) {
+        alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
+        return;
       }
 
-      let stokAkhir = jumlahUnit;
-      if (targetKey && dataBarangLama) {
-        const stokLama = parseInt(dataBarangLama.totalStok !== undefined ? dataBarangLama.totalStok : (dataBarangLama.total || 0), 10);
+      const btn = document.querySelector('#formStokBarang button');
+      if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
+
+      try {
+        // Ambil data terbaru inventaris via Worker
+        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
         
-        // 🌟 Logika pendukung untuk Tambah, Kurang, dan Set Total Stok
-        if (jenisAksi === 'kurang') {
-          stokAkhir = Math.max(0, stokLama - jumlahUnit);
-        } else if (jenisAksi === 'set') {
-          stokAkhir = jumlahUnit; // Mengatur stok secara langsung sesuai input
-        } else {
-          stokAkhir = stokLama + jumlahUnit; // Default tambah
+        let targetKey = null;
+        let dataBarangLama = null;
+
+        if (dataInv && typeof dataInv === 'object') {
+          Object.keys(dataInv).forEach(key => {
+            const val = dataInv[key];
+            if (val) {
+              const namaDb = val.namaBarang || val.nama || '';
+              if (namaDb.toLowerCase() === namaBarang.toLowerCase()) {
+                targetKey = key;
+                dataBarangLama = val;
+              }
+            }
+          });
         }
 
-        const updateRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
-        await window.firebaseSet(updateRef, {
-          ...dataBarangLama,
-          namaBarang: namaBarang,
-          totalStok: stokAkhir
-        });
-      } else {
-        targetKey = 'item_' + Date.now();
-        const newRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
-        await window.firebaseSet(newRef, {
-          id: targetKey,
-          namaBarang: namaBarang,
-          totalStok: jumlahUnit,
-          kategori: 'Umum',
-          kondisi: 'Baik',
-          peminjam: ''
-        });
-      }
+        if (targetKey && dataBarangLama) {
+          const stokLama = parseInt(dataBarangLama.totalStok !== undefined ? dataBarangLama.totalStok : (dataBarangLama.total || 0), 10);
+          let stokAkhir = jumlahUnit;
 
-      if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-      alert('✅ Data stok barang berhasil diperbarui ke database!');
-      
-      document.getElementById('stokPilihBarang').value = '';
-      document.getElementById('stokNamaBarangBaru').value = '';
-      document.getElementById('stokNamaBarangBaru').style.display = 'none';
-      document.getElementById('stokJumlahTotal').value = '';
-      if (typeof toggleFormStok === 'function') toggleFormStok();
-      if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
+          if (jenisAksi === 'kurang') {
+            stokAkhir = Math.max(0, stokLama - jumlahUnit);
+          } else if (jenisAksi === 'set') {
+            stokAkhir = jumlahUnit;
+          } else {
+            stokAkhir = stokLama + jumlahUnit;
+          }
 
-    } catch (err) {
-      if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-      alert('❌ Gagal menyimpan ke database: ' + err.message);
-    }
-}
+          await requestWorkerInventaris(`inventaris/${targetKey}`, 'PATCH', {
+            namaBarang: namaBarang,
+            totalStok: stokAkhir,
+            updatedAt: Date.now()
+          });
+        } else {
+          targetKey = 'item_' + Date.now();
+          await requestWorkerInventaris(`inventaris/${targetKey}`, 'PUT', {
+            id: targetKey,
+            namaBarang: namaBarang,
+            totalStok: jumlahUnit,
+            kategori: 'Umum',
+            kondisi: 'Baik',
+            peminjam: '',
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          });
+        }
 
-   async function prosesPengembalian(id) {
-  if (confirm("Apakah barang ini sudah dikembalikan?")) {
-    try {
-      // 1. Ambil data peminjaman yang aktif saat ini
-      const peminjamanRef = window.firebaseRef(window.db, 'peminjaman/' + id);
-      const snapshot = await window.firebaseGet(peminjamanRef);
-
-      if (snapshot.exists()) {
-        const dataPinjam = snapshot.val();
+        alert('✅ Data stok barang berhasil diperbarui melalui Worker!');
         
-        // 2. Tambahkan informasi status dan tanggal pengembalian
+        document.getElementById('stokPilihBarang').value = '';
+        document.getElementById('stokNamaBarangBaru').value = '';
+        document.getElementById('stokNamaBarangBaru').style.display = 'none';
+        document.getElementById('stokJumlahTotal').value = '';
+        
+        if (typeof toggleFormStok === 'function') toggleFormStok();
+        if (typeof muatPeminjamanAdmin === 'function') await muatPeminjamanAdmin();
+
+      } catch (err) {
+        if (err.message !== "SESSION_EXPIRED") {
+          alert('❌ Gagal menyimpan ke database: ' + err.message);
+        }
+      } finally {
+        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+      }
+    }
+
+    // 3. Proses Pengembalian Perkakas & Kembalikan Stok Otomatis via Worker
+    async function prosesPengembalian(id) {
+      if (!confirm("Apakah barang ini sudah dikembalikan?")) return;
+
+      try {
+        // 1. Ambil data peminjaman aktif via Worker
+        const dataPinjam = await requestWorkerInventaris(`peminjaman/${id}`, 'GET');
+        if (!dataPinjam) {
+          alert("⚠️ Data peminjaman tidak ditemukan atau sudah diproses.");
+          await muatPeminjamanAdmin();
+          return;
+        }
+
+        const namaBarangKembali = String(dataPinjam.barang || dataPinjam.namaBarang || '').trim();
+        const jumlahKembali = parseInt(dataPinjam.jumlah || 1, 10);
+
+        // 2. Tambahkan informasi pengembalian & arsipkan ke 'riwayat_peminjaman'
         dataPinjam.status = "Dikembalikan";
         dataPinjam.tglKembali = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        dataPinjam.returnedAt = Date.now();
 
-        // 3. Simpan ke node arsip baru di Firebase ('riwayat_peminjaman')
-        const riwayatRef = window.firebaseRef(window.db, 'riwayat_peminjaman/' + id);
-        await window.firebaseSet(riwayatRef, dataPinjam);
+        await requestWorkerInventaris(`riwayat_peminjaman/${id}`, 'PUT', dataPinjam);
 
-        // 4. Setelah berhasil diarsip, baru hapus dari daftar peminjaman aktif
-        await window.firebaseRemove(peminjamanRef);
+        // 3. Kembalikan jumlah stok barang di node 'inventaris'
+        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
+        if (dataInv && typeof dataInv === 'object' && namaBarangKembali) {
+          const keyBarang = Object.keys(dataInv).find(k => {
+            const item = dataInv[k];
+            const namaDb = String(item?.namaBarang || item?.nama || '').trim();
+            return namaDb.toLowerCase() === namaBarangKembali.toLowerCase();
+          });
 
-        alert("✅ Status barang berhasil diperbarui dan masuk ke riwayat arsip!");
-        muatPeminjamanAdmin();
+          if (keyBarang && dataInv[keyBarang]) {
+            const stokSaatIni = parseInt(dataInv[keyBarang].totalStok !== undefined ? dataInv[keyBarang].totalStok : (dataInv[keyBarang].total || 0), 10);
+            await requestWorkerInventaris(`inventaris/${keyBarang}`, 'PATCH', {
+              totalStok: stokSaatIni + jumlahKembali,
+              updatedAt: Date.now()
+            });
+          }
+        }
+
+        // 4. Hapus dari daftar peminjaman aktif
+        await requestWorkerInventaris(`peminjaman/${id}`, 'DELETE');
+
+        alert("✅ Barang dikembalikan, stok otomatis bertambah, dan masuk ke riwayat arsip!");
+        await muatPeminjamanAdmin();
+
+      } catch (err) {
+        if (err.message !== "SESSION_EXPIRED") {
+          alert("❌ Gagal memperbarui status pengembalian: " + err.message);
+        }
       }
-    } catch (err) {
-      alert("❌ Gagal memperbarui status pengembalian: " + err.message);
     }
-  }
-}
 
-// ==========================================
-// SISTEM KERANJANG PEMINJAMAN (MULTI-ITEM)
-// ==========================================
-let keranjangPinjam = [];
+    // ==========================================
+    // SISTEM KERANJANG PEMINJAMAN (MULTI-ITEM VIA WORKER)
+    // ==========================================
+    let keranjangPinjam = [];
 
-// 1. Tambah item ke keranjang sementara
-window.tambahKeKeranjangPinjam = function() {
-  const selectBarang = document.getElementById('pinjamPilihBarang');
-  const idBarang = selectBarang.value;
-  // Ambil teks bersih tanpa tulisan "(Sisa: ...)" di dropdown
-  let namaBarang = selectBarang.options[selectBarang.selectedIndex]?.text || '';
-  if (namaBarang.includes('(')) {
-    namaBarang = namaBarang.split('(')[0].trim();
-  }
-  
-  const jumlah = parseInt(document.getElementById('pinjamJumlah').value) || 0;
-
-  if (!idBarang) {
-    alert("Silakan pilih barang terlebih dahulu!");
-    return;
-  }
-  if (jumlah <= 0) {
-    alert("Jumlah pinjam minimal 1!");
-    return;
-  }
-
-  // Masukkan ke array keranjang
-  keranjangPinjam.push({ idBarang, namaBarang, jumlah });
-  
-  // Reset input jumlah & render ulang tabel keranjang
-  document.getElementById('pinjamJumlah').value = '1';
-  renderTabelKeranjangSementara();
-};
-
-// 2. Hapus item dari keranjang sementara berdasarkan indeks
-window.hapusItemKeranjang = function(index) {
-  keranjangPinjam.splice(index, 1);
-  renderTabelKeranjangSementara();
-};
-
-// 3. Render HTML tabel keranjang sementara
-function renderTabelKeranjangSementara() {
-  const tbody = document.getElementById('tabel-keranjang-sementara');
-  if (!tbody) return;
-
-  if (keranjangPinjam.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8; padding: 6px;">Belum ada barang ditambahkan ke keranjang.</td></tr>';
-    return;
-  }
-
-  let html = '';
-  keranjangPinjam.forEach((item, index) => {
-    html += `
-      <tr style="border-bottom: 1px solid #f1f5f9;">
-        <td style="padding: 4px 6px;">${escapeHTML(item.namaBarang)}</td>
-        <td style="padding: 4px 6px; text-align: center; font-weight: bold;">${item.jumlah} unit</td>
-        <td style="padding: 4px 6px; text-align: right;">
-          <button type="button" onclick="hapusItemKeranjang(${index})" style="background: #ef4444; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">✕ Hapus</button>
-        </td>
-      </tr>
-    `;
-  });
-  tbody.innerHTML = html;
-}
-
-// 4. Simpan seluruh isi keranjang ke Firebase secara massal (Sekaligus)
-window.simpanSemuaPeminjamanAdmin = async function() {
-  const peminjam = document.getElementById('pinjamNamaWarga').value.trim();
-
-  if (!peminjam) {
-    alert("Mohon isi Nama / No. Rumah peminjam terlebih dahulu!");
-    return;
-  }
-
-  if (keranjangPinjam.length === 0) {
-    alert("Keranjang peminjaman masih kosong! Tambahkan minimal 1 barang.");
-    return;
-  }
-
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
-    alert("Koneksi database belum siap.");
-    return;
-  }
-
-  const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanSemuaPeminjamanAdmin']");
-  if(btn) { btn.innerText = "⏳ Menyimpan Semua..."; btn.disabled = true; }
-
-  const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-
-  try {
-    // Gunakan node 'peminjaman' agar langsung sinkron dengan tabel daftar aktif Anda
-    for (let item of keranjangPinjam) {
-      const pinjamId = "pinjam_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
-      const targetRef = window.firebaseRef(window.db, 'peminjaman/' + pinjamId);
+    window.tambahKeKeranjangPinjam = function() {
+      const selectBarang = document.getElementById('pinjamPilihBarang');
+      const idBarang = selectBarang.value;
+      let namaBarang = selectBarang.options[selectBarang.selectedIndex]?.text || '';
+      if (namaBarang.includes('(')) {
+        namaBarang = namaBarang.split('(')[0].trim();
+      }
       
-      await window.firebaseSet(targetRef, {
-        id: pinjamId,
-        peminjam: peminjam,
-        barang: item.namaBarang,
-        namaBarang: item.namaBarang,
-        jumlah: item.jumlah,
-        tgl: hariIni,
-        status: "Dipinjam",
-        timestamp: Date.now()
+      const jumlah = parseInt(document.getElementById('pinjamJumlah').value, 10) || 0;
+
+      if (!idBarang) {
+        alert("Silakan pilih barang terlebih dahulu!");
+        return;
+      }
+      if (jumlah <= 0) {
+        alert("Jumlah pinjam minimal 1!");
+        return;
+      }
+
+      // Validasi sisa stok dari cachePerkakas
+      const barangCache = cachePerkakas.find(b => b.nama.toLowerCase() === namaBarang.toLowerCase());
+      const sudahDiKeranjang = keranjangPinjam
+        .filter(k => k.namaBarang.toLowerCase() === namaBarang.toLowerCase())
+        .reduce((sum, k) => sum + k.jumlah, 0);
+
+      if (barangCache && (jumlah + sudahDiKeranjang) > barangCache.total) {
+        alert(`⚠️ Stok "${namaBarang}" tidak mencukupi! Sisa tersedia: ${barangCache.total} unit.`);
+        return;
+      }
+
+      keranjangPinjam.push({ idBarang, namaBarang, jumlah });
+      document.getElementById('pinjamJumlah').value = '1';
+      renderTabelKeranjangSementara();
+    };
+
+    window.hapusItemKeranjang = function(index) {
+      keranjangPinjam.splice(index, 1);
+      renderTabelKeranjangSementara();
+    };
+
+    function renderTabelKeranjangSementara() {
+      const tbody = document.getElementById('tabel-keranjang-sementara');
+      if (!tbody) return;
+
+      if (keranjangPinjam.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8; padding: 6px;">Belum ada barang ditambahkan ke keranjang.</td></tr>';
+        return;
+      }
+
+      let html = '';
+      keranjangPinjam.forEach((item, index) => {
+        html += `
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 4px 6px;">${escapeHTML(item.namaBarang)}</td>
+            <td style="padding: 4px 6px; text-align: center; font-weight: bold;">${item.jumlah} unit</td>
+            <td style="padding: 4px 6px; text-align: right;">
+              <button type="button" onclick="hapusItemKeranjang(${index})" style="background: #ef4444; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">✕ Hapus</button>
+            </td>
+          </tr>
+        `;
       });
+      tbody.innerHTML = html;
     }
 
-    if(btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
-    alert("✅ Semua peminjaman berhasil dicatat sekaligus!");
-    
-    // Bersihkan form & keranjang
-    keranjangPinjam = [];
-    document.getElementById('pinjamNamaWarga').value = '';
-    renderTabelKeranjangSementara();
+    // 4. Simpan Semua Peminjaman & Kurangi Stok Otomatis via Worker
+    window.simpanSemuaPeminjamanAdmin = async function() {
+      const peminjam = document.getElementById('pinjamNamaWarga').value.trim();
 
-    // Muat ulang tabel daftar peminjaman admin
-    if (typeof muatPeminjamanAdmin === 'function') {
-      muatPeminjamanAdmin();
-    }
+      if (!peminjam) {
+        alert("Mohon isi Nama / No. Rumah peminjam terlebih dahulu!");
+        return;
+      }
 
-  } catch (err) {
-    if(btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
-    alert("❌ Gagal menyimpan peminjaman: " + err.message);
-  }
-};
+      if (keranjangPinjam.length === 0) {
+        alert("Keranjang peminjaman masih kosong! Tambahkan minimal 1 barang.");
+        return;
+      }
+
+      const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanSemuaPeminjamanAdmin']");
+      if (btn) { btn.innerText = "⏳ Menyimpan Semua..."; btn.disabled = true; }
+
+      const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
+      try {
+        // Ambil stok inventaris terbaru dari Worker sebelum mengurangi
+        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
+
+        for (let item of keranjangPinjam) {
+          const pinjamId = "pinjam_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+
+          // 1. Catat peminjaman ke node 'peminjaman' via Worker
+          await requestWorkerInventaris(`peminjaman/${pinjamId}`, 'PUT', {
+            id: pinjamId,
+            peminjam: peminjam,
+            barang: item.namaBarang,
+            namaBarang: item.namaBarang,
+            jumlah: item.jumlah,
+            tgl: hariIni,
+            status: "Dipinjam",
+            timestamp: Date.now()
+          });
+
+          // 2. Kurangi stok pada node 'inventaris' via Worker
+          if (dataInv && typeof dataInv === 'object') {
+            const keyBarang = Object.keys(dataInv).find(k => {
+              const invItem = dataInv[k];
+              const namaDb = String(invItem?.namaBarang || invItem?.nama || '').trim();
+              return namaDb.toLowerCase() === item.namaBarang.toLowerCase();
+            });
+
+            if (keyBarang && dataInv[keyBarang]) {
+              const stokLama = parseInt(dataInv[keyBarang].totalStok !== undefined ? dataInv[keyBarang].totalStok : (dataInv[keyBarang].total || 0), 10);
+              const stokBaru = Math.max(0, stokLama - item.jumlah);
+              dataInv[keyBarang].totalStok = stokBaru; // Update di memori lokal juga jika ada item kembar di keranjang
+
+              await requestWorkerInventaris(`inventaris/${keyBarang}`, 'PATCH', {
+                totalStok: stokBaru,
+                updatedAt: Date.now()
+              });
+            }
+          }
+        }
+
+        alert("✅ Semua peminjaman berhasil dicatat & stok diperbarui!");
+        
+        keranjangPinjam = [];
+        document.getElementById('pinjamNamaWarga').value = '';
+        renderTabelKeranjangSementara();
+
+        if (typeof muatPeminjamanAdmin === 'function') {
+          await muatPeminjamanAdmin();
+        }
+
+      } catch (err) {
+        if (err.message !== "SESSION_EXPIRED") {
+          alert("❌ Gagal menyimpan peminjaman: " + err.message);
+        }
+      } finally {
+        if (btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
+      }
+    };
 
 // 📋 Fungsi Toggle Panel Warga Baru & Sembunyikan Menu Sensus Utama
 window.togglePanelWargaBaruAdmin = function() {
