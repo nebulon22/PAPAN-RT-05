@@ -4577,10 +4577,9 @@ window.simpanPerubahanKeuanganAdmin = async function() {
 // ==========================================
 // PENGELOLAAN PENGUMUMAN ADMIN (100% VIA WORKER)
 // ==========================================
-let cacheDaftarPengumumanAdmin = {}; // Menyimpan data hasil fetch untuk keperluan Edit instan
-let currentEditPengumumanId = null;  // Variabel global penampung ID yang sedang diedit
+let cacheDaftarPengumumanAdmin = {};
+let currentEditPengumumanId = null;
 
-// Helper untuk mereset tampilan form ke Mode Tambah Baru
 function resetFormPengumumanKeModeBaru() {
   currentEditPengumumanId = null;
 
@@ -4596,7 +4595,6 @@ function resetFormPengumumanKeModeBaru() {
     }
   }
 
-  // Pastikan input hidden ikut dibersihkan secara eksplisit
   ['pengumumanFoto', 'pengumumanLat', 'pengumumanLng'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.value = '';
@@ -4619,12 +4617,7 @@ function resetFormPengumumanKeModeBaru() {
   }
 }
 
-// Alias agar tombol Batal / Tutup Modal tetap berjalan normal
-function resetFormPengumuman() {
-  resetFormPengumumanKeModeBaru();
-}
-
-function bukaModalPengumumanAdmin() {
+window.bukaModalPengumumanAdmin = function() {
   if (!sessionStorage.getItem('rt05_session_token')) {
     alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
     const overlay = document.getElementById('login-overlay');
@@ -4641,23 +4634,28 @@ function bukaModalPengumumanAdmin() {
   if (modal) modal.style.display = 'flex';
 
   muatDaftarPengumumanAdmin();
-}
+};
 
-function tutupModalPengumumanAdmin() {
+window.tutupModalPengumumanAdmin = function() {
   const modal = document.getElementById('modal-admin-pengumuman');
   if (modal) modal.style.display = 'none';
   resetFormPengumumanKeModeBaru();
-}
+};
 
 // 1. Muat Daftar & Arsip Pengumuman via Worker Admin
-async function muatDaftarPengumumanAdmin() {
+window.muatDaftarPengumumanAdmin = async function() {
   const tbody = document.getElementById('tabel-pengumuman-admin');
   if (!tbody) return;
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#dc2626; padding:12px;">⚠️ Sesi admin habis.</td></tr>`;
+    return;
+  }
 
   tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:12px;">⏳ Memuat daftar pengumuman...</td></tr>`;
 
   try {
-    const sessionToken = sessionStorage.getItem('rt05_session_token');
     const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
@@ -4672,6 +4670,14 @@ async function muatDaftarPengumumanAdmin() {
     });
 
     const jsonWorker = await res.json();
+
+    if (res.status === 401 || jsonWorker.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
     if (!res.ok || !jsonWorker.success) {
       throw new Error(jsonWorker.error || `HTTP ${res.status} saat mengambil data pengumuman.`);
     }
@@ -4685,16 +4691,16 @@ async function muatDaftarPengumumanAdmin() {
       return;
     }
 
-    // Urutkan dari yang terbaru (berdasarkan createdAt / timestamp / key)
-    keys.sort((a, b) => (data[b]?.createdAt || 0) - (data[a]?.createdAt || 0));
+    keys.sort((a, b) => (data[b]?.timestamp || data[b]?.createdAt || 0) - (data[a]?.timestamp || data[a]?.createdAt || 0));
 
     tbody.innerHTML = keys.map(id => {
       const item = data[id];
       if (!item) return '';
-      const isArsip = item.status === 'arsip' || item.arsip === true;
+      const isArsip = String(item.status || '').toUpperCase() === 'ARSIP' || item.arsip === true;
+      const statusBerikutnya = isArsip ? 'AKTIF' : 'ARSIP';
       const badgeStatus = isArsip
-        ? `<span style="background:#f3f4f6; color:#4b5563; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">📦 Arsip</span>`
-        : `<span style="background:#dcfce7; color:#15803d; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">🟢 Aktif</span>`;
+        ? `<button type="button" onclick="toggleStatusPengumuman('${escapeHTML(id)}', '${statusBerikutnya}')" title="Klik untuk aktifkan kembali" style="background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer;">📦 Arsip</button>`
+        : `<button type="button" onclick="toggleStatusPengumuman('${escapeHTML(id)}', '${statusBerikutnya}')" title="Klik untuk arsipkan" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer;">🟢 Aktif</button>`;
 
       return `
         <tr style="border-bottom: 1px solid #e5e7eb;">
@@ -4715,16 +4721,21 @@ async function muatDaftarPengumumanAdmin() {
     console.error("Gagal memuat pengumuman admin:", err);
     tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#dc2626; padding:12px;">❌ Gagal memuat data: ${escapeHTML(err.message)}</td></tr>`;
   }
-}
+};
 
-// 2. Muat Data ke Form Edit dari Cache Worker (atau fetch ulang ke Worker jika belum ada)
-async function editPengumuman(id) {
+// 2. Muat Data ke Form Edit via Cache / Worker Admin
+window.editPengumuman = async function(id) {
   let val = cacheDaftarPengumumanAdmin[id];
 
-  // Jika cache lokal belum terisi, ambil melalui Worker Admin
   if (!val) {
+    const sessionToken = sessionStorage.getItem('rt05_session_token');
+    if (!sessionToken) {
+      alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
     try {
-      const sessionToken = sessionStorage.getItem('rt05_session_token');
       const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
         method: "POST",
         headers: {
@@ -4739,6 +4750,13 @@ async function editPengumuman(id) {
       });
 
       const jsonWorker = await res.json();
+      if (res.status === 401 || jsonWorker.code === 'SESSION_EXPIRED') {
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+        window.location.reload();
+        return;
+      }
+
       if (!res.ok || !jsonWorker.success) {
         throw new Error(jsonWorker.error || `HTTP ${res.status}`);
       }
@@ -4766,15 +4784,9 @@ async function editPengumuman(id) {
   document.getElementById('pengumumanDetail').value = val.detail || '';
   document.getElementById('pengumumanLokasi').value = val.lokasi || '';
 
-  if (document.getElementById('pengumumanFoto')) {
-    document.getElementById('pengumumanFoto').value = val.foto || '';
-  }
-  if (document.getElementById('pengumumanLat')) {
-    document.getElementById('pengumumanLat').value = val.lat || '';
-  }
-  if (document.getElementById('pengumumanLng')) {
-    document.getElementById('pengumumanLng').value = val.lng || '';
-  }
+  if (document.getElementById('pengumumanFoto')) document.getElementById('pengumumanFoto').value = val.foto || '';
+  if (document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = val.lat || '';
+  if (document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = val.lng || '';
 
   const fileInput = document.getElementById('inputUploadPengumuman');
   if (fileInput) fileInput.value = '';
@@ -4807,9 +4819,10 @@ async function editPengumuman(id) {
     btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
     btnSimpan.style.background = "#2563eb";
   }
-}
+};
+
 // 3. Simpan / Update Pengumuman via Worker Admin Proxy
-async function simpanPengumumanAdmin() {
+window.simpanPengumumanAdmin = async function() {
   const tglInput = document.getElementById('pengumumanTanggal').value;
   const judul = document.getElementById('pengumumanJudul').value.trim();
   const detail = document.getElementById('pengumumanDetail').value.trim();
@@ -4830,8 +4843,7 @@ async function simpanPengumumanAdmin() {
   if (!sessionToken) {
     alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
     if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    const overlay = document.getElementById('login-overlay');
-    if (overlay) overlay.style.display = 'flex';
+    window.location.reload();
     return;
   }
 
@@ -4846,7 +4858,6 @@ async function simpanPengumumanAdmin() {
   }
 
   try {
-    // 1. Jika ada file baru yang dipilih, upload terlebih dahulu
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       if (btn) btn.innerText = "⏳ Mengunggah Media...";
       let file = fileInput.files[0];
@@ -4881,10 +4892,12 @@ async function simpanPengumumanAdmin() {
       }
     }
 
-    // 2. Simpan / Update ke database melalui Cloudflare Worker Admin
     if (btn) btn.innerText = "⏳ Menyimpan ke Database...";
 
     const pengumumanId = isEditMode ? currentEditPengumumanId : ('info_' + Date.now());
+    const statusSaatIni = isEditMode && cacheDaftarPengumumanAdmin[pengumumanId]?.status
+      ? cacheDaftarPengumumanAdmin[pengumumanId].status
+      : 'AKTIF';
 
     const payload = {
       id: pengumumanId,
@@ -4895,7 +4908,7 @@ async function simpanPengumumanAdmin() {
       lat: lat,
       lng: lng,
       foto: fotoUrl,
-      status: 'AKTIF',
+      status: statusSaatIni,
       timestamp: Date.now()
     };
 
@@ -4929,41 +4942,25 @@ async function simpanPengumumanAdmin() {
     alert(isEditMode ? "✅ Perubahan pengumuman berhasil disimpan!" : "✅ Pengumuman baru berhasil diterbitkan!");
 
     resetFormPengumumanKeModeBaru();
-
-    const modalBody = document.querySelector('.modal-body') || document.getElementById('formInputPengumuman');
-    if (modalBody && modalBody.scrollTo) {
-      modalBody.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    if (typeof tutupModalPengumumanAdmin === 'function') tutupModalPengumumanAdmin();
-    if (typeof muatDaftarPengumumanAdmin === 'function') muatDaftarPengumumanAdmin();
+    muatDaftarPengumumanAdmin();
 
   } catch (err) {
     alert("❌ Gagal menyimpan pengumuman: " + err.message);
-
     if (btn) {
       btn.disabled = false;
-      if (currentEditPengumumanId) {
-        btn.innerText = "💾 Simpan Perubahan (Update)";
-        btn.style.background = "#2563eb";
-      } else {
-        btn.innerText = "💾 Terbitkan Pengumuman";
-        btn.style.background = "#d97706";
-      }
+      btn.innerText = currentEditPengumumanId ? "💾 Simpan Perubahan (Update)" : "💾 Terbitkan Pengumuman";
+      btn.style.background = currentEditPengumumanId ? "#2563eb" : "#d97706";
     }
   }
-}
+};
 
 // 4. Ubah Status Aktif / Arsip via Worker Admin Proxy
-async function toggleStatusPengumuman(idUnik, statusBaru) {
+window.toggleStatusPengumuman = async function(idUnik, statusBaru) {
   const sessionToken = sessionStorage.getItem('rt05_session_token');
   if (!sessionToken) {
     alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
     if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    const overlay = document.getElementById('login-overlay');
-    if (overlay) overlay.style.display = 'flex';
+    window.location.reload();
     return;
   }
 
@@ -4978,7 +4975,7 @@ async function toggleStatusPengumuman(idUnik, statusBaru) {
         sessionToken: sessionToken,
         path: `pengumuman/${idUnik}`,
         method: "PATCH",
-        data: { status: statusBaru }
+        data: { status: statusBaru, updatedAt: Date.now() }
       })
     });
 
@@ -4995,14 +4992,61 @@ async function toggleStatusPengumuman(idUnik, statusBaru) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memperbarui status via Worker.");
     }
 
-    if (typeof muatDaftarPengumumanAdmin === 'function') {
-      muatDaftarPengumumanAdmin();
-    }
+    muatDaftarPengumumanAdmin();
   } catch (err) {
     alert("❌ Gagal mengubah status: " + err.message);
   }
-}
+};
 
+// 5. Hapus Pengumuman via Worker Admin Proxy (Sebelumnya belum ada)
+window.hapusPengumumanAdmin = async function(idUnik) {
+  if (!confirm("Yakin ingin menghapus pengumuman ini secara permanen?")) return;
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
+  try {
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: `pengumuman/${idUnik}`,
+        method: "DELETE"
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus pengumuman via Worker.");
+    }
+
+    if (currentEditPengumumanId === idUnik) {
+      resetFormPengumumanKeModeBaru();
+    }
+
+    alert("🗑️ Pengumuman berhasil dihapus.");
+    muatDaftarPengumumanAdmin();
+  } catch (err) {
+    alert("❌ Gagal menghapus pengumuman: " + err.message);
+  }
+};
    // ==========================================
     // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN (DENGAN IKON & BERSIH)
     // ==========================================
