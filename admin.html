@@ -1666,19 +1666,19 @@ function initMap() {
 
   markerGroup.addTo(map);
 
-  const adminToken = localStorage.getItem('adminToken') || '';
+  const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
 
   fetch(RT05_CONFIG.PETA_PROXY_URL, {
     method: 'GET',
     headers: {
-      'X-Admin-Token': adminToken,
+      'Authorization': `Bearer ${sessionToken}`,
       'Content-Type': 'application/json'
     }
   })
     .then(response => response.json())
     .then(dataObj => {
       markerGroup.clearLayers();
-      window.daftarPin = []; // Pakai window.daftarPin agar pasti terdaftar di scope global
+      window.daftarPin = [];
 
       if (!dataObj) return;
 
@@ -1689,17 +1689,27 @@ function initMap() {
         var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || val.LAT || '');
         var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || val.LNG || '');
         
-        var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || val['Kepala Keluarga'] || val.nama || val.Nama || '').trim();
+        var rawType = String(val.Type || val.type || val.Kategori || val.kategori || '').trim();
+        var kategoriLower = rawType.toLowerCase();
+        var isRumah = kategoriLower === '' || kategoriLower.includes('rumah');
+
+        var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || val['Kepala Keluarga'] || '').trim();
         var noRumah = String(val.noRumah || val.NoRumah || val['No Rumah'] || val.no_rumah || val.NOMOR_RUMAH || '').trim();
         var namaTempat = String(val.namaTempat || val.nama || val.Nama || val.name || '').trim();
         var textAnggota = String(val.Anggota || val.anggota || val.anggotaKeluarga || val['Anggota Keluarga'] || '').trim();
 
-        var namaTampilAsli = namaTempat;
-        if (kepalaKeluarga !== '') {
+        // Tentukan judul tampil berdasarkan kategori (Rumah vs Non-Rumah)
+        var namaTampilAsli = '';
+        if (isRumah) {
+          var namaUtamaRumah = kepalaKeluarga || namaTempat || 'Warga RT 05';
           var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
-          namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
+          namaTampilAsli = `${namaUtamaRumah}${formatNoRmh}`;
+        } else {
+          // Untuk Kuliner, Kost, Fasum, Minimarket -> Utamakan namaTempat
+          var namaUtamaTempat = namaTempat || kepalaKeluarga || rawType || 'Lokasi RT 05';
+          var formatNoBangunan = noRumah !== '' ? ` (No. ${noRumah})` : '';
+          namaTampilAsli = `${namaUtamaTempat}${formatNoBangunan}`;
         }
-        if (!namaTampilAsli) namaTampilAsli = "Warga RT 05";
         
         var latClean = perbaikiKoordinat(rawLat);
         var lngClean = perbaikiKoordinat(rawLng);
@@ -1712,9 +1722,15 @@ function initMap() {
         var urlFoto = String(val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '').trim();
         var htmlFoto = urlFoto ? `<br><img src="${urlFoto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
 
+        // Info pemilik tambahan di bawah judul khusus untuk kategori selain Rumah
+        var htmlPemilik = (!isRumah && kepalaKeluarga)
+          ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">Pemilik: ${escapeHTML(kepalaKeluarga)}</div>`
+          : '';
+
         var popupContent = `
           <div style="text-align: center; min-width: 180px;">
             <b>${escapeHTML(namaTampilAsli)}</b>
+            ${htmlPemilik}
             ${htmlFoto}
             <div style="display: flex; gap: 4px; margin-top: 8px;">
                 <a href="${urlRute}" target="_blank" class="btn-rute" style="flex: 1; padding: 4px; font-size: 11px; text-decoration: none; background: #22c55e; color: white; border-radius: 4px; display: inline-block;">📍 Rute</a>
@@ -1723,8 +1739,7 @@ function initMap() {
           </div>
         `;
         
-        let rawType = val.Type || val.type || val.Kategori || val.kategori || '';
-        let dataIkon = getIkonKategori(namaTampilAsli, String(rawType).trim().toLowerCase());
+        let dataIkon = getIkonKategori(namaTampilAsli, kategoriLower);
 
         var customIcon = L.divIcon({
           className: 'custom-pin',
@@ -1734,7 +1749,6 @@ function initMap() {
         
         var marker = L.marker([itemLat, itemLng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
         
-        // Simpan properti teks pada objek marker Leaflet sebagai fallback
         marker.customSearchText = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
         marker.customNoRumah = noRumah.replace(/^0+/, '').toLowerCase();
         marker.customLat = itemLat;
@@ -1742,21 +1756,20 @@ function initMap() {
 
         markerGroup.addLayer(marker);
 
-        // PUSH KE ARRAY GLOBAL DAFTARPIN
-window.daftarPin.push({ 
-  id: key, 
-  namaRaw: namaTampilAsli, 
-  namaTempat: namaTempat, 
-  noRumah: noRumah, 
-  kepalaKeluarga: kepalaKeluarga, 
-  anggota: textAnggota, 
-  foto: urlFoto,
-  hidden: Boolean(val.Hidden || val.hidden),
-  marker: marker, 
-  lat: itemLat, 
-  lng: itemLng, 
-  kategori: String(rawType).trim().toLowerCase() 
-});
+        window.daftarPin.push({ 
+          id: key, 
+          namaRaw: namaTampilAsli, 
+          namaTempat: namaTempat, 
+          noRumah: noRumah, 
+          kepalaKeluarga: kepalaKeluarga, 
+          anggota: textAnggota, 
+          foto: urlFoto,
+          hidden: Boolean(val.Hidden || val.hidden),
+          marker: marker, 
+          lat: itemLat, 
+          lng: itemLng, 
+          kategori: kategoriLower 
+        });
       });
 
       console.log("✅ Peta siap. Total daftarPin:", window.daftarPin.length);
