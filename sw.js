@@ -76,8 +76,19 @@ self.addEventListener('install', (e) => {
         './',
         './index.html',
         './admin.html',
+        './chat.html',          // 👈 Ditambahkan
+        './pengumuman.html',    // 👈 Ditambahkan
         './inventaris.html',
         './cetak-qr.html',
+        './utils.js',           // 👈 Sangat penting
+        './setting.js',         // 👈 Ditambahkan
+        './manifest.json',      // 👈 Ditambahkan
+        './all.min.css',        // 👈 Ditambahkan
+        './leaflet.css',        // 👈 Ditambahkan
+        './leaflet.js',         // 👈 Ditambahkan
+        './leaflet.markercluster.js',
+        './MarkerCluster.css',
+        './MarkerCluster.Default.css',
         './kentongan192.png',
         './kentongan-slit-drum.png',
         './html5-qrcode.min.js'
