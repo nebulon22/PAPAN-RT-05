@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.6.9'; // 🌟 Naikkan versi cache agar browser menghapus cache 404 lama
+const CACHE_NAME = 'rt-kayen-v1.7.0'; // 🌟 Naikkan versi cache agar browser menghapus cache 404 lama
 
 // 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
@@ -69,6 +69,7 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 self.addEventListener('install', (e) => {
+  self.skipWaiting(); // 🌟 Langsung aktifkan SW versi terbaru
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
@@ -103,29 +104,38 @@ self.addEventListener('activate', (e) => {
 });
 
 // Handling Fetch Event
+// Handling Fetch Event
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
 
-  // Bypass Request Video/Audio (Range Requests)
-  if (event.request.headers.has('range')) {
-    return; 
-  }
-
-  // 🌟 PENTING: BYPASS TOTAL UNTUK CLOUDFLARE WORKERS (TIDAK PERNAH DI-CACHE OLEH SW)
-  if (url.hostname.includes('workers.dev')) {
-    event.respondWith(fetch(event.request));
+  // 1. Bypass total untuk request non-GET (POST upload, simpan database, login, dll)
+  if (event.request.method !== 'GET') {
     return;
   }
 
-  // Longgarkan tangkapan untuk API, Firebase, Cloudflare R2 Storage (termasuk custom domain storage), dan Media Eksternal
+  // 2. Bypass Request Video/Audio (Range Requests)
+  if (event.request.headers.has('range')) {
+    return;
+  }
+
+  // 3. BYPASS TOTAL UNTUK CLOUDFLARE WORKERS & SUBDOMAIN API (Custom Domain & workers.dev)
   if (
-    event.request.mode === 'navigate' || 
-    url.origin.includes('firebase') || 
+    url.hostname.includes('workers.dev') ||
+    url.hostname === 'peta.papan05.my.id' ||
+    url.hostname === 'uploader.papan05.my.id'
+  ) {
+    return; // Biarkan browser menanganinya langsung tanpa campur tangan SW
+  }
+
+  // 4. Longgarkan tangkapan untuk API, Firebase, Cloudflare R2 Storage, dan Media Eksternal
+  if (
+    event.request.mode === 'navigate' ||
+    url.origin.includes('firebase') ||
     url.origin.includes('gstatic') ||
     url.origin.includes('firebasestorage') ||
     url.origin.includes('catbox.moe') ||
-    url.origin.includes('storage.papan05.my.id') || // 🌟 Tambahkan domain kustom R2 Anda
-    url.origin.includes('r2.dev') ||     
+    url.origin.includes('storage.papan05.my.id') ||
+    url.origin.includes('r2.dev') ||
     url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif|webp)$/i)
   ) {
     event.respondWith(
@@ -138,13 +148,13 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Cache First untuk aset statis UI PWA
+  // 5. Cache First untuk aset statis UI PWA
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
-      
+
       return fetch(event.request).catch(() => {
         return new Response('', { status: 480, statusText: 'Offline/Network Error' });
       });

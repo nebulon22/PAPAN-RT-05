@@ -4,6 +4,7 @@ const RT05_CONFIG = {
     PETA_PROXY_URL: "https://peta.papan05.my.id", 
     UPLOADER_URL: "https://uploader.papan05.my.id",
     ADMIN_API_URL: "https://admin-worker.papan05.my.id",
+    DATABASE_URL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
     FIREBASE: {
         apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
         authDomain: "papan05-21a56.firebaseapp.com",
@@ -50,19 +51,6 @@ try {
   auth = getAuth(app);
 }
 
-// Autentikasi Anonim Otomatis di Latar Belakang
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    signInAnonymously(auth).then(() => {
-      console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
-    }).catch((err) => {
-      console.error("🔴 Gagal Login Anonim:", err);
-    });
-  } else {
-    console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
-  }
-});
-
 // EKSPOS UTILITIES DARI MODULE KE GLOBAL WINDOW
 window.db = db;
 window.auth = auth;
@@ -107,12 +95,30 @@ function cariLokasi(keyword, daftarData, callbackHasil) {
         if (callbackHasil) callbackHasil([]);
         return [];
     }
-    const query = keyword.toLowerCase().trim();
+    const query = String(keyword).toLowerCase().trim();
+    const queryAngka = query.replace(/^0+/, '');
+    const isPureAngka = /^\d+$/.test(query);
+
     const hasil = daftarData.filter(item => {
-        const nama = (item.nama || item.namaRaw || item.namaWarga || item.nameAsli || item.namaBarang || '').toLowerCase();
-        const keterangan = (item.keterangan || item.kategori || '').toLowerCase();
-        return nama.includes(query) || keterangan.includes(query);
+        const nama = String(item.nama || item.namaRaw || item.namaWarga || item.nameAsli || item.namaBarang || '').toLowerCase();
+        const namaTempat = String(item.namaTempat || item.name || '').toLowerCase();
+        const kepalaKeluarga = String(item.kepalaKeluarga || '').toLowerCase();
+        const anggota = String(item.anggota || item.anggotaKeluarga || '').toLowerCase();
+        const noRumah = String(item.noRumah || '').toLowerCase();
+        const noRumahTanpaNol = noRumah.replace(/^0+/, '');
+        const keterangan = String(item.keterangan || item.kategori || '').toLowerCase();
+
+        // Jika pencarian berupa angka murni (misal "43"), prioritaskan kecocokan nomor rumah/bangunan persis
+        if (isPureAngka && noRumahTanpaNol === queryAngka) return true;
+
+        return nama.includes(query) ||
+               namaTempat.includes(query) ||
+               kepalaKeluarga.includes(query) ||
+               anggota.includes(query) ||
+               noRumah.includes(query) ||
+               keterangan.includes(query);
     });
+
     if (callbackHasil) callbackHasil(hasil);
     return hasil;
 }
@@ -224,7 +230,7 @@ function tutupModalInventaris() {
     if (modal) modal.style.display = 'none';
 }
 
-// Event Delegation & Listener DOM
+// Event Delegation & Listener DOM (CSP-Compliant)
 document.addEventListener('click', function(e) {
     const target = e.target.closest('[data-click]');
     if (!target) return;
@@ -305,43 +311,58 @@ window.tutupFotoBesar = function() {
   }
 };
 
-// Helper Global untuk Tombol Persetujuan Chat Warga
+// ==========================================
+// MANAJEMEN PERSETUJUAN AKUN CHAT WARGA
+// ==========================================
 window.approveUser = (uid) => {
-  window.firebaseUpdate(window.firebaseRef(window.db, `users/${uid}`), { status: 'aktif' });
+  if (!uid) return;
+  window.firebaseUpdate(window.firebaseRef(window.db, `users/${uid}`), { status: 'aktif' })
+    .then(() => tampilkanToast("✅ Akun warga disetujui."))
+    .catch(err => alert("❌ Gagal menyetujui akun: " + err.message));
 };
 
 window.rejectUser = (uid, statusWarga = 'pending') => {
+  if (!uid) return;
   const pesan = statusWarga === 'aktif' 
     ? "PERINGATAN: Yakin ingin menghapus akun warga aktif ini secara permanen?" 
     : "Hapus / Tolak pendaftaran warga ini?";
     
   if (confirm(pesan)) {
-    window.firebaseRemove(window.firebaseRef(window.db, `users/${uid}`));
+    window.firebaseRemove(window.firebaseRef(window.db, `users/${uid}`))
+      .then(() => tampilkanToast("🗑️ Akun warga dihapus.", "warning"))
+      .catch(err => alert("❌ Gagal menghapus akun: " + err.message));
   }
 };
 
 window.toggleRole = (uid, currentRole) => {
+  if (!uid) return;
   const newRole = currentRole === 'admin' ? 'warga' : 'admin';
-  window.firebaseUpdate(window.firebaseRef(window.db, `users/${uid}`), { role: newRole });
+  window.firebaseUpdate(window.firebaseRef(window.db, `users/${uid}`), { role: newRole })
+    .then(() => tampilkanToast(`🔄 Role diubah menjadi ${newRole.toUpperCase()}`))
+    .catch(err => alert("❌ Gagal mengubah role: " + err.message));
 };
 
-// Real-time Listener untuk Manajemen User/Chat Warga
+let isUsersListenerAktif = false;
+
 export function inisialisasiListenerUsersAdmin() {
+  if (isUsersListenerAktif) return;
+
   const pendingTable = document.getElementById('pending-users-list');
   const allUsersTable = document.getElementById('all-users-list');
-  
   if (!pendingTable || !allUsersTable) return;
 
+  isUsersListenerAktif = true;
   const usersRef = window.firebaseRef(window.db, 'users');
+
   window.firebaseOnValue(usersRef, (snapshot) => {
     pendingTable.innerHTML = '';
     allUsersTable.innerHTML = '';
 
+    const pBadge = document.getElementById('pending-badge');
+    const tWarga = document.getElementById('total-warga-count');
+
     if (!snapshot.exists()) {
       pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar.</td></tr>';
-      
-      const pBadge = document.getElementById('pending-badge');
-      const tWarga = document.getElementById('total-warga-count');
       if (pBadge) pBadge.innerText = `0 Pending`;
       if (tWarga) tWarga.innerText = 0;
       return;
@@ -353,6 +374,9 @@ export function inisialisasiListenerUsersAdmin() {
     snapshot.forEach((childSnap) => {
       const u = childSnap.val();
       const uid = childSnap.key;
+      if (!u) return;
+
+      const safeUid = escapeHTML(uid);
 
       if (u.status === 'pending') {
         pendingCount++;
@@ -364,10 +388,10 @@ export function inisialisasiListenerUsersAdmin() {
             <span style="color: #94a3b8; font-size: 10px;">${escapeHTML(u.hunian)}</span>
           </td>
           <td style="padding: 6px; text-align: center; white-space: nowrap;">
-            <button onclick="approveUser('${uid}')" style="background-color: #10b981; color: #022c22; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
+            <button type="button" data-click="approveUser" data-arg="${safeUid}" style="background-color: #10b981; color: #022c22; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
               ACC
             </button>
-            <button onclick="rejectUser('${uid}')" style="background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
+            <button type="button" data-click="rejectUser" data-arg="${safeUid}" style="background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
               Tolak
             </button>
           </td>
@@ -379,9 +403,9 @@ export function inisialisasiListenerUsersAdmin() {
         tr.style.borderBottom = "1px solid #1e293b";
         
         const isAdmin = u.role === 'admin';
-        const roleBadge = isAdmin ? 
-          '<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold;">ADMIN</span>' : 
-          '<span style="background: #334155; color: #94a3b8; padding: 1px 4px; border-radius: 3px; font-size: 9px;">WARGA</span>';
+        const roleBadge = isAdmin 
+          ? '<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold;">ADMIN</span>' 
+          : '<span style="background: #334155; color: #94a3b8; padding: 1px 4px; border-radius: 3px; font-size: 9px;">WARGA</span>';
 
         tr.innerHTML = `
           <td style="padding: 6px;">
@@ -389,14 +413,18 @@ export function inisialisasiListenerUsersAdmin() {
             <span style="color: #64748b; font-size: 10px;">${escapeHTML(u.hunian)}</span>
           </td>
           <td style="padding: 6px; text-align: center; white-space: nowrap;">
-            <button onclick="toggleRole('${uid}', '${u.role}')" style="background: #334155; color: #cbd5e1; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
+            <button type="button" class="btn-toggle-role" style="background: #334155; color: #cbd5e1; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
               ${isAdmin ? 'Warga' : 'Jadi Admin'}
             </button>
-            <button onclick="rejectUser('${uid}', 'aktif')" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
+            <button type="button" class="btn-hapus-warga" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
               ❌Hapus Akun
             </button>
           </td>
         `;
+
+        tr.querySelector('.btn-toggle-role').addEventListener('click', () => window.toggleRole(uid, u.role));
+        tr.querySelector('.btn-hapus-warga').addEventListener('click', () => window.rejectUser(uid, 'aktif'));
+
         allUsersTable.appendChild(tr);
       }
     });
@@ -405,13 +433,10 @@ export function inisialisasiListenerUsersAdmin() {
       pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar pending.</td></tr>';
     }
 
-    const pBadge = document.getElementById('pending-badge');
-    const tWarga = document.getElementById('total-warga-count');
-    const detailsElem = document.getElementById('details-chat-admin');
-
     if (pBadge) pBadge.innerText = `${pendingCount} Pending`;
     if (tWarga) tWarga.innerText = totalCount;
 
+    const detailsElem = document.getElementById('details-chat-admin');
     if (detailsElem) {
       if (pendingCount > 0) {
         detailsElem.open = true;
@@ -429,12 +454,27 @@ export function inisialisasiListenerUsersAdmin() {
         }
       }
     }
+  }, (error) => {
+    console.error("🔴 Gagal membaca daftar users Firebase:", error);
   });
 }
 
-// Panggil otomatis saat dokumen selesai dimuat
-document.addEventListener('DOMContentLoaded', () => {
-  inisialisasiListenerUsersAdmin();
+// Autentikasi Anonim Otomatis + Jalankan Listener Users setelah Auth Siap
+onAuthStateChanged(auth, (user) => {
+  if (!user) {
+    signInAnonymously(auth).then(() => {
+      console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
+    }).catch((err) => {
+      console.error("🔴 Gagal Login Anonim:", err);
+    });
+  } else {
+    console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', inisialisasiListenerUsersAdmin);
+    } else {
+      inisialisasiListenerUsersAdmin();
+    }
+  }
 });
 
 // DAFTARKAN SEMUA FUNGSI KE WINDOW GLOBAL

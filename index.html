@@ -20,7 +20,7 @@
   <noscript><link rel="stylesheet" href="all.min.css"></noscript>
   
   <!-- PWA Settings -->
-  <link rel="manifest" href="manifest.json?v=1.6.9">
+  <link rel="manifest" href="manifest.json?v=1.7.0">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
   <!-- Konfigurasi Khusus iOS PWA -->
@@ -1259,63 +1259,70 @@ window.addEventListener('firebaseSiapIndex', initMainPageChatListener);
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
 var map; 
-  var daftarPin = [];
-  var dataKeuangan = [];
-  var pinRumahAktif = null;
-  var isDataReady = false;
-  
-  function initPetaDanData() {
-    // 1. Render Peta Leaflet secara sinkron dan instan begitu DOM & Leaflet siap
-    if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
-      let container = L.DomUtil.get('map');
-      if (container && container._leaflet_id) container._leaflet_id = null;
+var daftarPin = [];
+var dataKeuangan = [];
+var pinRumahAktif = null;
+var isDataReady = false;
+var isPolygonDrawn = false;
 
-      map = L.map('map').setView([-7.7423, 110.3842], 17);
-      
-      var tileLayerUtama = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        maxZoom: 20,
-        subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
-        attribution: '&copy; Google Maps'
-      });
+function initPetaDanData() {
+  // 1. Render Peta Leaflet secara sinkron dan instan
+  if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
+    let container = L.DomUtil.get('map');
+    if (container && container._leaflet_id) container._leaflet_id = null;
 
-      let tileLoadCount = 0;
-      tileLayerUtama.on('tileloadstart', function(e) {
-        if (e.tile) {
-          if (tileLoadCount < 6) {
-            e.tile.setAttribute('fetchpriority', 'high');
-          }
-          tileLoadCount++;
-        }
-      });
-
-      tileLayerUtama.addTo(map);
-      
-      L.polygon(RT05_CONFIG.BATAS_WILAYAH, { color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 }).addTo(map);
-      perbaruiIndikatorSync();
-
-      setTimeout(() => {
-        let mapElement = document.getElementById('map');
-        if (mapElement) mapElement.classList.add('loaded');
-      }, 150);
-    }
+    map = L.map('map').setView([-7.7423, 110.3842], 17);
     
-    // 2. Ambil data peta warga (hanya set isDataReady jika fungsi dipanggil)
-    if (map && !isDataReady) {
-      if (typeof muatDataPetaWarga === 'function') {
-        isDataReady = true;
-        muatDataPetaWarga();
-      }
-    }
+    var tileLayerUtama = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+      maxZoom: 20,
+      subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
+      attribution: '&copy; Google Maps'
+    });
 
-    // 3. Sinkronisasi jimpitan offline & badge
-    if (window.db && typeof window.firebaseRef === 'function') {
-      if (navigator.onLine) kirimDataPendingJimpitan();
-    }
-    if (typeof muatBadgeInfoRT === 'function') {
-      muatBadgeInfoRT();
+    let tileLoadCount = 0;
+    tileLayerUtama.on('tileloadstart', function(e) {
+      if (e.tile) {
+        if (tileLoadCount < 6) {
+          e.tile.setAttribute('fetchpriority', 'high');
+        }
+        tileLoadCount++;
+      }
+    });
+
+    tileLayerUtama.addTo(map);
+    perbaruiIndikatorSync();
+
+    setTimeout(() => {
+      let mapElement = document.getElementById('map');
+      if (mapElement) mapElement.classList.add('loaded');
+    }, 150);
+  }
+
+  // 1b. Gambar poligon batas wilayah (otomatis tergambar begitu RT05_CONFIG siap)
+  if (map && !isPolygonDrawn && window.RT05_CONFIG && RT05_CONFIG.BATAS_WILAYAH) {
+    isPolygonDrawn = true;
+    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { 
+      color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 
+    }).addTo(map);
+  }
+  
+  // 2. Ambil data peta warga (hanya jalan sekali saat RT05_CONFIG sudah siap)
+  if (map && !isDataReady && window.RT05_CONFIG && window.RT05_CONFIG.PETA_PROXY_URL) {
+    if (typeof muatDataPetaWarga === 'function') {
+      isDataReady = true;
+      muatDataPetaWarga();
     }
   }
 
+  // 3. Sinkronisasi jimpitan offline & badge
+  if (window.db && typeof window.firebaseRef === 'function') {
+    if (navigator.onLine) kirimDataPendingJimpitan();
+  }
+  if (typeof muatBadgeInfoRT === 'function') {
+    muatBadgeInfoRT();
+  }
+}
+  
 function muatDataPetaWarga() {
   // 🌟 Ambil endpoint secara aman dari RT05_CONFIG
   const endpointPeta = window.RT05_CONFIG && window.RT05_CONFIG.PETA_PROXY_URL;
@@ -1382,10 +1389,16 @@ function muatDataPetaWarga() {
           var textAnggota = String(kolom.anggotaKeluarga || kolom.Anggota || kolom.anggota || '').trim(); 
           var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
 
-          var namaTampilAsli = namaTempat;
-          if (kepalaKeluarga !== '') {
-            var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
-            namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
+// 1. Tentukan nama utama yang ditampilkan
+          var namaUtama = namaTempat !== '' ? namaTempat : kepalaKeluarga;
+          var namaTampilAsli = namaUtama;
+
+          if (namaTempat !== '' && noRumah !== '') {
+            // Jika berupa tempat/kost/warung yang punya nomor rumah
+            namaTampilAsli = `${namaTempat} (No. ${noRumah})`;
+          } else if (kepalaKeluarga !== '' && noRumah !== '') {
+            // Jika berupa rumah warga biasa
+            namaTampilAsli = `${kepalaKeluarga} (Rumah No. ${noRumah})`;
           }
 
           if (namaTampilAsli !== '') {
@@ -1413,15 +1426,17 @@ function muatDataPetaWarga() {
 
             if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-            // Sensor nama hanya untuk publik/warga biasa jika ada fungsi sensor
-            var namaTersensor = typeof sensorNamaDepan === 'function' 
-              ? sensorNamaDepan(kepalaKeluarga !== '' ? kepalaKeluarga : namaTampilAsli, kategoriManual)
-              : (kepalaKeluarga !== '' ? kepalaKeluarga : namaTampilAsli);
+        // 2. Logika Sensor Privasi (Hanya sensor jika bukan nama tempat/fasum)
+          var teksYangDisensor = namaUtama.split(' ').map(kata => {
+            if (kata.length <= 2) return kata;
+            return kata.substring(0, 2) + '*'.repeat(kata.length - 2);
+          }).join(' ');
 
-            if (kepalaKeluarga !== '') {
-              var formatNoRmhSensor = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
-              namaTersensor = `${namaTersensor}${formatNoRmhSensor}`;
-            }
+// Jika namaTempat diisi (Kost/Warung/Fasum), tampilkan utuh tanpa sensor.
+// Jika rumah warga biasa, gunakan fungsi sensorNamaDepan (otomatis mengecualikan Pak RT/RW).
+var namaTersensor = namaTempat !== '' 
+  ? namaTampilAsli 
+  : sensorNamaDepan(namaTampilAsli, kategoriManual);
 
             var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
             var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
@@ -1438,7 +1453,7 @@ function muatDataPetaWarga() {
             
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
-            var keywordPencarian = `${namaTempat} ${kepalaKeluarga} ${textAnggota}`.toLowerCase();
+            var keywordPencarian = `${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
 
             // 🌟 Simpan ke Window Global
             window.daftarPin.push({ 
@@ -1520,7 +1535,7 @@ function sensorNamaDepan(namaAsli, kategori) {
       textLower.includes('musholla') || 
       textLower.includes('masjid') || 
       textLower.includes('balai') || 
-      textLower.includes('sd');
+      textLower.includes('sd ') || textLower.includes('sdn');
 
   // Jika termasuk Fasum / Tempat Usaha / Pejabat RT/RW, kembalikan nama aslinya tanpa sensor!
   if (adalahTempatUmumAtauPejabat) {
@@ -3241,7 +3256,7 @@ window.cetakLaporanJimpitan = function() {
 };
 
     const dataChangelog = [       {
-        versi: "v1.6.9",
+        versi: "v1.7.0",
         tanggal: "9 Nov 2026",
         status: "Terbaru",
         warna: "#4CAF50",

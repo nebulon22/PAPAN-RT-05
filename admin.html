@@ -7,7 +7,7 @@
   <title>Admin - Denah, Inventaris, & Keuangan RT 05</title>
   
   <!-- PWA & Theme Color -->
-  <link rel="manifest" href="manifest.json?v=1.6.9">
+  <link rel="manifest" href="manifest.json?v=1.7.0">
   <meta name="theme-color" content="#0288d1">
 
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
@@ -807,58 +807,79 @@
     </div>
   </div>
 
-         <!-- PANEL EDIT DATA LOKASI -->
+<!-- PANEL EDIT DATA LOKASI (BERLAKU UNTUK EDIT DARI DAFTAR MAUPUN PIN PETA) -->
 <div id="modal-edit-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-edit-warga') tutupModalEditWarga()">
   <div class="modal-content" style="max-width: 400px; width: 90%; max-height: 85vh; overflow-y: auto; padding-bottom: 20px;">
     <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
       <h3 style="margin: 0; font-size: 15px; color: #111;">✏️ Edit Data Lokasi / Warga</h3>
-      <button class="close-btn" onclick="tutupModalEditWarga()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
+      <button type="button" class="close-btn" onclick="tutupModalEditWarga()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
     </div>
 
-<form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
-  <input type="hidden" id="editWargaId">
+    <form id="formEditWarga" onsubmit="simpanPerubahanWarga(event)">
+      <input type="hidden" id="editWargaId">
 
-  <!-- Kategori Bangunan -->
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">Kategori Bangunan:</label>
-    <select id="editWargaKategori" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" onchange="toggleFieldKategoriEdit()">
-      <option value="Rumah">🏠 Rumah Warga</option>
-      <option value="Kost">🛏️ Kost / Kontrakan</option>
-      <option value="Fasum">🏛️ Fasum / Pos / Tempat Ibadah</option>
-      <option value="Kuliner">🍽️ Kuliner / Warung</option>
-      <option value="Minimarket">🏪 Minimarket / Toko</option>
-    </select>
-  </div>
+      <!-- Kategori Bangunan -->
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Kategori Bangunan:</label>
+        <select id="editWargaKategori" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;" onchange="toggleFieldKategoriEdit()">
+          <option value="Rumah">🏠 Rumah Warga</option>
+          <option value="Kost">🛏️ Kost / Kontrakan</option>
+          <option value="Fasum">🏛️ Fasum / Pos / Tempat Ibadah</option>
+          <option value="Kuliner">🍽️ Kuliner / Warung</option>
+          <option value="Minimarket">🏪 Minimarket / Toko</option>
+        </select>
+      </div>
 
-  <!-- 🌟 CONTAINER DINAMIS EDIT -->
-  <div id="containerEditDinamis">
-    <!-- Diisi otomatis oleh fungsi toggleFieldKategoriEdit() -->
-  </div>
+      <!-- CONTAINER DINAMIS EDIT -->
+      <div id="containerEditDinamis">
+        <!-- Diisi otomatis oleh fungsi toggleFieldKategoriEdit() -->
+      </div>
 
-  <!-- Pilih File Baru -->
-  <div class="form-group" style="margin-bottom: 12px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
-    <div style="margin-top: 4px;">
-      <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; width: 100%;" onchange="handlePilihFileBaru(this)">
-    </div>
-    <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
-  </div>
+      <!-- Koordinat Pin Peta (Otomatis terisi baik dari daftar maupun klik pin) -->
+      <div style="display: flex; gap: 8px; margin-bottom: 10px;">
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+          <label style="font-size: 12px; font-weight: bold; color: #374151;">Latitude:</label>
+          <input type="text" id="editWargaLat" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+        </div>
+        <div class="form-group" style="flex: 1; margin-bottom: 0;">
+          <label style="font-size: 12px; font-weight: bold; color: #374151;">Longitude:</label>
+          <input type="text" id="editWargaLng" required style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+        </div>
+      </div>
 
-  <!-- Kolom URL Foto -->
-  <div class="form-group" style="margin-bottom: 10px;">
-    <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media:</label>
-    <input type="text" id="editWargaFotoURL" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
-  </div>
+      <!-- Status Tampil di Peta -->
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">Tampilkan di Peta?</label>
+        <select id="editWargaHidden" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+          <option value="FALSE">Ya (Tampil di Peta)</option>
+          <option value="TRUE">Tidak (Sembunyikan)</option>
+        </select>
+      </div>
 
-  <div style="display: flex; gap: 8px;">
-    <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
-      💾 Simpan Perubahan
-    </button>
-    <button type="button" onclick="tutupModalEditWarga()" style="padding: 10px 14px; background: #94a3b8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
-      Batal
-    </button>
-  </div>
-</form>
+      <!-- Pilih File Baru -->
+      <div class="form-group" style="margin-bottom: 12px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">📂 Pilih Foto Baru (Opsional):</label>
+        <div style="margin-top: 4px;">
+          <input type="file" id="inputUploadSemiManual" accept="image/*,video/*" style="font-size: 11px; width: 100%;" onchange="handlePilihFileBaru(this)">
+        </div>
+        <div id="statusSemiManual" style="font-size: 11px; margin-top: 4px; color: #6b7280;"></div>
+      </div>
+
+      <!-- Kolom URL Foto -->
+      <div class="form-group" style="margin-bottom: 10px;">
+        <label style="font-size: 12px; font-weight: bold; color: #374151;">🔗 Atau URL Media:</label>
+        <input type="text" id="editWargaFotoURL" placeholder="https://storage.papan05.my.id/upload_xxx.webp" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 12px; box-sizing: border-box;">
+      </div>
+
+      <div style="display: flex; gap: 8px;">
+        <button type="submit" id="btnSimpanEditWarga" style="flex: 1; padding: 10px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          💾 Simpan Perubahan
+        </button>
+        <button type="button" onclick="tutupModalEditWarga()" style="padding: 10px 14px; background: #94a3b8; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px;">
+          Batal
+        </button>
+      </div>
+    </form>
   </div>
 </div>
 
@@ -1099,9 +1120,9 @@
           <input type="url" id="pengumumanFoto" placeholder="https://..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
         </div>
 
-        <button type="button" data-click="simpanPengumumanAdmin" id="btnSimpanPengumuman" style="width: 100%; padding: 7px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">
-          💾 Terbitkan Pengumuman
-        </button>
+       <button type="button" onclick="simpanPengumumanAdmin()" id="btnSimpanPengumuman" style="width: 100%; padding: 7px; background: #d97706; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11px;">
+  💾 Terbitkan Pengumuman
+      </button>
       </form>
 
       <!-- Daftar Pengumuman & Tombol Edit/Arsip (Ditambahkan overflow: hidden agar sudut tabel tidak tembus) -->
@@ -1148,38 +1169,54 @@ function formatRupiahInput(el) {
   }
   el.value = Number(value).toLocaleString('id-ID');
 }
+    
 async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "POST") {
-  const pinAdmin = prompt("🔒 Masukkan PIN Admin RT 05 untuk menyimpan perubahan:");
-  if (!pinAdmin) {
-    alert("Simpan dibatalkan: PIN Admin wajib diisi.");
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login kembali.");
+    bersihkanStorageAdmin();
+    document.getElementById('login-overlay').style.display = 'flex';
     return false;
+  }
+
+  // 1. Cek jika kondisi HP sedang offline sebelum menembak API
+  if (!navigator.onLine) {
+    simpanPayloadKeAntrean(pathTujuan, payloadData, pathTujuan, metodeHttp);
+    return true; // Kembalikan true agar form ter-reset dan modal tertutup rapi
   }
 
   try {
     const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
-        path: pathTujuan,      // Contoh: "peta_warga/item_1" atau "inventaris"
-        method: metodeHttp,    // "POST" atau "PUT"
+        sessionToken: sessionToken,
+        path: pathTujuan,
+        method: metodeHttp,
         data: payloadData
       })
     });
 
     const hasil = await response.json();
-
-    if (hasil.success) {
-      return true;
-    } else {
-      alert("❌ Gagal: " + (hasil.error || "PIN Salah atau Terjadi Kesalahan"));
+    if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      bersihkanStorageAdmin();
+      window.location.reload();
       return false;
     }
-  } catch (err) {
-    alert("❌ Kesalahan Jaringan / Worker: " + err.message);
+
+    if (hasil.success) return true;
+    alert("❌ Gagal: " + (hasil.error || "Terjadi Kesalahan"));
     return false;
+
+  } catch (err) {
+    // 2. Fallback: Jika indikator sinyal masih menyala tapi koneksi terputus saat mengirim (Failed to fetch)
+    console.warn("Koneksi terputus saat mengirim, mengalihkan ke antrean offline:", err);
+    simpanPayloadKeAntrean(pathTujuan, payloadData, pathTujuan, metodeHttp);
+    return true;
   }
 }
 
@@ -1220,69 +1257,89 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
     }
 
 async function kirimDataPendingAdmin() {
-  if (sedangMengirimAdmin) return;
-  
-  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-  if (antrean.length === 0) {
-    perbaruiIndikatorSyncAdmin();
-    return;
-  }
+  if (!navigator.onLine || sedangMengirimAdmin) return;
 
-  const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin');
-  if (!pinAdmin) {
-    console.warn("Sinkronisasi tertunda: PIN Admin belum tersedia di sesi ini.");
+  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+  if (antrean.length === 0) return;
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    console.warn("Ada data antrean offline, menunggu admin login ulang...");
     return;
   }
 
   sedangMengirimAdmin = true;
-  perbaruiIndikatorSyncAdmin();
+  perbaruiIndikatorSyncAdmin(); // Nyalakan badge biru "Sedang Menyinkronkan..."
+  let idTerkirim = [];
 
-  let sisaAntrean = [];
+  try {
+    for (const item of antrean) {
+      try {
+        const targetPath = item.payload?.path || item.targetNode || 'peta_warga';
+        const targetMethod = item.payload?.method || item.method || 'POST';
+        const dataBersih = item.payload?.data !== undefined ? item.payload.data : item.payload;
 
-  for (let item of antrean) {
-    try {
-      const nodeTujuan = item.targetNode || 'peta_warga'; 
-      
-      const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          pin: pinAdmin,
-          path: nodeTujuan,
-          method: "POST", // Menggunakan POST di Worker agar setara dengan firebasePush (auto-generate ID)
-          data: {
-            ...item.payload,
-            timestamp: Date.now()
-          }
-        })
-      });
+        const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({
+            sessionToken: sessionToken,
+            path: targetPath,
+            method: targetMethod,
+            data: dataBersih
+          })
+        });
 
-      const hasil = await response.json();
-      if (!response.ok || !hasil.success) {
-        throw new Error(hasil.error || hasil.message || "Gagal menyimpan melalui Worker");
+        const resJson = await response.json();
+
+        if (response.status === 401 || resJson.code === 'SESSION_EXPIRED') {
+          break; 
+        }
+
+        // Pastikan mengecek resJson.success agar konsisten dengan Worker Anda
+        if (response.ok && resJson.success !== false && !resJson.error) {
+          idTerkirim.push(item.id || item.time);
+        }
+      } catch (err) {
+        console.warn("Gagal sinkron item antrean, akan dicoba lagi nanti:", err);
       }
-
-    } catch (err) {
-      console.warn("Gagal menyinkronkan ke Worker:", err);
-      sisaAntrean.push(item);
     }
+
+    if (idTerkirim.length > 0) {
+      let antreanTerbaru = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+      let sisaAntrean = antreanTerbaru.filter(item => !idTerkirim.includes(item.id || item.time));
+      localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
+      console.log(`✅ ${idTerkirim.length} data dari antrean_admin berhasil disinkronkan.`);
+    }
+  } finally {
+    sedangMengirimAdmin = false;
+    perbaruiIndikatorSyncAdmin(); // Kembalikan badge ke hijau/kuning
+  }
+}
+    
+function simpanPayloadKeAntrean(label, payload, targetNode = 'peta_warga', metodeHttp = 'POST') {
+  let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
+  
+  if (payload && payload.token) {
+    delete payload.token;
   }
 
-  localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
-  sedangMengirimAdmin = false;
+  antrean.push({ 
+    id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
+    label: label, 
+    targetNode: targetNode,
+    method: metodeHttp,
+    payload: payload, 
+    time: Date.now() 
+  });
+  
+  localStorage.setItem('antrean_admin', JSON.stringify(antrean));
   perbaruiIndikatorSyncAdmin();
+  alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
 }
-    function simpanPayloadKeAntrean(label, payload) {
-      let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-      payload.token = payload.token || localStorage.getItem('adminToken') || '';
-      antrean.push({ label: label, payload: payload, time: Date.now() });
-      localStorage.setItem('antrean_admin', JSON.stringify(antrean));
-      perbaruiIndikatorSyncAdmin();
-      alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
-      kirimDataPendingAdmin();
-    }
 
     window.addEventListener('online', () => {
       console.log("Jaringan online kembali. Mengirim data admin pending...");
@@ -1295,76 +1352,37 @@ async function kirimDataPendingAdmin() {
     });
 
 
-    function verifikasiPin() {
-    const pin = document.getElementById("adminPin")?.value;
-    if (pin === RT05_CONFIG.ADMIN_PIN) {
-        simpanSesiAdmin();
-        
-        // 🟢 Set token rahasia admin ke localStorage saat PIN benar
-        if (RT05_CONFIG.ADMIN_SECRET_TOKEN) {
-            localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
-        }
-        
-        bukaAkses();
-        pilihanAdmin.style.display = 'block';
-        alert("Akses Admin Diberikan!");
-    } else {
-        alert("PIN Admin Salah!");
-    }
-}
+
 // ==========================================
-// KELOLA SESI & AUTHENTICATION ADMIN
+// KELOLA SESI & AUTHENTICATION ADMIN (100% VIA WORKER)
 // ==========================================
 
-// 1. Simpan Sesi & Token Admin ke LocalStorage
-function simpanSesiAdmin(token, pin) {
-  const session = {
-    timestamp: new Date().getTime()
-  };
-  localStorage.setItem("rt05_admin_session", JSON.stringify(session));
-  localStorage.setItem("authAdmin", "true");
-  localStorage.setItem("admin_login_time", Date.now().toString());
-
-  // 🌟 SIMPAN PIN ADMIN KE STORAGE
-  if (pin) {
-    localStorage.setItem("adminPin", pin);
-    localStorage.setItem("rt05_admin_pin", pin);
-    sessionStorage.setItem("adminPin", pin);
-  }
-
-  if (token) {
-    localStorage.setItem("adminToken", token);
-    localStorage.setItem("rt05_admin_token", token);
-  } else if (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.ADMIN_SECRET_TOKEN) {
-    localStorage.setItem("rt05_admin_token", RT05_CONFIG.ADMIN_SECRET_TOKEN);
-  }
+// 1. Bersihkan seluruh sisa storage lama maupun baru
+function bersihkanStorageAdmin() {
+  const keysLocal = [
+    'authAdmin', 'adminToken', 'verifiedPin', 'admin_login_time',
+    'rt05_admin_session', 'rt05_admin_token', 'rt05_admin_pin', 'adminPin'
+  ];
+  keysLocal.forEach(k => localStorage.removeItem(k));
+  
+  sessionStorage.removeItem('adminPin');
+  sessionStorage.removeItem('rt05_session_token');
 }
 
-// 2. Periksa Status Sesi (24 Jam)
-function periksaSesiAdmin() {
-  const session = localStorage.getItem("rt05_admin_session") || localStorage.getItem("authAdmin");
-  if (!session) return false;
-
-  const sessionData = localStorage.getItem("rt05_admin_session");
-  if (sessionData) {
-    const data = JSON.parse(sessionData);
-    const sekarang = new Date().getTime();
-    // Masa berlaku 24 jam
-    if (sekarang - data.timestamp > 24 * 60 * 60 * 1000) {
-      logoutAdminSilent();
-      return false;
-    }
-  }
-  return true;
-}
-
-// 3. Eksekusi Login via API Worker
+// 2. Eksekusi Login murni melalui Worker
 async function cekLogin() {
-  const inputPin = document.getElementById('adminPin').value.trim();
+  const inputPinEl = document.getElementById('adminPin');
+  const btnSubmit = document.querySelector('#login-overlay button[type="submit"]');
+  const inputPin = inputPinEl ? inputPinEl.value.trim() : '';
 
   if (!inputPin) {
     alert("⚠️ Masukkan PIN terlebih dahulu.");
     return;
+  }
+
+  if (btnSubmit) {
+    btnSubmit.disabled = true;
+    btnSubmit.innerText = '⏳ Memverifikasi...';
   }
 
   try {
@@ -1372,43 +1390,85 @@ async function cekLogin() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'verify-pin',
+        action: 'login', // Pastikan Worker menangani action 'login' (atau 'verify-pin') dan mengembalikan sessionToken
         pin: inputPin
       })
     });
 
-    const textResult = await response.text();
-    let result;
-    try {
-      result = JSON.parse(textResult);
-    } catch (e) {
-      throw new Error("Respon server bukan JSON valid: " + textResult);
-    }
+    const result = await response.json();
 
-if (response.ok && result.success) {
-      // 🌟 Oper inputPin sebagai parameter kedua
-      simpanSesiAdmin(result.token || ('rt05-admin-' + Date.now()), inputPin);
-      
-      // Buka Antarmuka Peta & Admin
+    if (response.ok && result.success && (result.sessionToken || result.token)) {
+      // Hapus seluruh PIN mentah dari memori/storage
+      bersihkanStorageAdmin();
+      if (inputPinEl) inputPinEl.value = '';
+
+      // Simpan HANYA token sesi dari Worker di sessionStorage
+      const tokenAktif = result.sessionToken || result.token;
+      sessionStorage.setItem('rt05_session_token', tokenAktif);
+
       bukaAkses();
     } else {
       alert("❌ " + (result.error || result.message || "PIN salah! Akses ditolak."));
-      document.getElementById('adminPin').value = '';
+      if (inputPinEl) {
+        inputPinEl.value = '';
+        inputPinEl.focus();
+      }
     }
   } catch (error) {
-    console.error("Gagal verifikasi PIN:", error);
-    alert("❌ Terjadi kesalahan jaringan / URL API Worker keliru.");
+    console.error("Gagal verifikasi PIN ke Worker:", error);
+    alert("❌ Gagal terhubung ke server autentikasi Worker.");
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.disabled = false;
+      btnSubmit.innerText = 'Buka Kunci';
+    }
   }
 }
 
-// 4. Buka Antarmuka Admin (Sembunyikan Overlay Login & Inisialisasi Peta)
+// 3. Validasi Sesi Langsung ke Worker saat Halaman Dimuat / Di-refresh
+async function periksaSesiAdminViaWorker() {
+  const token = sessionStorage.getItem('rt05_session_token');
+  if (!token) return false;
+
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        action: 'verify-session',
+        sessionToken: token
+      })
+    });
+
+    const result = await response.json();
+    if (response.ok && result.success) {
+      return true;
+    } else if (response.status === 401 || response.status === 403 || result.code === 'SESSION_EXPIRED') {
+      bersihkanStorageAdmin();
+      return false;
+    } else {
+      console.warn("Worker mengembalikan status non-auth:", response.status, result);
+      return false;
+    }
+  } catch (err) {
+    console.warn("Gagal memvalidasi sesi ke Worker:", err);
+    return !navigator.onLine && Boolean(token);
+  }
+}
+
+// 4. Buka Antarmuka Admin
 function bukaAkses() {
   const overlay = document.getElementById('login-overlay');
   if (overlay) overlay.style.display = 'none';
   document.body.style.overflow = 'auto';
 
-  const inputPin = document.getElementById('adminPin');
-  if (inputPin) inputPin.value = '';
+  // Langsung perbarui badge status sinkronisasi saat dashboard terbuka
+  if (typeof perbaruiIndikatorSyncAdmin === 'function') {
+    perbaruiIndikatorSyncAdmin();
+  }
 
   initMap();
 
@@ -1418,26 +1478,45 @@ function bukaAkses() {
 
   setTimeout(() => {
     muatSemuaDataAdmin();
-  }, 500);
+    
+    // Pindahkan pemanggilan muatDataPetaUntukAdmin ke sini (aman karena token sudah ada)
+    if (typeof muatDataPetaUntukAdmin === 'function') muatDataPetaUntukAdmin();
+    if (typeof muatDataProgker === 'function') muatDataProgker();
+    if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
+    
+    if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
+      kirimDataPendingAdmin();
+    }
+  }, 400);
 }
 
-// 5. Logout Bersih (Pindah ke Mode Warga)
-function logoutAdmin() {
+// 5. Logout Bersih (Cabut Sesi di Worker + Bersihkan Browser)
+async function logoutAdmin() {
   if (!confirm("Yakin ingin logout dari Mode Admin?")) return;
 
-  localStorage.removeItem('authAdmin');
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('verifiedPin');
-  localStorage.removeItem('admin_login_time');
-  localStorage.removeItem('rt05_admin_session');
-  localStorage.removeItem('rt05_admin_token');
-  localStorage.removeItem('rt05_admin_pin');
-  localStorage.removeItem('adminPin');
-  sessionStorage.removeItem('adminPin');
+  const token = sessionStorage.getItem('rt05_session_token');
+  if (token && navigator.onLine) {
+    try {
+      await fetch(RT05_CONFIG.ADMIN_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          action: 'logout',
+          sessionToken: token
+        })
+      });
+    } catch (e) {
+      console.warn("Gagal mengirim request logout ke Worker:", e);
+    }
+  }
 
+  bersihkanStorageAdmin();
   window.location.href = "index.html";
 }
-
+    
 function logoutAdminSilent() {
   localStorage.removeItem('authAdmin');
   localStorage.removeItem('adminToken');
@@ -1507,25 +1586,24 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
 
       payload.Nama = namaTempat || kategoriVal;
       payload.namaTempat = namaTempat || kategoriVal;
-      payload.kepalaKeluarga = namaPemilik; // Disimpan sebagai nama pemilik/pengelola usaha
+      payload.kepalaKeluarga = namaPemilik;
       payload.noRumah = noBangunan;
-      payload.anggotaKeluarga = ""; // Dikosongkan untuk non-rumah
+      payload.anggotaKeluarga = "";
     }
 
-    // Membuat node baru otomatis di Firebase
-    const newRef = window.firebasePush(window.firebaseRef(window.db, 'peta_warga'));
-    await window.firebaseSet(newRef, payload);
+    // ✅ Kirim via Worker Proxy menggunakan sessionToken
+    await kirimDataViaAdminWorker('peta_warga', payload, 'POST');
 
     btn.innerText = '💾 Simpan Data Lokasi';
     btn.disabled = false;
-    alert('✅ Data lokasi baru berhasil disimpan ke Firebase!');
+    alert('✅ Data lokasi baru berhasil disimpan!');
     tutupModalForm();
     document.getElementById('dataForm').reset();
     
-// Kembalikan form dinamis ke state awal (Rumah) setelah reset
-if (typeof sesuaikanFormKategori === 'function') {
-  sesuaikanFormKategori();
-}
+    // Kembalikan form dinamis ke state awal (Rumah) setelah reset
+    if (typeof sesuaikanFormKategori === 'function') {
+      sesuaikanFormKategori();
+    }
     
     muatSemuaDataAdmin();
 
@@ -1568,20 +1646,34 @@ function initMap() {
   }).addTo(map);
 
   markerGroup.addTo(map);
+  // 👇 (Klik peta untuk menambah lokasi baru)
+  map.on('click', function(e) {
+    document.getElementById('dataForm').reset();
+    document.getElementById('formTitle').innerText = '📍 Tambah Data Baru';
+    document.getElementById('inputKategori').value = 'Rumah';
+    
+    if (typeof sesuaikanFormKategori === 'function') {
+      sesuaikanFormKategori();
+    }
 
-  const adminToken = localStorage.getItem('adminToken') || '';
+    document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
+    document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+    document.getElementById('modal-form').style.display = 'flex';
+  });
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
 
   fetch(RT05_CONFIG.PETA_PROXY_URL, {
     method: 'GET',
     headers: {
-      'X-Admin-Token': adminToken,
+      'Authorization': `Bearer ${sessionToken}`,
       'Content-Type': 'application/json'
     }
   })
     .then(response => response.json())
     .then(dataObj => {
       markerGroup.clearLayers();
-      window.daftarPin = []; // Pakai window.daftarPin agar pasti terdaftar di scope global
+      window.daftarPin = [];
 
       if (!dataObj) return;
 
@@ -1592,17 +1684,27 @@ function initMap() {
         var rawLat = val.Lat !== undefined ? val.Lat : (val.lat || val.latitude || val.LAT || '');
         var rawLng = val.Lng !== undefined ? val.Lng : (val.lng || val.longitude || val.LNG || '');
         
-        var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || val['Kepala Keluarga'] || val.nama || val.Nama || '').trim();
+        var rawType = String(val.Type || val.type || val.Kategori || val.kategori || '').trim();
+        var kategoriLower = rawType.toLowerCase();
+        var isRumah = kategoriLower === '' || kategoriLower.includes('rumah');
+
+        var kepalaKeluarga = String(val.kepalaKeluarga || val.KepalaKeluarga || val['Kepala Keluarga'] || '').trim();
         var noRumah = String(val.noRumah || val.NoRumah || val['No Rumah'] || val.no_rumah || val.NOMOR_RUMAH || '').trim();
         var namaTempat = String(val.namaTempat || val.nama || val.Nama || val.name || '').trim();
         var textAnggota = String(val.Anggota || val.anggota || val.anggotaKeluarga || val['Anggota Keluarga'] || '').trim();
 
-        var namaTampilAsli = namaTempat;
-        if (kepalaKeluarga !== '') {
+        // Tentukan judul tampil berdasarkan kategori (Rumah vs Non-Rumah)
+        var namaTampilAsli = '';
+        if (isRumah) {
+          var namaUtamaRumah = kepalaKeluarga || namaTempat || 'Warga RT 05';
           var formatNoRmh = noRumah !== '' ? ` (Rumah No. ${noRumah})` : '';
-          namaTampilAsli = `${kepalaKeluarga}${formatNoRmh}`;
+          namaTampilAsli = `${namaUtamaRumah}${formatNoRmh}`;
+        } else {
+          // Untuk Kuliner, Kost, Fasum, Minimarket -> Utamakan namaTempat
+          var namaUtamaTempat = namaTempat || kepalaKeluarga || rawType || 'Lokasi RT 05';
+          var formatNoBangunan = noRumah !== '' ? ` (No. ${noRumah})` : '';
+          namaTampilAsli = `${namaUtamaTempat}${formatNoBangunan}`;
         }
-        if (!namaTampilAsli) namaTampilAsli = "Warga RT 05";
         
         var latClean = perbaikiKoordinat(rawLat);
         var lngClean = perbaikiKoordinat(rawLng);
@@ -1615,9 +1717,15 @@ function initMap() {
         var urlFoto = String(val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '').trim();
         var htmlFoto = urlFoto ? `<br><img src="${urlFoto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
 
+        // Info pemilik tambahan di bawah judul khusus untuk kategori selain Rumah
+        var htmlPemilik = (!isRumah && kepalaKeluarga)
+          ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">Pemilik: ${escapeHTML(kepalaKeluarga)}</div>`
+          : '';
+
         var popupContent = `
           <div style="text-align: center; min-width: 180px;">
             <b>${escapeHTML(namaTampilAsli)}</b>
+            ${htmlPemilik}
             ${htmlFoto}
             <div style="display: flex; gap: 4px; margin-top: 8px;">
                 <a href="${urlRute}" target="_blank" class="btn-rute" style="flex: 1; padding: 4px; font-size: 11px; text-decoration: none; background: #22c55e; color: white; border-radius: 4px; display: inline-block;">📍 Rute</a>
@@ -1626,8 +1734,7 @@ function initMap() {
           </div>
         `;
         
-        let rawType = val.Type || val.type || val.Kategori || val.kategori || '';
-        let dataIkon = getIkonKategori(namaTampilAsli, String(rawType).trim().toLowerCase());
+        let dataIkon = getIkonKategori(namaTampilAsli, kategoriLower);
 
         var customIcon = L.divIcon({
           className: 'custom-pin',
@@ -1637,7 +1744,6 @@ function initMap() {
         
         var marker = L.marker([itemLat, itemLng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
         
-        // Simpan properti teks pada objek marker Leaflet sebagai fallback
         marker.customSearchText = `${namaTampilAsli} ${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
         marker.customNoRumah = noRumah.replace(/^0+/, '').toLowerCase();
         marker.customLat = itemLat;
@@ -1645,18 +1751,19 @@ function initMap() {
 
         markerGroup.addLayer(marker);
 
-        // PUSH KE ARRAY GLOBAL DAFTARPIN
         window.daftarPin.push({ 
-          id: key,
-          namaRaw: namaTampilAsli,
-          namaTempat: namaTempat,
-          noRumah: noRumah,
-          kepalaKeluarga: kepalaKeluarga,
-          anggota: textAnggota,
+          id: key, 
+          namaRaw: namaTampilAsli, 
+          namaTempat: namaTempat, 
+          noRumah: noRumah, 
+          kepalaKeluarga: kepalaKeluarga, 
+          anggota: textAnggota, 
+          foto: urlFoto,
+          hidden: Boolean(val.Hidden || val.hidden),
           marker: marker, 
           lat: itemLat, 
-          lng: itemLng,
-          kategori: String(rawType).trim().toLowerCase()
+          lng: itemLng, 
+          kategori: kategoriLower 
         });
       });
 
@@ -1743,43 +1850,29 @@ window.cariLokasiPetaAdmin = function(queryManual) {
     
    
  // 3. FUNGSI FILTER KATEGORI LOKASI PETA
-// FUNGSI FILTER KATEGORI KHUSUS HALAMAN ADMIN
 function filterKategori(kat) {
   var kategoriPilihan = String(kat || 'semua').trim().toLowerCase();
-  
-  console.log(`🔍 [Admin Filter] Menjalankan filter: "${kategoriPilihan}"`);
-  
-  if (typeof markerGroup === 'undefined' || typeof daftarPin === 'undefined' || !Array.isArray(daftarPin)) {
-    console.warn("⚠️ [Admin Filter Warning] markerGroup atau daftarPin belum siap.");
-    return;
-  }
+  var sumberPin = window.daftarPin || [];
+
+  if (typeof markerGroup === 'undefined' || !Array.isArray(sumberPin)) return;
 
   markerGroup.clearLayers();
   var countTampil = 0;
 
-  daftarPin.forEach(function(pin) {
+  sumberPin.forEach(function(pin) {
     var teksKategori = String(pin.kategori || '').toLowerCase();
-    var teksNama = String(pin.nama || '').toLowerCase();
+    var teksNama = `${pin.namaRaw || ''} ${pin.namaTempat || ''}`.toLowerCase();
     var isMatch = false;
 
-    // 🌟 KUNCI UTAMA: Jika filter 'semua', LANGSUNG TAMPILKAN SEMUA TANPA CEK PIN.HIDDEN
     if (kategoriPilihan === 'semua') {
       isMatch = true;
     } else {
-      // Jika memilih kategori spesifik (misal: 'kost', 'fasum'), baru periksa status hidden jika ada
       if (pin.hidden) return;
 
-      var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') ||
-                   teksNama.includes('kost') || teksNama.includes('kos') || teksNama.includes('kontrakan');
-                   
-      var isFasum = teksKategori.includes('fasum') || teksKategori.includes('fasilitas') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') ||
-                    teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
-
-      var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksKategori.includes('makan') ||
-                      teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('makan');
-
-      var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') ||
-                         teksNama.includes('toko') || teksNama.includes('minimarket') || teksNama.includes('swalayan');
+      var isKost = teksKategori.includes('kost') || teksKategori.includes('kos') || teksKategori.includes('kontrakan') || teksNama.includes('kost') || teksNama.includes('kos');
+      var isFasum = teksKategori.includes('fasum') || teksKategori.includes('pos') || teksKategori.includes('musholla') || teksKategori.includes('masjid') || teksNama.includes('fasum') || teksNama.includes('pos') || teksNama.includes('musholla') || teksNama.includes('masjid');
+      var isKuliner = teksKategori.includes('kuliner') || teksKategori.includes('warung') || teksKategori.includes('resto') || teksNama.includes('warung') || teksNama.includes('resto') || teksNama.includes('angkringan');
+      var isMinimarket = teksKategori.includes('minimarket') || teksKategori.includes('toko') || teksKategori.includes('swalayan') || teksNama.includes('toko') || teksNama.includes('minimarket');
 
       if (kategoriPilihan === 'kost') isMatch = isKost;
       else if (kategoriPilihan === 'fasum') isMatch = isFasum;
@@ -1793,8 +1886,6 @@ function filterKategori(kat) {
       countTampil++;
     }
   });
-
-  console.log(`✅ [Admin Filter Selesai] Ditampilkan di peta: ${countTampil} dari total ${daftarPin.length} pin.`);
 }
 
     function toggleCustomFilter() {
@@ -1930,47 +2021,92 @@ window.toggleFormStok = function() {
       }
     }
 
-    let cachePerkakas = [];
+let cachePerkakas = [];
     let cachePeminjaman = [];
 
+    // Helper internal khusus inventaris agar konsisten dengan Worker Admin Anda
+    async function requestWorkerInventaris(pathTujuan, metodeHttp = "GET", payloadData = null) {
+      const sessionToken = sessionStorage.getItem('rt05_session_token');
+      if (!sessionToken) {
+        alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        window.location.reload();
+        throw new Error("SESSION_EXPIRED");
+      }
+
+      const bodyReq = {
+        sessionToken: sessionToken,
+        path: pathTujuan,
+        method: metodeHttp
+      };
+      if (payloadData !== null) {
+        bodyReq.data = payloadData;
+      }
+
+      const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify(bodyReq)
+      });
+
+      const hasilProxy = await responseProxy.json();
+
+      if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+        window.location.reload();
+        throw new Error("SESSION_EXPIRED");
+      }
+
+      if (!responseProxy.ok || !hasilProxy.success) {
+        throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memproses permintaan melalui Worker Admin.");
+      }
+
+      return hasilProxy.result !== undefined ? hasilProxy.result : hasilProxy.data;
+    }
+
+    // 1. Muat Data Inventaris & Peminjaman Aktif via Worker
     async function muatPeminjamanAdmin() {
       const container = document.getElementById("tabel-peminjaman-admin");
       if (!container) return;
 
       container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px;">⏳ Memuat data perkakas...</td></tr>`;
 
-      const inventarisRef = window.firebaseRef(window.db, 'inventaris');
-      const peminjamanRef = window.firebaseRef(window.db, 'peminjaman');
+      try {
+        const [dataInv, dataPem] = await Promise.all([
+          requestWorkerInventaris('inventaris', 'GET'),
+          requestWorkerInventaris('peminjaman', 'GET')
+        ]);
 
-      Promise.all([
-        window.firebaseGet(inventarisRef),
-        window.firebaseGet(peminjamanRef)
-      ]).then(([snapInv, snapPem]) => {
         let perkakas = [];
         let peminjaman = [];
 
-        if (snapInv.exists()) {
-          snapInv.forEach(child => {
-            const val = child.val();
+        if (dataInv && typeof dataInv === 'object') {
+          Object.keys(dataInv).forEach(key => {
+            const val = dataInv[key];
             if (val) {
               perkakas.push({
-                id: child.key,
+                id: key,
                 nama: val.namaBarang || val.nama || '',
-                total: val.totalStok !== undefined ? val.totalStok : (val.total || 0),
-                foto: val.fotoUrl || val.foto || ''
+                total: val.totalStok !== undefined ? Number(val.totalStok) : Number(val.total || 0),
+                foto: val.fotoUrl || val.foto || '',
+                raw: val
               });
             }
           });
         }
 
-        if (snapPem.exists()) {
-          snapPem.forEach(child => {
-            const val = child.val();
+        if (dataPem && typeof dataPem === 'object') {
+          Object.keys(dataPem).forEach(key => {
+            const val = dataPem[key];
             if (val) {
               peminjaman.push([
-                child.key,
+                key,
                 val.peminjam || '',
-                val.barang || '',
+                val.barang || val.namaBarang || '',
                 val.jumlah || 1,
                 val.tgl || '',
                 val.status || 'Dipinjam'
@@ -1983,10 +2119,11 @@ window.toggleFormStok = function() {
         cachePeminjaman = peminjaman;
         renderTabelDanDropdown(cachePerkakas, cachePeminjaman);
 
-      }).catch(err => {
-        console.error("Gagal memuat data inventaris dari Firebase:", err);
-        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Gagal memuat data dari database.</td></tr>`;
-      });
+      } catch (err) {
+        if (err.message === "SESSION_EXPIRED") return;
+        console.error("Gagal memuat data inventaris dari Worker:", err);
+        container.innerHTML = `<tr><td colspan="4" style="text-align:center; color:#dc2626; padding:12px;">Gagal memuat data: ${escapeHTML(err.message)}</td></tr>`;
+      }
     }
 
     function renderTabelDanDropdown(perkakas, peminjaman) {
@@ -1994,17 +2131,15 @@ window.toggleFormStok = function() {
       const selectBarang = document.getElementById("pinjamPilihBarang");
       const selectBarangStok = document.getElementById("stokPilihBarang");
 
-      if (perkakas && perkakas.length > 0) {
-        if (selectBarang) {
-          selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-            perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa: ${item.total})</option>`).join('');
-        }
+      if (selectBarang) {
+        selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
+          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa: ${item.total})</option>`).join('');
+      }
 
-        if (selectBarangStok) {
-          selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
-            `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
-            perkakas.map(item => `<option value="${item.nama}">${item.nama} (Sisa Stok: ${item.total})</option>`).join('');
-        }
+      if (selectBarangStok) {
+        selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
+          `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
+          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa Stok: ${item.total})</option>`).join('');
       }
       
       const pinjamanAktif = peminjaman.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
@@ -2020,253 +2155,301 @@ window.toggleFormStok = function() {
           <td style="padding: 6px;">${escapeHTML(row[2])}</td>
           <td style="padding: 6px; text-align: center; font-weight: bold;">${escapeHTML(row[3])}</td>
           <td style="padding: 6px; text-align: center;">
-            <button onclick="prosesPengembalian('${row[0]}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
+            <button onclick="prosesPengembalian('${escapeHTML(row[0])}')" style="background: #0288d1; color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 10.5px; font-weight: bold;">
               ↩️ Dikembalikan
             </button>
           </td>
         </tr>
       `).join('');
     }
-    
-   
 
-   async function simpanBarangStokAdmin() {
-    const pilihPilihan = document.getElementById('stokPilihBarang').value;
-    const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
-    const jenisAksi = document.getElementById('stokJenisAksi').value;
-    const jumlahUnit = parseInt(document.getElementById('stokJumlahTotal').value, 10);
-    
-    let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
-
-    if (!namaBarang || isNaN(jumlahUnit) || jumlahUnit <= 0) {
-      alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
-      return;
-    }
-
-    const btn = document.querySelector('#formStokBarang button');
-    if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
-
-    try {
-      const inventarisRef = window.firebaseRef(window.db, 'inventaris');
-      const snapshot = await window.firebaseGet(inventarisRef);
+    // 2. Tambah Barang Baru & Edit Jumlah Stok Perkakas via Worker (PUT / PATCH)
+    async function simpanBarangStokAdmin() {
+      const pilihPilihan = document.getElementById('stokPilihBarang').value;
+      const namaBaru = document.getElementById('stokNamaBarangBaru').value.trim();
+      const jenisAksi = document.getElementById('stokJenisAksi').value;
+      const jumlahUnit = parseInt(document.getElementById('stokJumlahTotal').value, 10);
       
-      let targetKey = null;
-      let dataBarangLama = null;
+      let namaBarang = (pilihPilihan === 'BARU') ? namaBaru : pilihPilihan;
 
-      if (snapshot.exists()) {
-        snapshot.forEach(child => {
-          const val = child.val();
-          const namaDb = val.namaBarang || val.nama || '';
-          if (namaDb.toLowerCase() === namaBarang.toLowerCase()) {
-            targetKey = child.key;
-            dataBarangLama = val;
-          }
-        });
+      if (!namaBarang || isNaN(jumlahUnit) || jumlahUnit < 0 || (jenisAksi !== 'set' && jumlahUnit <= 0)) {
+        alert('Mohon pilih/isi nama barang dan jumlah unit dengan benar!');
+        return;
       }
 
-      let stokAkhir = jumlahUnit;
-      if (targetKey && dataBarangLama) {
-        const stokLama = parseInt(dataBarangLama.totalStok !== undefined ? dataBarangLama.totalStok : (dataBarangLama.total || 0), 10);
+      const btn = document.querySelector('#formStokBarang button');
+      if (btn) { btn.innerText = '⏳ Menyimpan...'; btn.disabled = true; }
+
+      try {
+        // Ambil data terbaru inventaris via Worker
+        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
         
-        // 🌟 Logika pendukung untuk Tambah, Kurang, dan Set Total Stok
-        if (jenisAksi === 'kurang') {
-          stokAkhir = Math.max(0, stokLama - jumlahUnit);
-        } else if (jenisAksi === 'set') {
-          stokAkhir = jumlahUnit; // Mengatur stok secara langsung sesuai input
-        } else {
-          stokAkhir = stokLama + jumlahUnit; // Default tambah
+        let targetKey = null;
+        let dataBarangLama = null;
+
+        if (dataInv && typeof dataInv === 'object') {
+          Object.keys(dataInv).forEach(key => {
+            const val = dataInv[key];
+            if (val) {
+              const namaDb = val.namaBarang || val.nama || '';
+              if (namaDb.toLowerCase() === namaBarang.toLowerCase()) {
+                targetKey = key;
+                dataBarangLama = val;
+              }
+            }
+          });
         }
 
-        const updateRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
-        await window.firebaseSet(updateRef, {
-          ...dataBarangLama,
-          namaBarang: namaBarang,
-          totalStok: stokAkhir
-        });
-      } else {
-        targetKey = 'item_' + Date.now();
-        const newRef = window.firebaseRef(window.db, 'inventaris/' + targetKey);
-        await window.firebaseSet(newRef, {
-          id: targetKey,
-          namaBarang: namaBarang,
-          totalStok: jumlahUnit,
-          kategori: 'Umum',
-          kondisi: 'Baik',
-          peminjam: ''
-        });
-      }
+        if (targetKey && dataBarangLama) {
+          const stokLama = parseInt(dataBarangLama.totalStok !== undefined ? dataBarangLama.totalStok : (dataBarangLama.total || 0), 10);
+          let stokAkhir = jumlahUnit;
 
-      if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-      alert('✅ Data stok barang berhasil diperbarui ke database!');
-      
-      document.getElementById('stokPilihBarang').value = '';
-      document.getElementById('stokNamaBarangBaru').value = '';
-      document.getElementById('stokNamaBarangBaru').style.display = 'none';
-      document.getElementById('stokJumlahTotal').value = '';
-      if (typeof toggleFormStok === 'function') toggleFormStok();
-      if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
+          if (jenisAksi === 'kurang') {
+            stokAkhir = Math.max(0, stokLama - jumlahUnit);
+          } else if (jenisAksi === 'set') {
+            stokAkhir = jumlahUnit;
+          } else {
+            stokAkhir = stokLama + jumlahUnit;
+          }
 
-    } catch (err) {
-      if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
-      alert('❌ Gagal menyimpan ke database: ' + err.message);
-    }
-}
+          await requestWorkerInventaris(`inventaris/${targetKey}`, 'PATCH', {
+            namaBarang: namaBarang,
+            totalStok: stokAkhir,
+            updatedAt: Date.now()
+          });
+        } else {
+          targetKey = 'item_' + Date.now();
+          await requestWorkerInventaris(`inventaris/${targetKey}`, 'PUT', {
+            id: targetKey,
+            namaBarang: namaBarang,
+            totalStok: jumlahUnit,
+            kategori: 'Umum',
+            kondisi: 'Baik',
+            peminjam: '',
+            createdAt: Date.now(),
+            updatedAt: Date.now()
+          });
+        }
 
-   async function prosesPengembalian(id) {
-  if (confirm("Apakah barang ini sudah dikembalikan?")) {
-    try {
-      // 1. Ambil data peminjaman yang aktif saat ini
-      const peminjamanRef = window.firebaseRef(window.db, 'peminjaman/' + id);
-      const snapshot = await window.firebaseGet(peminjamanRef);
-
-      if (snapshot.exists()) {
-        const dataPinjam = snapshot.val();
+        alert('✅ Data stok barang berhasil diperbarui melalui Worker!');
         
-        // 2. Tambahkan informasi status dan tanggal pengembalian
+        document.getElementById('stokPilihBarang').value = '';
+        document.getElementById('stokNamaBarangBaru').value = '';
+        document.getElementById('stokNamaBarangBaru').style.display = 'none';
+        document.getElementById('stokJumlahTotal').value = '';
+        
+        if (typeof toggleFormStok === 'function') toggleFormStok();
+        if (typeof muatPeminjamanAdmin === 'function') await muatPeminjamanAdmin();
+
+      } catch (err) {
+        if (err.message !== "SESSION_EXPIRED") {
+          alert('❌ Gagal menyimpan ke database: ' + err.message);
+        }
+      } finally {
+        if (btn) { btn.innerText = '💾 Simpan Perubahan Stok'; btn.disabled = false; }
+      }
+    }
+
+    // 3. Proses Pengembalian Perkakas & Kembalikan Stok Otomatis via Worker
+    async function prosesPengembalian(id) {
+      if (!confirm("Apakah barang ini sudah dikembalikan?")) return;
+
+      try {
+        // 1. Ambil data peminjaman aktif via Worker
+        const dataPinjam = await requestWorkerInventaris(`peminjaman/${id}`, 'GET');
+        if (!dataPinjam) {
+          alert("⚠️ Data peminjaman tidak ditemukan atau sudah diproses.");
+          await muatPeminjamanAdmin();
+          return;
+        }
+
+        const namaBarangKembali = String(dataPinjam.barang || dataPinjam.namaBarang || '').trim();
+        const jumlahKembali = parseInt(dataPinjam.jumlah || 1, 10);
+
+        // 2. Tambahkan informasi pengembalian & arsipkan ke 'riwayat_peminjaman'
         dataPinjam.status = "Dikembalikan";
         dataPinjam.tglKembali = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        dataPinjam.returnedAt = Date.now();
 
-        // 3. Simpan ke node arsip baru di Firebase ('riwayat_peminjaman')
-        const riwayatRef = window.firebaseRef(window.db, 'riwayat_peminjaman/' + id);
-        await window.firebaseSet(riwayatRef, dataPinjam);
+        await requestWorkerInventaris(`riwayat_peminjaman/${id}`, 'PUT', dataPinjam);
 
-        // 4. Setelah berhasil diarsip, baru hapus dari daftar peminjaman aktif
-        await window.firebaseRemove(peminjamanRef);
+        // 3. Kembalikan jumlah stok barang di node 'inventaris'
+        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
+        if (dataInv && typeof dataInv === 'object' && namaBarangKembali) {
+          const keyBarang = Object.keys(dataInv).find(k => {
+            const item = dataInv[k];
+            const namaDb = String(item?.namaBarang || item?.nama || '').trim();
+            return namaDb.toLowerCase() === namaBarangKembali.toLowerCase();
+          });
 
-        alert("✅ Status barang berhasil diperbarui dan masuk ke riwayat arsip!");
-        muatPeminjamanAdmin();
+          if (keyBarang && dataInv[keyBarang]) {
+            const stokSaatIni = parseInt(dataInv[keyBarang].totalStok !== undefined ? dataInv[keyBarang].totalStok : (dataInv[keyBarang].total || 0), 10);
+            await requestWorkerInventaris(`inventaris/${keyBarang}`, 'PATCH', {
+              totalStok: stokSaatIni + jumlahKembali,
+              updatedAt: Date.now()
+            });
+          }
+        }
+
+        // 4. Hapus dari daftar peminjaman aktif
+        await requestWorkerInventaris(`peminjaman/${id}`, 'DELETE');
+
+        alert("✅ Barang dikembalikan, stok otomatis bertambah, dan masuk ke riwayat arsip!");
+        await muatPeminjamanAdmin();
+
+      } catch (err) {
+        if (err.message !== "SESSION_EXPIRED") {
+          alert("❌ Gagal memperbarui status pengembalian: " + err.message);
+        }
       }
-    } catch (err) {
-      alert("❌ Gagal memperbarui status pengembalian: " + err.message);
     }
-  }
-}
 
-// ==========================================
-// SISTEM KERANJANG PEMINJAMAN (MULTI-ITEM)
-// ==========================================
-let keranjangPinjam = [];
+    // ==========================================
+    // SISTEM KERANJANG PEMINJAMAN (MULTI-ITEM VIA WORKER)
+    // ==========================================
+    let keranjangPinjam = [];
 
-// 1. Tambah item ke keranjang sementara
-window.tambahKeKeranjangPinjam = function() {
-  const selectBarang = document.getElementById('pinjamPilihBarang');
-  const idBarang = selectBarang.value;
-  // Ambil teks bersih tanpa tulisan "(Sisa: ...)" di dropdown
-  let namaBarang = selectBarang.options[selectBarang.selectedIndex]?.text || '';
-  if (namaBarang.includes('(')) {
-    namaBarang = namaBarang.split('(')[0].trim();
-  }
-  
-  const jumlah = parseInt(document.getElementById('pinjamJumlah').value) || 0;
-
-  if (!idBarang) {
-    alert("Silakan pilih barang terlebih dahulu!");
-    return;
-  }
-  if (jumlah <= 0) {
-    alert("Jumlah pinjam minimal 1!");
-    return;
-  }
-
-  // Masukkan ke array keranjang
-  keranjangPinjam.push({ idBarang, namaBarang, jumlah });
-  
-  // Reset input jumlah & render ulang tabel keranjang
-  document.getElementById('pinjamJumlah').value = '1';
-  renderTabelKeranjangSementara();
-};
-
-// 2. Hapus item dari keranjang sementara berdasarkan indeks
-window.hapusItemKeranjang = function(index) {
-  keranjangPinjam.splice(index, 1);
-  renderTabelKeranjangSementara();
-};
-
-// 3. Render HTML tabel keranjang sementara
-function renderTabelKeranjangSementara() {
-  const tbody = document.getElementById('tabel-keranjang-sementara');
-  if (!tbody) return;
-
-  if (keranjangPinjam.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8; padding: 6px;">Belum ada barang ditambahkan ke keranjang.</td></tr>';
-    return;
-  }
-
-  let html = '';
-  keranjangPinjam.forEach((item, index) => {
-    html += `
-      <tr style="border-bottom: 1px solid #f1f5f9;">
-        <td style="padding: 4px 6px;">${escapeHTML(item.namaBarang)}</td>
-        <td style="padding: 4px 6px; text-align: center; font-weight: bold;">${item.jumlah} unit</td>
-        <td style="padding: 4px 6px; text-align: right;">
-          <button type="button" onclick="hapusItemKeranjang(${index})" style="background: #ef4444; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">✕ Hapus</button>
-        </td>
-      </tr>
-    `;
-  });
-  tbody.innerHTML = html;
-}
-
-// 4. Simpan seluruh isi keranjang ke Firebase secara massal (Sekaligus)
-window.simpanSemuaPeminjamanAdmin = async function() {
-  const peminjam = document.getElementById('pinjamNamaWarga').value.trim();
-
-  if (!peminjam) {
-    alert("Mohon isi Nama / No. Rumah peminjam terlebih dahulu!");
-    return;
-  }
-
-  if (keranjangPinjam.length === 0) {
-    alert("Keranjang peminjaman masih kosong! Tambahkan minimal 1 barang.");
-    return;
-  }
-
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
-    alert("Koneksi database belum siap.");
-    return;
-  }
-
-  const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanSemuaPeminjamanAdmin']");
-  if(btn) { btn.innerText = "⏳ Menyimpan Semua..."; btn.disabled = true; }
-
-  const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-
-  try {
-    // Gunakan node 'peminjaman' agar langsung sinkron dengan tabel daftar aktif Anda
-    for (let item of keranjangPinjam) {
-      const pinjamId = "pinjam_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
-      const targetRef = window.firebaseRef(window.db, 'peminjaman/' + pinjamId);
+    window.tambahKeKeranjangPinjam = function() {
+      const selectBarang = document.getElementById('pinjamPilihBarang');
+      const idBarang = selectBarang.value;
+      let namaBarang = selectBarang.options[selectBarang.selectedIndex]?.text || '';
+      if (namaBarang.includes('(')) {
+        namaBarang = namaBarang.split('(')[0].trim();
+      }
       
-      await window.firebaseSet(targetRef, {
-        id: pinjamId,
-        peminjam: peminjam,
-        barang: item.namaBarang,
-        namaBarang: item.namaBarang,
-        jumlah: item.jumlah,
-        tgl: hariIni,
-        status: "Dipinjam",
-        timestamp: Date.now()
+      const jumlah = parseInt(document.getElementById('pinjamJumlah').value, 10) || 0;
+
+      if (!idBarang) {
+        alert("Silakan pilih barang terlebih dahulu!");
+        return;
+      }
+      if (jumlah <= 0) {
+        alert("Jumlah pinjam minimal 1!");
+        return;
+      }
+
+      // Validasi sisa stok dari cachePerkakas
+      const barangCache = cachePerkakas.find(b => b.nama.toLowerCase() === namaBarang.toLowerCase());
+      const sudahDiKeranjang = keranjangPinjam
+        .filter(k => k.namaBarang.toLowerCase() === namaBarang.toLowerCase())
+        .reduce((sum, k) => sum + k.jumlah, 0);
+
+      if (barangCache && (jumlah + sudahDiKeranjang) > barangCache.total) {
+        alert(`⚠️ Stok "${namaBarang}" tidak mencukupi! Sisa tersedia: ${barangCache.total} unit.`);
+        return;
+      }
+
+      keranjangPinjam.push({ idBarang, namaBarang, jumlah });
+      document.getElementById('pinjamJumlah').value = '1';
+      renderTabelKeranjangSementara();
+    };
+
+    window.hapusItemKeranjang = function(index) {
+      keranjangPinjam.splice(index, 1);
+      renderTabelKeranjangSementara();
+    };
+
+    function renderTabelKeranjangSementara() {
+      const tbody = document.getElementById('tabel-keranjang-sementara');
+      if (!tbody) return;
+
+      if (keranjangPinjam.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="3" style="text-align: center; color: #94a3b8; padding: 6px;">Belum ada barang ditambahkan ke keranjang.</td></tr>';
+        return;
+      }
+
+      let html = '';
+      keranjangPinjam.forEach((item, index) => {
+        html += `
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 4px 6px;">${escapeHTML(item.namaBarang)}</td>
+            <td style="padding: 4px 6px; text-align: center; font-weight: bold;">${item.jumlah} unit</td>
+            <td style="padding: 4px 6px; text-align: right;">
+              <button type="button" onclick="hapusItemKeranjang(${index})" style="background: #ef4444; color: white; border: none; border-radius: 3px; padding: 2px 6px; font-size: 10px; cursor: pointer;">✕ Hapus</button>
+            </td>
+          </tr>
+        `;
       });
+      tbody.innerHTML = html;
     }
 
-    if(btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
-    alert("✅ Semua peminjaman berhasil dicatat sekaligus!");
-    
-    // Bersihkan form & keranjang
-    keranjangPinjam = [];
-    document.getElementById('pinjamNamaWarga').value = '';
-    renderTabelKeranjangSementara();
+    // 4. Simpan Semua Peminjaman & Kurangi Stok Otomatis via Worker
+    window.simpanSemuaPeminjamanAdmin = async function() {
+      const peminjam = document.getElementById('pinjamNamaWarga').value.trim();
 
-    // Muat ulang tabel daftar peminjaman admin
-    if (typeof muatPeminjamanAdmin === 'function') {
-      muatPeminjamanAdmin();
-    }
+      if (!peminjam) {
+        alert("Mohon isi Nama / No. Rumah peminjam terlebih dahulu!");
+        return;
+      }
 
-  } catch (err) {
-    if(btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
-    alert("❌ Gagal menyimpan peminjaman: " + err.message);
-  }
-};
+      if (keranjangPinjam.length === 0) {
+        alert("Keranjang peminjaman masih kosong! Tambahkan minimal 1 barang.");
+        return;
+      }
+
+      const btn = document.querySelector("#modal-admin-inventaris button[onclick*='simpanSemuaPeminjamanAdmin']");
+      if (btn) { btn.innerText = "⏳ Menyimpan Semua..."; btn.disabled = true; }
+
+      const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+
+      try {
+        // Ambil stok inventaris terbaru dari Worker sebelum mengurangi
+        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
+
+        for (let item of keranjangPinjam) {
+          const pinjamId = "pinjam_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
+
+          // 1. Catat peminjaman ke node 'peminjaman' via Worker
+          await requestWorkerInventaris(`peminjaman/${pinjamId}`, 'PUT', {
+            id: pinjamId,
+            peminjam: peminjam,
+            barang: item.namaBarang,
+            namaBarang: item.namaBarang,
+            jumlah: item.jumlah,
+            tgl: hariIni,
+            status: "Dipinjam",
+            timestamp: Date.now()
+          });
+
+          // 2. Kurangi stok pada node 'inventaris' via Worker
+          if (dataInv && typeof dataInv === 'object') {
+            const keyBarang = Object.keys(dataInv).find(k => {
+              const invItem = dataInv[k];
+              const namaDb = String(invItem?.namaBarang || invItem?.nama || '').trim();
+              return namaDb.toLowerCase() === item.namaBarang.toLowerCase();
+            });
+
+            if (keyBarang && dataInv[keyBarang]) {
+              const stokLama = parseInt(dataInv[keyBarang].totalStok !== undefined ? dataInv[keyBarang].totalStok : (dataInv[keyBarang].total || 0), 10);
+              const stokBaru = Math.max(0, stokLama - item.jumlah);
+              dataInv[keyBarang].totalStok = stokBaru; // Update di memori lokal juga jika ada item kembar di keranjang
+
+              await requestWorkerInventaris(`inventaris/${keyBarang}`, 'PATCH', {
+                totalStok: stokBaru,
+                updatedAt: Date.now()
+              });
+            }
+          }
+        }
+
+        alert("✅ Semua peminjaman berhasil dicatat & stok diperbarui!");
+        
+        keranjangPinjam = [];
+        document.getElementById('pinjamNamaWarga').value = '';
+        renderTabelKeranjangSementara();
+
+        if (typeof muatPeminjamanAdmin === 'function') {
+          await muatPeminjamanAdmin();
+        }
+
+      } catch (err) {
+        if (err.message !== "SESSION_EXPIRED") {
+          alert("❌ Gagal menyimpan peminjaman: " + err.message);
+        }
+      } finally {
+        if (btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
+      }
+    };
 
 // 📋 Fungsi Toggle Panel Warga Baru & Sembunyikan Menu Sensus Utama
 window.togglePanelWargaBaruAdmin = function() {
@@ -2286,27 +2469,33 @@ window.togglePanelWargaBaruAdmin = function() {
   }
 };
 
+// ✏️ Wrapper agar data tetap utuh (tidak rusak oleh kutip/enter/simbol HTML) saat tombol Edit diklik
+window.bukaEditWargaBaruEncoded = function(encodedStr) {
+  const d = JSON.parse(decodeURIComponent(encodedStr));
+  window.editWargaBaruAdmin(d.id, d.nama, d.noRumah, d.hp, d.status, d.cerita, d.foto);
+};
+
 window.bukaModalWargaBaruAdmin = async function() {
   const listContainer = document.getElementById('listWargaBaruContent');
   if (!listContainer) return;
 
   listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #64748b; padding: 10px;">⏳ Memuat data...</div>';
 
-  try {
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || localStorage.getItem('rt05_admin_pin') || prompt('Masukkan PIN Admin:');
-    
-    if (!pinAdmin) {
-      listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">⚠️ PIN Admin diperlukan untuk melihat data.</div>';
-      return;
-    }
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">⚠️ Sesi admin habis. Silakan login ulang.</div>';
+    return;
+  }
 
+  try {
     const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
+        sessionToken: sessionToken,
         path: "warga_baru",
         method: "GET"
       })
@@ -2314,11 +2503,18 @@ window.bukaModalWargaBaruAdmin = async function() {
 
     const hasilProxy = await responseProxy.json();
 
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
     if (!hasilProxy.success) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari server.");
     }
 
-   const data = hasilProxy.result;
+    const data = hasilProxy.result || hasilProxy.data;
     const badgeCount = document.getElementById('badge-warga-baru-count');
 
     if (!data || Object.keys(data).length === 0) {
@@ -2331,18 +2527,20 @@ window.bukaModalWargaBaruAdmin = async function() {
     if (badgeCount) badgeCount.innerText = `${keys.length} Laporan ▴`;
 
     let html = '';
-    // Urutkan dari yang terbaru (jika ada timestamp/key)
     keys.reverse().forEach((key) => {
       const item = data[key];
       if (!item) return;
 
-      // Amankan karakter kutip agar tidak merusak parameter onclick
-      const safeNama = escapeHTML(item.nama || '').replace(/'/g, "\\'");
-      const safeNoRumah = escapeHTML(item.noRumah || '').replace(/'/g, "\\'");
-      const safeHp = escapeHTML(item.hp || '').replace(/'/g, "\\'");
-      const safeStatus = escapeHTML(item.status || '').replace(/'/g, "\\'");
-      const safeCerita = escapeHTML(item.cerita || '').replace(/'/g, "\\'").replace(/\n/g, ' ');
-      const safeFoto = escapeHTML(item.foto || '').replace(/'/g, "\\'");
+      // Encode objek data secara utuh untuk dilempar ke modal Edit
+      const encodedData = encodeURIComponent(JSON.stringify({
+        id: key,
+        nama: item.nama || '',
+        noRumah: item.noRumah || '',
+        hp: item.hp || '',
+        status: item.status || 'Kontrakan',
+        cerita: item.cerita || '',
+        foto: item.foto || ''
+      })).replace(/'/g, "%27");
 
       html += `
         <div style="background: white; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; margin-bottom: 6px; font-size: 11px;">
@@ -2355,8 +2553,8 @@ window.bukaModalWargaBaruAdmin = async function() {
           <div style="margin-bottom: 6px; color: #475569;">💬 <strong>Cerita:</strong> ${escapeHTML(item.cerita || '-')}</div>
           
           <div style="display: flex; justify-content: flex-end; gap: 4px;">
-            <button type="button" onclick="editWargaBaruAdmin('${key}', '${safeNama}', '${safeNoRumah}', '${safeHp}', '${safeStatus}', '${safeCerita}', '${safeFoto}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
-            <button type="button" onclick="hapusWargaBaruAdmin('${key}')" style="padding: 3px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">🗑️ Hapus</button>
+            <button type="button" onclick="bukaEditWargaBaruEncoded('${encodedData}')" style="padding: 3px 8px; background: #0288d1; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">✏️ Edit</button>
+            <button type="button" onclick="hapusWargaBaruAdmin('${escapeHTML(key).replace(/'/g, "\\'")}')" style="padding: 3px 8px; background: #dc2626; color: white; border: none; border-radius: 4px; font-size: 10px; cursor: pointer;">🗑️ Hapus</button>
           </div>
         </div>
       `;
@@ -2370,29 +2568,7 @@ window.bukaModalWargaBaruAdmin = async function() {
   }
 };
 
-// ✏️ Buka Modal Edit Warga Baru
-window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita, foto) {
-  document.getElementById('editWargaBaruId').value = id;
-  document.getElementById('editWargaBaruNama').value = nama || '';
-  document.getElementById('editWargaBaruNoRumah').value = noRumah || '';
-  document.getElementById('editWargaBaruHp').value = hp || '';
-  document.getElementById('editWargaBaruStatus').value = status || 'Kontrakan';
-  document.getElementById('editWargaBaruCerita').value = cerita || '';
-
-  const inputFotoLama = document.getElementById('editWargaBaruFoto');
-  if (inputFotoLama) inputFotoLama.value = foto || '';
-
-  const modal = document.getElementById('modal-edit-warga-baru');
-  if (modal) modal.style.display = 'flex';
-};
-
-// ❌ Tutup Modal Edit Warga Baru
-window.tutupModalEditWargaBaru = function() {
-  const modal = document.getElementById('modal-edit-warga-baru');
-  if (modal) modal.style.display = 'none';
-};
-
-// 💾 Simpan Perubahan Data Warga Baru via Cloudflare Worker Admin
+// 💾 Simpan Perubahan Data Warga Baru via Session Token
 window.simpanPerubahanWargaBaru = async function(e) {
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
 
@@ -2409,6 +2585,14 @@ window.simpanPerubahanWargaBaru = async function(e) {
     return;
   }
 
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
   if (btn) {
     btn.disabled = true;
     btn.innerText = "⏳ Memproses...";
@@ -2421,7 +2605,6 @@ window.simpanPerubahanWargaBaru = async function(e) {
   const statusDiv = document.getElementById('statusSemiManual');
 
   try {
-    // 1. Upload foto baru ke R2 melalui Worker Uploader jika ada
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       if (statusDiv) {
         statusDiv.innerHTML = "⏳ Mengompres & mengunggah foto baru ke R2...";
@@ -2441,7 +2624,8 @@ window.simpanPerubahanWargaBaru = async function(e) {
         method: "POST",
         headers: {
           "X-File-Name": encodeURIComponent(namaFileKustom),
-          "Content-Type": file.type || "application/octet-stream"
+          "Content-Type": file.type || "application/octet-stream",
+          "Authorization": `Bearer ${sessionToken}`
         },
         body: file
       });
@@ -2457,11 +2641,8 @@ window.simpanPerubahanWargaBaru = async function(e) {
       }
     }
 
-    if (btn) {
-      btn.innerText = "⏳ Menyimpan ke Database...";
-    }
+    if (btn) btn.innerText = "⏳ Menyimpan ke Database...";
 
-    // 2. Susun payload & kirim PATCH via Worker Admin
     const dataUpdate = {
       nama: nama,
       noRumah: noRumah,
@@ -2472,15 +2653,14 @@ window.simpanPerubahanWargaBaru = async function(e) {
       updatedAt: Date.now()
     };
 
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
-
     const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
+        sessionToken: sessionToken,
         path: `warga_baru/${id}`,
         method: "PATCH",
         data: dataUpdate
@@ -2488,6 +2668,13 @@ window.simpanPerubahanWargaBaru = async function(e) {
     });
 
     const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
 
     if (!hasilProxy.success) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan perubahan via Worker Admin.");
@@ -2509,26 +2696,40 @@ window.simpanPerubahanWargaBaru = async function(e) {
   }
 };
 
-// 🗑️ Fungsi Hapus Laporan Warga Baru via Cloudflare Worker Admin
+// 🗑️ Fungsi Hapus Laporan Warga Baru via Session Token
 window.hapusWargaBaruAdmin = async function(id) {
   if (!confirm("Yakin ingin menghapus laporan warga/tamu ini?")) return;
 
-  try {
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
 
+  try {
     const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
+        sessionToken: sessionToken,
         path: `warga_baru/${id}`,
         method: "DELETE"
       })
     });
 
     const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
 
     if (!hasilProxy.success) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus data via Worker Admin.");
@@ -2541,19 +2742,25 @@ window.hapusWargaBaruAdmin = async function(id) {
   }
 };
 
-// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV) via Cloudflare Worker Admin
+// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV) via Session Token
 window.exportWargaBaruToCSV = async function() {
-  try {
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
-    if (!pinAdmin) return;
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
 
+  try {
     const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
+        sessionToken: sessionToken,
         path: "warga_baru",
         method: "GET"
       })
@@ -2561,11 +2768,18 @@ window.exportWargaBaruToCSV = async function() {
 
     const hasilProxy = await responseProxy.json();
 
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
     if (!hasilProxy.success) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari Worker Admin.");
     }
 
-    const rawData = hasilProxy.data;
+    const rawData = hasilProxy.result || hasilProxy.data;
     if (!rawData || Object.keys(rawData).length === 0) {
       alert("Tidak ada data laporan warga baru di database.");
       return;
@@ -2613,10 +2827,49 @@ window.exportWargaBaruToCSV = async function() {
     alert("Gagal mengunduh data warga baru: " + err.message);
   }
 };
+
     
+// ✏️ Buka Modal Edit Warga Baru
+window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita, foto) {
+  document.getElementById('editWargaBaruId').value = id;
+  document.getElementById('editWargaBaruNama').value = nama || '';
+  document.getElementById('editWargaBaruNoRumah').value = noRumah || '';
+  document.getElementById('editWargaBaruHp').value = hp || '';
+  document.getElementById('editWargaBaruStatus').value = status || 'Kontrakan';
+  document.getElementById('editWargaBaruCerita').value = cerita || '';
+
+  const inputFotoLama = document.getElementById('editWargaBaruFoto');
+  if (inputFotoLama) inputFotoLama.value = foto || '';
+
+  const modal = document.getElementById('modal-edit-warga-baru');
+  if (modal) modal.style.display = 'flex';
+};
+
+// ❌ Tutup Modal Edit Warga Baru
+window.tutupModalEditWargaBaru = function() {
+  const modal = document.getElementById('modal-edit-warga-baru');
+  if (modal) modal.style.display = 'none';
+};
+
+// 1. Helper terpusat untuk mengambil data peta_warga dengan Session Token
 async function ambilDataWargaWorker() {
-    const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
-    return await response.json();
+  const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
+  const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${sessionToken}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    alert('⚠️ Sesi admin telah berakhir. Silakan login kembali.');
+    location.reload();
+    return null;
+  }
+
+  return await response.json();
 }
 
 async function exportSensusToCSV() {
@@ -2764,17 +3017,25 @@ let listSemuaRumahAdmin = [];
 // ==========================================
 async function muatSemuaDataAdmin() {
     try {
-        // 🌟 1. Ambil token sesi admin dari localStorage
-        const adminToken = localStorage.getItem('adminToken') || '';
+        // 🌟 1. Ambil sessionToken aktif dari sessionStorage
+        const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
 
-        // 🌟 2. Sertakan X-Admin-Token agar Worker memberikan 100% data lokasi utuh tanpa hidden otomatis
+        // 🌟 2. Sertakan header Authorization Bearer agar Worker mengenali sesi admin & memberikan 100% data (termasuk yang Hidden)
         const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, {
             method: 'GET',
             headers: {
-                'X-Admin-Token': adminToken,
+                'Authorization': `Bearer ${sessionToken}`,
                 'Content-Type': 'application/json'
             }
         });
+
+        // Jika sesi ditolak / kedaluwarsa, bersihkan & kunci ulang halaman
+        if (response.status === 401 || response.status === 403) {
+            if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+            alert('⚠️ Sesi admin telah berakhir. Silakan login kembali.');
+            location.reload();
+            return;
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP error status: ${response.status}`);
@@ -2789,9 +3050,9 @@ async function muatSemuaDataAdmin() {
         let totalJiwa = 0;
 
         if (!dataObj) {
-            document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
-            document.getElementById("stat-total-kk").innerText = "0 KK";
-            document.getElementById("stat-total-jiwa").innerText = "0 Orang";
+            if (document.getElementById("badge-total-jiwa")) document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
+            if (document.getElementById("stat-total-kk")) document.getElementById("stat-total-kk").innerText = "0 KK";
+            if (document.getElementById("stat-total-jiwa")) document.getElementById("stat-total-jiwa").innerText = "0 Orang";
             return;
         }
 
@@ -2929,16 +3190,21 @@ async function cariDetailKeluargaAdmin() {
     }
 
     try {
-        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+        // 1. Sertakan token admin agar rumah dengan status Hidden: true tetap terbaca
+        const sessionToken = sessionStorage.getItem('rt05_session_token');
+        const headers = sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {};
+        
+        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, { headers });
         const dataObj = await response.json();
 
         if (!dataObj) {
             throw new Error("Data kosong dari server.");
         }
 
+        // Simpan data mentah asli agar tidak merusak struktur globalDataWarga
+        window.globalDataWarga = dataObj;
+
         let daftarWargaWorker = [];
-        
-        // Tangani data baik berupa Array maupun Objek Key-Value
         const items = Array.isArray(dataObj) ? dataObj : Object.keys(dataObj).map(k => ({ ...dataObj[k], _id: k }));
 
         items.forEach((val, idx) => {
@@ -2950,16 +3216,17 @@ async function cariDetailKeluargaAdmin() {
                 kepalaKeluarga: String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim(),
                 anggotaKeluarga: String(val.anggotaKeluarga || val.Anggota || val.anggota || '').trim(),
                 noRumah: String(val.noRumah || val.NoRumah || '').trim(),
-                namaTempat: String(val.namaTempat || val.namaTempat || '').trim(),
+                namaTempat: String(val.namaTempat || '').trim(),
                 lat: val.Lat !== undefined ? val.Lat : (val.lat || ''),
                 lng: val.Lng !== undefined ? val.Lng : (val.lng || ''),
                 foto: val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '',
-                type: val.Type || val.type || val.Kategori || val.kategori || ''
+                type: val.Type || val.type || val.Kategori || val.kategori || '',
+                hidden: val.Hidden === true
             });
         });
 
-        // Cari data yang mengandung keyword (pencocokan substring fleksibel)
-        const match = daftarWargaWorker.find(row => {
+        // 2. Gunakan .filter() agar jika ada lebih dari 1 nama yang mirip, semuanya muncul
+        const matches = daftarWargaWorker.filter(row => {
             const gabungan = `${row.namaLama} ${row.kepalaKeluarga} ${row.anggotaKeluarga} ${row.noRumah} ${row.namaTempat}`.toLowerCase();
             const noRumahBersih = row.noRumah.replace(/^0+/, '').toLowerCase();
             const keywordBersih = keyword.replace(/^0+/, '');
@@ -2968,7 +3235,7 @@ async function cariDetailKeluargaAdmin() {
                    (noRumahBersih && noRumahBersih === keywordBersih);
         });
 
-        if (!match) {
+        if (matches.length === 0) {
             if (container) {
                 container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga, nomor rumah, atau tempat tidak ditemukan.</p>`;
             }
@@ -2976,33 +3243,38 @@ async function cariDetailKeluargaAdmin() {
             return;
         }
 
-        const kepala = match.kepalaKeluarga || match.namaLama || match.namaTempat || 'Tanpa Nama';
-        const anggota = match.anggotaKeluarga || '-';
-        const labelRumah = match.noRumah ? `Rumah No. ${match.noRumah}` : (match.namaTempat || '-');
-        const foto = match.foto || '';
+        // 3. Render semua hasil yang cocok
+        container.innerHTML = matches.map(match => {
+            const kepala = match.kepalaKeluarga || match.namaLama || match.namaTempat || 'Tanpa Nama';
+            const anggota = match.anggotaKeluarga || '-';
+            const labelRumah = match.noRumah ? `Rumah No. ${match.noRumah}` : (match.namaTempat || '-');
+            const badgeHidden = match.hidden ? `<span style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px;">Disembunyikan</span>` : '';
 
-        let htmlKoor = (match.lat && match.lng) 
-            ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${match.lat},${match.lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat</a>`
-            : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
+            const htmlKoor = (match.lat && match.lng) 
+                ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(match.lat)},${encodeURIComponent(match.lng)}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat</a>`
+                : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
 
-        let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" onError="this.style.display='none'" /></div>` : '';
+            const htmlFoto = match.foto 
+                ? `<div style="margin-top:6px;"><img src="${escapeHTML(match.foto)}" style="max-height:80px; border-radius:4px;" onerror="this.style.display='none'" /></div>` 
+                : '';
 
-        container.innerHTML = `
-            <div style="font-size: 12px; color: #334155; line-height: 1.6;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                    <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
-                    <button type="button" onclick="bukaModalEditWargaAdminById('${match.id}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
-                        ✏️ Edit
-                    </button>
+            return `
+                <div style="font-size: 12px; color: #334155; line-height: 1.6; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                        <div style="font-weight: bold; font-size: 14px; color: #0288d1;">
+                            🏠 ${escapeHTML(kepala)} ${badgeHidden}
+                        </div>
+                        <button type="button" onclick="bukaModalEditWargaAdminById('${escapeHTML(String(match.id))}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+                            ✏️ Edit
+                        </button>
+                    </div>
+                    <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
+                    <div style="margin-top: 4px;"><b>Nomor / Keterangan Rumah:</b> ${escapeHTML(labelRumah)}</div>
+                    ${htmlFoto}
+                    ${htmlKoor}
                 </div>
-                <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
-                <div style="margin-top: 4px;"><b>Nomor / Keterangan Rumah:</b> ${escapeHTML(labelRumah)}</div>
-                ${htmlFoto}
-                ${htmlKoor}
-            </div>
-        `;
-
-        window.globalDataWarga = daftarWargaWorker;
+            `;
+        }).join('');
 
     } catch (err) {
         console.error("Gagal memuat data dari Cloudflare Worker:", err);
@@ -3011,72 +3283,271 @@ async function cariDetailKeluargaAdmin() {
         }
     }
 }
+
+    
+let currentEditWargaData = null;
+
 function bukaModalEditWargaAdminById(id) {
-    const data = globalDataWarga.find(item => String(item.id) === String(id));
-    if (!data) return;
+  // Cari di globalDataWarga terlebih dahulu, fallback ke window.daftarPin jika dibuka langsung dari peta
+  let data = (typeof globalDataWarga !== 'undefined' && Array.isArray(globalDataWarga))
+    ? globalDataWarga.find(item => String(item.id) === String(id))
+    : null;
 
-    const inputId = document.getElementById('editWargaId');
-    if (inputId) inputId.value = data.id;
-
-    // 🌟 1. Set nilai dropdown kategori bangunan secara aman
-    const selectKategori = document.getElementById('editWargaKategori');
-    if (selectKategori) {
-        const dbType = String(data.type || data.Type || 'Rumah').toLowerCase();
-        let matched = false;
-        for (let option of selectKategori.options) {
-            if (option.value.toLowerCase() === dbType) {
-                selectKategori.value = option.value;
-                matched = true;
-                break;
-            }
-        }
-        if (!matched) selectKategori.value = 'Rumah'; 
+  if (!data && typeof window.daftarPin !== 'undefined' && Array.isArray(window.daftarPin)) {
+    const pinItem = window.daftarPin.find(p => String(p.id) === String(id));
+    if (pinItem) {
+      data = {
+        id: pinItem.id,
+        type: pinItem.kategori || 'Rumah',
+        namaTempat: pinItem.namaTempat || pinItem.namaRaw || '',
+        kepalaKeluarga: pinItem.kepalaKeluarga || '',
+        anggotaKeluarga: pinItem.anggota || '',
+        noRumah: pinItem.noRumah || '',
+        lat: pinItem.lat || '',
+        lng: pinItem.lng || '',
+        hidden: pinItem.hidden || false,
+        foto: pinItem.foto || ''
+      };
     }
+  }
 
-    // 🌟 2. Jalankan fungsi toggle/atur tampilan form berdasarkan kategori yang terpilih
-    if (typeof toggleFieldKategoriEdit === 'function') {
-        toggleFieldKategoriEdit();
+  if (!data) {
+    alert('⚠️ Data lokasi tidak ditemukan.');
+    return;
+  }
+
+  currentEditWargaData = data;
+
+  const inputId = document.getElementById('editWargaId');
+  if (inputId) inputId.value = data.id;
+
+  // 1. Set dropdown kategori bangunan
+  const selectKategori = document.getElementById('editWargaKategori');
+  if (selectKategori) {
+    const dbType = String(data.type || data.Type || 'Rumah').toLowerCase();
+    let matched = false;
+    for (let option of selectKategori.options) {
+      if (option.value.toLowerCase() === dbType) {
+        selectKategori.value = option.value;
+        matched = true;
+        break;
+      }
+    }
+    if (!matched) selectKategori.value = 'Rumah';
+  }
+
+  // 2. Render form dinamis & isi nilainya
+  if (typeof toggleFieldKategoriEdit === 'function') {
+    toggleFieldKategoriEdit();
+  }
+  isiNilaiFormEditWarga(data);
+
+  // 3. Isi Koordinat & Status Tampil Peta
+  const elLat = document.getElementById('editWargaLat');
+  if (elLat) elLat.value = data.lat !== undefined ? data.lat : '';
+
+  const elLng = document.getElementById('editWargaLng');
+  if (elLng) elLng.value = data.lng !== undefined ? data.lng : '';
+
+  const elHidden = document.getElementById('editWargaHidden');
+  if (elHidden) {
+    const isHidden = data.hidden === true || String(data.hidden).toUpperCase() === 'TRUE';
+    elHidden.value = isHidden ? 'TRUE' : 'FALSE';
+  }
+
+  // 4. Set Foto & Preview
+  const inputFoto = document.getElementById('editWargaFotoURL');
+  const preview = document.getElementById('previewFotoRumah');
+  const fotoVal = data.foto || data.Foto || '';
+
+  if (inputFoto) inputFoto.value = fotoVal;
+  if (preview) {
+    if (fotoVal) {
+      preview.src = fotoVal;
+      preview.style.display = 'inline-block';
     } else {
-        // Fallback manual jika fungsi toggle belum terpanggil
-        const kategori = String(data.type || data.Type || '').toLowerCase();
-        const isRumahAtauKost = kategori.includes('rumah') || kategori.includes('kost') || kategori.includes('kos') || kategori === '';
-        const groupKeluarga = document.getElementById('groupFieldKeluarga');
-        if (groupKeluarga) {
-            groupKeluarga.style.display = isRumahAtauKost ? 'block' : 'none';
-        }
+      preview.style.display = 'none';
+    }
+  }
+
+  // 5. Tampilkan modal
+  const modal = document.getElementById('modal-edit-warga');
+  if (modal) modal.style.display = 'flex';
+}
+
+function isiNilaiFormEditWarga(data) {
+  if (!data) return;
+
+  // Field Mode Rumah
+  const elNama = document.getElementById('editWargaNama');
+  if (elNama) elNama.value = data.kepalaKeluarga || '';
+
+  const elAnggota = document.getElementById('editWargaAnggota');
+  if (elAnggota) elAnggota.value = data.anggotaKeluarga || data.Anggota || '';
+
+  // Field Mode Non-Rumah (Kost, Fasum, Kuliner, Minimarket)
+  const elNamaTempat = document.getElementById('editNamaTempat');
+  if (elNamaTempat) elNamaTempat.value = data.namaTempat || data.Nama || data.nama || '';
+
+  const elNamaPemilik = document.getElementById('editNamaPemilik');
+  if (elNamaPemilik) elNamaPemilik.value = data.kepalaKeluarga || data.pemilik || '';
+
+  // Field Nomor Rumah / Bangunan (dipakai di kedua mode)
+  const elNoRumah = document.getElementById('editWargaNoRumah');
+  if (elNoRumah) elNoRumah.value = data.noRumah || '';
+}
+
+function bukaModalEditWargaDariPeta(id) {
+  if (map) map.closePopup();
+  bukaModalEditWargaAdminById(id);
+}
+
+async function simpanPerubahanWarga(event) {
+  event.preventDefault();
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert('⚠️ Sesi admin habis. Silakan login ulang.');
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
+  const idWarga = document.getElementById('editWargaId').value;
+  const btnSimpan = document.getElementById('btnSimpanEditWarga');
+
+  btnSimpan.disabled = true;
+  btnSimpan.innerText = '⏳ Sedang Memproses...';
+
+  try {
+    let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
+
+    // 1. Upload file baru jika admin memilih file dari perangkat
+    if (typeof fileBaruDipilih !== 'undefined' && fileBaruDipilih !== null) {
+      const statusEl = document.getElementById('statusSemiManual');
+      if (statusEl) statusEl.innerHTML = '<i>⏳ Sedang mengompres & mengupload foto baru...</i>';
+
+      let fileToUpload = fileBaruDipilih;
+      if (typeof kompresGambar === 'function' && fileToUpload.type.startsWith('image/')) {
+        fileToUpload = await kompresGambar(fileToUpload, 1200, 0.8);
+      }
+
+      const noRumahVal = document.getElementById('editWargaNoRumah')
+        ? document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_')
+        : idWarga;
+      const ekstensi = fileToUpload.name.split('.').pop() || 'jpg';
+      const namaFileKustom = `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`;
+
+      const responseUpload = await fetch(RT05_CONFIG.UPLOADER_URL, {
+        method: 'POST',
+        headers: {
+          'X-File-Name': encodeURIComponent(namaFileKustom),
+          'Content-Type': fileToUpload.type || 'application/octet-stream',
+          'Authorization': `Bearer ${sessionToken}`
+        },
+        body: fileToUpload
+      });
+
+      const hasilUpload = await responseUpload.json();
+      if (responseUpload.ok && (hasilUpload.success || hasilUpload.url)) {
+        const urlAwal = new URL(hasilUpload.url);
+        finalUrlFoto = 'https://storage.papan05.my.id' + urlAwal.pathname;
+      } else {
+        throw new Error(hasilUpload.error || 'Gagal mengupload file ke cloud storage.');
+      }
     }
 
-    // 🌟 3. Set input nilai keluarga dan alamat secara aman (menggunakan pengaman if)
-    const elNama = document.getElementById('editWargaNama');
-    if (elNama) elNama.value = data.kepalaKeluarga || '';
+    // 2. Susun payload sesuai kategori (diselaraskan dengan toggleFieldKategoriEdit)
+    const kategoriInput = document.getElementById('editWargaKategori').value;
+    const isRumah = kategoriInput.toLowerCase().includes('rumah');
+    const noRumahInput = document.getElementById('editWargaNoRumah')
+      ? document.getElementById('editWargaNoRumah').value.trim()
+      : '';
 
-    const elAnggota = document.getElementById('editWargaAnggota');
-    if (elAnggota) elAnggota.value = data.anggotaKeluarga || data.Anggota || '';
+    const latInput = document.getElementById('editWargaLat') ? document.getElementById('editWargaLat').value.trim() : '';
+    const lngInput = document.getElementById('editWargaLng') ? document.getElementById('editWargaLng').value.trim() : '';
+    const hiddenInput = document.getElementById('editWargaHidden') ? document.getElementById('editWargaHidden').value === 'TRUE' : false;
 
-    const elNoRumah = document.getElementById('editWargaNoRumah');
-    if (elNoRumah) elNoRumah.value = data.noRumah || '';
+    let dataUpdate = {
+      Type: kategoriInput,
+      noRumah: noRumahInput,
+      Lat: latInput,
+      Lng: lngInput,
+      Hidden: hiddenInput,
+      foto: finalUrlFoto,
+      updatedAt: Date.now()
+    };
 
-    const elNamaTempat = document.getElementById('editWargaNamaTempat');
-    if (elNamaTempat) elNamaTempat.value = data.namaTempat || data.Nama || data.nama || '';
-    
-    // Set Foto & Preview
-    const inputFoto = document.getElementById('editWargaFotoURL');
-    const preview = document.getElementById('previewFotoRumah');
-    
-    const fotoVal = data.foto || data.Foto || '';
-    if (inputFoto) inputFoto.value = fotoVal;
-    if (preview) {
-        if (fotoVal) {
-            preview.src = fotoVal;
-            preview.style.display = 'inline-block';
-        } else {
-            preview.style.display = 'none';
-        }
+    if (isRumah) {
+      const kepalaKeluarga = document.getElementById('editWargaNama') ? document.getElementById('editWargaNama').value.trim() : '';
+      const anggotaKeluarga = document.getElementById('editWargaAnggota') ? document.getElementById('editWargaAnggota').value.trim() : '';
+
+      dataUpdate.kepalaKeluarga = kepalaKeluarga;
+      dataUpdate.anggotaKeluarga = anggotaKeluarga;
+      dataUpdate.namaTempat = kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : (noRumahInput ? `No ${noRumahInput}` : 'Rumah Warga');
+      dataUpdate.Nama = dataUpdate.namaTempat;
+    } else {
+      // Kost, Fasum, Kuliner, Minimarket
+      const namaTempat = document.getElementById('editNamaTempat') ? document.getElementById('editNamaTempat').value.trim() : '';
+      const namaPemilik = document.getElementById('editNamaPemilik') ? document.getElementById('editNamaPemilik').value.trim() : '';
+
+      dataUpdate.namaTempat = namaTempat || kategoriInput;
+      dataUpdate.Nama = dataUpdate.namaTempat;
+      dataUpdate.kepalaKeluarga = namaPemilik;
+      dataUpdate.anggotaKeluarga = '';
     }
 
-    // 🌟 4. Tampilkan modal edit
-    const modal = document.getElementById('modal-edit-warga');
-    if (modal) modal.style.display = 'flex';
+    // 3. Kirim PATCH via Worker Admin menggunakan Session Token
+    btnSimpan.innerText = '⏳ Menyimpan ke Database...';
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: `peta_warga/${idWarga}`,
+        method: 'PATCH',
+        data: dataUpdate
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert('⚠️ Sesi telah kedaluwarsa. Silakan login ulang.');
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || 'Gagal meng-update data via Worker Admin.');
+    }
+
+    if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
+    tutupModalEditWarga();
+    alert('✅ Perubahan data lokasi berhasil disimpan!');
+
+    // 4. Muat ulang data statistik & perbarui pin di peta
+    if (typeof muatSemuaDataAdmin === 'function') {
+      await muatSemuaDataAdmin();
+    }
+    if (map) {
+      map.remove();
+      map = null;
+      initMap();
+    }
+
+  } catch (error) {
+    console.error(error);
+    alert('❌ Terjadi kesalahan: ' + error.message);
+  } finally {
+    btnSimpan.disabled = false;
+    btnSimpan.innerText = '💾 Simpan Perubahan';
+  }
 }
 
 // --- FORM TAMBAH LOKASI DINAMIS ---
@@ -3161,12 +3632,13 @@ function toggleFieldKategoriEdit(kategoriVal = null) {
       </div>
     `;
   }
+
+  // Isi ulang data saat ini jika admin mengganti kategori di tengah proses edit
+  if (typeof currentEditWargaData !== 'undefined' && currentEditWargaData && typeof isiNilaiFormEditWarga === 'function') {
+    isiNilaiFormEditWarga(currentEditWargaData);
+  }
 }
     
-function bukaModalEditWargaDariPeta(id) {
-    if (map) map.closePopup();
-    bukaModalEditWargaAdminById(id);
-}
 
 async function prosesUploadR2Universal(jenisTarget = 'warga') {
   // Tentukan elemen berdasarkan jenis target
@@ -3179,6 +3651,13 @@ async function prosesUploadR2Universal(jenisTarget = 'warga') {
   const fileInput = document.getElementById(fileInputId);
   if (!fileInput || fileInput.files.length === 0) {
     if (isSemiManual) alert("Silakan pilih file foto/video terlebih dahulu!");
+    return;
+  }
+
+  // Ambil session token dari sessionStorage
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
     return;
   }
 
@@ -3202,15 +3681,12 @@ async function prosesUploadR2Universal(jenisTarget = 'warga') {
     const ekstensi = file.name.split('.').pop() || 'jpg';
     const namaFileKustom = `${jenisTarget}_${Date.now()}.${ekstensi}`;
 
-    // 🌟 1. Ambil PIN Admin tersimpan dari LocalStorage / input admin
-    const adminPin = localStorage.getItem('rt05_admin_pin') || (window.CURRENT_ADMIN_PIN || '');
-
-    // 🌟 2. Kirim ke Cloudflare Worker (termasuk header X-Admin-Pin)
+    // Kirim ke Cloudflare Worker menggunakan Bearer Session Token
     const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
       method: "POST",
       headers: {
-        "X-File-Name": namaFileKustom,
-        "X-Admin-Pin": adminPin, // 👈 PENTING: Diselaraskan dengan proteksi ADMIN_PIN Worker
+        "X-File-Name": encodeURIComponent(namaFileKustom),
+        "Authorization": `Bearer ${sessionToken}`,
         "Content-Type": file.type || "application/octet-stream"
       },
       body: file
@@ -3228,12 +3704,11 @@ async function prosesUploadR2Universal(jenisTarget = 'warga') {
       let urlAwal = new URL(result.url);
       let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
 
-      // Masukkan ke input target form warga
-      const inputUrlTarget = document.getElementById('editWargaFoto');
-      if (inputUrlTarget) inputUrlTarget.value = urlFinal;
-
-      // Preview gambar khusus warga
+      // Masukkan ke input target form warga (hanya jika target bukan semimanual)
       if (!isSemiManual) {
+        const inputUrlTarget = document.getElementById('editWargaFoto');
+        if (inputUrlTarget) inputUrlTarget.value = urlFinal;
+
         const preview = document.getElementById('previewFotoRumah');
         if (preview) {
           preview.src = urlFinal;
@@ -3335,116 +3810,7 @@ function handlePilihFileBaru(inputElement) {
   }
 }
 
-// 2. Dipanggil saat tombol "Simpan Perubahan" ditekan
-async function simpanPerubahanWarga(event) {
-  event.preventDefault();
-  
-  const idWarga = document.getElementById('editWargaId').value;
-  const btnSimpan = document.getElementById('btnSimpanEditWarga');
-  
-  btnSimpan.disabled = true;
-  btnSimpan.innerText = 'Sedang Memproses...';
 
-  try {
-    let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
-
-    // Proses upload file baru jika dipilih
-    if (typeof fileBaruDipilih !== 'undefined' && fileBaruDipilih !== null) {
-      document.getElementById('statusSemiManual').innerHTML = '<i>⏳ Sedang mengupload file baru ke cloud storage...</i>';
-      
-      const noRumahVal = document.getElementById('editWargaNoRumah') ? document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_') : idWarga;
-      const ekstensi = fileBaruDipilih.name.split('.').pop() || 'jpg';
-      const namaFileKustom = `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`;
-
-      const responseUpload = await fetch(RT05_CONFIG.UPLOADER_URL, {
-        method: 'POST',
-        headers: {
-          "X-File-Name": encodeURIComponent(namaFileKustom),
-          "Content-Type": fileBaruDipilih.type || "application/octet-stream"
-        },
-        body: fileBaruDipilih
-      });
-
-      const hasilUpload = await responseUpload.json();
-      if (hasilUpload.success || hasilUpload.url) {
-        let urlAwal = new URL(hasilUpload.url);
-        finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
-      } else {
-        throw new Error('Gagal mengupload file ke cloud storage.');
-      }
-    }
-
-    const kategoriInput = document.getElementById('editWargaKategori').value;
-    const isRumah = kategoriInput.toLowerCase().includes('rumah') || kategoriInput.toLowerCase().includes('kost');
-
-    const noRumahInput = document.getElementById('editWargaNoRumah') ? document.getElementById('editWargaNoRumah').value.trim() : '';
-    
-    let dataUpdate = {
-      Type: kategoriInput,
-      noRumah: noRumahInput,
-      foto: finalUrlFoto,
-      updatedAt: Date.now()
-    };
-
-    // 🌟 Ambil nilai secara aman berdasarkan jenis kategori
-    if (isRumah) {
-      const kepalaKeluarga = document.getElementById('editWargaNama') ? document.getElementById('editWargaNama').value.trim() : '';
-      const anggotaKeluarga = document.getElementById('editWargaAnggota') ? document.getElementById('editWargaAnggota').value.trim() : '';
-      const namaRumah = document.getElementById('editNamaRumah') ? document.getElementById('editNamaRumah').value.trim() : '';
-
-      dataUpdate.kepalaKeluarga = kepalaKeluarga;
-      dataUpdate.anggotaKeluarga = anggotaKeluarga;
-      dataUpdate.namaTempat = namaRumah || (kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : `No ${noRumahInput}`);
-      dataUpdate.Nama = dataUpdate.namaTempat;
-    } else {
-      // Untuk Kuliner, Fasum, Minimarket, dll.
-      const namaTempat = document.getElementById('editNamaTempat') ? document.getElementById('editNamaTempat').value.trim() : '';
-      const namaPemilik = document.getElementById('editNamaPemilik') ? document.getElementById('editNamaPemilik').value.trim() : '';
-
-      dataUpdate.namaTempat = namaTempat || kategoriInput;
-      dataUpdate.Nama = dataUpdate.namaTempat;
-      dataUpdate.kepalaKeluarga = namaPemilik; // Disimpan sebagai nama pemilik/pengelola
-      dataUpdate.anggotaKeluarga = ""; // Dikosongkan
-    }
-
-   // 🔒 PROSES UPDATE MELALUI CLOUDFLARE WORKER ADMIN (Via RT05_CONFIG)
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
-
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        pin: pinAdmin,
-        path: `peta_warga/${idWarga}`,
-        method: "PATCH",
-        data: dataUpdate
-      })
-    });
-
-    const hasilProxy = await responseProxy.json();
-
-    if (!hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal meng-update data via Worker Admin.");
-    }
-
-    if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
-    tutupModalEditWarga();
-    alert('✅ Perubahan data dan foto berhasil disimpan!');
-    
-    if (typeof muatSemuaDataAdmin === 'function') {
-      muatSemuaDataAdmin();
-    }
-
-  } catch (error) {
-    console.error(error);
-    alert('❌ Terjadi kesalahan: ' + error.message);
-  } finally {
-    btnSimpan.disabled = false;
-    btnSimpan.innerText = '💾 Simpan Perubahan';
-  }
-}
 
 // Fungsi reset saat modal ditutup
 function tutupModalEditWarga() {
@@ -3586,23 +3952,21 @@ function clearInputCariWarga() {
     if (inputEl) inputEl.focus();
 }
 
-document.addEventListener("DOMContentLoaded", () => {
-  if (typeof perbaruiIndikatorSyncAdmin === 'function') perbaruiIndikatorSyncAdmin();
-  if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
-
-  // Cek apakah sesi masih valid
-  if (periksaSesiAdmin()) {
-    bukaAkses();
-    if (typeof muatDataProgker === 'function') muatDataProgker();
-  } else {
-    // Tampilkan overlay login jika belum terautentikasi
-    const overlay = document.getElementById('login-overlay');
-    if (overlay) overlay.style.display = 'flex';
-    setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
+document.addEventListener("DOMContentLoaded", async () => {
+  if (typeof perbaruiIndikatorSyncAdmin === 'function') {
+    perbaruiIndikatorSyncAdmin();
   }
 
-  if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
-    kirimDataPendingAdmin();
+  const sesiValid = await periksaSesiAdminViaWorker();
+
+  if (sesiValid) {
+    // Cukup panggil bukaAkses(), karena muatPeminjamanAdmin() & kirimDataPendingAdmin() sudah ada di dalamnya
+    bukaAkses();
+  } else {
+    const overlay = document.getElementById('login-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    setTimeout(() => document.getElementById('adminPin')?.focus(), 300);
   }
 });
 
@@ -3650,6 +4014,15 @@ window.simpanLaporanDivisi = async function() {
     return;
   }
 
+  // Ambil token sesi admin
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
   const btn = document.getElementById('btnSimpanLaporan');
   if (btn) { btn.disabled = true; btn.innerText = "⏳ Memproses Laporan..."; }
 
@@ -3657,7 +4030,7 @@ window.simpanLaporanDivisi = async function() {
   const fileInput = document.getElementById('laporanInputFoto');
   const statusDiv = document.getElementById('statusUploadBukti');
 
-  // 🌟 3. PROSES UPLOAD FOTO DIJALANKAN DI SINI (Hanya saat tombol kirim ditekan)
+  // 🌟 3. PROSES UPLOAD FOTO DIJALANKAN DI SINI (Dengan Header Authorization)
   if (fileInput && fileInput.files.length > 0) {
     if (statusDiv) {
       statusDiv.innerHTML = "⏳ Mengompres & mengunggah nota ke R2...";
@@ -3665,25 +4038,25 @@ window.simpanLaporanDivisi = async function() {
     }
 
     let file = fileInput.files[0];
-   try {
+    try {
       if (typeof kompresGambar === 'function') {
         file = await kompresGambar(file, 1200, 0.8);
       }
-      // Mengambil URL dari konfigurasi terpusat di utils.js
       const workerUrl = RT05_CONFIG.UPLOADER_URL; 
       const response = await fetch(workerUrl, {
-  method: "POST",
-  headers: {
-    "X-File-Name": file.name ? encodeURIComponent(file.name) : "nota.jpg",
-    "Content-Type": file.type || "application/octet-stream"
-  },
-  body: file
-});
+        method: "POST",
+        headers: {
+          "X-File-Name": encodeURIComponent("nota_" + Date.now() + "_" + (file.name || "nota.jpg")),
+          "Content-Type": file.type || "application/octet-stream",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: file
+      });
       
       const textResult = await response.text();
       let result = JSON.parse(textResult);
 
-      if (result.success && result.url) {
+      if (response.ok && result.success && result.url) {
         let urlAwal = new URL(result.url);
         finalUrlFoto = "https://storage.papan05.my.id" + urlAwal.pathname;
         
@@ -3702,28 +4075,55 @@ window.simpanLaporanDivisi = async function() {
       }
       alert("Gagal mengunggah foto bukti. Pengiriman laporan dibatalkan.");
       if (btn) { btn.disabled = false; btn.innerText = "📤 Kirim Laporan Keuangan"; }
-      return; // Hentikan proses jika upload foto gagal
+      return;
     }
   }
 
-  // 🌟 4. SIMPAN DATA KE FIREBASE
+// 🌟 4. SIMPAN DATA KE FIREBASE MELALUI ADMIN WORKER PROXY
   if (btn) { btn.innerText = "⏳ Menyimpan ke Database..."; }
 
   const parts = tglInput.split('-');
   const tglFormatted = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const laporanId = 'keu_' + Date.now();
 
   const payload = {
+    id: laporanId,
     tanggal: tglFormatted,
     divisi: divisi,
     keterangan: ket,
     tipe: String(jenis).toUpperCase().includes('KELUAR') ? 'KELUAR' : 'MASUK',
-    nominal: parseInt(nominal),
-    foto: finalUrlFoto
+    nominal: parseInt(nominal, 10),
+    foto: finalUrlFoto,
+    timestamp: Date.now()
   };
 
   try {
-    const newRef = window.firebasePush(window.firebaseRef(window.db, 'keuangan'));
-    await window.firebaseSet(newRef, payload);
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: `keuangan/${laporanId}`,
+        method: "PUT",
+        data: payload
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan laporan via Worker Admin.");
+    }
 
     alert('✅ Laporan Keuangan ' + divisi + ' berhasil disimpan ke database!');
     tutupModalLaporan();
@@ -3742,6 +4142,13 @@ async function prosesUploadBuktiKeR2() {
 
   if (!fileInput || fileInput.files.length === 0) return;
 
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    statusDiv.innerHTML = `❌ Sesi admin habis. Silakan login ulang.`;
+    statusDiv.style.color = "#dc2626";
+    return;
+  }
+
   let file = fileInput.files[0];
   statusDiv.innerHTML = "⏳ Mengompres & mengunggah nota ke R2...";
   statusDiv.style.color = "#d97706";
@@ -3751,12 +4158,13 @@ async function prosesUploadBuktiKeR2() {
       file = await kompresGambar(file, 1200, 0.8);
     }
 
-const workerUrl = RT05_CONFIG.UPLOADER_URL;
+    const workerUrl = RT05_CONFIG.UPLOADER_URL;
     const response = await fetch(workerUrl, {
       method: "POST",
       headers: {
         "X-File-Name": encodeURIComponent("nota_" + Date.now() + "_" + file.name),
-        "Content-Type": file.type || "application/octet-stream"
+        "Content-Type": file.type || "application/octet-stream",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: file
     });
@@ -3764,12 +4172,11 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
     const textResult = await response.text();
     let result = JSON.parse(textResult);
 
-    if (result.success && result.url) {
-      // 🌟 MANIPULASI DOMAIN KE CUSTOM DOMAIN R2
+    if (response.ok && result.success && result.url) {
       let urlAwal = new URL(result.url);
       let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
 
-      urlTarget.value = urlFinal;
+      if (urlTarget) urlTarget.value = urlFinal;
       statusDiv.innerHTML = `✅ Bukti berhasil diunggah! <button type="button" data-click="bukaFotoBesar" data-arg="${urlFinal}" style="background:none; border:none; color:#2563eb; text-decoration:underline; font-size:10.5px; padding:0; cursor:pointer;">Lihat Nota</button>`;
       statusDiv.style.color = "#10b981";
     } else {
@@ -3840,28 +4247,63 @@ window.switchTabKeuangan = function(targetTab) {
   }
 };
 
-// Ambil seluruh data dari node "keuangan" Firebase untuk diedit
-window.muatDataKelolaKeuanganAdmin = function() {
-  if (!window.db || typeof window.firebaseRef !== 'function') return;
+// 3. Perbaikan muatDataKelolaKeuanganAdmin agar 100% via Worker (bukan Firebase SDK)
+window.muatDataKelolaKeuanganAdmin = async function() {
+  const tbody = document.getElementById('tabel-kelola-keuangan-admin');
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
 
-  const refKeuangan = window.firebaseRef(window.db, 'keuangan');
-  window.firebaseOnValue(refKeuangan, (snapshot) => {
-    const dataObj = snapshot.val();
+  if (!sessionToken) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">⚠️ Sesi admin habis.</td></tr>';
+    return;
+  }
+
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">⏳ Memuat data keuangan...</td></tr>';
+  }
+
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "keuangan",
+        method: "GET"
+      })
+    });
+
+    const hasil = await response.json();
+
+    if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    const dataObj = hasil.result !== undefined ? hasil.result : hasil.data;
     cacheDataKeuanganAdmin = [];
 
     if (!dataObj) {
-      document.getElementById('tabel-kelola-keuangan-admin').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Belum ada data laporan.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Belum ada data laporan.</td></tr>';
       return;
     }
 
     Object.keys(dataObj).forEach(key => {
-      cacheDataKeuanganAdmin.push({ id: key, ...dataObj[key] });
+      if (dataObj[key]) {
+        cacheDataKeuanganAdmin.push({ id: key, ...dataObj[key] });
+      }
     });
 
     renderTabelKelolaAdmin(cacheDataKeuanganAdmin);
-  }, { onlyOnce: true });
+  } catch (err) {
+    console.error("Gagal memuat data keuangan via Worker:", err);
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">❌ Gagal memuat data dari server.</td></tr>';
+  }
 };
-
 // Render baris tabel daftar keuangan
 window.renderTabelKelolaAdmin = function(dataArray) {
   const tbody = document.getElementById('tabel-kelola-keuangan-admin');
@@ -3966,24 +4408,31 @@ window.prosesUploadBuktiEditAdmin = async function() {
   const hiddenUrl = document.getElementById('editFotoUrl');
 
   if (!fileInput.files || fileInput.files.length === 0) return;
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    statusDiv.innerHTML = '❌ Sesi admin habis. Silakan login ulang.';
+    statusDiv.style.color = '#dc2626';
+    return;
+  }
+
   let file = fileInput.files[0];
 
   statusDiv.innerHTML = '⏳ Sedang mengompres & mengunggah nota...';
   statusDiv.style.color = '#d97706';
 
   try {
-    // 1. Jalankan kompresi otomatis (Sama seperti form lainnya)
     if (typeof kompresGambar === 'function') {
       file = await kompresGambar(file, 1200, 0.8);
     }
     
-    // 2. Gunakan Worker utama Anda yang lebih stabil & ringan (Tanpa JSON/Base64)
-const workerUrl = RT05_CONFIG.UPLOADER_URL;
+    const workerUrl = RT05_CONFIG.UPLOADER_URL;
     let response = await fetch(workerUrl, {
       method: "POST",
       headers: {
         "X-File-Name": encodeURIComponent("nota_edit_" + Date.now() + "_" + file.name),
-        "Content-Type": file.type || "application/octet-stream"
+        "Content-Type": file.type || "application/octet-stream",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: file
     });
@@ -3991,8 +4440,7 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
     const textResult = await response.text();
     let result = JSON.parse(textResult);
 
-    if (result.success && result.url) {
-      // 3. Modifikasi langsung ke Custom Domain Anda
+    if (response.ok && result.success && result.url) {
       let urlAwal = new URL(result.url);
       let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
 
@@ -4019,7 +4467,7 @@ window.simpanPerubahanKeuanganAdmin = async function() {
   let nominal = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
   let pinInput = document.getElementById('editPinDivisi').value.trim();
   
-  let fotoUrl = document.getElementById('editFotoUrl').value; // Mengambil URL foto lama/yang sudah ada
+  let fotoUrl = document.getElementById('editFotoUrl').value;
 
   if (!tglInput || !divisi || !keterangan || nominal <= 0) {
     alert("Mohon lengkapi semua data dengan benar!");
@@ -4053,12 +4501,21 @@ window.simpanPerubahanKeuanganAdmin = async function() {
     return;
   }
 
+  // Ambil token sesi admin
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
   const btn = document.getElementById('btnSimpanEditAdmin');
   const statusDiv = document.getElementById('statusUploadBuktiEdit');
   if (btn) { btn.disabled = true; btn.innerText = '⏳ Memproses...'; }
 
   try {
-    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG SAAT TOMBOL DIKLIK
+    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG DENGAN AUTHORIZATION
     const fileInput = document.getElementById('editInputFoto');
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
       if (statusDiv) {
@@ -4071,12 +4528,13 @@ window.simpanPerubahanKeuanganAdmin = async function() {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
-const workerUrl = RT05_CONFIG.UPLOADER_URL;
+      const workerUrl = RT05_CONFIG.UPLOADER_URL;
       let response = await fetch(workerUrl, {
         method: "POST",
         headers: {
           "X-File-Name": encodeURIComponent("nota_edit_" + Date.now() + "_" + file.name),
-          "Content-Type": file.type || "application/octet-stream"
+          "Content-Type": file.type || "application/octet-stream",
+          "Authorization": `Bearer ${sessionToken}`
         },
         body: file
       });
@@ -4084,23 +4542,22 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
       let textResult = await response.text();
       let result = JSON.parse(textResult);
 
-      if (result.success && result.url) {
+      if (response.ok && result.success && result.url) {
         let urlAwal = new URL(result.url);
-        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan custom domain baru
+        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname;
       } else {
         throw new Error(result.error || "Gagal unggah file baru");
       }
     }
 
-    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE
+    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE MELALUI ADMIN WORKER PROXY (PATCH)
     if (btn) { btn.innerText = '⏳ Menyimpan ke Database...'; }
 
     let parts = tglInput.split('-');
     let tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
     let tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
 
-    const refItem = window.firebaseRef(window.db, `keuangan/${idKeuanganSedangDiedit}`);
-    await window.firebaseUpdate(refItem, {
+    const updatePayload = {
       tanggal: tanggalRapi,
       tgl: tanggalRapi,
       divisi: divisi,
@@ -4109,13 +4566,44 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
       keterangan: keterangan,
       ket: keterangan,
       nominal: nominal,
-      foto: fotoUrl
+      foto: fotoUrl,
+      updatedAt: Date.now()
+    };
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: `keuangan/${idKeuanganSedangDiedit}`,
+        method: "PATCH",
+        data: updatePayload
+      })
     });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memperbarui data via Worker Admin.");
+    }
 
     alert("✅ Data keuangan & nota berhasil diperbarui!");
     window.tutupModalEditAdmin();
     if (typeof muatDataKelolaKeuanganAdmin === 'function') {
       muatDataKelolaKeuanganAdmin();
+    }
+    if (typeof muatDataKeuangan === 'function') {
+      muatDataKeuangan();
     }
   } catch (err) {
     alert("❌ Gagal memperbarui data: " + err.message);
@@ -4127,14 +4615,15 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
   }
 };
     
-    // ==========================================
-    // PENGELOLAAN PENGUMUMAN ADMIN (FIREBASE)
-    // ==========================================
-  function bukaModalPengumumanAdmin() {
-  // 0. Reset status edit agar kembali ke mode tambah baru
+// ==========================================
+// PENGELOLAAN PENGUMUMAN ADMIN (100% VIA WORKER)
+// ==========================================
+let cacheDaftarPengumumanAdmin = {};
+let currentEditPengumumanId = null;
+
+function resetFormPengumumanKeModeBaru() {
   currentEditPengumumanId = null;
 
-  // 1. Bersihkan form, kembalikan warna kuning & status saat modal dibuka
   const form = document.getElementById('formInputPengumuman');
   if (form) {
     form.reset();
@@ -4147,11 +4636,10 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
     }
   }
 
-  const btnSimpan = document.getElementById('btnSimpanPengumuman');
-  if (btnSimpan) {
-    btnSimpan.innerText = '💾 Terbitkan Pengumuman';
-    btnSimpan.style.background = '#d97706';
-  }
+  ['pengumumanFoto', 'pengumumanLat', 'pengumumanLng'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
 
   const fileInput = document.getElementById('inputUploadPengumuman');
   if (fileInput) fileInput.value = '';
@@ -4159,158 +4647,232 @@ const workerUrl = RT05_CONFIG.UPLOADER_URL;
   const statusEl = document.getElementById('statusUploadPengumuman');
   if (statusEl) {
     statusEl.innerText = '';
-    statusEl.style.display = 'none'; // Sembunyikan teks status
+    statusEl.style.display = 'none';
   }
 
-  // 2. Set tanggal default & tampilkan modal
-  document.getElementById('pengumumanTanggal').value = new Date().toISOString().split('T')[0];
-  document.getElementById('modal-admin-pengumuman').style.display = 'flex';
-  muatDaftarPengumumanAdmin();
+  const btn = document.getElementById('btnSimpanPengumuman');
+  if (btn) {
+    btn.disabled = false;
+    btn.innerText = "💾 Terbitkan Pengumuman";
+    btn.style.background = "#d97706";
+  }
 }
 
-    function tutupModalPengumumanAdmin() {
-      document.getElementById('modal-admin-pengumuman').style.display = 'none';
-      
-      // Reset form dan bersihkan teks status upload saat ditutup
-      const form = document.getElementById('formInputPengumuman');
-      if (form) form.reset();
+window.bukaModalPengumumanAdmin = function() {
+  if (!sessionStorage.getItem('rt05_session_token')) {
+    alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+    const overlay = document.getElementById('login-overlay');
+    if (overlay) overlay.style.display = 'flex';
+    return;
+  }
 
-      const fileInput = document.getElementById('inputUploadPengumuman');
-      if (fileInput) fileInput.value = '';
+  resetFormPengumumanKeModeBaru();
 
-      const statusEl = document.getElementById('statusUploadPengumuman');
-      if (statusEl) {
-        statusEl.innerText = '';
-        statusEl.style.display = 'none'; // Sembunyikan teks status
-      }
+  const tglEl = document.getElementById('pengumumanTanggal');
+  if (tglEl) tglEl.value = new Date().toISOString().split('T')[0];
+
+  const modal = document.getElementById('modal-admin-pengumuman');
+  if (modal) modal.style.display = 'flex';
+
+  muatDaftarPengumumanAdmin();
+};
+
+window.tutupModalPengumumanAdmin = function() {
+  const modal = document.getElementById('modal-admin-pengumuman');
+  if (modal) modal.style.display = 'none';
+  resetFormPengumumanKeModeBaru();
+};
+
+// 1. Muat Daftar & Arsip Pengumuman via Worker Admin
+window.muatDaftarPengumumanAdmin = async function() {
+  const tbody = document.getElementById('tabel-pengumuman-admin');
+  if (!tbody) return;
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#dc2626; padding:12px;">⚠️ Sesi admin habis.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:12px;">⏳ Memuat daftar pengumuman...</td></tr>`;
+
+  try {
+    const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "pengumuman",
+        method: "GET"
+      })
+    });
+
+    const jsonWorker = await res.json();
+
+    if (res.status === 401 || jsonWorker.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
     }
 
-    function muatDaftarPengumumanAdmin() {
-      const container = document.getElementById('tabel-pengumuman-admin');
-      if (!container) return;
+    if (!res.ok || !jsonWorker.success) {
+      throw new Error(jsonWorker.error || `HTTP ${res.status} saat mengambil data pengumuman.`);
+    }
 
-      container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Memuat pengumuman...</td></tr>`;
+    const data = jsonWorker.result || {};
+    cacheDaftarPengumumanAdmin = data;
 
-      if (typeof window.firebaseRef !== 'function' || !window.db) {
-        setTimeout(muatDaftarPengumumanAdmin, 50);
+    const keys = Object.keys(data);
+    if (keys.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:12px; color:#888;">Belum ada pengumuman tersimpan.</td></tr>`;
+      return;
+    }
+
+    keys.sort((a, b) => (data[b]?.timestamp || data[b]?.createdAt || 0) - (data[a]?.timestamp || data[a]?.createdAt || 0));
+
+    tbody.innerHTML = keys.map(id => {
+      const item = data[id];
+      if (!item) return '';
+      const isArsip = String(item.status || '').toUpperCase() === 'ARSIP' || item.arsip === true;
+      const statusBerikutnya = isArsip ? 'AKTIF' : 'ARSIP';
+      const badgeStatus = isArsip
+        ? `<button type="button" onclick="toggleStatusPengumuman('${escapeHTML(id)}', '${statusBerikutnya}')" title="Klik untuk aktifkan kembali" style="background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer;">📦 Arsip</button>`
+        : `<button type="button" onclick="toggleStatusPengumuman('${escapeHTML(id)}', '${statusBerikutnya}')" title="Klik untuk arsipkan" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer;">🟢 Aktif</button>`;
+
+      return `
+        <tr style="border-bottom: 1px solid #e5e7eb;">
+          <td style="padding: 8px 6px;">
+            <div style="font-weight: bold; color: #1e293b;">${escapeHTML(item.judul || '(Tanpa Judul)')}</div>
+            <div style="font-size: 10.5px; color: #64748b;">📅 ${escapeHTML(item.tanggal || '-')} ${item.lokasi ? '• 📍 ' + escapeHTML(item.lokasi) : ''}</div>
+          </td>
+          <td style="padding: 8px 6px; text-align: center;">${badgeStatus}</td>
+          <td style="padding: 8px 6px; text-align: right; white-space: nowrap;">
+            <button type="button" onclick="editPengumuman('${escapeHTML(id)}')" style="background:#2563eb; color:white; border:none; border-radius:4px; padding:4px 7px; font-size:10.5px; cursor:pointer; margin-right:3px;">✏️ Edit</button>
+            <button type="button" onclick="hapusPengumumanAdmin('${escapeHTML(id)}')" style="background:#dc2626; color:white; border:none; border-radius:4px; padding:4px 7px; font-size:10.5px; cursor:pointer;">🗑️</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+  } catch (err) {
+    console.error("Gagal memuat pengumuman admin:", err);
+    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#dc2626; padding:12px;">❌ Gagal memuat data: ${escapeHTML(err.message)}</td></tr>`;
+  }
+};
+
+// 2. Muat Data ke Form Edit via Cache / Worker Admin
+window.editPengumuman = async function(id) {
+  let val = cacheDaftarPengumumanAdmin[id];
+
+  if (!val) {
+    const sessionToken = sessionStorage.getItem('rt05_session_token');
+    if (!sessionToken) {
+      alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    try {
+      const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: JSON.stringify({
+          sessionToken: sessionToken,
+          path: `pengumuman/${id}`,
+          method: "GET"
+        })
+      });
+
+      const jsonWorker = await res.json();
+      if (res.status === 401 || jsonWorker.code === 'SESSION_EXPIRED') {
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+        window.location.reload();
         return;
       }
 
-      const pengumumanRef = window.firebaseRef(window.db, 'pengumuman');
-      window.firebaseOnValue(pengumumanRef, (snapshot) => {
-        const dataObj = snapshot.val();
-        if (!dataObj) {
-          container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
-          return;
-        }
-
-        let html = '';
-        Object.keys(dataObj).forEach(key => {
-          const item = dataObj[key];
-          if (item) {
-            const judul = item.judul || '-';
-            const tanggal = item.tanggal || '';
-            const status = String(item.status || 'AKTIF').toUpperCase().trim();
-            const isAktif = status === 'AKTIF';
-
-        // KODE BARU (DITAMBAHKAN TOMBOL EDIT):
-html += `
-  <tr style="border-bottom: 1px solid #e5e7eb; background: ${isAktif ? '#fff' : '#f3f4f6'};">
-    <td style="padding: 6px;">
-      <strong style="color: ${isAktif ? '#111' : '#6b7280'};">${escapeHTML(judul)}</strong>
-      <div style="font-size: 9.5px; color: #6b7280;">📅 ${escapeHTML(tanggal)}</div>
-    </td>
-    <td style="padding: 6px; text-align: center;">
-      <span style="font-weight: bold; font-size: 9.5px; padding: 2px 6px; border-radius: 4px; ${isAktif ? 'background:#d1fae5; color:#065f46;' : 'background:#e5e7eb; color:#374151;'}">
-        ${isAktif ? 'AKTIF' : 'ARSIP'}
-      </span>
-    </td>
-    <td style="padding: 6px; text-align: center; white-space: nowrap;">
-      <button onclick="editPengumuman('${key}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; background: #3b82f6; color: white; margin-right: 4px;">
-        ✏️ Edit
-      </button>
-      <button onclick="toggleStatusPengumuman('${key}', '${isAktif ? 'ARSIP' : 'AKTIF'}')" style="padding: 3px 6px; font-size: 10px; font-weight: bold; border-radius: 4px; border: none; cursor: pointer; ${isAktif ? 'background:#ef4444; color:white;' : 'background:#10b981; color:white;'}">
-        ${isAktif ? '📦 Arsipkan' : '🟢 Aktifkan'}
-      </button>
-    </td>
-  </tr>
-`;
-          }
-        });
-
-        container.innerHTML = html || `<tr><td colspan="3" style="text-align: center; padding: 10px; color: #888;">Belum ada pengumuman.</td></tr>`;
-      }, (error) => {
-        console.error("Gagal memuat pengumuman admin:", error);
-        container.innerHTML = `<tr><td colspan="3" style="text-align: center; padding: 10px; color: red;">Gagal memuat data.</td></tr>`;
-      });
+      if (!res.ok || !jsonWorker.success) {
+        throw new Error(jsonWorker.error || `HTTP ${res.status}`);
+      }
+      val = jsonWorker.result;
+    } catch (err) {
+      alert("❌ Gagal mengambil detail pengumuman: " + err.message);
+      return;
     }
-// 1. Variabel global untuk menampung ID yang sedang diedit
-let currentEditPengumumanId = null;
+  }
 
-function editPengumuman(id) {
-  const pengumumanRef = window.firebaseRef(window.db, 'pengumuman/' + id);
-  window.firebaseGet(pengumumanRef).then((snapshot) => {
-    if (snapshot.exists()) {
-      const val = snapshot.val();
-      
-      currentEditPengumumanId = id;
+  if (!val) {
+    alert("⚠️ Data pengumuman tidak ditemukan.");
+    return;
+  }
 
-      if (val.tanggal) {
-        const p = val.tanggal.split('/');
-        if (p.length === 3) {
-          document.getElementById('pengumumanTanggal').value = `${p[2]}-${p[1]}-${p[0]}`;
-        }
-      }
-      document.getElementById('pengumumanJudul').value = val.judul || '';
-      document.getElementById('pengumumanDetail').value = val.detail || '';
-      document.getElementById('pengumumanLokasi').value = val.lokasi || '';
-      if (document.getElementById('pengumumanFoto')) {
-        document.getElementById('pengumumanFoto').value = val.foto || '';
-      }
+  currentEditPengumumanId = id;
 
-      // Bersihkan input file & sembunyikan teks status saat masuk mode edit
-      const fileInput = document.getElementById('inputUploadPengumuman');
-      if (fileInput) fileInput.value = '';
-
-      const statusEl = document.getElementById('statusUploadPengumuman');
-      if (statusEl) {
-        statusEl.innerText = '';
-        statusEl.style.display = 'none';
-      }
-
-      // Ubah tampilan form & tombol sebagai penanda Mode Edit (tanpa alert)
-      const form = document.getElementById('formInputPengumuman');
-      if (form) {
-        form.style.background = '#eff6ff';
-        form.style.borderColor = '#93c5fd';
-        const headerForm = form.querySelector('div');
-        if (headerForm) {
-          headerForm.innerHTML = '✏️ Mode Edit Pengumuman (Ubah data lalu klik Simpan)';
-          headerForm.style.color = '#1d4ed8';
-        }
-        form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }
-
-      const btnSimpan = document.getElementById('btnSimpanPengumuman');
-      if (btnSimpan) {
-        btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
-        btnSimpan.style.background = "#2563eb";
-      }
+  if (val.tanggal) {
+    const p = val.tanggal.split('/');
+    if (p.length === 3) {
+      document.getElementById('pengumumanTanggal').value = `${p[2]}-${p[1]}-${p[0]}`;
     }
-  });
-}
+  }
+  document.getElementById('pengumumanJudul').value = val.judul || '';
+  document.getElementById('pengumumanDetail').value = val.detail || '';
+  document.getElementById('pengumumanLokasi').value = val.lokasi || '';
 
-// 📢 Simpan / Terbitkan Pengumuman Baru (Upload file & Simpan via Worker Admin Proxy)
-async function simpanPengumumanAdmin() {
+  if (document.getElementById('pengumumanFoto')) document.getElementById('pengumumanFoto').value = val.foto || '';
+  if (document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = val.lat || '';
+  if (document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = val.lng || '';
+
+  const fileInput = document.getElementById('inputUploadPengumuman');
+  if (fileInput) fileInput.value = '';
+
+  const statusEl = document.getElementById('statusUploadPengumuman');
+  if (statusEl) {
+    if (val.foto) {
+      statusEl.innerText = '📎 Media saat ini tersimpan (pilih file baru jika ingin mengganti)';
+      statusEl.style.display = 'block';
+    } else {
+      statusEl.innerText = '';
+      statusEl.style.display = 'none';
+    }
+  }
+
+  const form = document.getElementById('formInputPengumuman');
+  if (form) {
+    form.style.background = '#eff6ff';
+    form.style.borderColor = '#93c5fd';
+    const headerForm = form.querySelector('div');
+    if (headerForm) {
+      headerForm.innerHTML = '✏️ Mode Edit Pengumuman (Ubah data lalu klik Simpan)';
+      headerForm.style.color = '#1d4ed8';
+    }
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  const btnSimpan = document.getElementById('btnSimpanPengumuman');
+  if (btnSimpan) {
+    btnSimpan.innerText = "💾 Simpan Perubahan (Update)";
+    btnSimpan.style.background = "#2563eb";
+  }
+};
+
+// 3. Simpan / Update Pengumuman via Worker Admin Proxy
+window.simpanPengumumanAdmin = async function() {
   const tglInput = document.getElementById('pengumumanTanggal').value;
   const judul = document.getElementById('pengumumanJudul').value.trim();
   const detail = document.getElementById('pengumumanDetail').value.trim();
   const lokasi = document.getElementById('pengumumanLokasi').value.trim();
-  
+
   const lat = document.getElementById('pengumumanLat') ? document.getElementById('pengumumanLat').value.trim() : '';
   const lng = document.getElementById('pengumumanLng') ? document.getElementById('pengumumanLng').value.trim() : '';
-  
-  let fotoUrl = document.getElementById('pengumumanFoto').value.trim(); // URL lama / manual
+
+  let fotoUrl = document.getElementById('pengumumanFoto') ? document.getElementById('pengumumanFoto').value.trim() : '';
   const fileInput = document.getElementById('inputUploadPengumuman');
 
   if (!judul || !tglInput) {
@@ -4318,8 +4880,17 @@ async function simpanPengumumanAdmin() {
     return;
   }
 
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
   const parts = tglInput.split('-');
   const tglRapi = `${parts[2]}/${parts[1]}/${parts[0]}`;
+  const isEditMode = Boolean(currentEditPengumumanId);
 
   const btn = document.getElementById('btnSimpanPengumuman');
   if (btn) {
@@ -4328,43 +4899,47 @@ async function simpanPengumumanAdmin() {
   }
 
   try {
-    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG SAAT TOMBOL DIKLIK
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      if (btn) btn.innerText = "⏳ Mengunggah Media...";
       let file = fileInput.files[0];
-      
-      // Kompres gambar agar ringan sebelum di-upload
+
       if (typeof kompresGambar === 'function') {
         file = await kompresGambar(file, 1200, 0.8);
       }
 
-      // Menggunakan RT05_CONFIG.UPLOADER_URL
-const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
-      let response = await fetch(uploaderUrl, {
+      const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
         method: "POST",
         headers: {
           "X-File-Name": encodeURIComponent("pengumuman_" + Date.now() + "_" + file.name),
-          "Content-Type": file.type || "application/octet-stream"
+          "Content-Type": file.type || "application/octet-stream",
+          "Authorization": `Bearer ${sessionToken}`
         },
         body: file
       });
 
-      let textResult = await response.text();
-      let result = JSON.parse(textResult);
+      const textResult = await response.text();
+      let result;
+      try {
+        result = JSON.parse(textResult);
+      } catch (e) {
+        throw new Error("Respon server upload tidak valid: " + textResult.slice(0, 100));
+      }
 
-      if (result.success && result.url) {
-        let urlAwal = new URL(result.url);
-        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname; // Menggunakan Custom Domain R2
+      if (response.ok && result.success && result.url) {
+        const urlAwal = new URL(result.url);
+        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname;
       } else {
         throw new Error(result.error || "Gagal mengunggah file media.");
       }
     }
 
-    // 🌟 2. SIMPAN KE DATABASE MELALUI CLOUDFLARE WORKER ADMIN
-    if (btn) { btn.innerText = "⏳ Menyimpan ke Database..."; }
+    if (btn) btn.innerText = "⏳ Menyimpan ke Database...";
 
-    // Jika currentEditPengumumanId ada isinya, berarti pakai ID lama (Update). Jika null, buat ID baru.
-    const pengumumanId = (typeof currentEditPengumumanId !== 'undefined' && currentEditPengumumanId) ? currentEditPengumumanId : ('info_' + Date.now());
-    
+    const pengumumanId = isEditMode ? currentEditPengumumanId : ('info_' + Date.now());
+    const statusSaatIni = isEditMode && cacheDaftarPengumumanAdmin[pengumumanId]?.status
+      ? cacheDaftarPengumumanAdmin[pengumumanId].status
+      : 'AKTIF';
+
     const payload = {
       id: pengumumanId,
       tanggal: tglRapi,
@@ -4374,22 +4949,18 @@ const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
       lat: lat,
       lng: lng,
       foto: fotoUrl,
-      status: 'AKTIF',
+      status: statusSaatIni,
       timestamp: Date.now()
     };
 
-    // 🔒 Ambil PIN Admin & URL Worker Admin dari Utils
-    const pinAdmin = sessionStorage.getItem('adminPin') || localStorage.getItem('adminPin') || prompt('Masukkan PIN Admin:');
-    const workerAdminUrl = RT05_CONFIG.ADMIN_API_URL;
-
-    // Kirim request PUT untuk menulis/memperbarui node pengumuman/{id}
-    const responseProxy = await fetch(workerAdminUrl, {
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
       },
       body: JSON.stringify({
-        pin: pinAdmin,
+        sessionToken: sessionToken,
         path: `pengumuman/${pengumumanId}`,
         method: "PUT",
         data: payload
@@ -4398,109 +4969,157 @@ const uploaderUrl = RT05_CONFIG.UPLOADER_URL;
 
     const hasilProxy = await responseProxy.json();
 
-    if (!hasilProxy.success) {
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
       throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan pengumuman via Worker Admin.");
     }
 
-    currentEditPengumumanId = null; // Reset mode edit
+    alert(isEditMode ? "✅ Perubahan pengumuman berhasil disimpan!" : "✅ Pengumuman baru berhasil diterbitkan!");
 
-    alert("✅ Pengumuman berhasil diperbarui/diterbitkan!");
-    
-    // Reset form
-    document.getElementById('formInputPengumuman').reset();
-    if (document.getElementById('pengumumanLat')) document.getElementById('pengumumanLat').value = '';
-    if (document.getElementById('pengumumanLng')) document.getElementById('pengumumanLng').value = '';
-    
-    // Hilangkan teks status upload jika ada
-    const statusEl = document.getElementById('statusUploadPengumuman');
-    if (statusEl) statusEl.style.display = 'none';
-
-    // Scroll ke atas
-    const modalBody = document.querySelector('.modal-body') || document.getElementById('formInputPengumuman');
-    if (modalBody && modalBody.scrollTo) {
-      modalBody.scrollTo({ top: 0, behavior: 'smooth' });
-    } else {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-
-    if (typeof tutupModalPengumumanAdmin === 'function') tutupModalPengumumanAdmin();
-    if (typeof muatDaftarPengumumanAdmin === 'function') muatDaftarPengumumanAdmin();
+    resetFormPengumumanKeModeBaru();
+    muatDaftarPengumumanAdmin();
 
   } catch (err) {
     alert("❌ Gagal menyimpan pengumuman: " + err.message);
-  } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerText = "💾 Terbitkan Pengumuman";
+      btn.innerText = currentEditPengumumanId ? "💾 Simpan Perubahan (Update)" : "💾 Terbitkan Pengumuman";
+      btn.style.background = currentEditPengumumanId ? "#2563eb" : "#d97706";
     }
   }
-}
+};
 
-async function toggleStatusPengumuman(idUnik, statusBaru) {
+// 4. Ubah Status Aktif / Arsip via Worker Admin Proxy
+window.toggleStatusPengumuman = async function(idUnik, statusBaru) {
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
   try {
-    const targetRef = window.firebaseRef(window.db, 'pengumuman/' + idUnik);
-    await window.firebaseUpdate(targetRef, { status: statusBaru });
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: `pengumuman/${idUnik}`,
+        method: "PATCH",
+        data: { status: statusBaru, updatedAt: Date.now() }
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memperbarui status via Worker.");
+    }
+
+    muatDaftarPengumumanAdmin();
   } catch (err) {
     alert("❌ Gagal mengubah status: " + err.message);
   }
-}
-// Fungsi untuk mereset form pengumuman secara total
-function resetFormPengumuman() {
-    // 1. Reset elemen form standar jika ada
-    const form = document.getElementById('formPengumuman');
-    if (form) form.reset();
+};
 
-    // 2. Kosongkan input file secara manual
-    const fileInput = document.getElementById('inputUploadPengumuman');
-    if (fileInput) fileInput.value = '';
+// 5. Hapus Pengumuman via Worker Admin Proxy (Sebelumnya belum ada)
+window.hapusPengumumanAdmin = async function(idUnik) {
+  if (!confirm("Yakin ingin menghapus pengumuman ini secara permanen?")) return;
 
-    // 3. Sembunyikan dan kosongkan teks status upload
-    const statusEl = document.getElementById('statusUploadPengumuman');
-    if (statusEl) {
-        statusEl.innerText = '';
-        statusEl.style.display = 'none'; // Sembunyikan elemen teksnya
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
+  try {
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: `pengumuman/${idUnik}`,
+        method: "DELETE"
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
     }
 
-    // 4. Reset variabel ID edit jika diperlukan
-    window.currentEditPengumumanId = null;
-}
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus pengumuman via Worker.");
+    }
 
+    if (currentEditPengumumanId === idUnik) {
+      resetFormPengumumanKeModeBaru();
+    }
+
+    alert("🗑️ Pengumuman berhasil dihapus.");
+    muatDaftarPengumumanAdmin();
+  } catch (err) {
+    alert("❌ Gagal menghapus pengumuman: " + err.message);
+  }
+};
    // ==========================================
     // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN (DENGAN IKON & BERSIH)
     // ==========================================
     let cacheDataPetaAdmin = [];
 
     // 1. Ambil data lengkap beserta kategori/ikon dari Cloudflare Worker
-    function muatDataPetaUntukAdmin() {
-      fetch(RT05_CONFIG.PETA_PROXY_URL)
-        .then(response => response.json())
-        .then(dataObj => {
-          cacheDataPetaAdmin = [];
-          if (!dataObj) return;
+function muatDataPetaUntukAdmin() {
+  ambilDataWargaWorker()
+    .then(dataObj => {
+      cacheDataPetaAdmin = [];
+      if (!dataObj) return;
 
-          Object.keys(dataObj).forEach(key => {
-            var item = dataObj[key];
-            var namaAsli = String(item.Nama || item.nama || item.name || '').trim();
-            if (namaAsli !== '') {
-              var kategoriManual = String(item.Type || item.type || item.Kategori || item.kategori || '').trim().toLowerCase();
-              
-              // Panggil fungsi getIkonKategori bawaan utils jika ada, untuk mendapatkan emoji/ikon yang sesuai
-              var dataIkon = (typeof getIkonKategori === 'function') ? getIkonKategori(namaAsli, kategoriManual) : { emoji: '🏠' };
+      Object.keys(dataObj).forEach(key => {
+        var item = dataObj[key];
+        var namaAsli = String(item.Nama || item.nama || item.name || '').trim();
+        if (namaAsli !== '') {
+          var kategoriManual = String(item.Type || item.type || item.Kategori || item.kategori || '').trim().toLowerCase();
+          var dataIkon = (typeof getIkonKategori === 'function') ? getIkonKategori(namaAsli, kategoriManual) : { emoji: '🏠' };
 
-              cacheDataPetaAdmin.push({
-                nama: namaAsli,
-                kepalaKeluarga: item.kepalaKeluarga || '',
-                lat: item.Lat !== undefined ? item.Lat : (item.lat || ''),
-                lng: item.Lng !== undefined ? item.Lng : (item.lng || ''),
-                emoji: dataIkon.emoji || '🏠'
-              });
-            }
+          cacheDataPetaAdmin.push({
+            nama: namaAsli,
+            kepalaKeluarga: item.kepalaKeluarga || '',
+            lat: item.Lat !== undefined ? item.Lat : (item.lat || ''),
+            lng: item.Lng !== undefined ? item.Lng : (item.lng || ''),
+            emoji: dataIkon.emoji || '🏠'
           });
-        })
-        .catch(err => console.error("Gagal memuat data peta untuk admin:", err));
-    }
+        }
+      });
+    })
+    .catch(err => console.error("Gagal memuat data peta untuk admin:", err));
+}
 
-    document.addEventListener('DOMContentLoaded', muatDataPetaUntukAdmin);
 
     function cariLokasiPengumuman(keyword) {
       var container = document.getElementById('hasilPencarianLokasi');
@@ -4562,41 +5181,64 @@ function resetFormPengumuman() {
     // ==========================================
     // PENGELOLAAN PROGRAM KERJA & RAB (FIREBASE)
     // ==========================================
-    var dataProgkerGlobal = [];
+var dataProgkerGlobal = [];
 
-    function muatDataProgker() {
-      var tbody = document.getElementById('list-tabel-progker');
-      if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
-      }
+async function muatDataProgker() {
+  var tbody = document.getElementById('list-tabel-progker');
+  if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
 
-      const progkerRef = window.firebaseRef(window.db, 'progker_rab');
-      window.firebaseOnValue(progkerRef, (snapshot) => {
-        dataProgkerGlobal = [];
-        if (snapshot.exists()) {
-          snapshot.forEach((childSnap) => {
-            const item = childSnap.val();
-            if (item) {
-              dataProgkerGlobal.push({
-                id: item.id || childSnap.key,
-                kegiatan: item.Nama_Kegiatan || item.kegiatan || '',
-                divisi: item.Divisi || item.divisi || '',
-                anggaran: item.Anggaran !== undefined ? item.Anggaran : (item.anggaran || 0),
-                realisasi: item.Realisasi !== undefined ? item.Realisasi : (item.realisasi || 0),
-                status: item.Status || item.status || 'Perencanaan',
-                detail: item.Detail || item.detail || ''
-              });
-            }
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Sesi habis. Silakan login ulang.</td></tr>';
+    return;
+  }
+
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "progker_rab",
+        method: "GET"
+      })
+    });
+
+    const resJson = await response.json();
+    if (response.status === 401 || resJson.code === 'SESSION_EXPIRED') {
+      bersihkanStorageAdmin();
+      window.location.reload();
+      return;
+    }
+
+    const dataObj = resJson.result !== undefined ? resJson.result : resJson.data;
+    dataProgkerGlobal = [];
+
+    if (dataObj && typeof dataObj === 'object') {
+      Object.keys(dataObj).forEach((key) => {
+        const item = dataObj[key];
+        if (item && typeof item === 'object') {
+          dataProgkerGlobal.push({
+            id: item.id || key,
+            kegiatan: item.Nama_Kegiatan || item.kegiatan || '',
+            divisi: item.Divisi || item.divisi || '',
+            anggaran: item.Anggaran !== undefined ? item.Anggaran : (item.anggaran || 0),
+            realisasi: item.Realisasi !== undefined ? item.Realisasi : (item.realisasi || 0),
+            status: item.Status || item.status || 'Perencanaan',
+            detail: item.Detail || item.detail || ''
           });
-        }
-        renderTabelProgker(dataProgkerGlobal);
-      }, (error) => {
-        console.error("Gagal memuat progker dari Firebase:", error);
-        if (tbody) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data dari database.</td></tr>';
         }
       });
     }
+    renderTabelProgker(dataProgkerGlobal);
+  } catch (error) {
+    console.error("Gagal memuat progker dari Worker:", error);
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data dari server.</td></tr>';
+  }
+}
 
     function renderTabelProgker(list) {
       var tbody = document.getElementById('list-tabel-progker');
@@ -4672,11 +5314,22 @@ function resetFormPengumuman() {
     }
 
     
-    function simpanDataProgker(e) {
-      e.preventDefault();
+async function simpanDataProgker(e) {
+      if (e) e.preventDefault();
+
+      const sessionToken = sessionStorage.getItem('rt05_session_token');
+      if (!sessionToken) {
+        alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        window.location.reload();
+        return;
+      }
+
       var btn = document.getElementById('btnSimpanProgker');
-      btn.disabled = true;
-      btn.innerText = 'Menyimpan...';
+      if (btn) {
+        btn.disabled = true;
+        btn.innerText = '⏳ Menyimpan...';
+      }
 
       var status = document.getElementById('progkerStatus').value;
       var kegiatan = document.getElementById('progkerKegiatan').value;
@@ -4705,22 +5358,49 @@ function resetFormPengumuman() {
         Detail: detail,
         detail: detail,
         Tanggal: new Date().toLocaleDateString('id-ID'),
-        tanggal: new Date().toLocaleDateString('id-ID')
+        tanggal: new Date().toLocaleDateString('id-ID'),
+        updatedAt: Date.now()
       };
 
-      const targetRef = window.firebaseRef(window.db, 'progker_rab/' + progkerId);
-      window.firebaseSet(targetRef, payload)
-        .then(() => {
-          btn.disabled = false;
-          btn.innerText = '💾 Simpan Program Kerja';
-          tutupModalFormProgker();
-          alert('✅ Program Kerja berhasil disimpan ke Firebase!');
-        })
-        .catch((err) => {
-          btn.disabled = false;
-          btn.innerText = '💾 Simpan Program Kerja';
-          alert('❌ Gagal menyimpan program kerja: ' + err.message);
+      try {
+        const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({
+            sessionToken: sessionToken,
+            path: `progker_rab/${progkerId}`,
+            method: "PUT",
+            data: payload
+          })
         });
+
+        const hasilProxy = await responseProxy.json();
+
+        if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+          if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+          alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+          window.location.reload();
+          return;
+        }
+
+        if (!responseProxy.ok || !hasilProxy.success) {
+          throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan program kerja via Worker Admin.");
+        }
+
+        tutupModalFormProgker();
+        alert('✅ Program Kerja berhasil disimpan ke database!');
+        if (typeof muatDataProgker === 'function') muatDataProgker();
+      } catch (err) {
+        alert('❌ Gagal menyimpan program kerja: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerText = '💾 Simpan Program Kerja';
+        }
+      }
     }
 
     function bukaModalFormProgker() {
@@ -4750,17 +5430,49 @@ function resetFormPengumuman() {
       document.getElementById('modal-form-progker').style.display = 'flex';
     }
 
-    function hapusProgker(id) {
+async function hapusProgker(id) {
       if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
 
-      const targetRef = window.firebaseRef(window.db, 'progker_rab/' + id);
-      window.firebaseRemove(targetRef)
-        .then(() => {
-          alert('🗑️ Program kerja berhasil dihapus.');
-        })
-        .catch((err) => {
-          alert('❌ Gagal menghapus: ' + err.message);
+      const sessionToken = sessionStorage.getItem('rt05_session_token');
+      if (!sessionToken) {
+        alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+        window.location.reload();
+        return;
+      }
+
+      try {
+        const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${sessionToken}`
+          },
+          body: JSON.stringify({
+            sessionToken: sessionToken,
+            path: `progker_rab/${id}`,
+            method: "DELETE"
+          })
         });
+
+        const hasilProxy = await responseProxy.json();
+
+        if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+          if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+          alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+          window.location.reload();
+          return;
+        }
+
+        if (!responseProxy.ok || !hasilProxy.success) {
+          throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus program kerja via Worker Admin.");
+        }
+
+        alert('🗑️ Program kerja berhasil dihapus.');
+        if (typeof muatDataProgker === 'function') muatDataProgker();
+      } catch (err) {
+        alert('❌ Gagal menghapus: ' + err.message);
+      }
     }
 
     function tutupTabProgker() {
