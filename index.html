@@ -1162,6 +1162,18 @@ function initMainPageChatListener() {
   });
 }
 
+  // Tambahkan di index.html untuk menangkap update badge dari chat.html
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
+    const badge = document.getElementById('badge-chat-main');
+    const total = event.data.unreadPublicCount || 0;
+    if (badge) {
+      badge.innerText = total > 99 ? '99+' : total;
+      badge.style.display = total > 0 ? 'inline-flex' : 'none';
+    }
+  }
+});
+
 // Tangkap sinyal siap Firebase di halaman utama
 window.addEventListener('firebaseSiapIndex', initMainPageChatListener);
   
