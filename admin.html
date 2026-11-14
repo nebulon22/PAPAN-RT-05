@@ -606,58 +606,37 @@
 </div>
    
 <!-- MODAL 3: Kelola Peminjaman Perkakas (Khusus Admin) -->
-  <div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
-    <div class="modal-content" style="max-width: 550px; width: 92%;">
+<div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000; align-items: center; justify-content: center; padding: 10px 0;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
+  <div class="modal-content" style="max-width: 580px; width: 95%; height: 94vh; max-height: 94vh; overflow-y: auto; display: flex; flex-direction: column; box-sizing: border-box; padding: 14px;">
       
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
-        <h3 style="margin: 0; font-size: 15px; color: #111;">📦 Kelola Peminjaman Perkakas</h3>
-        <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
-      </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; flex-shrink: 0;">
+      <h3 style="margin: 0; font-size: 15px; color: #111;">📦 Kelola Peminjaman Perkakas</h3>
+      <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
+    </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-size: 12px; font-weight: bold; color: #374151;">📋 Kelola Inventaris:</span>
-        <button type="button" id="btnToggleStok" onclick="toggleFormStok()" style="background: #2563eb; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+    <!-- BARIS TOMBOL ATAS (Sesuai desain asli + tombol Riwayat di sebelahnya) -->
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 8px; flex-shrink: 0; flex-wrap: wrap;">
+      <span style="font-size: 12px; font-weight: bold; color: #374151;">📋 Kelola Inventaris:</span>
+      <div style="display: flex; gap: 6px;">
+        <button type="button" id="tab-btn-pinjam" onclick="pilihTabInventarisAdmin('pinjam')" style="display: none; background: #475569; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+          ⬅️ Form Pinjam
+        </button>
+        <button type="button" id="btnToggleStok" onclick="pilihTabInventarisAdmin('stok')" style="background: #2563eb; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
           ➕/✏️ Tambah & Edit Stok Barang
         </button>
-      </div>
-
-      <form id="formStokBarang" style="display: none; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
-        <div style="font-weight: bold; font-size: 11.5px; color: #1e40af; margin-bottom: 8px;">
-          📦 Master Data & Stok Barang
-        </div>
-
-        <div style="margin-bottom: 8px;">
-          <label for="stokPilihBarang" style="font-size: 11px; font-weight: bold; color: #374151;">Pilih / Nama Barang:</label>
-          <select id="stokPilihBarang" onchange="cekPilihBarangStok(this)" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px; margin-bottom: 4px;">
-            <option value="">-- Pilih Barang Terdaftar --</option>
-            <option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>
-          </select>
-
-          <input type="text" id="stokNamaBarangBaru" aria-label="Nama Barang Baru" placeholder="Masukkan nama barang baru..." style="display: none; width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-          <div>
-            <label for="stokJenisAksi" style="font-size: 11px; font-weight: bold; color: #374151;">Aksi Stok:</label>
-            <select id="stokJenisAksi" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-              <option value="tambah">➕ Tambah (Beli Baru)</option>
-              <option value="kurang">➖ Kurangi (Rusak/Hilang)</option>
-              <option value="set">✏️ Set Total Stok</option>
-            </select>
-          </div>
-          <div>
-            <label for="stokJumlahTotal" style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Unit:</label>
-            <input type="number" id="stokJumlahTotal" min="1" placeholder="Contoh: 5" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-          </div>
-        </div>
-
-        <button type="button" onclick="simpanBarangStokAdmin()" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
-          💾 Simpan Perubahan Stok
+        <button type="button" id="tab-btn-riwayat" onclick="pilihTabInventarisAdmin('riwayat')" style="background: #0f766e; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+          📜 Riwayat
         </button>
-      </form>
+      </div>
+    </div>
 
-<!-- 🌟 FORM PEMINJAMAN DENGAN SISTEM KERANJANG (MULTI-ITEM) -->
-      <div id="formPinjamBarang" style="background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+    <!-- ========================================================= -->
+    <!-- KONTEN 1: FORM PEMINJAMAN & DAFTAR BELUM DIKEMBALIKAN     -->
+    <!-- ========================================================= -->
+    <div id="tab-konten-pinjam" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+
+      <!-- 🌟 FORM PEMINJAMAN DENGAN SISTEM KERANJANG (MULTI-ITEM) -->
+      <div id="formPinjamBarang" style="background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px; flex-shrink: 0;">
         
         <div style="margin-bottom: 8px;">
           <label for="pinjamNamaWarga" style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah Peminjam:</label>
@@ -701,15 +680,15 @@
         </button>
       </div>
 
-      <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151;">📋 Daftar Belum Dikembalikan:</h4>
-      <div style="overflow-x: auto;">
-        <table style="width: 100%; border-collapse: collapse; font-size: 11.5px; text-align: left;">
-          <thead>
-            <tr style="background: #111827; color: white;">
-              <th style="padding: 6px;">Peminjam</th>
-              <th style="padding: 6px;">Barang</th>
-              <th style="padding: 6px; text-align: center;">Jumlah</th>
-              <th style="padding: 6px; text-align: center;">Aksi</th>
+      <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151; flex-shrink: 0;">📋 Daftar Belum Dikembalikan:</h4>
+      <div style="flex: 1; min-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 10px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead style="background: #111827; color: white; position: sticky; top: 0; z-index: 1;">
+            <tr>
+              <th style="padding: 8px 6px; text-align: left;">Peminjam</th>
+              <th style="padding: 8px 6px; text-align: left;">Barang</th>
+              <th style="padding: 8px 6px; text-align: center;">Jumlah</th>
+              <th style="padding: 8px 6px; text-align: center;">Aksi</th>
             </tr>
           </thead>
           <tbody id="tabel-peminjaman-admin">
@@ -718,9 +697,121 @@
         </table>
       </div>
 
-      <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
     </div>
+
+<!-- ========================================================= -->
+    <!-- KONTEN 2: FORM TAMBAH & EDIT STOK                         -->
+    <!-- ========================================================= -->
+    <div id="tab-konten-stok" style="display: none; flex: 1; overflow-y: auto;">
+      <form id="formStokBarang" style="display: block; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
+        <div style="font-weight: bold; font-size: 11.5px; color: #1e40af; margin-bottom: 8px;">
+          📦 Master Data & Stok Barang
+        </div>
+
+        <div style="margin-bottom: 8px;">
+          <label for="stokPilihBarang" style="font-size: 11px; font-weight: bold; color: #374151;">Pilih / Nama Barang:</label>
+          <select id="stokPilihBarang" onchange="cekPilihBarangStok(this)" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px; margin-bottom: 4px;">
+            <option value="">-- Pilih Barang Terdaftar --</option>
+            <option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>
+          </select>
+
+          <input type="text" id="stokNamaBarangBaru" aria-label="Nama Barang Baru" placeholder="Masukkan nama barang baru..." style="display: none; width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+          <div>
+            <label for="stokJenisAksi" style="font-size: 11px; font-weight: bold; color: #374151;">Aksi Stok:</label>
+            <select id="stokJenisAksi" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+              <option value="tambah">➕ Tambah (Beli Baru)</option>
+              <option value="kurang">➖ Kurangi (Rusak/Hilang)</option>
+              <option value="set">✏️ Set Total Stok</option>
+            </select>
+          </div>
+          <div>
+            <label for="stokJumlahTotal" style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Unit:</label>
+            <input type="number" id="stokJumlahTotal" min="1" placeholder="Contoh: 5" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+          </div>
+        </div>
+
+        <button type="button" onclick="simpanBarangStokAdmin()" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
+          💾 Simpan Perubahan Stok
+        </button>
+      </form>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- KONTEN 3: RIWAYAT PEMINJAMAN (FULL LAYAR PENUH)           -->
+    <!-- ========================================================= -->
+    <div id="tab-konten-riwayat" style="display: none; flex-direction: column; flex: 1; min-height: 0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-shrink: 0;">
+        <h4 style="margin: 0; font-size: 12.5px; color: #374151;">📜 Riwayat Peminjaman (Sudah Dikembalikan):</h4>
+        <button type="button" onclick="muatRiwayatPeminjamanAdmin()" style="background: #e2e8f0; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: #1e293b; font-weight: bold;">
+          🔄 Refresh
+        </button>
+      </div>
+
+      <div style="flex: 1; min-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 10px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead style="background: #111827; color: white; position: sticky; top: 0; z-index: 1;">
+            <tr>
+              <th style="padding: 8px 6px; text-align: left;">Peminjam</th>
+              <th style="padding: 8px 6px; text-align: left;">Barang</th>
+              <th style="padding: 8px 6px; text-align: center;">Jml</th>
+              <th style="padding: 8px 6px; text-align: center;">Pinjam</th>
+              <th style="padding: 8px 6px; text-align: center;">Kembali</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-riwayat-peminjaman-admin">
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 12px; color: #94a3b8;">Memuat riwayat...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; flex-shrink: 0;">Tutup</button>
   </div>
+</div>
+  <!-- MODAL KONFIRMASI PENGEMBALIAN BARANG (CUSTOM) -->
+<div id="modal-konfirmasi-kembali" class="modal-bg" style="display: none; z-index: 4000; align-items: center; justify-content: center; padding: 15px;" onclick="if(event.target.id==='modal-konfirmasi-kembali') tutupModalKonfirmasiKembali()">
+  <div class="modal-content" style="max-width: 400px; width: 92%; padding: 16px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.25);">
+    
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px; margin-bottom: 12px;">
+      <h4 style="margin: 0; font-size: 14px; color: #111827;">↩️ Konfirmasi Pengembalian</h4>
+      <span onclick="tutupModalKonfirmasiKembali()" style="cursor: pointer; font-weight: bold; font-size: 18px; color: #9ca3af;">&times;</span>
+    </div>
+
+    <div id="info-barang-kembali" style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 8px 10px; font-size: 12px; color: #334155; margin-bottom: 12px;">
+      <!-- Info peminjam & barang diisi otomatis oleh JS -->
+    </div>
+
+    <label style="display: block; font-size: 11.5px; font-weight: bold; color: #374151; margin-bottom: 6px;">Kondisi Barang Saat Dikembalikan:</label>
+    
+    <!-- Pilihan Cepat -->
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px;">
+      <button type="button" id="btn-pilih-utuh" onclick="setKondisiKembali('Utuh')" style="padding: 7px; border-radius: 5px; font-size: 11.5px; font-weight: bold; cursor: pointer; border: 1.5px solid #16a34a; background: #dcfce7; color: #166534;">
+        ✅ Lengkap / Utuh
+      </button>
+      <button type="button" id="btn-pilih-catatan" onclick="setKondisiKembali('Catatan')" style="padding: 7px; border-radius: 5px; font-size: 11.5px; font-weight: bold; cursor: pointer; border: 1px solid #cbd5e1; background: #f8fafc; color: #475569;">
+        ⚠️ Rusak / Hilang
+      </button>
+    </div>
+
+    <!-- Input Catatan (Muncul/aktif saat pilih Rusak/Hilang atau bisa langsung diisi) -->
+    <input type="text" id="input-catatan-kembali" value="Utuh" placeholder="Tulis keterangan (misal: 1 gelas pecah / hilang)..." style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 5px; box-sizing: border-box; font-size: 12px; margin-bottom: 14px; background: #f1f5f9; color: #334155;" readonly>
+
+    <div style="display: grid; grid-template-columns: 1fr 1.4fr; gap: 8px;">
+      <button type="button" onclick="tutupModalKonfirmasiKembali()" style="padding: 8px; background: #6b7280; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px;">
+        Batal
+      </button>
+      <button type="button" id="btn-submit-kembali" onclick="eksekusiPengembalianBarang()" style="padding: 8px; background: #10b981; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; font-size: 12px;">
+        💾 Simpan Pengembalian
+      </button>
+    </div>
+
+  </div>
+</div>
 
 <!-- MODAL 4: Kelola Data Keluarga (Berdiri Sendiri) -->
   <div id="modal-kelola-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-kelola-warga') tutupModalKelolaWarga()">
@@ -912,13 +1003,13 @@
         </div>
 
         <div class="form-group" style="margin-bottom: 10px;">
-          <label style="font-size: 11px; font-weight: bold; color: #475569;">Status Hunian:</label>
-          <select id="editWargaBaruStatus" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; font-size: 12px; box-sizing: border-box; margin-top: 4px;">
-            <option value="Warga Tetap (Pemilik)">Warga Tetap (Pemilik)</option>
-            <option value="Kontrakan">Kontrakan</option>
-            <option value="Kost">Kost</option>
-            <option value="Tamu">Tamu</option>
-          </select>
+        <label style="font-size: 12px; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">Status Hunian:</label>
+        <select id="edit-status-hunian" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background: #fff;">
+          <option value="Warga Tetap (Pemilik)">🏠 Warga Tetap (Pemilik)</option>
+          <option value="Kontrakan">🔑 Kontrakan</option>
+          <option value="Kost">🛏️ Kost</option>
+          <option value="Tamu">🧳 Tamu</option>
+        </select>
         </div>
 
         <div class="form-group" style="margin-bottom: 10px;">
@@ -1959,19 +2050,22 @@ function tutupModalIframeQR() {
   document.getElementById('modal-iframe-qr').style.display = 'none';
 }
     
-   function bukaModalPinjamAdmin() {
+function bukaModalPinjamAdmin() {
       if (typeof muatPeminjamanAdmin === 'function') {
         muatPeminjamanAdmin();
       }
-      
+
+      // Pastikan form stok & form pinjam kembali ke display default-nya
       const formStok = document.getElementById('formStokBarang');
-      if (formStok) formStok.style.display = 'none';
+      if (formStok) formStok.style.display = 'block';
 
       const formPinjam = document.getElementById('formPinjamBarang');
-      if (formPinjam) formPinjam.style.display = 'grid';
+      if (formPinjam) formPinjam.style.display = 'block';
 
-      const btnToggle = document.getElementById('btnToggleStok');
-      if (btnToggle) btnToggle.innerText = '➕/✏️ Tambah & Edit Stok Barang';
+      // Selalu buka di tab utama (Form Pinjam & Daftar Belum Dikembalikan)
+      if (typeof pilihTabInventarisAdmin === 'function') {
+        pilihTabInventarisAdmin('pinjam');
+      }
 
       const modal = document.getElementById("modal-admin-inventaris");
       if (modal) modal.style.display = "flex";
@@ -2021,8 +2115,28 @@ window.toggleFormStok = function() {
       }
     }
 
+    window.pilihTabInventarisAdmin = function(namaTab) {
+      const kontenPinjam = document.getElementById('tab-konten-pinjam');
+      const kontenStok = document.getElementById('tab-konten-stok');
+      const kontenRiwayat = document.getElementById('tab-konten-riwayat');
+      const btnKembaliPinjam = document.getElementById('tab-btn-pinjam');
+
+      if (kontenPinjam) kontenPinjam.style.display = (namaTab === 'pinjam') ? 'flex' : 'none';
+      if (kontenStok) kontenStok.style.display = (namaTab === 'stok') ? 'block' : 'none';
+      if (kontenRiwayat) kontenRiwayat.style.display = (namaTab === 'riwayat') ? 'flex' : 'none';
+
+      // Tampilkan tombol "⬅️ Form Pinjam" hanya jika sedang membuka tab Stok atau Riwayat
+      if (btnKembaliPinjam) {
+        btnKembaliPinjam.style.display = (namaTab === 'pinjam') ? 'none' : 'inline-block';
+      }
+
+      if (namaTab === 'riwayat' && typeof muatRiwayatPeminjamanAdmin === 'function') {
+        muatRiwayatPeminjamanAdmin();
+      }
+    };
+
 let cachePerkakas = [];
-    let cachePeminjaman = [];
+let cachePeminjaman = [];
 
     // Helper internal khusus inventaris agar konsisten dengan Worker Admin Anda
     async function requestWorkerInventaris(pathTujuan, metodeHttp = "GET", payloadData = null) {
@@ -2126,23 +2240,37 @@ let cachePerkakas = [];
       }
     }
 
-    function renderTabelDanDropdown(perkakas, peminjaman) {
+function renderTabelDanDropdown(perkakas, peminjaman) {
       const container = document.getElementById("tabel-peminjaman-admin");
       const selectBarang = document.getElementById("pinjamPilihBarang");
       const selectBarangStok = document.getElementById("stokPilihBarang");
 
+      // 1. Hitung jumlah barang yang sedang berstatus "dipinjam"
+      const pinjamanAktif = peminjaman.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
+      const rekapDipinjam = {};
+      pinjamanAktif.forEach(row => {
+        const nama = String(row[2] || '').trim().toLowerCase();
+        const jml = parseInt(row[3], 10) || 0;
+        if (nama) rekapDipinjam[nama] = (rekapDipinjam[nama] || 0) + jml;
+      });
+
+      // 2. Simpan sisaStok ke masing-masing item di cachePerkakas
+      (perkakas || []).forEach(item => {
+        const dipinjam = rekapDipinjam[item.nama.toLowerCase()] || 0;
+        item.dipinjam = dipinjam;
+        item.sisa = Math.max(0, item.total - dipinjam);
+      });
+
       if (selectBarang) {
         selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa: ${item.total})</option>`).join('');
+          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa: ${item.sisa} / Total: ${item.total})</option>`).join('');
       }
 
       if (selectBarangStok) {
         selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
           `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
-          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa Stok: ${item.total})</option>`).join('');
+          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Total Aset: ${item.total} | Sisa: ${item.sisa})</option>`).join('');
       }
-      
-      const pinjamanAktif = peminjaman.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
 
       if (pinjamanAktif.length === 0) {
         container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
@@ -2238,7 +2366,7 @@ let cachePerkakas = [];
         document.getElementById('stokNamaBarangBaru').style.display = 'none';
         document.getElementById('stokJumlahTotal').value = '';
         
-        if (typeof toggleFormStok === 'function') toggleFormStok();
+        if (typeof pilihTabInventarisAdmin === 'function') pilihTabInventarisAdmin('pinjam');
         if (typeof muatPeminjamanAdmin === 'function') await muatPeminjamanAdmin();
 
       } catch (err) {
@@ -2250,59 +2378,120 @@ let cachePerkakas = [];
       }
     }
 
-    // 3. Proses Pengembalian Perkakas & Kembalikan Stok Otomatis via Worker
-    async function prosesPengembalian(id) {
-      if (!confirm("Apakah barang ini sudah dikembalikan?")) return;
+let idPeminjamanAkanDikembalikan = null;
+
+    // 3. Buka Custom Modal Konfirmasi Pengembalian
+    window.prosesPengembalian = function(id) {
+      idPeminjamanAkanDikembalikan = id;
+
+      // Cari detail peminjaman dari cachePeminjaman agar admin yakin barang yang diklik benar
+      const itemCache = (typeof cachePeminjaman !== 'undefined')
+        ? cachePeminjaman.find(p => p[0] === id)
+        : null;
+
+      const infoBox = document.getElementById('info-barang-kembali');
+      if (infoBox) {
+        if (itemCache) {
+          infoBox.innerHTML = `
+            <div><strong>Peminjam:</strong> ${escapeHTML(itemCache[1])}</div>
+            <div style="margin-top: 2px;"><strong>Barang:</strong> ${escapeHTML(itemCache[2])} (${escapeHTML(String(itemCache[3]))} unit)</div>
+          `;
+        } else {
+          infoBox.innerHTML = `Konfirmasi pengembalian perkakas ini ke inventaris RT.`;
+        }
+      }
+
+      // Reset ke kondisi "Utuh" setiap kali modal dibuka
+      setKondisiKembali('Utuh');
+
+      const modal = document.getElementById('modal-konfirmasi-kembali');
+      if (modal) modal.style.display = 'flex';
+    };
+
+    window.tutupModalKonfirmasiKembali = function() {
+      idPeminjamanAkanDikembalikan = null;
+      const modal = document.getElementById('modal-konfirmasi-kembali');
+      if (modal) modal.style.display = 'none';
+    };
+
+    window.setKondisiKembali = function(mode) {
+      const btnUtuh = document.getElementById('btn-pilih-utuh');
+      const btnCatatan = document.getElementById('btn-pilih-catatan');
+      const inputCatatan = document.getElementById('input-catatan-kembali');
+
+      if (mode === 'Utuh') {
+        btnUtuh.style.border = '1.5px solid #16a34a';
+        btnUtuh.style.background = '#dcfce7';
+        btnUtuh.style.color = '#166534';
+
+        btnCatatan.style.border = '1px solid #cbd5e1';
+        btnCatatan.style.background = '#f8fafc';
+        btnCatatan.style.color = '#475569';
+
+        inputCatatan.value = 'Utuh';
+        inputCatatan.readOnly = true;
+        inputCatatan.style.background = '#f1f5f9';
+      } else {
+        btnCatatan.style.border = '1.5px solid #dc2626';
+        btnCatatan.style.background = '#fee2e2';
+        btnCatatan.style.color = '#991b1b';
+
+        btnUtuh.style.border = '1px solid #cbd5e1';
+        btnUtuh.style.background = '#f8fafc';
+        btnUtuh.style.color = '#475569';
+
+        inputCatatan.value = '';
+        inputCatatan.readOnly = false;
+        inputCatatan.style.background = '#ffffff';
+        inputCatatan.focus();
+      }
+    };
+
+    // Eksekusi simpan ke riwayat_peminjaman & hapus dari peminjaman aktif
+    window.eksekusiPengembalianBarang = async function() {
+      if (!idPeminjamanAkanDikembalikan) return;
+
+      const inputEl = document.getElementById('input-catatan-kembali');
+      const catatanKondisi = (inputEl ? inputEl.value.trim() : '') || 'Utuh';
+      const btnSubmit = document.getElementById('btn-submit-kembali');
+
+      if (btnSubmit) {
+        btnSubmit.innerText = '⏳ Menyimpan...';
+        btnSubmit.disabled = true;
+      }
 
       try {
-        // 1. Ambil data peminjaman aktif via Worker
+        const id = idPeminjamanAkanDikembalikan;
         const dataPinjam = await requestWorkerInventaris(`peminjaman/${id}`, 'GET');
         if (!dataPinjam) {
           alert("⚠️ Data peminjaman tidak ditemukan atau sudah diproses.");
+          tutupModalKonfirmasiKembali();
           await muatPeminjamanAdmin();
           return;
         }
 
-        const namaBarangKembali = String(dataPinjam.barang || dataPinjam.namaBarang || '').trim();
-        const jumlahKembali = parseInt(dataPinjam.jumlah || 1, 10);
-
-        // 2. Tambahkan informasi pengembalian & arsipkan ke 'riwayat_peminjaman'
         dataPinjam.status = "Dikembalikan";
         dataPinjam.tglKembali = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        dataPinjam.catatanKembali = catatanKondisi;
         dataPinjam.returnedAt = Date.now();
 
         await requestWorkerInventaris(`riwayat_peminjaman/${id}`, 'PUT', dataPinjam);
-
-        // 3. Kembalikan jumlah stok barang di node 'inventaris'
-        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
-        if (dataInv && typeof dataInv === 'object' && namaBarangKembali) {
-          const keyBarang = Object.keys(dataInv).find(k => {
-            const item = dataInv[k];
-            const namaDb = String(item?.namaBarang || item?.nama || '').trim();
-            return namaDb.toLowerCase() === namaBarangKembali.toLowerCase();
-          });
-
-          if (keyBarang && dataInv[keyBarang]) {
-            const stokSaatIni = parseInt(dataInv[keyBarang].totalStok !== undefined ? dataInv[keyBarang].totalStok : (dataInv[keyBarang].total || 0), 10);
-            await requestWorkerInventaris(`inventaris/${keyBarang}`, 'PATCH', {
-              totalStok: stokSaatIni + jumlahKembali,
-              updatedAt: Date.now()
-            });
-          }
-        }
-
-        // 4. Hapus dari daftar peminjaman aktif
         await requestWorkerInventaris(`peminjaman/${id}`, 'DELETE');
 
-        alert("✅ Barang dikembalikan, stok otomatis bertambah, dan masuk ke riwayat arsip!");
+        tutupModalKonfirmasiKembali();
         await muatPeminjamanAdmin();
 
       } catch (err) {
         if (err.message !== "SESSION_EXPIRED") {
           alert("❌ Gagal memperbarui status pengembalian: " + err.message);
         }
+      } finally {
+        if (btnSubmit) {
+          btnSubmit.innerText = '💾 Simpan Pengembalian';
+          btnSubmit.disabled = false;
+        }
       }
-    }
+    };
 
     // ==========================================
     // SISTEM KERANJANG PEMINJAMAN (MULTI-ITEM VIA WORKER)
@@ -2334,8 +2523,8 @@ let cachePerkakas = [];
         .filter(k => k.namaBarang.toLowerCase() === namaBarang.toLowerCase())
         .reduce((sum, k) => sum + k.jumlah, 0);
 
-      if (barangCache && (jumlah + sudahDiKeranjang) > barangCache.total) {
-        alert(`⚠️ Stok "${namaBarang}" tidak mencukupi! Sisa tersedia: ${barangCache.total} unit.`);
+      if (barangCache && (jumlah + sudahDiKeranjang) > barangCache.sisa) {
+        alert(`⚠️ Stok "${namaBarang}" tidak mencukupi! Sisa tersedia: ${barangCache.sisa} unit.`);
         return;
       }
 
@@ -2374,7 +2563,7 @@ let cachePerkakas = [];
     }
 
     // 4. Simpan Semua Peminjaman & Kurangi Stok Otomatis via Worker
-    window.simpanSemuaPeminjamanAdmin = async function() {
+window.simpanSemuaPeminjamanAdmin = async function() {
       const peminjam = document.getElementById('pinjamNamaWarga').value.trim();
 
       if (!peminjam) {
@@ -2393,13 +2582,10 @@ let cachePerkakas = [];
       const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 
       try {
-        // Ambil stok inventaris terbaru dari Worker sebelum mengurangi
-        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
-
         for (let item of keranjangPinjam) {
           const pinjamId = "pinjam_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
 
-          // 1. Catat peminjaman ke node 'peminjaman' via Worker
+          // Catat peminjaman ke node 'peminjaman' via Worker (totalStok aset tidak diubah)
           await requestWorkerInventaris(`peminjaman/${pinjamId}`, 'PUT', {
             id: pinjamId,
             peminjam: peminjam,
@@ -2410,29 +2596,9 @@ let cachePerkakas = [];
             status: "Dipinjam",
             timestamp: Date.now()
           });
-
-          // 2. Kurangi stok pada node 'inventaris' via Worker
-          if (dataInv && typeof dataInv === 'object') {
-            const keyBarang = Object.keys(dataInv).find(k => {
-              const invItem = dataInv[k];
-              const namaDb = String(invItem?.namaBarang || invItem?.nama || '').trim();
-              return namaDb.toLowerCase() === item.namaBarang.toLowerCase();
-            });
-
-            if (keyBarang && dataInv[keyBarang]) {
-              const stokLama = parseInt(dataInv[keyBarang].totalStok !== undefined ? dataInv[keyBarang].totalStok : (dataInv[keyBarang].total || 0), 10);
-              const stokBaru = Math.max(0, stokLama - item.jumlah);
-              dataInv[keyBarang].totalStok = stokBaru; // Update di memori lokal juga jika ada item kembar di keranjang
-
-              await requestWorkerInventaris(`inventaris/${keyBarang}`, 'PATCH', {
-                totalStok: stokBaru,
-                updatedAt: Date.now()
-              });
-            }
-          }
         }
 
-        alert("✅ Semua peminjaman berhasil dicatat & stok diperbarui!");
+        alert("✅ Semua peminjaman berhasil dicatat!");
         
         keranjangPinjam = [];
         document.getElementById('pinjamNamaWarga').value = '';
@@ -2448,6 +2614,74 @@ let cachePerkakas = [];
         }
       } finally {
         if (btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
+      }
+    };
+
+// Toggle buka/tutup panel riwayat peminjaman
+    window.toggleRiwayatPeminjamanAdmin = function() {
+      const panel = document.getElementById("panel-riwayat-peminjaman");
+      const icon = document.getElementById("icon-toggle-riwayat");
+      if (!panel) return;
+
+      const sedangTutup = panel.style.display === "none";
+      panel.style.display = sedangTutup ? "block" : "none";
+      if (icon) icon.innerText = sedangTutup ? "▲" : "▼";
+
+      // Muat data otomatis saat panel dibuka
+      if (sedangTutup) {
+        muatRiwayatPeminjamanAdmin();
+      }
+    };
+
+// Muat Data Riwayat Peminjaman dari node 'riwayat_peminjaman' via Worker
+    window.muatRiwayatPeminjamanAdmin = async function() {
+      const tbody = document.getElementById("tabel-riwayat-peminjaman-admin");
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px; color:#64748b;">⏳ Memuat riwayat...</td></tr>`;
+
+      try {
+        const dataRiwayat = await requestWorkerInventaris('riwayat_peminjaman', 'GET');
+
+        if (!dataRiwayat || typeof dataRiwayat !== 'object') {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada riwayat pengembalian barang.</td></tr>`;
+          return;
+        }
+
+        const listRiwayat = Object.keys(dataRiwayat)
+          .map(key => ({ id: key, ...dataRiwayat[key] }))
+          .filter(item => item && (item.peminjam || item.barang || item.namaBarang))
+          .sort((a, b) => (b.returnedAt || b.timestamp || 0) - (a.returnedAt || a.timestamp || 0));
+
+        if (listRiwayat.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada riwayat pengembalian barang.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = listRiwayat.map(item => {
+          const catatan = (item.catatanKembali || 'Utuh').trim();
+          const isUtuh = catatan.toLowerCase() === 'utuh';
+          const warnaCatatan = isUtuh ? '#16a34a' : '#dc2626';
+          const ikonCatatan = isUtuh ? '✓' : '⚠️';
+
+          return `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px; font-weight: 600; color: #1e293b;">${escapeHTML(item.peminjam || '-')}</td>
+              <td style="padding: 6px; color: #334155;">${escapeHTML(item.barang || item.namaBarang || '-')}</td>
+              <td style="padding: 6px; text-align: center; font-weight: bold;">${escapeHTML(String(item.jumlah || 1))}</td>
+              <td style="padding: 6px; text-align: center; color: #64748b; font-size: 11px;">${escapeHTML(item.tgl || '-')}</td>
+              <td style="padding: 6px; text-align: center; font-size: 11px;">
+                <div style="color: #16a34a; font-weight: 600;">${escapeHTML(item.tglKembali || '-')}</div>
+                <div style="color: ${warnaCatatan}; font-size: 10px; font-weight: 600; margin-top: 2px;">${ikonCatatan} ${escapeHTML(catatan)}</div>
+              </td>
+            </tr>
+          `;
+        }).join('');
+
+      } catch (err) {
+        if (err.message === "SESSION_EXPIRED") return;
+        console.error("Gagal memuat riwayat peminjaman:", err);
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px; color:#dc2626;">Gagal memuat riwayat: ${escapeHTML(err.message)}</td></tr>`;
       }
     };
 
