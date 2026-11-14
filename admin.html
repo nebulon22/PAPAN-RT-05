@@ -2339,9 +2339,18 @@ function renderTabelDanDropdown(perkakas, peminjaman) {
       }
     }
 
-// 3. Proses Pengembalian Perkakas & Arsipkan ke Riwayat via Worker
+// 3. Proses Pengembalian Perkakas + Catatan Kondisi & Arsipkan ke Riwayat via Worker
     async function prosesPengembalian(id) {
-      if (!confirm("Apakah barang ini sudah dikembalikan?")) return;
+      // Munculkan prompt dengan default "Utuh"
+      const inputCatatan = prompt(
+        "Konfirmasi pengembalian barang.\n\nBiarkan 'Utuh' jika lengkap/baik, atau tulis catatan (misal: 1 pecah / rusak / hilang):",
+        "Utuh"
+      );
+
+      // Jika admin menekan tombol Cancel / Batal
+      if (inputCatatan === null) return;
+
+      const catatanKondisi = inputCatatan.trim() || "Utuh";
 
       try {
         // 1. Ambil data peminjaman aktif via Worker
@@ -2352,17 +2361,18 @@ function renderTabelDanDropdown(perkakas, peminjaman) {
           return;
         }
 
-        // 2. Tambahkan informasi pengembalian & arsipkan ke 'riwayat_peminjaman'
+        // 2. Tambahkan informasi pengembalian & catatan kondisi ke 'riwayat_peminjaman'
         dataPinjam.status = "Dikembalikan";
         dataPinjam.tglKembali = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        dataPinjam.catatanKembali = catatanKondisi;
         dataPinjam.returnedAt = Date.now();
 
         await requestWorkerInventaris(`riwayat_peminjaman/${id}`, 'PUT', dataPinjam);
 
-        // 3. Hapus dari daftar peminjaman aktif (sisa stok otomatis bertambah karena dihitung dinamis)
+        // 3. Hapus dari daftar peminjaman aktif
         await requestWorkerInventaris(`peminjaman/${id}`, 'DELETE');
 
-        alert("✅ Barang dikembalikan dan masuk ke riwayat arsip!");
+        alert(`✅ Barang dikembalikan (Catatan: ${catatanKondisi}) dan masuk ke riwayat arsip!`);
         await muatPeminjamanAdmin();
 
       } catch (err) {
@@ -2512,7 +2522,7 @@ window.simpanSemuaPeminjamanAdmin = async function() {
       }
     };
 
-    // Muat data dari node 'riwayat_peminjaman' via Worker
+// Muat Data Riwayat Peminjaman dari node 'riwayat_peminjaman' via Worker
     window.muatRiwayatPeminjamanAdmin = async function() {
       const tbody = document.getElementById("tabel-riwayat-peminjaman-admin");
       if (!tbody) return;
@@ -2537,15 +2547,25 @@ window.simpanSemuaPeminjamanAdmin = async function() {
           return;
         }
 
-        tbody.innerHTML = listRiwayat.map(item => `
-          <tr style="border-bottom: 1px solid #f1f5f9;">
-            <td style="padding: 6px; font-weight: 600; color: #1e293b;">${escapeHTML(item.peminjam || '-')}</td>
-            <td style="padding: 6px; color: #334155;">${escapeHTML(item.barang || item.namaBarang || '-')}</td>
-            <td style="padding: 6px; text-align: center; font-weight: bold;">${escapeHTML(String(item.jumlah || 1))}</td>
-            <td style="padding: 6px; text-align: center; color: #64748b;">${escapeHTML(item.tgl || '-')}</td>
-            <td style="padding: 6px; text-align: center; color: #16a34a; font-weight: 600;">${escapeHTML(item.tglKembali || '-')}</td>
-          </tr>
-        `).join('');
+        tbody.innerHTML = listRiwayat.map(item => {
+          const catatan = (item.catatanKembali || 'Utuh').trim();
+          const isUtuh = catatan.toLowerCase() === 'utuh';
+          const warnaCatatan = isUtuh ? '#16a34a' : '#dc2626';
+          const ikonCatatan = isUtuh ? '✓' : '⚠️';
+
+          return `
+            <tr style="border-bottom: 1px solid #f1f5f9;">
+              <td style="padding: 6px; font-weight: 600; color: #1e293b;">${escapeHTML(item.peminjam || '-')}</td>
+              <td style="padding: 6px; color: #334155;">${escapeHTML(item.barang || item.namaBarang || '-')}</td>
+              <td style="padding: 6px; text-align: center; font-weight: bold;">${escapeHTML(String(item.jumlah || 1))}</td>
+              <td style="padding: 6px; text-align: center; color: #64748b; font-size: 11px;">${escapeHTML(item.tgl || '-')}</td>
+              <td style="padding: 6px; text-align: center; font-size: 11px;">
+                <div style="color: #16a34a; font-weight: 600;">${escapeHTML(item.tglKembali || '-')}</div>
+                <div style="color: ${warnaCatatan}; font-size: 10px; font-weight: 600; margin-top: 2px;">${ikonCatatan} ${escapeHTML(catatan)}</div>
+              </td>
+            </tr>
+          `;
+        }).join('');
 
       } catch (err) {
         if (err.message === "SESSION_EXPIRED") return;
