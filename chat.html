@@ -1829,6 +1829,30 @@ window.markPublicGroupAsRead = () => {
         evaluateStatus(true);
       };
     }
+
+    // 🌟 Tangkap sinyal buka/tutup modal dari halaman induk (index.html)
+window.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'CHAT_MODAL_STATUS') {
+    isChatVisible = Boolean(event.data.isOpen);
+
+    // 1. Langsung perbarui status presence (Online <-> Idle) tanpa jeda
+    if (typeof window.updatePresenceOnChatToggle === 'function') {
+      window.updatePresenceOnChatToggle();
+    }
+
+    // 2. Jika modal dibuka, tandai pesan di tab aktif sebagai terbaca
+    if (isChatVisible) {
+      if (activeChatType === 'private' && activePrivateUID) {
+        unreadCounts[activePrivateUID] = 0;
+        markRoomAsRead(activePrivateUID);
+        renderPrivateTabsUI();
+      } else if (activeChatType === 'public') {
+        updatePublicTabBadge(0);
+        markPublicGroupAsRead();
+      }
+    }
+  }
+});
  
     
     function requestNotificationPermission() {
