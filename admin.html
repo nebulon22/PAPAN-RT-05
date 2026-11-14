@@ -1630,6 +1630,20 @@ function initMap() {
   }).addTo(map);
 
   markerGroup.addTo(map);
+  // 👇 (Klik peta untuk menambah lokasi baru)
+  map.on('click', function(e) {
+    document.getElementById('dataForm').reset();
+    document.getElementById('formTitle').innerText = '📍 Tambah Data Baru';
+    document.getElementById('inputKategori').value = 'Rumah';
+    
+    if (typeof sesuaikanFormKategori === 'function') {
+      sesuaikanFormKategori();
+    }
+
+    document.getElementById('inputLat').value = e.latlng.lat.toFixed(6);
+    document.getElementById('inputLng').value = e.latlng.lng.toFixed(6);
+    document.getElementById('modal-form').style.display = 'flex';
+  });
 
   const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
 
@@ -5120,41 +5134,65 @@ window.hapusPengumumanAdmin = async function(idUnik) {
     // ==========================================
     // PENGELOLAAN PROGRAM KERJA & RAB (FIREBASE)
     // ==========================================
-    var dataProgkerGlobal = [];
+var dataProgkerGlobal = [];
 
-    function muatDataProgker() {
-      var tbody = document.getElementById('list-tabel-progker');
-      if (tbody) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
-      }
+async function muatDataProgker() {
+  var tbody = document.getElementById('list-tabel-progker');
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
+  }
 
-      const progkerRef = window.firebaseRef(window.db, 'progker_rab');
-      window.firebaseOnValue(progkerRef, (snapshot) => {
-        dataProgkerGlobal = [];
-        if (snapshot.exists()) {
-          snapshot.forEach((childSnap) => {
-            const item = childSnap.val();
-            if (item) {
-              dataProgkerGlobal.push({
-                id: item.id || childSnap.key,
-                kegiatan: item.Nama_Kegiatan || item.kegiatan || '',
-                divisi: item.Divisi || item.divisi || '',
-                anggaran: item.Anggaran !== undefined ? item.Anggaran : (item.anggaran || 0),
-                realisasi: item.Realisasi !== undefined ? item.Realisasi : (item.realisasi || 0),
-                status: item.Status || item.status || 'Perencanaan',
-                detail: item.Detail || item.detail || ''
-              });
-            }
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Sesi habis. Silakan login ulang.</td></tr>';
+    }
+    return;
+  }
+
+  try {
+   const response = await fetch(`${RT05_CONFIG.ADMIN_API_URL}?path=progker_rab`, {
+  method: "GET",
+  headers: {
+    "Authorization": `Bearer ${sessionToken}`,
+    "Content-Type": "application/json"
+  }
+});
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+
+    const resJson = await response.json();
+    // Menyesuaikan jika Worker mengembalikan { data: {...} } atau langsung objek node
+    const dataObj = resJson.data !== undefined ? resJson.data : resJson;
+
+    dataProgkerGlobal = [];
+    if (dataObj && typeof dataObj === 'object') {
+      Object.keys(dataObj).forEach((key) => {
+        const item = dataObj[key];
+        if (item && typeof item === 'object') {
+          dataProgkerGlobal.push({
+            id: item.id || key,
+            kegiatan: item.Nama_Kegiatan || item.kegiatan || '',
+            divisi: item.Divisi || item.divisi || '',
+            anggaran: item.Anggaran !== undefined ? item.Anggaran : (item.anggaran || 0),
+            realisasi: item.Realisasi !== undefined ? item.Realisasi : (item.realisasi || 0),
+            status: item.Status || item.status || 'Perencanaan',
+            detail: item.Detail || item.detail || ''
           });
-        }
-        renderTabelProgker(dataProgkerGlobal);
-      }, (error) => {
-        console.error("Gagal memuat progker dari Firebase:", error);
-        if (tbody) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data dari database.</td></tr>';
         }
       });
     }
+
+    renderTabelProgker(dataProgkerGlobal);
+  } catch (error) {
+    console.error("Gagal memuat progker dari Worker:", error);
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data dari server.</td></tr>';
+    }
+  }
+}
 
     function renderTabelProgker(list) {
       var tbody = document.getElementById('list-tabel-progker');
