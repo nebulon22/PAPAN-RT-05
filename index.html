@@ -1332,12 +1332,11 @@ function muatDataPetaWarga() {
     return;
   }
 
-  // 🌟 AMBIL TOKEN ADMIN JIKA ADA (Agar Admin bisa melihat seluruh rumah)
-  const adminToken = localStorage.getItem('rt05_admin_token') || localStorage.getItem('adminToken') || '';
-  const headers = { 'Content-Type': 'application/json' };
-  if (adminToken) {
-    headers['X-Admin-Token'] = adminToken;
-  }
+const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
+const headers = { 'Content-Type': 'application/json' };
+if (sessionToken) {
+  headers['Authorization'] = `Bearer ${sessionToken}`;
+}
 
   // 1. Ambil data melalui Cloudflare Worker proxy secara aman dengan Header Admin
   fetch(endpointPeta, { method: 'GET', headers: headers })
@@ -1462,6 +1461,7 @@ var namaTersensor = namaTempat !== ''
               noRumah: noRumah.toLowerCase(),
               kepalaKeluarga: kepalaKeluarga.toLowerCase(),
               anggota: textAnggota.toLowerCase(),
+              searchHashes: Array.isArray(kolom.searchHashes) ? kolom.searchHashes : [], // <-- Tambahkan baris ini
               marker: marker, 
               lat: item.lat, 
               lng: item.lng,
@@ -1509,6 +1509,97 @@ var namaTersensor = namaTempat !== ''
       tampilkanToast("Data peta gagal dimuat dari server", "error");
     });
 }
+
+async function hashKataKunciBrowser(teks) {
+  if (!teks || !window.crypto || !window.crypto.subtle) return "";
+  const encoder = new TextEncoder();
+  const data = encoder.encode(teks.toLowerCase().trim());
+  const hashBuffer = await crypto.subtle.digest("SHA-256", data);
+  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(b => b.toString(16).padStart(2, "0")).join("").slice(0, 16);
+}
+
+window.jalankanPencarianPeta = async function(e) {
+  if (e && typeof e.preventDefault === 'function') e.preventDefault();
+  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
+
+  var inputEl = document.getElementById('searchInput');
+  var kataKunci = String(inputEl ? inputEl.value : '').toLowerCase().trim();
+  
+  if (!kataKunci) {
+    if (e && (e.type === 'click' || e.type === 'submit')) {
+      tampilkanToast("Masukkan kata kunci!", "warning");
+    }
+    return;
+  }
+
+  const targetDaftar = window.daftarPin || (typeof daftarPin !== 'undefined' ? daftarPin : []);
+
+  if (!targetDaftar || targetDaftar.length === 0) {
+    tampilkanToast("Data peta belum sepenuhnya dimuat, mohon tunggu sebentar...", "warning");
+    return;
+  }
+
+  var keywordBersih = kataKunci.replace(/^0+/, '');
+  var isPureAngka = /^\d+$/.test(kataKunci);
+
+  // Buat hash dari setiap kata yang diketik warga di kotak pencarian
+  const kataPencarian = kataKunci.replace(/[^a-z0-9\s]/g, " ").split(/\s+/).filter(k => k.length >= 3);
+  const hashDicari = await Promise.all(kataPencarian.map(k => hashKataKunciBrowser(k)));
+
+  var hasil = targetDaftar.find(pin => {
+    var noRumahAsli = String(pin.noRumah || '').toLowerCase().trim();
+    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
+    
+    if (isPureAngka) {
+      return noRumahTanpaNol === keywordBersih || noRumahAsli === kataKunci;
+    }
+
+    var teksNama = String(pin.nama || '').toLowerCase();
+    var namaRaw = String(pin.namaRaw || '').toLowerCase();
+    var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
+    var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
+    var kategori = String(pin.kategori || '').toLowerCase();
+    
+    // Cek kecocokan teks biasa (untuk Fasum/Tempat/Admin) ATAU kecocokan SHA-256 Hash (untuk warga biasa)
+    var cocokTeks = teksNama.includes(kataKunci) || 
+                    namaRaw.includes(kataKunci) ||
+                    kepalaKeluarga.includes(kataKunci) || 
+                    anggotaKeluarga.includes(kataKunci) ||
+                    kategori.includes(kataKunci);
+
+    var cocokHash = false;
+    if (hashDicari.length > 0 && Array.isArray(pin.searchHashes) && pin.searchHashes.length > 0) {
+      cocokHash = hashDicari.every(h => pin.searchHashes.includes(h));
+    }
+
+    return cocokTeks || cocokHash;
+  });
+
+  if (hasil) {
+    if (window.pinRumahAktif && map.hasLayer(window.pinRumahAktif)) {  
+      map.removeLayer(window.pinRumahAktif);  
+      window.pinRumahAktif = null;  
+    }
+
+    if (!map.hasLayer(hasil.marker)) {
+      hasil.marker.addTo(map);
+      window.pinRumahAktif = hasil.marker;
+    }
+
+    var pointM = map.project([hasil.lat, hasil.lng], 19);
+    var pointC = L.point(pointM.x, pointM.y - 200);
+    map.flyTo(map.unproject(pointC, 19), 19);
+
+    map.once('moveend', function() {
+      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
+      hasil.marker.openPopup();
+    });
+
+  } else {
+    tampilkanToast("Data \"" + kataKunci + "\" tidak ditemukan.", "error");
+  }
+};
   
 // 🌟 Fungsi helper sensor nama depan warga (dengan pengecualian tempat umum/pengurus)
 function sensorNamaDepan(namaAsli, kategori) {
