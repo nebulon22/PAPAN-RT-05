@@ -3888,6 +3888,18 @@ async function prosesUploadR2Universal(jenisTarget = 'warga') {
     return;
   }
 
+  // 📴 CEK KONEKSI OFFLINE DI AWAL
+  if (!navigator.onLine) {
+    const msg = "❌ Tidak dapat mengunggah file saat offline. Harap sambungkan internet terlebih dahulu.";
+    if (isSemiManual) {
+      statusEl.innerHTML = msg;
+    } else {
+      statusEl.innerText = msg;
+    }
+    statusEl.style.color = "#dc2626";
+    return;
+  }
+
   // Ambil session token dari sessionStorage
   const sessionToken = sessionStorage.getItem('rt05_session_token');
   if (!sessionToken) {
