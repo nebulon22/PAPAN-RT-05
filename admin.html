@@ -655,7 +655,42 @@
           💾 Simpan Perubahan Stok
         </button>
       </form>
+<!-- Tombol & Panel Riwayat Peminjaman (Diletakkan persis di bawah </form>) -->
+      <div style="margin-bottom: 12px;">
+        <button type="button" id="btn-toggle-riwayat-pinjam" onclick="toggleRiwayatPeminjamanAdmin()" style="width: 100%; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 7px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
+          <span>📜 Riwayat Peminjaman (Sudah Dikembalikan)</span>
+          <span id="icon-toggle-riwayat">▼</span>
+        </button>
 
+        <div id="panel-riwayat-peminjaman" style="display: none; margin-top: 6px; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; padding: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+            <span style="font-size: 11px; color: #64748b;">Arsip barang yang telah dikembalikan:</span>
+            <button type="button" onclick="muatRiwayatPeminjamanAdmin()" style="background: #e2e8f0; border: none; border-radius: 4px; padding: 3px 8px; font-size: 10.5px; cursor: pointer; color: #1e293b; font-weight: 600;">
+              🔄 Refresh
+            </button>
+          </div>
+
+          <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 4px;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
+              <thead style="background: #f8fafc; position: sticky; top: 0; border-bottom: 1px solid #e2e8f0; color: #475569;">
+                <tr>
+                  <th style="padding: 6px; text-align: left;">Peminjam</th>
+                  <th style="padding: 6px; text-align: left;">Barang</th>
+                  <th style="padding: 6px; text-align: center;">Jml</th>
+                  <th style="padding: 6px; text-align: center;">Pinjam</th>
+                  <th style="padding: 6px; text-align: center;">Kembali</th>
+                </tr>
+              </thead>
+              <tbody id="tabel-riwayat-peminjaman-admin">
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 12px; color: #94a3b8;">Klik tombol di atas untuk memuat riwayat.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
 <!-- 🌟 FORM PEMINJAMAN DENGAN SISTEM KERANJANG (MULTI-ITEM) -->
       <div id="formPinjamBarang" style="background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
         
@@ -2418,6 +2453,64 @@ window.simpanSemuaPeminjamanAdmin = async function() {
         }
       } finally {
         if (btn) { btn.innerText = "💾 Simpan Semua Peminjaman Sekaligus"; btn.disabled = false; }
+      }
+    };
+
+// Toggle buka/tutup panel riwayat peminjaman
+    window.toggleRiwayatPeminjamanAdmin = function() {
+      const panel = document.getElementById("panel-riwayat-peminjaman");
+      const icon = document.getElementById("icon-toggle-riwayat");
+      if (!panel) return;
+
+      const sedangTutup = panel.style.display === "none";
+      panel.style.display = sedangTutup ? "block" : "none";
+      if (icon) icon.innerText = sedangTutup ? "▲" : "▼";
+
+      // Muat data otomatis saat panel dibuka
+      if (sedangTutup) {
+        muatRiwayatPeminjamanAdmin();
+      }
+    };
+
+    // Muat data dari node 'riwayat_peminjaman' via Worker
+    window.muatRiwayatPeminjamanAdmin = async function() {
+      const tbody = document.getElementById("tabel-riwayat-peminjaman-admin");
+      if (!tbody) return;
+
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px; color:#64748b;">⏳ Memuat riwayat...</td></tr>`;
+
+      try {
+        const dataRiwayat = await requestWorkerInventaris('riwayat_peminjaman', 'GET');
+
+        if (!dataRiwayat || typeof dataRiwayat !== 'object') {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada riwayat pengembalian barang.</td></tr>`;
+          return;
+        }
+
+        const listRiwayat = Object.keys(dataRiwayat)
+          .map(key => ({ id: key, ...dataRiwayat[key] }))
+          .filter(item => item && (item.peminjam || item.barang || item.namaBarang))
+          .sort((a, b) => (b.returnedAt || b.timestamp || 0) - (a.returnedAt || a.timestamp || 0));
+
+        if (listRiwayat.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada riwayat pengembalian barang.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = listRiwayat.map(item => `
+          <tr style="border-bottom: 1px solid #f1f5f9;">
+            <td style="padding: 6px; font-weight: 600; color: #1e293b;">${escapeHTML(item.peminjam || '-')}</td>
+            <td style="padding: 6px; color: #334155;">${escapeHTML(item.barang || item.namaBarang || '-')}</td>
+            <td style="padding: 6px; text-align: center; font-weight: bold;">${escapeHTML(String(item.jumlah || 1))}</td>
+            <td style="padding: 6px; text-align: center; color: #64748b;">${escapeHTML(item.tgl || '-')}</td>
+            <td style="padding: 6px; text-align: center; color: #16a34a; font-weight: 600;">${escapeHTML(item.tglKembali || '-')}</td>
+          </tr>
+        `).join('');
+
+      } catch (err) {
+        if (err.message === "SESSION_EXPIRED") return;
+        console.error("Gagal memuat riwayat peminjaman:", err);
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:12px; color:#dc2626;">Gagal memuat riwayat: ${escapeHTML(err.message)}</td></tr>`;
       }
     };
 
