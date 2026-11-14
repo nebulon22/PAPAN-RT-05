@@ -2933,22 +2933,35 @@ async function simpanPerubahanWarga(event) {
       ? (fileBaruDipilih.name.split('.').pop() || 'jpg')
       : 'jpg';
 
+    // 1. Upload file baru dengan fallback hapus lampiran foto saat offline
     const hasilUpload = await tanganiUploadR2DenganOpsiOffline({
       file: (typeof fileBaruDipilih !== 'undefined') ? fileBaruDipilih : null,
       namaFileKustom: `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`,
       sessionToken,
       statusEl: document.getElementById('statusSemiManual'),
-      fallbackUrl: urlLama, // Pertahankan foto lama jika ada, atau kosong jika baru
+      fallbackUrl: urlLama, // Jika foto baru dihapus saat offline, pertahankan URL foto lama (atau kosong jika belum ada)
       onHapusFoto: () => {
         fileBaruDipilih = null;
         const inputEl = document.getElementById('inputUploadSemiManual');
         if (inputEl) inputEl.value = '';
+
+        const preview = document.getElementById('previewFotoRumah');
+        if (preview) {
+          if (urlLama) {
+            preview.src = urlLama;
+            preview.style.display = 'inline-block';
+          } else {
+            preview.src = '';
+            preview.style.display = 'none';
+          }
+        }
       }
     });
 
     if (!hasilUpload.lanjut) return;
     const finalUrlFoto = hasilUpload.url;
 
+    // 2. Susun payload sesuai kategori
     const kategoriInput = document.getElementById('editWargaKategori').value;
     const isRumah = kategoriInput.toLowerCase().includes('rumah');
     const noRumahInput = document.getElementById('editWargaNoRumah')
@@ -2987,6 +3000,7 @@ async function simpanPerubahanWarga(event) {
       dataUpdate.anggotaKeluarga = '';
     }
 
+    // 3. Kirim PATCH via kirimDataViaAdminWorker (otomatis masuk antrean_admin jika offline)
     btnSimpan.innerText = '⏳ Menyimpan ke Database...';
     const statusKirim = await kirimDataViaAdminWorker(`peta_warga/${idWarga}`, dataUpdate, 'PATCH');
     if (!statusKirim) return;
@@ -2994,15 +3008,19 @@ async function simpanPerubahanWarga(event) {
     if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
     tutupModalEditWarga();
 
+    // 4. Jika terkirim online, langsung refresh data & peta
     if (statusKirim === true) {
       alert('✅ Perubahan data lokasi berhasil disimpan!');
-      if (typeof muatSemuaDataAdmin === 'function') await muatSemuaDataAdmin();
+      if (typeof muatSemuaDataAdmin === 'function') {
+        await muatSemuaDataAdmin();
+      }
       if (map) {
         map.remove();
         map = null;
         initMap();
       }
     }
+
   } catch (error) {
     console.error(error);
     alert('❌ Terjadi kesalahan: ' + error.message);
