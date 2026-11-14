@@ -2126,23 +2126,37 @@ let cachePerkakas = [];
       }
     }
 
-    function renderTabelDanDropdown(perkakas, peminjaman) {
+function renderTabelDanDropdown(perkakas, peminjaman) {
       const container = document.getElementById("tabel-peminjaman-admin");
       const selectBarang = document.getElementById("pinjamPilihBarang");
       const selectBarangStok = document.getElementById("stokPilihBarang");
 
+      // 1. Hitung jumlah barang yang sedang berstatus "dipinjam"
+      const pinjamanAktif = peminjaman.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
+      const rekapDipinjam = {};
+      pinjamanAktif.forEach(row => {
+        const nama = String(row[2] || '').trim().toLowerCase();
+        const jml = parseInt(row[3], 10) || 0;
+        if (nama) rekapDipinjam[nama] = (rekapDipinjam[nama] || 0) + jml;
+      });
+
+      // 2. Simpan sisaStok ke masing-masing item di cachePerkakas
+      (perkakas || []).forEach(item => {
+        const dipinjam = rekapDipinjam[item.nama.toLowerCase()] || 0;
+        item.dipinjam = dipinjam;
+        item.sisa = Math.max(0, item.total - dipinjam);
+      });
+
       if (selectBarang) {
         selectBarang.innerHTML = `<option value="">-- Pilih Barang --</option>` + 
-          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa: ${item.total})</option>`).join('');
+          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa: ${item.sisa} / Total: ${item.total})</option>`).join('');
       }
 
       if (selectBarangStok) {
         selectBarangStok.innerHTML = `<option value="">-- Pilih Barang Terdaftar --</option>` +
           `<option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>` +
-          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Sisa Stok: ${item.total})</option>`).join('');
+          (perkakas || []).map(item => `<option value="${escapeHTML(item.nama)}">${escapeHTML(item.nama)} (Total Aset: ${item.total} | Sisa: ${item.sisa})</option>`).join('');
       }
-      
-      const pinjamanAktif = peminjaman.filter(row => String(row[5] || '').trim().toLowerCase() === "dipinjam");
 
       if (pinjamanAktif.length === 0) {
         container.innerHTML = `<tr><td colspan="4" style="text-align:center; padding:12px; color:#888;">Tidak ada barang yang sedang dipinjam.</td></tr>`;
@@ -2250,7 +2264,7 @@ let cachePerkakas = [];
       }
     }
 
-    // 3. Proses Pengembalian Perkakas & Kembalikan Stok Otomatis via Worker
+// 3. Proses Pengembalian Perkakas & Arsipkan ke Riwayat via Worker
     async function prosesPengembalian(id) {
       if (!confirm("Apakah barang ini sudah dikembalikan?")) return;
 
@@ -2263,9 +2277,6 @@ let cachePerkakas = [];
           return;
         }
 
-        const namaBarangKembali = String(dataPinjam.barang || dataPinjam.namaBarang || '').trim();
-        const jumlahKembali = parseInt(dataPinjam.jumlah || 1, 10);
-
         // 2. Tambahkan informasi pengembalian & arsipkan ke 'riwayat_peminjaman'
         dataPinjam.status = "Dikembalikan";
         dataPinjam.tglKembali = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
@@ -2273,28 +2284,10 @@ let cachePerkakas = [];
 
         await requestWorkerInventaris(`riwayat_peminjaman/${id}`, 'PUT', dataPinjam);
 
-        // 3. Kembalikan jumlah stok barang di node 'inventaris'
-        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
-        if (dataInv && typeof dataInv === 'object' && namaBarangKembali) {
-          const keyBarang = Object.keys(dataInv).find(k => {
-            const item = dataInv[k];
-            const namaDb = String(item?.namaBarang || item?.nama || '').trim();
-            return namaDb.toLowerCase() === namaBarangKembali.toLowerCase();
-          });
-
-          if (keyBarang && dataInv[keyBarang]) {
-            const stokSaatIni = parseInt(dataInv[keyBarang].totalStok !== undefined ? dataInv[keyBarang].totalStok : (dataInv[keyBarang].total || 0), 10);
-            await requestWorkerInventaris(`inventaris/${keyBarang}`, 'PATCH', {
-              totalStok: stokSaatIni + jumlahKembali,
-              updatedAt: Date.now()
-            });
-          }
-        }
-
-        // 4. Hapus dari daftar peminjaman aktif
+        // 3. Hapus dari daftar peminjaman aktif (sisa stok otomatis bertambah karena dihitung dinamis)
         await requestWorkerInventaris(`peminjaman/${id}`, 'DELETE');
 
-        alert("✅ Barang dikembalikan, stok otomatis bertambah, dan masuk ke riwayat arsip!");
+        alert("✅ Barang dikembalikan dan masuk ke riwayat arsip!");
         await muatPeminjamanAdmin();
 
       } catch (err) {
@@ -2334,8 +2327,8 @@ let cachePerkakas = [];
         .filter(k => k.namaBarang.toLowerCase() === namaBarang.toLowerCase())
         .reduce((sum, k) => sum + k.jumlah, 0);
 
-      if (barangCache && (jumlah + sudahDiKeranjang) > barangCache.total) {
-        alert(`⚠️ Stok "${namaBarang}" tidak mencukupi! Sisa tersedia: ${barangCache.total} unit.`);
+      if (barangCache && (jumlah + sudahDiKeranjang) > barangCache.sisa) {
+        alert(`⚠️ Stok "${namaBarang}" tidak mencukupi! Sisa tersedia: ${barangCache.sisa} unit.`);
         return;
       }
 
@@ -2374,7 +2367,7 @@ let cachePerkakas = [];
     }
 
     // 4. Simpan Semua Peminjaman & Kurangi Stok Otomatis via Worker
-    window.simpanSemuaPeminjamanAdmin = async function() {
+window.simpanSemuaPeminjamanAdmin = async function() {
       const peminjam = document.getElementById('pinjamNamaWarga').value.trim();
 
       if (!peminjam) {
@@ -2393,13 +2386,10 @@ let cachePerkakas = [];
       const hariIni = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
 
       try {
-        // Ambil stok inventaris terbaru dari Worker sebelum mengurangi
-        const dataInv = await requestWorkerInventaris('inventaris', 'GET');
-
         for (let item of keranjangPinjam) {
           const pinjamId = "pinjam_" + Date.now() + "_" + Math.floor(Math.random() * 1000);
 
-          // 1. Catat peminjaman ke node 'peminjaman' via Worker
+          // Catat peminjaman ke node 'peminjaman' via Worker (totalStok aset tidak diubah)
           await requestWorkerInventaris(`peminjaman/${pinjamId}`, 'PUT', {
             id: pinjamId,
             peminjam: peminjam,
@@ -2410,29 +2400,9 @@ let cachePerkakas = [];
             status: "Dipinjam",
             timestamp: Date.now()
           });
-
-          // 2. Kurangi stok pada node 'inventaris' via Worker
-          if (dataInv && typeof dataInv === 'object') {
-            const keyBarang = Object.keys(dataInv).find(k => {
-              const invItem = dataInv[k];
-              const namaDb = String(invItem?.namaBarang || invItem?.nama || '').trim();
-              return namaDb.toLowerCase() === item.namaBarang.toLowerCase();
-            });
-
-            if (keyBarang && dataInv[keyBarang]) {
-              const stokLama = parseInt(dataInv[keyBarang].totalStok !== undefined ? dataInv[keyBarang].totalStok : (dataInv[keyBarang].total || 0), 10);
-              const stokBaru = Math.max(0, stokLama - item.jumlah);
-              dataInv[keyBarang].totalStok = stokBaru; // Update di memori lokal juga jika ada item kembar di keranjang
-
-              await requestWorkerInventaris(`inventaris/${keyBarang}`, 'PATCH', {
-                totalStok: stokBaru,
-                updatedAt: Date.now()
-              });
-            }
-          }
         }
 
-        alert("✅ Semua peminjaman berhasil dicatat & stok diperbarui!");
+        alert("✅ Semua peminjaman berhasil dicatat!");
         
         keranjangPinjam = [];
         document.getElementById('pinjamNamaWarga').value = '';
