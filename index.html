@@ -1332,12 +1332,11 @@ function muatDataPetaWarga() {
     return;
   }
 
-  // 🌟 AMBIL TOKEN ADMIN JIKA ADA (Agar Admin bisa melihat seluruh rumah)
-  const adminToken = localStorage.getItem('rt05_admin_token') || localStorage.getItem('adminToken') || '';
-  const headers = { 'Content-Type': 'application/json' };
-  if (adminToken) {
-    headers['X-Admin-Token'] = adminToken;
-  }
+const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
+const headers = { 'Content-Type': 'application/json' };
+if (sessionToken) {
+  headers['Authorization'] = `Bearer ${sessionToken}`;
+}
 
   // 1. Ambil data melalui Cloudflare Worker proxy secara aman dengan Header Admin
   fetch(endpointPeta, { method: 'GET', headers: headers })
