@@ -808,7 +808,7 @@ function formatWaktuPesan(timestamp) {
       }
     };
 
-    // === LOGIN DENGAN FIREBASE AUTH ===
+// === LOGIN DENGAN FIREBASE AUTH ===
     window.handleLogin = async (e) => {
       e.preventDefault();
       const inputVal = document.getElementById('login-user-input').value.trim();
@@ -822,29 +822,22 @@ function formatWaktuPesan(timestamp) {
       }
 
       try {
-        const userRef = ref(db, `users/${uid}`);
-        const snap = await get(userRef);
-        
+        // 1. Verifikasi PIN langsung ke server Firebase Auth (aman tanpa baca node pin)
+        const pseudoEmail = (window.loginEmailMap && window.loginEmailMap[uid]) 
+          ? window.loginEmailMap[uid] 
+          : `${uid.toLowerCase()}@rt05kayen.internal`;
+        const securePassword = inputPin + "RT05Key";
+
+        await signInWithEmailAndPassword(auth, pseudoEmail, securePassword);
+
+        // 2. Setelah Auth berhasil, ambil profil publik user dari database
+        const snap = await get(ref(db, `users/${uid}`));
         if (!snap.exists()) {
           alert("❌ Data akun tidak ditemukan!");
           return;
         }
 
         const val = snap.val();
-
-        if (String(val.pin) !== String(inputPin)) {
-          alert("❌ PIN Rahasia Salah!");
-          return;
-        }
-
-        const pseudoEmail = val.authEmail || `${uid.toLowerCase()}@rt05kayen.internal`;
-        const securePassword = inputPin + "RT05Key";
-
-        try {
-          await signInWithEmailAndPassword(auth, pseudoEmail, securePassword);
-        } catch (authErr) {
-          console.log("Auth login fallback / error:", authErr);
-        }
 
         currentUser = {
           uid: val.uid,
@@ -855,12 +848,16 @@ function formatWaktuPesan(timestamp) {
           status: val.status
         };
         window.currentUser = currentUser;
-        
+
         localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
         checkUserStatus();
       } catch (err) {
         console.error("Gagal masuk:", err);
-        alert("❌ Terjadi kesalahan saat masuk. Periksa kembali data Anda.");
+        if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+          alert("❌ PIN Rahasia Salah!");
+        } else {
+          alert("❌ Terjadi kesalahan saat masuk: " + err.message);
+        }
       }
     };
 
@@ -2170,13 +2167,14 @@ async function checkUserStatus() {
       }
     };
 
-   let allRegisteredUsers = [];
+let allRegisteredUsers = [];
 
     function loadLoginUserOptions() {
       const usersRef = ref(db, 'users');
       get(usersRef).then((snapshot) => {
         allRegisteredUsers = [];
         window.loginUserMap = {};
+        window.loginEmailMap = {}; // Simpan pseudoEmail masing-masing user untuk Firebase Auth
 
         if (snapshot.exists()) {
           snapshot.forEach((childSnap) => {
@@ -2184,6 +2182,7 @@ async function checkUserStatus() {
             if (u.status === 'aktif') {
               const displayString = `${u.nama} (${u.hunian})`;
               window.loginUserMap[displayString] = u.uid;
+              window.loginEmailMap[u.uid] = u.authEmail || `${u.uid.toLowerCase()}@rt05kayen.internal`;
               allRegisteredUsers.push(displayString);
             }
           });
