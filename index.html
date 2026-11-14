@@ -1433,7 +1433,8 @@ if (sessionToken) {
 
 // Jika namaTempat diisi (Kost/Warung/Fasum), tampilkan utuh tanpa sensor.
 // Jika rumah warga biasa, gunakan fungsi sensorNamaDepan (otomatis mengecualikan Pak RT/RW).
-var namaTersensor = namaTempat !== '' 
+var isBukanRumah = namaTempat !== '' && kategoriManual !== '' && !kategoriManual.includes('rumah');
+var namaTersensor = isBukanRumah 
   ? namaTampilAsli 
   : sensorNamaDepan(namaTampilAsli, kategoriManual);
 
@@ -1731,88 +1732,6 @@ window.addEventListener('pageshow', function(event) {
   }
 });
   
-// ==========================================
-// 2. FUNGSI PENCARIAN DI SEARCH BOX (GLOBAL)
-// ==========================================
-window.jalankanPencarianPeta = function(e) {
-  // Stop propagasi agar event tidak memicu listener lain
-  if (e && typeof e.preventDefault === 'function') e.preventDefault();
-  if (e && typeof e.stopPropagation === 'function') e.stopPropagation();
-
-  var inputEl = document.getElementById('searchInput');
-  var kataKunci = String(inputEl ? inputEl.value : '').toLowerCase().trim();
-  
-  // 🌟 JIKA DIPANGGIL SECARA OTOMATIS SAAT AWAL LOAD DENGAN INPUT KOSONG -> SILENT RETURN
-  // TAPI JIKA ENGAN DISENGADJA DIKLIK WARGA (Event 'click') DENGAN INPUT KOSONG -> TAMPILKAN TOAST
-  if (!kataKunci) {
-    if (e && (e.type === 'click' || e.type === 'submit')) {
-      tampilkanToast("Masukkan kata kunci!", "warning");
-    }
-    return;
-  }
-
-  // Gunakan data pin dari Window Global
-  const targetDaftar = window.daftarPin || (typeof daftarPin !== 'undefined' ? daftarPin : []);
-
-  if (!targetDaftar || targetDaftar.length === 0) {
-    tampilkanToast("Data peta belum sepenuhnya dimuat, mohon tunggu sebentar...", "warning");
-    return;
-  }
-
-  var keywordBersih = kataKunci.replace(/^0+/, '');
-  var isPureAngka = /^\d+$/.test(kataKunci);
-
-  // Cari pin lokasi yang cocok (by nama, no rumah, kepala keluarga, anggota, atau kategori)
-  var hasil = targetDaftar.find(pin => {
-    var noRumahAsli = String(pin.noRumah || '').toLowerCase().trim();
-    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
-    
-    if (isPureAngka) {
-      return noRumahTanpaNol === keywordBersih || noRumahAsli === kataKunci;
-    }
-
-    var teksNama = String(pin.nama || '').toLowerCase();
-    var namaRaw = String(pin.namaRaw || '').toLowerCase();
-    var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
-    var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
-    var kategori = String(pin.kategori || '').toLowerCase();
-    
-    return teksNama.includes(kataKunci) || 
-           namaRaw.includes(kataKunci) ||
-           kepalaKeluarga.includes(kataKunci) || 
-           anggotaKeluarga.includes(kataKunci) ||
-           kategori.includes(kataKunci);
-  });
-
-  if (hasil) {
-    // Bersihkan marker highlight aktif sebelumnya jika ada
-    if (window.pinRumahAktif && map.hasLayer(window.pinRumahAktif)) {  
-      map.removeLayer(window.pinRumahAktif);  
-      window.pinRumahAktif = null;  
-    }
-
-    // Tampilkan marker hasil pencarian jika belum ada di map
-    if (!map.hasLayer(hasil.marker)) {
-      hasil.marker.addTo(map);
-      window.pinRumahAktif = hasil.marker;
-    }
-
-    // Arahkan kamera peta melayang (flyTo) dengan offset posisi popup 200px
-    var pointM = map.project([hasil.lat, hasil.lng], 19);
-    var pointC = L.point(pointM.x, pointM.y - 200);
-    map.flyTo(map.unproject(pointC, 19), 19);
-
-    map.once('moveend', function() {
-      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-      hasil.marker.openPopup();
-    });
-
-  } else {
-    tampilkanToast("Data \"" + kataKunci + "\" tidak ditemukan.", "error");
-  }
-};
-  
- 
   window.bukaModalSetting = function() {
   var modal = document.getElementById('modal-setting');
   if (modal) modal.style.display = 'flex';
@@ -1937,48 +1856,6 @@ function filterKategori(kat, btnElement) {
     }
   });
 }
-
-
-window.bukaFotoBesar = function(urlFoto, event) {
-  if (event && typeof event.stopPropagation === 'function') {
-    event.stopPropagation();
-  }
-  
-  // Cari atau buat elemen modal penampil foto besar secara dinamis
-  let modalFoto = document.getElementById('modal-foto-besar');
-  if (!modalFoto) {
-    modalFoto = document.createElement('div');
-    modalFoto.id = 'modal-foto-besar';
-    modalFoto.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:999999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box;';
-    modalFoto.innerHTML = `
-      <div style="position:relative; max-width:90%; max-height:90%;">
-        <button onclick="window.tutupFotoBesar()" style="position:absolute; top:-40px; right:0; background:#ef4444; color:#fff; border:none; border-radius:50%; width:32px; height:32px; font-size:16px; cursor:pointer; font-weight:bold;">✕</button>
-        <img id="img-tampil-besar" src="" style="max-width:100%; max-height:85vh; border-radius:8px; object-fit:contain; display:block; margin:0 auto;" />
-      </div>
-    `;
-    // Tutup saat area luar gambar diklik
-    modalFoto.onclick = function(e) {
-      if (e.target.id === 'modal-foto-besar') {
-        window.tutupFotoBesar();
-      }
-    };
-    document.body.appendChild(modalFoto);
-  }
-
-  const imgElem = document.getElementById('img-tampil-besar');
-  if (imgElem) {
-    imgElem.src = urlFoto;
-  }
-  modalFoto.style.display = 'flex';
-};
-
-window.tutupFotoBesar = function() {
-  const modalFoto = document.getElementById('modal-foto-besar');
-  if (modalFoto) {
-    modalFoto.style.display = 'none';
-  }
-};
-
 
 window.muatDataKeuangan = function() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
@@ -2366,16 +2243,7 @@ window.tutupModalKeuanganLuar = function(e) {
   }
 };
 
-window.bukaModalInventaris = function() {
-  const modal = document.getElementById('modal-inventaris');
-  if (modal) modal.style.display = 'flex';
-};
 
-// 🌟 Fungsi Tutup Modal Inventaris
-window.tutupModalInventaris = function() {
-  const modal = document.getElementById('modal-inventaris');
-  if (modal) modal.style.display = 'none';
-};
 
 window.tutupModalInventarisLuar = function(e) {
   if (e && e.target && e.target.id === 'modal-inventaris') {

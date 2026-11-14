@@ -469,6 +469,9 @@ onAuthStateChanged(auth, (user) => {
     });
   } else {
     console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
+    // 🌟 Kirim sinyal ke index.html bahwa Firebase Auth & DB sudah siap
+    window.dispatchEvent(new Event('firebaseSiapIndex'));
+
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', inisialisasiListenerUsersAdmin);
     } else {
