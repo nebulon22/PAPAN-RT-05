@@ -2011,19 +2011,22 @@ function tutupModalIframeQR() {
   document.getElementById('modal-iframe-qr').style.display = 'none';
 }
     
-   function bukaModalPinjamAdmin() {
+function bukaModalPinjamAdmin() {
       if (typeof muatPeminjamanAdmin === 'function') {
         muatPeminjamanAdmin();
       }
-      
+
+      // Pastikan form stok & form pinjam kembali ke display default-nya
       const formStok = document.getElementById('formStokBarang');
-      if (formStok) formStok.style.display = 'none';
+      if (formStok) formStok.style.display = 'block';
 
       const formPinjam = document.getElementById('formPinjamBarang');
-      if (formPinjam) formPinjam.style.display = 'grid';
+      if (formPinjam) formPinjam.style.display = 'block';
 
-      const btnToggle = document.getElementById('btnToggleStok');
-      if (btnToggle) btnToggle.innerText = '➕/✏️ Tambah & Edit Stok Barang';
+      // Selalu buka di tab utama (Form Pinjam & Daftar Belum Dikembalikan)
+      if (typeof pilihTabInventarisAdmin === 'function') {
+        pilihTabInventarisAdmin('pinjam');
+      }
 
       const modal = document.getElementById("modal-admin-inventaris");
       if (modal) modal.style.display = "flex";
@@ -2324,7 +2327,7 @@ function renderTabelDanDropdown(perkakas, peminjaman) {
         document.getElementById('stokNamaBarangBaru').style.display = 'none';
         document.getElementById('stokJumlahTotal').value = '';
         
-        if (typeof toggleFormStok === 'function') toggleFormStok();
+        if (typeof pilihTabInventarisAdmin === 'function') pilihTabInventarisAdmin('pinjam');
         if (typeof muatPeminjamanAdmin === 'function') await muatPeminjamanAdmin();
 
       } catch (err) {
