@@ -609,90 +609,34 @@
 <div id="modal-admin-inventaris" class="modal-bg" style="display: none; z-index: 3000; align-items: center; justify-content: center; padding: 10px 0;" onclick="if(event.target.id==='modal-admin-inventaris') tutupModalPinjamAdmin()">
   <div class="modal-content" style="max-width: 580px; width: 95%; height: 94vh; max-height: 94vh; overflow-y: auto; display: flex; flex-direction: column; box-sizing: border-box; padding: 14px;">
       
-      <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
-        <h3 style="margin: 0; font-size: 15px; color: #111;">📦 Kelola Peminjaman Perkakas</h3>
-        <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
-      </div>
+    <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; flex-shrink: 0;">
+      <h3 style="margin: 0; font-size: 15px; color: #111;">📦 Kelola Peminjaman Perkakas</h3>
+      <span onclick="tutupModalPinjamAdmin()" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
+    </div>
 
-      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-        <span style="font-size: 12px; font-weight: bold; color: #374151;">📋 Kelola Inventaris:</span>
-        <button type="button" id="btnToggleStok" onclick="toggleFormStok()" style="background: #2563eb; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+    <!-- BARIS TOMBOL ATAS (Sesuai desain asli + tombol Riwayat di sebelahnya) -->
+    <div style="display: flex; justify-content: space-between; align-items: center; gap: 6px; margin-bottom: 8px; flex-shrink: 0; flex-wrap: wrap;">
+      <span style="font-size: 12px; font-weight: bold; color: #374151;">📋 Kelola Inventaris:</span>
+      <div style="display: flex; gap: 6px;">
+        <button type="button" id="tab-btn-pinjam" onclick="pilihTabInventarisAdmin('pinjam')" style="display: none; background: #475569; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+          ⬅️ Form Pinjam
+        </button>
+        <button type="button" id="btnToggleStok" onclick="pilihTabInventarisAdmin('stok')" style="background: #2563eb; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
           ➕/✏️ Tambah & Edit Stok Barang
         </button>
-      </div>
-
-      <form id="formStokBarang" style="display: none; background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
-        <div style="font-weight: bold; font-size: 11.5px; color: #1e40af; margin-bottom: 8px;">
-          📦 Master Data & Stok Barang
-        </div>
-
-        <div style="margin-bottom: 8px;">
-          <label for="stokPilihBarang" style="font-size: 11px; font-weight: bold; color: #374151;">Pilih / Nama Barang:</label>
-          <select id="stokPilihBarang" onchange="cekPilihBarangStok(this)" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px; margin-bottom: 4px;">
-            <option value="">-- Pilih Barang Terdaftar --</option>
-            <option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>
-          </select>
-
-          <input type="text" id="stokNamaBarangBaru" aria-label="Nama Barang Baru" placeholder="Masukkan nama barang baru..." style="display: none; width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-        </div>
-
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
-          <div>
-            <label for="stokJenisAksi" style="font-size: 11px; font-weight: bold; color: #374151;">Aksi Stok:</label>
-            <select id="stokJenisAksi" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-              <option value="tambah">➕ Tambah (Beli Baru)</option>
-              <option value="kurang">➖ Kurangi (Rusak/Hilang)</option>
-              <option value="set">✏️ Set Total Stok</option>
-            </select>
-          </div>
-          <div>
-            <label for="stokJumlahTotal" style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Unit:</label>
-            <input type="number" id="stokJumlahTotal" min="1" placeholder="Contoh: 5" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
-          </div>
-        </div>
-
-        <button type="button" onclick="simpanBarangStokAdmin()" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
-          💾 Simpan Perubahan Stok
+        <button type="button" id="tab-btn-riwayat" onclick="pilihTabInventarisAdmin('riwayat')" style="background: #0f766e; color: white; border: none; padding: 5px 10px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+          📜 Riwayat
         </button>
-      </form>
-<!-- Tombol & Panel Riwayat Peminjaman (Diletakkan persis di bawah </form>) -->
-      <div style="margin-bottom: 12px;">
-        <button type="button" id="btn-toggle-riwayat-pinjam" onclick="toggleRiwayatPeminjamanAdmin()" style="width: 100%; background: #f8fafc; color: #334155; border: 1px solid #cbd5e1; padding: 7px 10px; border-radius: 4px; font-weight: bold; font-size: 11px; cursor: pointer; display: flex; justify-content: space-between; align-items: center;">
-          <span>📜 Riwayat Peminjaman (Sudah Dikembalikan)</span>
-          <span id="icon-toggle-riwayat">▼</span>
-        </button>
-
-        <div id="panel-riwayat-peminjaman" style="display: none; margin-top: 6px; border: 1px solid #e2e8f0; border-radius: 6px; background: #ffffff; padding: 8px;">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
-            <span style="font-size: 11px; color: #64748b;">Arsip barang yang telah dikembalikan:</span>
-            <button type="button" onclick="muatRiwayatPeminjamanAdmin()" style="background: #e2e8f0; border: none; border-radius: 4px; padding: 3px 8px; font-size: 10.5px; cursor: pointer; color: #1e293b; font-weight: 600;">
-              🔄 Refresh
-            </button>
-          </div>
-
-          <div style="max-height: 200px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 4px;">
-            <table style="width: 100%; border-collapse: collapse; font-size: 11.5px;">
-              <thead style="background: #f8fafc; position: sticky; top: 0; border-bottom: 1px solid #e2e8f0; color: #475569;">
-                <tr>
-                  <th style="padding: 6px; text-align: left;">Peminjam</th>
-                  <th style="padding: 6px; text-align: left;">Barang</th>
-                  <th style="padding: 6px; text-align: center;">Jml</th>
-                  <th style="padding: 6px; text-align: center;">Pinjam</th>
-                  <th style="padding: 6px; text-align: center;">Kembali</th>
-                </tr>
-              </thead>
-              <tbody id="tabel-riwayat-peminjaman-admin">
-                <tr>
-                  <td colspan="5" style="text-align: center; padding: 12px; color: #94a3b8;">Klik tombol di atas untuk memuat riwayat.</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
       </div>
-      
-<!-- 🌟 FORM PEMINJAMAN DENGAN SISTEM KERANJANG (MULTI-ITEM) -->
-      <div id="formPinjamBarang" style="background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px;">
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- KONTEN 1: FORM PEMINJAMAN & DAFTAR BELUM DIKEMBALIKAN     -->
+    <!-- ========================================================= -->
+    <div id="tab-konten-pinjam" style="display: flex; flex-direction: column; flex: 1; min-height: 0;">
+
+      <!-- 🌟 FORM PEMINJAMAN DENGAN SISTEM KERANJANG (MULTI-ITEM) -->
+      <div id="formPinjamBarang" style="background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #e5e7eb; margin-bottom: 15px; flex-shrink: 0;">
         
         <div style="margin-bottom: 8px;">
           <label for="pinjamNamaWarga" style="font-size: 11px; font-weight: bold; color: #374151;">Nama / No. Rumah Peminjam:</label>
@@ -736,26 +680,99 @@
         </button>
       </div>
 
-      <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151;">📋 Daftar Belum Dikembalikan:</h4>
-<div style="flex: 1; min-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 10px;">
-  <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
-    <thead style="background: #111827; color: white; position: sticky; top: 0; z-index: 1;">
-      <tr>
-        <th style="padding: 8px 6px; text-align: left;">Peminjam</th>
-        <th style="padding: 8px 6px; text-align: left;">Barang</th>
-        <th style="padding: 8px 6px; text-align: center;">Jumlah</th>
-        <th style="padding: 8px 6px; text-align: center;">Aksi</th>
-      </tr>
-    </thead>
-    <tbody id="tabel-peminjaman-admin">
+      <h4 style="margin: 10px 0 6px 0; font-size: 12.5px; color: #374151; flex-shrink: 0;">📋 Daftar Belum Dikembalikan:</h4>
+      <div style="flex: 1; min-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 10px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead style="background: #111827; color: white; position: sticky; top: 0; z-index: 1;">
+            <tr>
+              <th style="padding: 8px 6px; text-align: left;">Peminjam</th>
+              <th style="padding: 8px 6px; text-align: left;">Barang</th>
+              <th style="padding: 8px 6px; text-align: center;">Jumlah</th>
+              <th style="padding: 8px 6px; text-align: center;">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-peminjaman-admin">
             <!-- Diisi oleh JS -->
           </tbody>
         </table>
       </div>
 
-      <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px;">Tutup</button>
     </div>
+
+    <!-- ========================================================= -->
+    <!-- KONTEN 2: FORM TAMBAH & EDIT STOK (PERSIS ASLI ANDA)      -->
+    <!-- ========================================================= -->
+    <div id="tab-konten-stok" style="display: none; flex: 1; overflow-y: auto;">
+      <form id="formStokBarang" style="background: #eff6ff; padding: 10px; border-radius: 6px; border: 1px solid #bfdbfe; margin-bottom: 12px;">
+        <div style="font-weight: bold; font-size: 11.5px; color: #1e40af; margin-bottom: 8px;">
+          📦 Master Data & Stok Barang
+        </div>
+
+        <div style="margin-bottom: 8px;">
+          <label for="stokPilihBarang" style="font-size: 11px; font-weight: bold; color: #374151;">Pilih / Nama Barang:</label>
+          <select id="stokPilihBarang" onchange="cekPilihBarangStok(this)" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px; margin-bottom: 4px;">
+            <option value="">-- Pilih Barang Terdaftar --</option>
+            <option value="BARU">➕ [ Ketik Nama Barang Baru ]</option>
+          </select>
+
+          <input type="text" id="stokNamaBarangBaru" aria-label="Nama Barang Baru" placeholder="Masukkan nama barang baru..." style="display: none; width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px;">
+          <div>
+            <label for="stokJenisAksi" style="font-size: 11px; font-weight: bold; color: #374151;">Aksi Stok:</label>
+            <select id="stokJenisAksi" style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+              <option value="tambah">➕ Tambah (Beli Baru)</option>
+              <option value="kurang">➖ Kurangi (Rusak/Hilang)</option>
+              <option value="set">✏️ Set Total Stok</option>
+            </select>
+          </div>
+          <div>
+            <label for="stokJumlahTotal" style="font-size: 11px; font-weight: bold; color: #374151;">Jumlah Unit:</label>
+            <input type="number" id="stokJumlahTotal" min="1" placeholder="Contoh: 5" required style="width: 100%; padding: 7px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 11.5px;">
+          </div>
+        </div>
+
+        <button type="button" onclick="simpanBarangStokAdmin()" style="width: 100%; padding: 8px; background: #2563eb; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 11.5px;">
+          💾 Simpan Perubahan Stok
+        </button>
+      </form>
+    </div>
+
+    <!-- ========================================================= -->
+    <!-- KONTEN 3: RIWAYAT PEMINJAMAN (FULL LAYAR PENUH)           -->
+    <!-- ========================================================= -->
+    <div id="tab-konten-riwayat" style="display: none; flex-direction: column; flex: 1; min-height: 0;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; flex-shrink: 0;">
+        <h4 style="margin: 0; font-size: 12.5px; color: #374151;">📜 Riwayat Peminjaman (Sudah Dikembalikan):</h4>
+        <button type="button" onclick="muatRiwayatPeminjamanAdmin()" style="background: #e2e8f0; border: none; border-radius: 4px; padding: 4px 8px; font-size: 11px; cursor: pointer; color: #1e293b; font-weight: bold;">
+          🔄 Refresh
+        </button>
+      </div>
+
+      <div style="flex: 1; min-height: 180px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; margin-bottom: 10px;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 12px;">
+          <thead style="background: #111827; color: white; position: sticky; top: 0; z-index: 1;">
+            <tr>
+              <th style="padding: 8px 6px; text-align: left;">Peminjam</th>
+              <th style="padding: 8px 6px; text-align: left;">Barang</th>
+              <th style="padding: 8px 6px; text-align: center;">Jml</th>
+              <th style="padding: 8px 6px; text-align: center;">Pinjam</th>
+              <th style="padding: 8px 6px; text-align: center;">Kembali</th>
+            </tr>
+          </thead>
+          <tbody id="tabel-riwayat-peminjaman-admin">
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 12px; color: #94a3b8;">Memuat riwayat...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <button type="button" onclick="tutupModalPinjamAdmin()" style="width: 100%; margin-top: 15px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 12px; flex-shrink: 0;">Tutup</button>
   </div>
+</div>
 
 <!-- MODAL 4: Kelola Data Keluarga (Berdiri Sendiri) -->
   <div id="modal-kelola-warga" class="modal-bg" style="display: none; z-index: 3000;" onclick="if(event.target.id==='modal-kelola-warga') tutupModalKelolaWarga()">
@@ -2056,8 +2073,28 @@ window.toggleFormStok = function() {
       }
     }
 
+    window.pilihTabInventarisAdmin = function(namaTab) {
+      const kontenPinjam = document.getElementById('tab-konten-pinjam');
+      const kontenStok = document.getElementById('tab-konten-stok');
+      const kontenRiwayat = document.getElementById('tab-konten-riwayat');
+      const btnKembaliPinjam = document.getElementById('tab-btn-pinjam');
+
+      if (kontenPinjam) kontenPinjam.style.display = (namaTab === 'pinjam') ? 'flex' : 'none';
+      if (kontenStok) kontenStok.style.display = (namaTab === 'stok') ? 'block' : 'none';
+      if (kontenRiwayat) kontenRiwayat.style.display = (namaTab === 'riwayat') ? 'flex' : 'none';
+
+      // Tampilkan tombol "⬅️ Form Pinjam" hanya jika sedang membuka tab Stok atau Riwayat
+      if (btnKembaliPinjam) {
+        btnKembaliPinjam.style.display = (namaTab === 'pinjam') ? 'none' : 'inline-block';
+      }
+
+      if (namaTab === 'riwayat' && typeof muatRiwayatPeminjamanAdmin === 'function') {
+        muatRiwayatPeminjamanAdmin();
+      }
+    };
+
 let cachePerkakas = [];
-    let cachePeminjaman = [];
+let cachePeminjaman = [];
 
     // Helper internal khusus inventaris agar konsisten dengan Worker Admin Anda
     async function requestWorkerInventaris(pathTujuan, metodeHttp = "GET", payloadData = null) {
