@@ -2851,9 +2851,25 @@ window.tutupModalEditWargaBaru = function() {
   if (modal) modal.style.display = 'none';
 };
 
+// 1. Helper terpusat untuk mengambil data peta_warga dengan Session Token
 async function ambilDataWargaWorker() {
-    const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
-    return await response.json();
+  const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
+  const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${sessionToken}`,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  if (response.status === 401 || response.status === 403) {
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    alert('⚠️ Sesi admin telah berakhir. Silakan login kembali.');
+    location.reload();
+    return null;
+  }
+
+  return await response.json();
 }
 
 async function exportSensusToCSV() {
@@ -4231,28 +4247,63 @@ window.switchTabKeuangan = function(targetTab) {
   }
 };
 
-// Ambil seluruh data dari node "keuangan" Firebase untuk diedit
-window.muatDataKelolaKeuanganAdmin = function() {
-  if (!window.db || typeof window.firebaseRef !== 'function') return;
+// 3. Perbaikan muatDataKelolaKeuanganAdmin agar 100% via Worker (bukan Firebase SDK)
+window.muatDataKelolaKeuanganAdmin = async function() {
+  const tbody = document.getElementById('tabel-kelola-keuangan-admin');
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
 
-  const refKeuangan = window.firebaseRef(window.db, 'keuangan');
-  window.firebaseOnValue(refKeuangan, (snapshot) => {
-    const dataObj = snapshot.val();
+  if (!sessionToken) {
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">⚠️ Sesi admin habis.</td></tr>';
+    return;
+  }
+
+  if (tbody) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">⏳ Memuat data keuangan...</td></tr>';
+  }
+
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "keuangan",
+        method: "GET"
+      })
+    });
+
+    const hasil = await response.json();
+
+    if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    const dataObj = hasil.result !== undefined ? hasil.result : hasil.data;
     cacheDataKeuanganAdmin = [];
 
     if (!dataObj) {
-      document.getElementById('tabel-kelola-keuangan-admin').innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Belum ada data laporan.</td></tr>';
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Belum ada data laporan.</td></tr>';
       return;
     }
 
     Object.keys(dataObj).forEach(key => {
-      cacheDataKeuanganAdmin.push({ id: key, ...dataObj[key] });
+      if (dataObj[key]) {
+        cacheDataKeuanganAdmin.push({ id: key, ...dataObj[key] });
+      }
     });
 
     renderTabelKelolaAdmin(cacheDataKeuanganAdmin);
-  }, { onlyOnce: true });
+  } catch (err) {
+    console.error("Gagal memuat data keuangan via Worker:", err);
+    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">❌ Gagal memuat data dari server.</td></tr>';
+  }
 };
-
 // Render baris tabel daftar keuangan
 window.renderTabelKelolaAdmin = function(dataArray) {
   const tbody = document.getElementById('tabel-kelola-keuangan-admin');
@@ -5043,34 +5094,31 @@ window.hapusPengumumanAdmin = async function(idUnik) {
     let cacheDataPetaAdmin = [];
 
     // 1. Ambil data lengkap beserta kategori/ikon dari Cloudflare Worker
-    function muatDataPetaUntukAdmin() {
-      fetch(RT05_CONFIG.PETA_PROXY_URL)
-        .then(response => response.json())
-        .then(dataObj => {
-          cacheDataPetaAdmin = [];
-          if (!dataObj) return;
+function muatDataPetaUntukAdmin() {
+  ambilDataWargaWorker()
+    .then(dataObj => {
+      cacheDataPetaAdmin = [];
+      if (!dataObj) return;
 
-          Object.keys(dataObj).forEach(key => {
-            var item = dataObj[key];
-            var namaAsli = String(item.Nama || item.nama || item.name || '').trim();
-            if (namaAsli !== '') {
-              var kategoriManual = String(item.Type || item.type || item.Kategori || item.kategori || '').trim().toLowerCase();
-              
-              // Panggil fungsi getIkonKategori bawaan utils jika ada, untuk mendapatkan emoji/ikon yang sesuai
-              var dataIkon = (typeof getIkonKategori === 'function') ? getIkonKategori(namaAsli, kategoriManual) : { emoji: '🏠' };
+      Object.keys(dataObj).forEach(key => {
+        var item = dataObj[key];
+        var namaAsli = String(item.Nama || item.nama || item.name || '').trim();
+        if (namaAsli !== '') {
+          var kategoriManual = String(item.Type || item.type || item.Kategori || item.kategori || '').trim().toLowerCase();
+          var dataIkon = (typeof getIkonKategori === 'function') ? getIkonKategori(namaAsli, kategoriManual) : { emoji: '🏠' };
 
-              cacheDataPetaAdmin.push({
-                nama: namaAsli,
-                kepalaKeluarga: item.kepalaKeluarga || '',
-                lat: item.Lat !== undefined ? item.Lat : (item.lat || ''),
-                lng: item.Lng !== undefined ? item.Lng : (item.lng || ''),
-                emoji: dataIkon.emoji || '🏠'
-              });
-            }
+          cacheDataPetaAdmin.push({
+            nama: namaAsli,
+            kepalaKeluarga: item.kepalaKeluarga || '',
+            lat: item.Lat !== undefined ? item.Lat : (item.lat || ''),
+            lng: item.Lng !== undefined ? item.Lng : (item.lng || ''),
+            emoji: dataIkon.emoji || '🏠'
           });
-        })
-        .catch(err => console.error("Gagal memuat data peta untuk admin:", err));
-    }
+        }
+      });
+    })
+    .catch(err => console.error("Gagal memuat data peta untuk admin:", err));
+}
 
     document.addEventListener('DOMContentLoaded', muatDataPetaUntukAdmin);
 
