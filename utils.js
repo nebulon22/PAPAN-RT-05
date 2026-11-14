@@ -51,19 +51,6 @@ try {
   auth = getAuth(app);
 }
 
-// Autentikasi Anonim Otomatis di Latar Belakang
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    signInAnonymously(auth).then(() => {
-      console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
-    }).catch((err) => {
-      console.error("🔴 Gagal Login Anonim:", err);
-    });
-  } else {
-    console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
-  }
-});
-
 // EKSPOS UTILITIES DARI MODULE KE GLOBAL WINDOW
 window.db = db;
 window.auth = auth;
@@ -243,7 +230,7 @@ function tutupModalInventaris() {
     if (modal) modal.style.display = 'none';
 }
 
-// Event Delegation & Listener DOM
+// Event Delegation & Listener DOM (CSP-Compliant)
 document.addEventListener('click', function(e) {
     const target = e.target.closest('[data-click]');
     if (!target) return;
@@ -324,7 +311,9 @@ window.tutupFotoBesar = function() {
   }
 };
 
-// Helper Global untuk Tombol Persetujuan Chat Warga
+// ==========================================
+// MANAJEMEN PERSETUJUAN AKUN CHAT WARGA
+// ==========================================
 window.approveUser = (uid) => {
   if (!uid) return;
   window.firebaseUpdate(window.firebaseRef(window.db, `users/${uid}`), { status: 'aktif' })
@@ -353,11 +342,10 @@ window.toggleRole = (uid, currentRole) => {
     .catch(err => alert("❌ Gagal mengubah role: " + err.message));
 };
 
-// Real-time Listener untuk Manajemen User/Chat Warga
 let isUsersListenerAktif = false;
 
 export function inisialisasiListenerUsersAdmin() {
-  if (isUsersListenerAktif) return; // Cegah listener ganda
+  if (isUsersListenerAktif) return;
 
   const pendingTable = document.getElementById('pending-users-list');
   const allUsersTable = document.getElementById('all-users-list');
@@ -434,7 +422,6 @@ export function inisialisasiListenerUsersAdmin() {
           </td>
         `;
 
-        // Pasang event listener aman (CSP-compliant & mendukung multi-argumen)
         tr.querySelector('.btn-toggle-role').addEventListener('click', () => window.toggleRole(uid, u.role));
         tr.querySelector('.btn-hapus-warga').addEventListener('click', () => window.rejectUser(uid, 'aktif'));
 
@@ -472,9 +459,16 @@ export function inisialisasiListenerUsersAdmin() {
   });
 }
 
-// Jalankan listener HANYA setelah Firebase Anonymous Auth aktif (mencegah Permission Denied)
+// Autentikasi Anonim Otomatis + Jalankan Listener Users setelah Auth Siap
 onAuthStateChanged(auth, (user) => {
-  if (user) {
+  if (!user) {
+    signInAnonymously(auth).then(() => {
+      console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
+    }).catch((err) => {
+      console.error("🔴 Gagal Login Anonim:", err);
+    });
+  } else {
+    console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', inisialisasiListenerUsersAdmin);
     } else {
