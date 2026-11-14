@@ -1179,6 +1179,12 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
     return false;
   }
 
+  // 1. Cek jika kondisi HP sedang offline sebelum menembak API
+  if (!navigator.onLine) {
+    simpanPayloadKeAntrean(pathTujuan, payloadData, pathTujuan, metodeHttp);
+    return true; // Kembalikan true agar form ter-reset dan modal tertutup rapi
+  }
+
   try {
     const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
@@ -1205,9 +1211,12 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
     if (hasil.success) return true;
     alert("❌ Gagal: " + (hasil.error || "Terjadi Kesalahan"));
     return false;
+
   } catch (err) {
-    alert("❌ Kesalahan Jaringan / Worker: " + err.message);
-    return false;
+    // 2. Fallback: Jika indikator sinyal masih menyala tapi koneksi terputus saat mengirim (Failed to fetch)
+    console.warn("Koneksi terputus saat mengirim, mengalihkan ke antrean offline:", err);
+    simpanPayloadKeAntrean(pathTujuan, payloadData, pathTujuan, metodeHttp);
+    return true;
   }
 }
 
@@ -1247,10 +1256,8 @@ async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "PO
       }
     }
 
-let isSyncingAdmin = false;
-
 async function kirimDataPendingAdmin() {
-  if (!navigator.onLine || isSyncingAdmin) return;
+  if (!navigator.onLine || sedangMengirimAdmin) return;
 
   let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
   if (antrean.length === 0) return;
@@ -1261,14 +1268,15 @@ async function kirimDataPendingAdmin() {
     return;
   }
 
-  isSyncingAdmin = true;
-  let waktuTerkirim = [];
+  sedangMengirimAdmin = true;
+  perbaruiIndikatorSyncAdmin(); // Nyalakan badge biru "Sedang Menyinkronkan..."
+  let idTerkirim = [];
 
   try {
     for (const item of antrean) {
       try {
         const targetPath = item.payload?.path || item.targetNode || 'peta_warga';
-        const targetMethod = item.payload?.method || 'POST';
+        const targetMethod = item.payload?.method || item.method || 'POST';
         const dataBersih = item.payload?.data !== undefined ? item.payload.data : item.payload;
 
         const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
@@ -1288,43 +1296,44 @@ async function kirimDataPendingAdmin() {
         const resJson = await response.json();
 
         if (response.status === 401 || resJson.code === 'SESSION_EXPIRED') {
-          break; // Hentikan loop jika token kedaluwarsa, biarkan sisa antrean tetap tersimpan
+          break; 
         }
 
-        if (response.ok && !resJson.error) {
-          waktuTerkirim.push(item.time);
+        // Pastikan mengecek resJson.success agar konsisten dengan Worker Anda
+        if (response.ok && resJson.success !== false && !resJson.error) {
+          idTerkirim.push(item.id || item.time);
         }
       } catch (err) {
-        // Jaringan putus di tengah jalan, lanjutkan ke item berikutnya atau biarkan tetap di antrean
+        console.warn("Gagal sinkron item antrean, akan dicoba lagi nanti:", err);
       }
     }
 
-    // Hapus hanya item yang benar-benar berhasil terkirim (aman jika ada input offline baru masuk saat proses kirim)
-    if (waktuTerkirim.length > 0) {
+    if (idTerkirim.length > 0) {
       let antreanTerbaru = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
-      let sisaAntrean = antreanTerbaru.filter(item => !waktuTerkirim.includes(item.time));
+      let sisaAntrean = antreanTerbaru.filter(item => !idTerkirim.includes(item.id || item.time));
       localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
-      console.log(`✅ ${waktuTerkirim.length} data dari antrean_admin berhasil disinkronkan.`);
+      console.log(`✅ ${idTerkirim.length} data dari antrean_admin berhasil disinkronkan.`);
     }
   } finally {
-    isSyncingAdmin = false;
-    if (typeof perbaruiIndikatorSyncAdmin === 'function') {
-      perbaruiIndikatorSyncAdmin();
-    }
+    sedangMengirimAdmin = false;
+    perbaruiIndikatorSyncAdmin(); // Kembalikan badge ke hijau/kuning
   }
 }
     
-function simpanPayloadKeAntrean(label, payload, targetNode = 'peta_warga') {
+let sedangMengirimAdmin = false;
+
+function simpanPayloadKeAntrean(label, payload, targetNode = 'peta_warga', metodeHttp = 'POST') {
   let antrean = JSON.parse(localStorage.getItem('antrean_admin') || '[]');
   
-  // Hapus properti token lama jika terbawa di dalam payload agar data bersih
   if (payload && payload.token) {
     delete payload.token;
   }
 
   antrean.push({ 
+    id: Date.now() + '_' + Math.random().toString(36).slice(2, 7),
     label: label, 
     targetNode: targetNode,
+    method: metodeHttp,
     payload: payload, 
     time: Date.now() 
   });
@@ -1332,7 +1341,6 @@ function simpanPayloadKeAntrean(label, payload, targetNode = 'peta_warga') {
   localStorage.setItem('antrean_admin', JSON.stringify(antrean));
   perbaruiIndikatorSyncAdmin();
   alert(`📴 Offline: Data (${label}) tersimpan sementara di HP. Akan dikirim otomatis saat ada sinyal!`);
-  kirimDataPendingAdmin();
 }
 
     window.addEventListener('online', () => {
@@ -1459,6 +1467,11 @@ function bukaAkses() {
   if (overlay) overlay.style.display = 'none';
   document.body.style.overflow = 'auto';
 
+  // Langsung perbarui badge status sinkronisasi saat dashboard terbuka
+  if (typeof perbaruiIndikatorSyncAdmin === 'function') {
+    perbaruiIndikatorSyncAdmin();
+  }
+
   initMap();
 
   setTimeout(() => {
@@ -1467,8 +1480,12 @@ function bukaAkses() {
 
   setTimeout(() => {
     muatSemuaDataAdmin();
+    
+    // Pindahkan pemanggilan muatDataPetaUntukAdmin ke sini (aman karena token sudah ada)
+    if (typeof muatDataPetaUntukAdmin === 'function') muatDataPetaUntukAdmin();
     if (typeof muatDataProgker === 'function') muatDataProgker();
     if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
+    
     if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
       kirimDataPendingAdmin();
     }
@@ -3175,16 +3192,21 @@ async function cariDetailKeluargaAdmin() {
     }
 
     try {
-        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+        // 1. Sertakan token admin agar rumah dengan status Hidden: true tetap terbaca
+        const sessionToken = sessionStorage.getItem('rt05_session_token');
+        const headers = sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {};
+        
+        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, { headers });
         const dataObj = await response.json();
 
         if (!dataObj) {
             throw new Error("Data kosong dari server.");
         }
 
+        // Simpan data mentah asli agar tidak merusak struktur globalDataWarga
+        window.globalDataWarga = dataObj;
+
         let daftarWargaWorker = [];
-        
-        // Tangani data baik berupa Array maupun Objek Key-Value
         const items = Array.isArray(dataObj) ? dataObj : Object.keys(dataObj).map(k => ({ ...dataObj[k], _id: k }));
 
         items.forEach((val, idx) => {
@@ -3196,16 +3218,17 @@ async function cariDetailKeluargaAdmin() {
                 kepalaKeluarga: String(val.kepalaKeluarga || val.KepalaKeluarga || '').trim(),
                 anggotaKeluarga: String(val.anggotaKeluarga || val.Anggota || val.anggota || '').trim(),
                 noRumah: String(val.noRumah || val.NoRumah || '').trim(),
-                namaTempat: String(val.namaTempat || val.namaTempat || '').trim(),
+                namaTempat: String(val.namaTempat || '').trim(),
                 lat: val.Lat !== undefined ? val.Lat : (val.lat || ''),
                 lng: val.Lng !== undefined ? val.Lng : (val.lng || ''),
                 foto: val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '',
-                type: val.Type || val.type || val.Kategori || val.kategori || ''
+                type: val.Type || val.type || val.Kategori || val.kategori || '',
+                hidden: val.Hidden === true
             });
         });
 
-        // Cari data yang mengandung keyword (pencocokan substring fleksibel)
-        const match = daftarWargaWorker.find(row => {
+        // 2. Gunakan .filter() agar jika ada lebih dari 1 nama yang mirip, semuanya muncul
+        const matches = daftarWargaWorker.filter(row => {
             const gabungan = `${row.namaLama} ${row.kepalaKeluarga} ${row.anggotaKeluarga} ${row.noRumah} ${row.namaTempat}`.toLowerCase();
             const noRumahBersih = row.noRumah.replace(/^0+/, '').toLowerCase();
             const keywordBersih = keyword.replace(/^0+/, '');
@@ -3214,7 +3237,7 @@ async function cariDetailKeluargaAdmin() {
                    (noRumahBersih && noRumahBersih === keywordBersih);
         });
 
-        if (!match) {
+        if (matches.length === 0) {
             if (container) {
                 container.innerHTML = `<p style="font-size: 12px; color: #ef4444; text-align: center; margin: 0;">❌ Data warga, nomor rumah, atau tempat tidak ditemukan.</p>`;
             }
@@ -3222,33 +3245,38 @@ async function cariDetailKeluargaAdmin() {
             return;
         }
 
-        const kepala = match.kepalaKeluarga || match.namaLama || match.namaTempat || 'Tanpa Nama';
-        const anggota = match.anggotaKeluarga || '-';
-        const labelRumah = match.noRumah ? `Rumah No. ${match.noRumah}` : (match.namaTempat || '-');
-        const foto = match.foto || '';
+        // 3. Render semua hasil yang cocok
+        container.innerHTML = matches.map(match => {
+            const kepala = match.kepalaKeluarga || match.namaLama || match.namaTempat || 'Tanpa Nama';
+            const anggota = match.anggotaKeluarga || '-';
+            const labelRumah = match.noRumah ? `Rumah No. ${match.noRumah}` : (match.namaTempat || '-');
+            const badgeHidden = match.hidden ? `<span style="background:#fee2e2; color:#b91c1c; font-size:10px; padding:2px 6px; border-radius:4px; margin-left:6px;">Disembunyikan</span>` : '';
 
-        let htmlKoor = (match.lat && match.lng) 
-            ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${match.lat},${match.lng}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat</a>`
-            : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
+            const htmlKoor = (match.lat && match.lng) 
+                ? `<a href="https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(match.lat)},${encodeURIComponent(match.lng)}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#10b981; color:white; border-radius:4px; font-size:11px; text-decoration:none; font-weight:bold;">📍 Buka Koordinat</a>`
+                : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
 
-        let htmlFoto = foto ? `<div style="margin-top:6px;"><img src="${foto}" style="max-height:80px; border-radius:4px;" onError="this.style.display='none'" /></div>` : '';
+            const htmlFoto = match.foto 
+                ? `<div style="margin-top:6px;"><img src="${escapeHTML(match.foto)}" style="max-height:80px; border-radius:4px;" onerror="this.style.display='none'" /></div>` 
+                : '';
 
-        container.innerHTML = `
-            <div style="font-size: 12px; color: #334155; line-height: 1.6;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
-                    <div style="font-weight: bold; font-size: 14px; color: #0288d1;">🏠 ${escapeHTML(kepala)}</div>
-                    <button type="button" onclick="bukaModalEditWargaAdminById('${match.id}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
-                        ✏️ Edit
-                    </button>
+            return `
+                <div style="font-size: 12px; color: #334155; line-height: 1.6; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px dashed #cbd5e1;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px;">
+                        <div style="font-weight: bold; font-size: 14px; color: #0288d1;">
+                            🏠 ${escapeHTML(kepala)} ${badgeHidden}
+                        </div>
+                        <button type="button" onclick="bukaModalEditWargaAdminById('${escapeHTML(String(match.id))}')" style="background: #3b82f6; color: white; border: none; padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; cursor: pointer;">
+                            ✏️ Edit
+                        </button>
+                    </div>
+                    <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
+                    <div style="margin-top: 4px;"><b>Nomor / Keterangan Rumah:</b> ${escapeHTML(labelRumah)}</div>
+                    ${htmlFoto}
+                    ${htmlKoor}
                 </div>
-                <div><b>Anggota Keluarga:</b> ${escapeHTML(anggota)}</div>
-                <div style="margin-top: 4px;"><b>Nomor / Keterangan Rumah:</b> ${escapeHTML(labelRumah)}</div>
-                ${htmlFoto}
-                ${htmlKoor}
-            </div>
-        `;
-
-        window.globalDataWarga = daftarWargaWorker;
+            `;
+        }).join('');
 
     } catch (err) {
         console.error("Gagal memuat data dari Cloudflare Worker:", err);
@@ -5094,7 +5122,6 @@ function muatDataPetaUntukAdmin() {
     .catch(err => console.error("Gagal memuat data peta untuk admin:", err));
 }
 
-    document.addEventListener('DOMContentLoaded', muatDataPetaUntukAdmin);
 
     function cariLokasiPengumuman(keyword) {
       var container = document.getElementById('hasilPencarianLokasi');
