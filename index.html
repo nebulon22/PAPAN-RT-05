@@ -1505,7 +1505,8 @@ var namaTersensor = isBukanRumah
         setTimeout(prosesChunk, 4);
       }
     })
-    .catch(error => {
+      .catch(error => {
+      isDataReady = false; // Izinkan muat ulang otomatis saat kembali online
       console.error("Gagal memuat peta warga dari Cloudflare Worker:", error);
       tampilkanToast("Data peta gagal dimuat dari server", "error");
     });
@@ -1537,6 +1538,10 @@ window.jalankanPencarianPeta = async function(e) {
   const targetDaftar = window.daftarPin || (typeof daftarPin !== 'undefined' ? daftarPin : []);
 
   if (!targetDaftar || targetDaftar.length === 0) {
+    if (navigator.onLine && !isDataReady && typeof muatDataPetaWarga === 'function') {
+      isDataReady = true;
+      muatDataPetaWarga();
+    }
     tampilkanToast("Data peta belum sepenuhnya dimuat, mohon tunggu sebentar...", "warning");
     return;
   }
@@ -1564,9 +1569,9 @@ window.jalankanPencarianPeta = async function(e) {
     
     // Cek kecocokan teks biasa (untuk Fasum/Tempat/Admin) ATAU kecocokan SHA-256 Hash (untuk warga biasa)
     var cocokTeks = teksNama.includes(kataKunci) || 
-                    namaRaw.includes(kataKunci) ||
+                    namaRaw.includes(kataKunci) || 
                     kepalaKeluarga.includes(kataKunci) || 
-                    anggotaKeluarga.includes(kataKunci) ||
+                    anggotaKeluarga.includes(kataKunci) || 
                     kategori.includes(kataKunci);
 
     var cocokHash = false;
@@ -2600,7 +2605,15 @@ window.simpanJimpitan = function(dataInput) {
 
 window.addEventListener('online', () => {
   perbaruiIndikatorSync();
-  kirimDataPendingJimpitan();
+  if (typeof kirimDataPendingJimpitan === 'function') {
+    kirimDataPendingJimpitan();
+  }
+
+  // Muat ulang data peta otomatis jika sebelumnya dibuka saat offline
+  if ((!window.daftarPin || window.daftarPin.length === 0) && typeof muatDataPetaWarga === 'function') {
+    isDataReady = true;
+    muatDataPetaWarga();
+  }
 });
 
 window.addEventListener('offline', () => {
