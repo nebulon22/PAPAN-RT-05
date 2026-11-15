@@ -3169,7 +3169,10 @@ window.editWargaBaruAdmin = function(id, nama, noRumah, hp, status, cerita, foto
   document.getElementById('editWargaBaruNama').value = nama || '';
   document.getElementById('editWargaBaruNoRumah').value = noRumah || '';
   document.getElementById('editWargaBaruHp').value = hp || '';
-  document.getElementById('editWargaBaruStatus').value = status || 'Kontrakan';
+
+  const elStatusEdit = document.getElementById('edit-status-hunian') || document.getElementById('editWargaBaruStatus');
+  if (elStatusEdit) elStatusEdit.value = status || 'Kontrakan';
+
   document.getElementById('editWargaBaruCerita').value = cerita || '';
 
   const inputFotoLama = document.getElementById('editWargaBaruFoto');
@@ -3736,154 +3739,6 @@ function bukaModalEditWargaDariPeta(id) {
   bukaModalEditWargaAdminById(id);
 }
 
-async function simpanPerubahanWarga(event) {
-  event.preventDefault();
-
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    alert('⚠️ Sesi admin habis. Silakan login ulang.');
-    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    window.location.reload();
-    return;
-  }
-
-  const idWarga = document.getElementById('editWargaId').value;
-  const btnSimpan = document.getElementById('btnSimpanEditWarga');
-
-  btnSimpan.disabled = true;
-  btnSimpan.innerText = '⏳ Sedang Memproses...';
-
-  try {
-    let finalUrlFoto = document.getElementById('editWargaFotoURL').value.trim();
-
-    // 1. Upload file baru jika admin memilih file dari perangkat
-    if (typeof fileBaruDipilih !== 'undefined' && fileBaruDipilih !== null) {
-      const statusEl = document.getElementById('statusSemiManual');
-      if (statusEl) statusEl.innerHTML = '<i>⏳ Sedang mengompres & mengupload foto baru...</i>';
-
-      let fileToUpload = fileBaruDipilih;
-      if (typeof kompresGambar === 'function' && fileToUpload.type.startsWith('image/')) {
-        fileToUpload = await kompresGambar(fileToUpload, 1200, 0.8);
-      }
-
-      const noRumahVal = document.getElementById('editWargaNoRumah')
-        ? document.getElementById('editWargaNoRumah').value.trim().replace(/[^a-zA-Z0-9]/g, '_')
-        : idWarga;
-      const ekstensi = fileToUpload.name.split('.').pop() || 'jpg';
-      const namaFileKustom = `warga_${noRumahVal || idWarga}_${Date.now()}.${ekstensi}`;
-
-      const responseUpload = await fetch(RT05_CONFIG.UPLOADER_URL, {
-        method: 'POST',
-        headers: {
-          'X-File-Name': encodeURIComponent(namaFileKustom),
-          'Content-Type': fileToUpload.type || 'application/octet-stream',
-          'Authorization': `Bearer ${sessionToken}`
-        },
-        body: fileToUpload
-      });
-
-      const hasilUpload = await responseUpload.json();
-      if (responseUpload.ok && (hasilUpload.success || hasilUpload.url)) {
-        const urlAwal = new URL(hasilUpload.url);
-        finalUrlFoto = 'https://storage.papan05.my.id' + urlAwal.pathname;
-      } else {
-        throw new Error(hasilUpload.error || 'Gagal mengupload file ke cloud storage.');
-      }
-    }
-
-    // 2. Susun payload sesuai kategori (diselaraskan dengan toggleFieldKategoriEdit)
-    const kategoriInput = document.getElementById('editWargaKategori').value;
-    const isRumah = kategoriInput.toLowerCase().includes('rumah');
-    const noRumahInput = document.getElementById('editWargaNoRumah')
-      ? document.getElementById('editWargaNoRumah').value.trim()
-      : '';
-
-    const latInput = document.getElementById('editWargaLat') ? document.getElementById('editWargaLat').value.trim() : '';
-    const lngInput = document.getElementById('editWargaLng') ? document.getElementById('editWargaLng').value.trim() : '';
-    const hiddenInput = document.getElementById('editWargaHidden') ? document.getElementById('editWargaHidden').value === 'TRUE' : false;
-
-    let dataUpdate = {
-      Type: kategoriInput,
-      noRumah: noRumahInput,
-      Lat: latInput,
-      Lng: lngInput,
-      Hidden: hiddenInput,
-      foto: finalUrlFoto,
-      updatedAt: Date.now()
-    };
-
-    if (isRumah) {
-      const kepalaKeluarga = document.getElementById('editWargaNama') ? document.getElementById('editWargaNama').value.trim() : '';
-      const anggotaKeluarga = document.getElementById('editWargaAnggota') ? document.getElementById('editWargaAnggota').value.trim() : '';
-
-      dataUpdate.kepalaKeluarga = kepalaKeluarga;
-      dataUpdate.anggotaKeluarga = anggotaKeluarga;
-      dataUpdate.namaTempat = kepalaKeluarga ? `Rumah ${kepalaKeluarga}` : (noRumahInput ? `No ${noRumahInput}` : 'Rumah Warga');
-      dataUpdate.Nama = dataUpdate.namaTempat;
-    } else {
-      // Kost, Fasum, Kuliner, Minimarket
-      const namaTempat = document.getElementById('editNamaTempat') ? document.getElementById('editNamaTempat').value.trim() : '';
-      const namaPemilik = document.getElementById('editNamaPemilik') ? document.getElementById('editNamaPemilik').value.trim() : '';
-
-      dataUpdate.namaTempat = namaTempat || kategoriInput;
-      dataUpdate.Nama = dataUpdate.namaTempat;
-      dataUpdate.kepalaKeluarga = namaPemilik;
-      dataUpdate.anggotaKeluarga = '';
-    }
-
-    // 3. Kirim PATCH via Worker Admin menggunakan Session Token
-    btnSimpan.innerText = '⏳ Menyimpan ke Database...';
-
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: `peta_warga/${idWarga}`,
-        method: 'PATCH',
-        data: dataUpdate
-      })
-    });
-
-    const hasilProxy = await responseProxy.json();
-
-    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert('⚠️ Sesi telah kedaluwarsa. Silakan login ulang.');
-      window.location.reload();
-      return;
-    }
-
-    if (!responseProxy.ok || !hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || 'Gagal meng-update data via Worker Admin.');
-    }
-
-    if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
-    tutupModalEditWarga();
-    alert('✅ Perubahan data lokasi berhasil disimpan!');
-
-    // 4. Muat ulang data statistik & perbarui pin di peta
-    if (typeof muatSemuaDataAdmin === 'function') {
-      await muatSemuaDataAdmin();
-    }
-    if (map) {
-      map.remove();
-      map = null;
-      initMap();
-    }
-
-  } catch (error) {
-    console.error(error);
-    alert('❌ Terjadi kesalahan: ' + error.message);
-  } finally {
-    btnSimpan.disabled = false;
-    btnSimpan.innerText = '💾 Simpan Perubahan';
-  }
-}
-
 // --- FORM TAMBAH LOKASI DINAMIS ---
 function sesuaikanFormKategori() {
   const kategori = document.getElementById('inputKategori').value.toLowerCase();
@@ -4406,60 +4261,7 @@ window.simpanPerubahanWargaBaru = async function(e) {
   }
 };
 
-async function prosesUploadBuktiKeR2() {
-  const fileInput = document.getElementById('laporanInputFoto');
-  const statusDiv = document.getElementById('statusUploadBukti');
-  const urlTarget = document.getElementById('laporanFotoUrl');
-
-  if (!fileInput || fileInput.files.length === 0) return;
-
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    statusDiv.innerHTML = `❌ Sesi admin habis. Silakan login ulang.`;
-    statusDiv.style.color = "#dc2626";
-    return;
-  }
-
-  let file = fileInput.files[0];
-  statusDiv.innerHTML = "⏳ Mengompres & mengunggah nota ke R2...";
-  statusDiv.style.color = "#d97706";
-
-  try {
-    if (typeof kompresGambar === 'function') {
-      file = await kompresGambar(file, 1200, 0.8);
-    }
-
-    const workerUrl = RT05_CONFIG.UPLOADER_URL;
-    const response = await fetch(workerUrl, {
-      method: "POST",
-      headers: {
-        "X-File-Name": encodeURIComponent("nota_" + Date.now() + "_" + file.name),
-        "Content-Type": file.type || "application/octet-stream",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: file
-    });
-    
-    const textResult = await response.text();
-    let result = JSON.parse(textResult);
-
-    if (response.ok && result.success && result.url) {
-      let urlAwal = new URL(result.url);
-      let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
-
-      if (urlTarget) urlTarget.value = urlFinal;
-      statusDiv.innerHTML = `✅ Bukti berhasil diunggah! <button type="button" data-click="bukaFotoBesar" data-arg="${urlFinal}" style="background:none; border:none; color:#2563eb; text-decoration:underline; font-size:10.5px; padding:0; cursor:pointer;">Lihat Nota</button>`;
-      statusDiv.style.color = "#10b981";
-    } else {
-      throw new Error(result.error || "Gagal upload.");
-    }
-  } catch (err) {
-    console.error(err);
-    statusDiv.innerHTML = `❌ Gagal upload bukti: ${err.message}`;
-    statusDiv.style.color = "#dc2626";
-  }
-}
-    
+  
 function tutupModalLaporan() {
       document.getElementById('modal-laporan').style.display = 'none';
       document.getElementById('formLaporanDivisi').reset();
@@ -4671,60 +4473,6 @@ window.tutupModalEditAdmin = function() {
   const modal = document.getElementById('modal-edit-keuangan');
   if (modal) modal.style.display = 'none';
   idKeuanganSedangDiedit = null;
-};
-
-window.prosesUploadBuktiEditAdmin = async function() {
-  const fileInput = document.getElementById('editInputFoto');
-  const statusDiv = document.getElementById('statusUploadBuktiEdit');
-  const hiddenUrl = document.getElementById('editFotoUrl');
-
-  if (!fileInput.files || fileInput.files.length === 0) return;
-
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    statusDiv.innerHTML = '❌ Sesi admin habis. Silakan login ulang.';
-    statusDiv.style.color = '#dc2626';
-    return;
-  }
-
-  let file = fileInput.files[0];
-
-  statusDiv.innerHTML = '⏳ Sedang mengompres & mengunggah nota...';
-  statusDiv.style.color = '#d97706';
-
-  try {
-    if (typeof kompresGambar === 'function') {
-      file = await kompresGambar(file, 1200, 0.8);
-    }
-    
-    const workerUrl = RT05_CONFIG.UPLOADER_URL;
-    let response = await fetch(workerUrl, {
-      method: "POST",
-      headers: {
-        "X-File-Name": encodeURIComponent("nota_edit_" + Date.now() + "_" + file.name),
-        "Content-Type": file.type || "application/octet-stream",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: file
-    });
-
-    const textResult = await response.text();
-    let result = JSON.parse(textResult);
-
-    if (response.ok && result.success && result.url) {
-      let urlAwal = new URL(result.url);
-      let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
-
-      hiddenUrl.value = urlFinal;
-      statusDiv.innerHTML = `✅ Bukti berhasil diunggah! <button type="button" data-click="bukaFotoBesar" data-arg="${urlFinal}" style="background:none; border:none; color:#2563eb; text-decoration:underline; font-size:10.5px; padding:0; cursor:pointer;">Lihat Nota</button>`;
-      statusDiv.style.color = '#16a34a';
-    } else {
-      throw new Error(result.error || "Gagal unggah");
-    }
-  } catch (err) {
-    statusDiv.innerHTML = '❌ Gagal mengunggah nota: ' + err.message;
-    statusDiv.style.color = '#dc2626';
-  }
 };
 
 window.simpanPerubahanKeuanganAdmin = async function() {
