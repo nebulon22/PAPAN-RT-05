@@ -1316,12 +1316,14 @@ async function tanganiUploadR2DenganOpsiOffline({
       fileSiap = await kompresGambar(file, 1200, 0.8);
     }
 
+    const uploaderAuth = sessionStorage.getItem('rt05_admin_pin_aktif') || sessionToken;
+
     const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
       method: "POST",
       headers: {
         "X-File-Name": encodeURIComponent(namaFileKustom),
         "Content-Type": fileSiap.type || "application/octet-stream",
-        "Authorization": `Bearer ${sessionToken}`
+        "Authorization": `Bearer ${uploaderAuth}`
       },
       body: fileSiap
     });
@@ -1562,6 +1564,7 @@ function bersihkanStorageAdmin() {
   
   sessionStorage.removeItem('adminPin');
   sessionStorage.removeItem('rt05_session_token');
+  sessionStorage.removeItem('rt05_admin_pin_aktif');
 }
 
 // 2. Eksekusi Login murni melalui Worker
@@ -1585,7 +1588,7 @@ async function cekLogin() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: 'login', // Pastikan Worker menangani action 'login' (atau 'verify-pin') dan mengembalikan sessionToken
+        action: 'login',
         pin: inputPin
       })
     });
@@ -1593,11 +1596,14 @@ async function cekLogin() {
     const result = await response.json();
 
     if (response.ok && result.success && (result.sessionToken || result.token)) {
-      // Hapus seluruh PIN mentah dari memori/storage
+      // Bersihkan sisa storage lama
       bersihkanStorageAdmin();
+      
+      // Simpan PIN di sessionStorage khusus untuk otorisasi upload ke R2
+      sessionStorage.setItem('rt05_admin_pin_aktif', inputPin);
       if (inputPinEl) inputPinEl.value = '';
 
-      // Simpan HANYA token sesi dari Worker di sessionStorage
+      // Simpan token sesi dari Worker di sessionStorage
       const tokenAktif = result.sessionToken || result.token;
       sessionStorage.setItem('rt05_session_token', tokenAktif);
 
@@ -1619,6 +1625,8 @@ async function cekLogin() {
     }
   }
 }
+
+
 
 // 3. Validasi Sesi Langsung ke Worker saat Halaman Dimuat / Di-refresh
 async function periksaSesiAdminViaWorker() {
