@@ -2579,24 +2579,20 @@ async function kirimDataPendingJimpitan() {
 }
 
   
-window.simpanJimpitan = function(dataInput) {
-  let rawWarga = '';
-  let rawNominal = 0;
+window.simpanJimpitan = function() {
+  let elNama = document.getElementById('jimpitanNamaWarga');
+  let elNominal = document.getElementById('jimpitanNominal');
 
-  // Cek apakah dataInput adalah objek data langsung atau event dari element/UI
-  if (dataInput && typeof dataInput === 'object' && !dataInput.target) {
-    rawWarga = dataInput.warga || dataInput.nama || dataInput.nama_warga || '';
-    rawNominal = parseInt(dataInput.nominal, 10) || 0;
-  } else {
-    let elNama = document.getElementById('jimpitanNamaWarga');
-    let elNominal = document.getElementById('jimpitanNominal');
-
-    rawWarga = elNama ? elNama.value.trim() : '';
-    rawNominal = parseInt(elNominal ? elNominal.value : 0, 10);
-  }
+  let rawWarga = elNama ? elNama.value.trim() : '';
+  let rawNominal = parseInt(elNominal ? elNominal.value : 0, 10) || 0;
 
   if (!rawWarga) {
     alert("Nama warga / rumah belum terisi!");
+    return;
+  }
+
+  if (rawNominal < 0) {
+    alert("Nominal tidak valid!");
     return;
   }
 
@@ -2623,8 +2619,7 @@ window.simpanJimpitan = function(dataInput) {
   let modal = document.getElementById('modal-jimpitan');
   if (modal) modal.style.display = 'none';
   
-  let elNama = document.getElementById('jimpitanNamaWarga');
-  let elNominal = document.getElementById('jimpitanNominal');
+  // Langsung kosongkan nilai tanpa mendeklarasikan ulang 'let'
   if (elNama) elNama.value = '';
   if (elNominal) elNominal.value = '';
 
@@ -2639,7 +2634,7 @@ window.addEventListener('online', () => {
   }
 
   // Muat ulang data peta otomatis jika sebelumnya dibuka saat offline
-  if ((!window.daftarPin || window.daftarPin.length === 0) && typeof muatDataPetaWarga === 'function') {
+ if ((!daftarPin || daftarPin.length === 0) && typeof muatDataPetaWarga === 'function') {
     isDataReady = true;
     muatDataPetaWarga();
   }
@@ -3640,14 +3635,6 @@ window.simpanWargaBaru = async function() {
   }
 };
   // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
-if (document.readyState === 'complete') {
-    initPetaDanData();
-  } else {
-    document.addEventListener('DOMContentLoaded', initPetaDanData);
-  }
-  window.addEventListener('utilsSiap', initPetaDanData);
-
-  
 if (document.readyState === 'complete') {
     initPetaDanData();
   } else {
