@@ -612,7 +612,7 @@
   </button>
 
   <!-- Popup Menu Filter yang Diposisikan di Tengah Layar -->
-  <div id="denah-filter-popup" style="display: none; position: fixed; top: 180px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 380px; display: none; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(4px); padding: 14px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255, 255, 255, 0.2); z-index: 9999; box-sizing: border-box;">
+  <div id="denah-filter-popup" style="display: none; position: fixed; top: 180px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 380px; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(4px); padding: 14px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255, 255, 255, 0.2); z-index: 9999; box-sizing: border-box;">
     <button class="btn-filter active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua Lokasi</button>
     <button class="btn-filter" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%; justify-content: center;">🏪 Minimarket</button>
     <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%; justify-content: center;">🛏️ Kost</button>
@@ -1040,6 +1040,8 @@
 </main>
 
 <script>
+(function() {
+  "use strict";
   // ==========================================
   // 1. SCRIPT SERVICE WORKER & MANAJEMEN PWA
   // ==========================================
@@ -1332,34 +1334,39 @@ const jalankanTugasLatarBelakang = () => {
   }
 }
 
-  function buatMarkerPin(pin) {
-  // Jika marker sudah pernah dibuat sebelumnya, langsung kembalikan
-  if (pin.marker) return pin.marker;
+function buatMarkerPin(pin) {
+    // Jika marker sudah pernah dibuat sebelumnya, langsung kembalikan
+    if (pin.marker) return pin.marker;
 
-  const isBukanRumah = pin.namaTempat !== '' && pin.kategoriManual !== '' && !pin.kategoriManual.includes('rumah');
-  const namaTersensor = isBukanRumah
-    ? pin.namaRaw
-    : sensorNamaDepan(pin.namaRaw, pin.kategoriManual);
+    const isBukanRumah = pin.namaTempat !== '' && pin.kategoriManual !== '' && !pin.kategoriManual.includes('rumah');
+    const namaTersensor = isBukanRumah
+      ? pin.namaRaw
+      : sensorNamaDepan(pin.namaRaw, pin.kategoriManual);
 
-  const urlRute = `https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}`;
-  const htmlFoto = pin.foto
-    ? `<br><img src="${pin.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${pin.foto}" onError="this.style.display='none'">`
-    : '';
+    const safeNama = escapeHTML(namaTersensor);
+    const safeFoto = pin.foto ? escapeHTML(pin.foto) : '';
+    const safeLat = encodeURIComponent(pin.lat);
+    const safeLng = encodeURIComponent(pin.lng);
 
-  const popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-  const dataIkon = getIkonKategori(pin.namaRaw, pin.kategoriManual);
+    const urlRute = `https://www.google.com/maps/dir/?api=1&destination=${safeLat},${safeLng}`;
+    const htmlFoto = safeFoto
+      ? `<br><img src="${safeFoto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${safeFoto}" onError="this.style.display='none'">`
+      : '';
 
-  const customIcon = L.divIcon({
-    className: 'custom-pin',
-    html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14]
-  });
+    const popupContent = `<b>${safeNama}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+    const dataIkon = getIkonKategori(pin.namaRaw, pin.kategoriManual);
 
-  pin.marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-  return pin.marker;
-}
+    const customIcon = L.divIcon({
+      className: 'custom-pin',
+      html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+      popupAnchor: [0, -14]
+    });
+
+    pin.marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+    return pin.marker;
+  }
   
 function muatDataPetaWarga() {
   // 🌟 Ambil endpoint secara aman dari RT05_CONFIG
@@ -1675,7 +1682,7 @@ function sensorNamaDepan(namaAsli, kategori) {
   return bagianInfoRumah !== '' ? `${namaTersensor} ${bagianInfoRumah}` : namaTersensor;
 }
 
-function bukaInfoSmooth(event, targetUrl) {
+window.bukaInfoSmooth = function(event, targetUrl) {
   event.preventDefault();
 
   const btn = event.currentTarget;
@@ -1996,7 +2003,7 @@ window.tampilkanRekeningKoran = function() {
 };
     
 
-window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
+function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
   var tbody = document.getElementById(elementId);
   if (!tbody) return;
 
@@ -2011,13 +2018,13 @@ window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
     var tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
 
-   // 🌟 Menggunakan tombol pop-up modal agar gambar tampil full screen di tempat
+    // 🌟 Bungkus item.foto dengan escapeHTML agar aman dari injeksi atribut
     let htmlBukti = '';
     if (item.foto && item.foto.trim() !== '') {
-      htmlBukti = `<button type="button" data-click="bukaFotoBesar" data-arg="${item.foto}" style="font-size: 9.5px; background: #e0f2fe; color: #0288d1; padding: 2px 6px; border-radius: 4px; border: 1px solid #bae6fd; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">📄 Lihat Nota</button>`;
+      const safeFoto = escapeHTML(item.foto.trim());
+      htmlBukti = `<button type="button" data-click="bukaFotoBesar" data-arg="${safeFoto}" style="font-size: 9.5px; background: #e0f2fe; color: #0288d1; padding: 2px 6px; border-radius: 4px; border: 1px solid #bae6fd; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">📄 Lihat Nota</button>`;
     }
 
-    // 🌟 2. Bagi menjadi 3 kolom: Kiri (Keterangan), Tengah (Tombol Nota), Kanan (Nominal)
     tr.innerHTML = `
       <td style="padding:6px 0; width: 50%;">
         <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHTML(item.tgl)}</span><br>
@@ -2027,12 +2034,12 @@ window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
         ${htmlBukti}
       </td>
       <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top; width: 25%;">
-        ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
+        ${tanda} Rp ${Number(item.nominal || 0).toLocaleString('id-ID')}
       </td>
     `;
     tbody.appendChild(tr);
   });
-};
+}
 
 // 1. Fungsi Unduh Excel (CSV) Rekening Koran (Dengan Baris Total di Bawah)
 window.unduhExcelRekeningKoran = () => {
@@ -2112,15 +2119,15 @@ window.cetakPDFRekeningKoran = () => {
 
   // Buat baris tabel HTML secara dinamis
   var tableRows = '';
-  dataFilter.forEach(item => {
+dataFilter.forEach(item => {
     var formattedNominal = Number(item.nominal || 0).toLocaleString('id-ID');
     var warnaTeks = item.tipe === 'MASUK' ? '#16a34a' : '#dc2626';
     tableRows += `
       <tr>
-        <td>${item.tgl || '-'}</td>
-        <td style="text-transform: capitalize;">${item.divisi || '-'}</td>
-        <td style="font-weight: bold; color: ${warnaTeks};">${item.tipe || '-'}</td>
-        <td>${item.ket || '-'}</td>
+        <td>${escapeHTML(item.tgl || '-')}</td>
+        <td style="text-transform: capitalize;">${escapeHTML(item.divisi || '-')}</td>
+        <td style="font-weight: bold; color: ${warnaTeks};">${escapeHTML(item.tipe || '-')}</td>
+        <td>${escapeHTML(item.ket || '-')}</td>
         <td style="text-align: right; font-weight: bold;">Rp ${formattedNominal}</td>
       </tr>
     `;
@@ -2572,24 +2579,20 @@ async function kirimDataPendingJimpitan() {
 }
 
   
-window.simpanJimpitan = function(dataInput) {
-  let rawWarga = '';
-  let rawNominal = 0;
+window.simpanJimpitan = function() {
+  let elNama = document.getElementById('jimpitanNamaWarga');
+  let elNominal = document.getElementById('jimpitanNominal');
 
-  // Cek apakah dataInput adalah objek data langsung atau event dari element/UI
-  if (dataInput && typeof dataInput === 'object' && !dataInput.target) {
-    rawWarga = dataInput.warga || dataInput.nama || dataInput.nama_warga || '';
-    rawNominal = parseInt(dataInput.nominal, 10) || 0;
-  } else {
-    let elNama = document.getElementById('jimpitanNamaWarga');
-    let elNominal = document.getElementById('jimpitanNominal');
-
-    rawWarga = elNama ? elNama.value.trim() : '';
-    rawNominal = parseInt(elNominal ? elNominal.value : 0, 10);
-  }
+  let rawWarga = elNama ? elNama.value.trim() : '';
+  let rawNominal = parseInt(elNominal ? elNominal.value : 0, 10) || 0;
 
   if (!rawWarga) {
     alert("Nama warga / rumah belum terisi!");
+    return;
+  }
+
+  if (rawNominal < 0) {
+    alert("Nominal tidak valid!");
     return;
   }
 
@@ -2616,8 +2619,7 @@ window.simpanJimpitan = function(dataInput) {
   let modal = document.getElementById('modal-jimpitan');
   if (modal) modal.style.display = 'none';
   
-  let elNama = document.getElementById('jimpitanNamaWarga');
-  let elNominal = document.getElementById('jimpitanNominal');
+  // Langsung kosongkan nilai tanpa mendeklarasikan ulang 'let'
   if (elNama) elNama.value = '';
   if (elNominal) elNominal.value = '';
 
@@ -2632,7 +2634,7 @@ window.addEventListener('online', () => {
   }
 
   // Muat ulang data peta otomatis jika sebelumnya dibuka saat offline
-  if ((!window.daftarPin || window.daftarPin.length === 0) && typeof muatDataPetaWarga === 'function') {
+ if ((!daftarPin || daftarPin.length === 0) && typeof muatDataPetaWarga === 'function') {
     isDataReady = true;
     muatDataPetaWarga();
   }
@@ -2776,12 +2778,12 @@ window.cetakLaporanCatatanRonda = function() {
     if (!dataObj) return;
 
     let tableRows = '';
-    Object.keys(dataObj).forEach(key => {
+Object.keys(dataObj).forEach(key => {
       let item = dataObj[key];
       if (item) {
-        let warga = item.warga || item.nama_warga || '-';
+        let warga = escapeHTML(item.warga || item.nama_warga || '-');
         let nominal = Number(item.nominal || 0).toLocaleString('id-ID');
-        let tgl = item.tanggal || '-';
+        let tgl = escapeHTML(item.tanggal || '-');
         tableRows += `
           <tr>
             <td>${warga}</td>
@@ -3152,117 +3154,164 @@ window.switchModeJimpitan = function(mode) {
   renderDropdownTanggal();
 };
 
-// 1. Fungsi Unduh ke Excel (Format CSV)
+// 1. Fungsi Unduh ke Excel (Format CSV) langsung dari Cache Data
 window.exportJimpitanToCSV = function() {
-    const selectPeriode = document.getElementById('select-bulan-jimpitan');
-    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap_Jimpitan";
-    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
-    const gridJimpitan = document.getElementById('grid-jimpitan');
+  const selectPeriode = document.getElementById('select-bulan-jimpitan');
+  const keyTerpilih = selectPeriode ? selectPeriode.value : '';
+  const namaPeriode = selectPeriode && selectPeriode.selectedIndex >= 0
+    ? selectPeriode.options[selectPeriode.selectedIndex].text
+    : "Rekap_Jimpitan";
 
-    if (!gridJimpitan) {
-        alert("Data rekap tidak ditemukan!");
-        return;
-    }
+  let rows = [];
+  let totalNominal = 0;
 
-    let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
+  if (modeJimpitan === 'harian' && cacheDataHarian[keyTerpilih]) {
+    totalNominal = cacheDataHarian[keyTerpilih].subtotal;
+    rows = cacheDataHarian[keyTerpilih].items.map(item => [
+      item.warga,
+      item.nominal
+    ]);
+  } else if (modeJimpitan === 'bulanan' && cacheDataBulanan[keyTerpilih]) {
+    totalNominal = cacheDataBulanan[keyTerpilih].total;
+    const rekap = cacheDataBulanan[keyTerpilih].rekapMalam;
+    const urutanMalam = ['Malam Senin', 'Malam Selasa', 'Malam Rabu', 'Malam Kamis', 'Malam Jumat', 'Malam Sabtu', 'Malam Minggu'];
+    
+    const daftarMalam = Object.keys(rekap).sort((a, b) => {
+      const idxA = urutanMalam.indexOf(a);
+      const idxB = urutanMalam.indexOf(b);
+      return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+    });
 
-    if (rawTextLines.length === 0) {
-        alert("Tidak ada data untuk diunduh pada periode ini.");
-        return;
-    }
+    rows = daftarMalam.map(malam => [
+      malam,
+      rekap[malam].subtotal
+    ]);
+  }
 
-    let csvContent = "\uFEFF";
-    csvContent += `"LAPORAN REKAP JIMPITAN RT 05 KAYEN"\n`;
-    csvContent += `"Periode: ${namaPeriode}"\n`;
-    csvContent += `"Total Keseluruhan: ${totalNominal}"\n\n`;
-    csvContent += `"Nama Warga / Keterangan";"Nominal Jimpitan"\n`;
+  if (rows.length === 0) {
+    alert("Tidak ada data untuk diunduh pada periode ini.");
+    return;
+  }
 
-    for (let i = 0; i < rawTextLines.length; i += 2) {
-        let col1 = rawTextLines[i] ? rawTextLines[i].replace(/"/g, '""') : '';
-        let col2 = rawTextLines[i+1] ? rawTextLines[i+1].replace(/"/g, '""') : '';
-        if (col1) {
-            csvContent += `"${col1}";"${col2}"\n`;
-        }
-    }
+  let csvContent = "\uFEFF";
+  csvContent += `"LAPORAN REKAP JIMPITAN RT 05 KAYEN"\n`;
+  csvContent += `"Periode: ${namaPeriode.replace(/"/g, '""')}"\n`;
+  csvContent += `"Total Keseluruhan: Rp ${totalNominal.toLocaleString('id-ID')}"\n\n`;
+  csvContent += `"Nama Warga / Keterangan";"Nominal Jimpitan"\n`;
 
-    csvContent += `"TOTAL KESELURUHAN";"${totalNominal}"\n`;
+  rows.forEach(([col1, col2]) => {
+    csvContent += `"${String(col1).replace(/"/g, '""')}";"${col2}"\n`;
+  });
 
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  csvContent += `\n"TOTAL KESELURUHAN";"${totalNominal}"\n`;
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.setAttribute("href", url);
+  link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
 };
 
 // 2. Fungsi Cetak / Simpan ke PDF via Print Dialog Browser
 window.cetakLaporanJimpitan = function() {
-    const selectPeriode = document.getElementById('select-bulan-jimpitan');
-    const namaPeriode = selectPeriode ? selectPeriode.options[selectPeriode.selectedIndex].text : "Rekap Jimpitan";
-    const totalNominal = document.getElementById('total-jimpitan')?.innerText || "Rp 0";
-    const gridJimpitan = document.getElementById('grid-jimpitan');
+  const selectPeriode = document.getElementById('select-bulan-jimpitan');
+  const keyTerpilih = selectPeriode ? selectPeriode.value : '';
+  const namaPeriode = selectPeriode && selectPeriode.selectedIndex >= 0
+    ? selectPeriode.options[selectPeriode.selectedIndex].text
+    : "Rekap_Jimpitan";
 
-    if (!gridJimpitan) {
-        alert("Data rekap tidak ditemukan!");
-        return;
-    }
+  let rows = [];
+  let totalNominal = 0;
 
-    let rawTextLines = gridJimpitan.innerText.split('\n').map(line => line.trim()).filter(line => line !== '');
-
-    if (rawTextLines.length === 0) {
-        alert("Tidak ada data untuk dicetak pada periode ini.");
-        return;
-    }
-
-    const printWindow = window.open('', '_blank', 'height=700,width=900');
-    printWindow.document.write('<html><head><title>Laporan Rekap Jimpitan RT 05 Kayen</title>');
-    printWindow.document.write('<style>');
-    printWindow.document.write('body { font-family: Arial, sans-serif; padding: 30px; color: #111; }');
-    printWindow.document.write('h2 { text-align: center; color: #0288d1; margin-bottom: 5px; font-size: 18px; }');
-    printWindow.document.write('.subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 20px; }');
-    printWindow.document.write('.total-box { background: #10b981; color: white; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; font-size: 15px; }');
-    printWindow.document.write('table { width: 100%; border-collapse: collapse; margin-top: 10px; }');
-    printWindow.document.write('th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: left; }');
-    printWindow.document.write('th { background-color: #f1f5f9; color: #1e293b; font-weight: bold; }');
-    printWindow.document.write('tr:nth-child(even) { background-color: #f8fafc; }');
-    printWindow.document.write('.text-right { text-align: right; }');
-    printWindow.document.write('</style>');
-    printWindow.document.write('</head><body>');
+  if (modeJimpitan === 'harian' && cacheDataHarian[keyTerpilih]) {
+    totalNominal = cacheDataHarian[keyTerpilih].subtotal;
+    rows = cacheDataHarian[keyTerpilih].items.map(item => [
+      item.warga,
+      `Rp ${Number(item.nominal || 0).toLocaleString('id-ID')}`
+    ]);
+  } else if (modeJimpitan === 'bulanan' && cacheDataBulanan[keyTerpilih]) {
+    totalNominal = cacheDataBulanan[keyTerpilih].total;
+    const rekap = cacheDataBulanan[keyTerpilih].rekapMalam;
+    const urutanMalam = ['Malam Senin', 'Malam Selasa', 'Malam Rabu', 'Malam Kamis', 'Malam Jumat', 'Malam Sabtu', 'Malam Minggu'];
     
-    printWindow.document.write('<h2>RT 05 KAYEN - LAPORAN REKAP JIMPITAN</h2>');
-    printWindow.document.write(`<div class="subtitle">Periode Laporan: ${namaPeriode}</div>`);
-    printWindow.document.write(`<div class="total-box">TOTAL KESELURUHAN: ${totalNominal}</div>`);
-    
-    printWindow.document.write('<table>');
-    printWindow.document.write('<thead><tr><th>Nama Warga / Keterangan / Malam</th><th class="text-right">Nominal (Rp)</th></tr></thead>');
-    printWindow.document.write('<tbody>');
+    const daftarMalam = Object.keys(rekap).sort((a, b) => {
+      const idxA = urutanMalam.indexOf(a);
+      const idxB = urutanMalam.indexOf(b);
+      return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
+    });
 
-    for (let i = 0; i < rawTextLines.length; i += 2) {
-        let col1 = rawTextLines[i] ? rawTextLines[i] : '';
-        let col2 = rawTextLines[i+1] ? rawTextLines[i+1] : '';
-        if (col1) {
-            printWindow.document.write(`<tr><td>${col1}</td><td class="text-right">${col2}</td></tr>`);
-        }
-    }
+    rows = daftarMalam.map(malam => [
+      malam,
+      `Rp ${Number(rekap[malam].subtotal || 0).toLocaleString('id-ID')}`
+    ]);
+  }
 
-    printWindow.document.write('</tbody></table>');
-    printWindow.document.write('</body></html>');
-    printWindow.document.close();
-    printWindow.focus();
-    
-    setTimeout(() => {
-        printWindow.print();
-        printWindow.close();
-    }, 600);
+  if (rows.length === 0) {
+    alert("Tidak ada data untuk dicetak pada periode ini.");
+    return;
+  }
+
+  const tableRowsHTML = rows.map(([col1, col2]) =>
+    `<tr><td>${escapeHTML(col1)}</td><td class="text-right">${escapeHTML(col2)}</td></tr>`
+  ).join('');
+
+  const printWindow = window.open('', '_blank', 'height=700,width=900');
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>Laporan Rekap Jimpitan RT 05 Kayen</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 30px; color: #111; }
+          h2 { text-align: center; color: #0288d1; margin-bottom: 5px; font-size: 18px; }
+          .subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 20px; }
+          .total-box { background: #10b981; color: white; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; font-size: 15px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: left; }
+          th { background-color: #f1f5f9; color: #1e293b; font-weight: bold; }
+          tr:nth-child(even) { background-color: #f8fafc; }
+          .text-right { text-align: right; }
+        </style>
+      </head>
+      <body>
+        <h2>RT 05 KAYEN - LAPORAN REKAP JIMPITAN</h2>
+        <div class="subtitle">Periode Laporan: ${escapeHTML(namaPeriode)}</div>
+        <div class="total-box">TOTAL KESELURUHAN: Rp ${totalNominal.toLocaleString('id-ID')}</div>
+        <table>
+          <thead><tr><th>Nama Warga / Keterangan / Malam</th><th class="text-right">Nominal (Rp)</th></tr></thead>
+          <tbody>${tableRowsHTML}</tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 600);
 };
 
-    const dataChangelog = [       {
-        versi: "v1.7.0",
-        tanggal: "9 Nov 2026",
+    const dataChangelog = [
+      {
+        versi: "v1.7.1",
+        tanggal: "16 Nov 2026",
         status: "Terbaru",
         warna: "#4CAF50",
+        fitur: [
+          "Perbaikan antar muka pada index dan admin",
+          "Perbaikan kecepatan membuka aplikasi"
+        ]
+      },
+      {
+        versi: "v1.7.0",
+        tanggal: "9 Nov 2026",
+        status: "",
+        warna: "#888",
         fitur: [
           "Perbaikan fitur Edit/Kelola Data Warga",
           "Perbaikan Major pada halaman cloud storage",
@@ -3629,7 +3678,7 @@ if (document.readyState === 'complete') {
   }
   window.addEventListener('utilsSiap', initPetaDanData);
 
-  
+})();
   </script>
   </body>
 </html>
