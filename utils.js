@@ -105,7 +105,7 @@ async function initFirebaseLazy() {
 
 // Jalankan pemuatan Firebase setelah halaman utama selesai render awal (idle)
 if ('requestIdleCallback' in window) {
-  requestIdleCallback(() => initFirebaseLazy(), { timeout: 2000 });
+  requestIdleCallback(() => initFirebaseLazy(), { timeout: 2500 });
 } else {
   setTimeout(() => initFirebaseLazy(), 1200);
 }
