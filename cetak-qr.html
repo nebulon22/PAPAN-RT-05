@@ -6,22 +6,26 @@
   
   <title>Cetak Stiker QR Code Jimpitan RT 05</title>
 
-  <!-- Pustaka QRCode.js via CDN (Gratis & Tanpa Batas) -->
+  <!-- Pustaka QRCode.js via CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 
   <!-- Utils Konfigurasi (berisi RT05_CONFIG) -->
   <script type="module" src="utils.js"></script>
 
   <style>
+    * { box-sizing: border-box; }
     body {
       font-family: sans-serif;
       background: #f1f5f9;
       color: #1e293b;
       margin: 0;
-      padding: 20px;
+      padding: 16px;
+      overflow-x: hidden;
     }
     .header-print {
       display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
       justify-content: space-between;
       align-items: center;
       background: white;
@@ -42,11 +46,12 @@
     }
     .btn-print:hover { background: #0277bd; }
 
-    /* Grid Stiker untuk Lembaran A4 */
+    /* Grid Responsif untuk Layar Pratinjau (Bebas Scrollbar Horizontal) */
     .grid-stiker {
       display: grid;
-      grid-template-columns: repeat(3, 1fr); /* 3 Kolom per baris */
-      gap: 16px;
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 14px;
+      width: 100%;
     }
     .stiker-card {
       background: white;
@@ -74,13 +79,13 @@
       text-transform: uppercase;
     }
     .qr-box {
-      margin: 4px 0;
+      margin: 6px 0;
     }
 
-    /* Pengaturan Khusus saat tombol Print ditekan */
+    /* Pengaturan Khusus saat tombol Print ditekan (Tetap 3 Kolom Rapi untuk Kertas A4) */
     @media print {
       body { background: white; padding: 0; }
-      .header-print { display: none; } /* Sembunyikan tombol saat dicetak */
+      .header-print { display: none; }
       .grid-stiker {
         grid-template-columns: repeat(3, 1fr);
         gap: 10px;
@@ -98,29 +103,44 @@
   <div class="header-print">
     <div>
       <h2 style="margin: 0; font-size: 18px;">🖨️ Generator Stiker QR Code Jimpitan RT 05</h2>
-      <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">Data diambil otomatis dari database <code>peta_warga</code> via Proxy.</p>
+      <p style="margin: 4px 0 0 0; font-size: 12px; color: #64748b;">Data diambil otomatis dari database <code>peta_warga</code> via Proxy Admin.</p>
     </div>
     <button class="btn-print" onclick="window.print()">🖨️ Cetak / Print Stiker</button>
   </div>
 
   <div id="container-stiker" class="grid-stiker">
-    <div style="grid-column: span 3; text-align: center; padding: 40px; color: #64748b;">⏳ Memuat data warga...</div>
+    <div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #64748b;">⏳ Memuat data warga...</div>
   </div>
 
 <script>
 document.addEventListener("DOMContentLoaded", async () => {
     const container = document.getElementById('container-stiker');
-    container.innerHTML = '<div style="grid-column: span 3; text-align: center; padding: 40px; color: #64748b;">⏳ Memuat data warga dari server...</div>';
+    container.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; padding: 40px; color: #64748b;">⏳ Memuat data warga dari server...</div>';
+
+    // Ambil token sesi admin dari sessionStorage (sama dengan admin.html)
+    const sessionToken = sessionStorage.getItem('rt05_session_token') || localStorage.getItem('rt05_session_token') || '';
+    if (!sessionToken) {
+      container.innerHTML = '<div style="grid-column: 1 / -1; color:#dc2626; text-align:center; padding:20px; font-weight:bold;">🔒 Akses ditolak: Silakan login Admin terlebih dahulu.</div>';
+      return;
+    }
 
     try {
-      // Menggunakan endpoint proxy Cloudflare Worker
-      const response = await fetch(RT05_CONFIG.PETA_PROXY_URL);
+      const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, {
+        headers: {
+          "Authorization": `Bearer ${sessionToken}`,
+          "X-Admin-Token": sessionToken
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
       const dataObj = await response.json();
-      
       container.innerHTML = '';
 
       if (!dataObj) {
-        container.innerHTML = '<div style="grid-column: span 3; text-align:center; padding:20px;">Tidak ada data warga ditemukan.</div>';
+        container.innerHTML = '<div style="grid-column: 1 / -1; text-align:center; padding:20px;">Tidak ada data warga ditemukan.</div>';
         return;
       }
 
@@ -128,14 +148,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         const item = dataObj[key];
         if (!item) return;
 
-        // Ambil data kepala keluarga dan no rumah sesuai struktur
-        const kepalaKeluarga = item.kepalaKeluarga || item.Nama || item.nama || '';
-        const noRumah = item.noRumah || item.no_rumah || '-';
+        const kategori = String(item.Type || item.type || item.Kategori || item.kategori || '').toLowerCase();
+        const namaTempat = String(item.namaTempat || item.Nama || item.nama || '').trim();
+        const kepalaKeluarga = String(item.kepalaKeluarga || item.KepalaKeluarga || '').trim();
+        const noRumah = String(item.noRumah || item.NoRumah || item.no_rumah || '').trim();
 
-        // Format teks murni: Bejo Nurmantyo (Rumah no.06)
-        const teksQR = `${kepalaKeluarga} (Rumah no.${noRumah})`;
+        const isRumahWarga = (kategori.includes('rumah') || kategori === '') &&
+                             !kategori.includes('fasum') &&
+                             !kategori.includes('kost') &&
+                             !kategori.includes('kontrakan') &&
+                             !kategori.includes('kuliner') &&
+                             !kategori.includes('minimarket');
 
-        if (kepalaKeluarga) {
+        let teksQR = '';
+        let subLabel = '';
+
+        if (isRumahWarga && noRumah && noRumah !== '-') {
+          // Untuk rumah warga: isi QR cukup "Rumah No XX" agar aman saat ditempel di depan rumah & discan ronda
+          teksQR = `Rumah No ${noRumah}`;
+          // Nama kepala keluarga hanya tampil kecil di kartu pratinjau admin agar admin tidak salah tempel stiker
+          subLabel = kepalaKeluarga ? `(${kepalaKeluarga})` : '';
+        } else {
+          // Untuk fasum / tempat usaha / rumah tanpa nomor
+          const labelTempat = namaTempat || kepalaKeluarga;
+          if (!labelTempat) return;
+          teksQR = (noRumah && noRumah !== '-') ? `${labelTempat} (No. ${noRumah})` : labelTempat;
+        }
+
+        if (teksQR) {
           const card = document.createElement('div');
           card.className = 'stiker-card';
 
@@ -143,11 +183,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             <span>Jimpitan RT 05 Kayen</span>
             <div class="qr-box" id="qr-${key}"></div>
             <h3>${teksQR}</h3>
+            ${subLabel ? `<div style="font-size:11px; color:#475569; margin-top:2px;">${subLabel}</div>` : ''}
           `;
 
           container.appendChild(card);
 
-          // Generate QR code dengan teks murni
           new QRCode(document.getElementById(`qr-${key}`), {
             text: teksQR,
             width: 90,
@@ -160,7 +200,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     } catch (err) {
       console.error("Gagal memuat data QR:", err);
-      container.innerHTML = `<div style="grid-column: span 3; color:red; text-align:center; padding:20px;">❌ Gagal memuat data: ${err.message}</div>`;
+      container.innerHTML = `<div style="grid-column: 1 / -1; color:red; text-align:center; padding:20px;">❌ Gagal memuat data: ${err.message}</div>`;
     }
 });
 </script>
