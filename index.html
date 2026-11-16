@@ -12,8 +12,12 @@
 
   <!-- 🌟 1. CSS LOKAL (Leaflet & MarkerCluster) -->
   <link rel="stylesheet" href="leaflet.css">
-  <link rel="stylesheet" href="MarkerCluster.css">
-  <link rel="stylesheet" href="MarkerCluster.Default.css">
+  <link rel="stylesheet" href="MarkerCluster.css" media="print" onload="this.media='all'">
+  <link rel="stylesheet" href="MarkerCluster.Default.css" media="print" onload="this.media='all'">
+  <noscript>
+    <link rel="stylesheet" href="MarkerCluster.css">
+    <link rel="stylesheet" href="MarkerCluster.Default.css">
+  </noscript>
 
   <!-- FontAwesome Lokal -->
   <link rel="stylesheet" href="all.min.css" media="print" onload="this.media='all'">
@@ -30,9 +34,9 @@
   <meta name="apple-mobile-web-app-title" content="Papan 05">
   <link rel="apple-touch-icon" href="kentongan-slit-drum.png">
   
-  <!-- 🌟 2. JAVASCRIPT LOKAL (Urutan harus berurutan: Leaflet -> MarkerCluster -> Utils/Setting) -->
-  <script src="leaflet.js"></script>
-  <script src="leaflet.markercluster.js"></script>
+<!-- 🌟 2. JAVASCRIPT LOKAL (Urutan eksekusi tetap terjamin berurutan dengan defer) -->
+  <script src="leaflet.js" defer></script>
+  <script src="leaflet.markercluster.js" defer></script>
   
 <!-- Konfigurasi Global & Utils (Gunakan type="module" untuk utils.js) -->
 <script type="module" src="utils.js"></script>
@@ -3597,7 +3601,7 @@ window.simpanWargaBaru = async function() {
   }
 };
   // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
+if (document.readyState === 'complete') {
     initPetaDanData();
   } else {
     document.addEventListener('DOMContentLoaded', initPetaDanData);
