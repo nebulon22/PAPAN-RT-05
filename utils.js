@@ -24,45 +24,91 @@ const RT05_CONFIG = {
 };
 
 // ==========================================
-// INISIALISASI FIREBASE V10 + ANONYMOUS AUTH TERPUSAT
+// INISIALISASI FIREBASE V10 + ANONYMOUS AUTH (LAZY / NON-BLOCKING)
 // ==========================================
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
-import { 
-  getAuth, 
-  initializeAuth, 
-  browserLocalPersistence, 
-  browserSessionPersistence, 
-  inMemoryPersistence, 
-  signInAnonymously, 
-  onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+async function initFirebaseLazy() {
+  if (window.db && window.auth) return;
 
-const app = initializeApp(RT05_CONFIG.FIREBASE);
-const db = getDatabase(app, RT05_CONFIG.FIREBASE.databaseURL);
+  try {
+    const [
+      { initializeApp },
+      { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query },
+      {
+        getAuth,
+        initializeAuth,
+        browserLocalPersistence,
+        browserSessionPersistence,
+        inMemoryPersistence,
+        signInAnonymously,
+        onAuthStateChanged
+      }
+    ] = await Promise.all([
+      import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js"),
+      import("https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js"),
+      import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js")
+    ]);
 
-// Inisialisasi Auth Langsung Menggunakan Persistence (Tanpa Memicu GAPI Iframe)
-let auth;
-try {
-  auth = initializeAuth(app, {
-    persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]
-  });
-} catch (e) {
-  auth = getAuth(app);
+    const app = initializeApp(RT05_CONFIG.FIREBASE);
+    const db = getDatabase(app, RT05_CONFIG.FIREBASE.databaseURL);
+
+    let auth;
+    try {
+      auth = initializeAuth(app, {
+        persistence: [browserLocalPersistence, browserSessionPersistence, inMemoryPersistence]
+      });
+    } catch (e) {
+      auth = getAuth(app);
+    }
+
+    // EKSPOS UTILITIES DARI MODULE KE GLOBAL WINDOW
+    window.db = db;
+    window.auth = auth;
+    window.firebaseRef = ref;
+    window.firebaseOnValue = onValue;
+    window.firebaseUpdate = update;
+    window.firebaseRemove = remove;
+    window.firebasePush = push;
+    window.firebaseSet = set;
+    window.firebaseGet = get;
+    window.firebaseLimitToLast = limitToLast;
+    window.firebaseQuery = query;
+    window.signInAnonymously = signInAnonymously;
+    window.onAuthStateChanged = onAuthStateChanged;
+
+    // Autentikasi Anonim Otomatis + Jalankan Listener Users setelah Auth Siap
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        signInAnonymously(auth).then(() => {
+          console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
+        }).catch((err) => {
+          console.error("🔴 Gagal Login Anonim:", err);
+        });
+      } else {
+        console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
+        // 🌟 Kirim sinyal ke index.html bahwa Firebase Auth & DB sudah siap
+        window.dispatchEvent(new Event('firebaseSiapIndex'));
+        window.dispatchEvent(new Event('firebaseSiap'));
+
+        if (typeof inisialisasiListenerUsersAdmin === 'function') {
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', inisialisasiListenerUsersAdmin);
+          } else {
+            inisialisasiListenerUsersAdmin();
+          }
+        }
+      }
+    });
+  } catch (err) {
+    console.error("Gagal memuat modul Firebase:", err);
+  }
 }
 
-// EKSPOS UTILITIES DARI MODULE KE GLOBAL WINDOW
-window.db = db;
-window.auth = auth;
-window.firebaseRef = ref;
-window.firebaseOnValue = onValue;
-window.firebaseUpdate = update;
-window.firebaseRemove = remove;
-window.firebasePush = push;
-window.firebaseSet = set;
-window.firebaseGet = get;
-window.firebaseLimitToLast = limitToLast;
-window.firebaseQuery = query;
+// Jalankan pemuatan Firebase setelah halaman utama selesai render awal (idle)
+if ('requestIdleCallback' in window) {
+  requestIdleCallback(() => initFirebaseLazy(), { timeout: 2000 });
+} else {
+  setTimeout(() => initFirebaseLazy(), 1200);
+}
 
 // ==========================================
 // FUNGSI UTILITY PENDUKUNG & PENCARIAN
@@ -466,26 +512,7 @@ export function inisialisasiListenerUsersAdmin() {
   });
 }
 
-// Autentikasi Anonim Otomatis + Jalankan Listener Users setelah Auth Siap
-onAuthStateChanged(auth, (user) => {
-  if (!user) {
-    signInAnonymously(auth).then(() => {
-      console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
-    }).catch((err) => {
-      console.error("🔴 Gagal Login Anonim:", err);
-    });
-  } else {
-    console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
-    // 🌟 Kirim sinyal ke index.html bahwa Firebase Auth & DB sudah siap
-    window.dispatchEvent(new Event('firebaseSiapIndex'));
 
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', inisialisasiListenerUsersAdmin);
-    } else {
-      inisialisasiListenerUsersAdmin();
-    }
-  }
-});
 
 // DAFTARKAN SEMUA FUNGSI KE WINDOW GLOBAL
 window.RT05_CONFIG = RT05_CONFIG;
