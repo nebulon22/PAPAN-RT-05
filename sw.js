@@ -91,6 +91,7 @@ self.addEventListener('install', (e) => {
         './MarkerCluster.Default.css',
         './kentongan192.png',
         './kentongan-slit-drum.png',
+        './kentongan-btn.webp',
         './html5-qrcode.min.js'
       ]);
     })
