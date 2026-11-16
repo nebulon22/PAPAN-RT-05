@@ -1259,7 +1259,7 @@ window.addEventListener('firebaseSiapIndex', initMainPageChatListener);
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
 var map; 
-var daftarPin = [];
+let daftarPin = [];
 var dataKeuangan = [];
 var pinRumahAktif = null;
 var isDataReady = false;
@@ -1360,9 +1360,8 @@ if (sessionToken) {
       markerGroup.clearLayers();
       
       // 🌟 PASTI KAN daftarPin & daftarDataPeta TERBUKA KE WINDOW GLOBAL UNTUK SEARCH BOX
-      window.daftarPin = [];
-      window.daftarDataPeta = [];
-
+      daftarPin = [];
+      
       if (!dataObj) return;
 
       var baris = [];
@@ -1456,7 +1455,7 @@ var namaTersensor = isBukanRumah
             var keywordPencarian = `${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
 
             // 🌟 Simpan ke Window Global
-            window.daftarPin.push({ 
+            daftarPin.push({ 
               namaRaw: namaTampilAsli,
               nama: keywordPencarian, 
               noRumah: noRumah.toLowerCase(),
@@ -1535,7 +1534,7 @@ window.jalankanPencarianPeta = async function(e) {
     return;
   }
 
-  const targetDaftar = window.daftarPin || (typeof daftarPin !== 'undefined' ? daftarPin : []);
+const targetDaftar = typeof daftarPin !== 'undefined' ? daftarPin : [];
 
   if (!targetDaftar || targetDaftar.length === 0) {
     if (navigator.onLine && !isDataReady && typeof muatDataPetaWarga === 'function') {
