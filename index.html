@@ -2,21 +2,24 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Papan Informasi Digital, Denah Interaktif, Keuangan, dan Pengumuman Warga RT 05 Kayen.">
   
   <title>Denah Interaktif & Keuangan RT 05 Kayen</title>
 
-<!-- Cukup 2 preconnect utama (sisanya otomatis ditangani SDK / dns-prefetch) -->
-<link rel="preconnect" href="https://mt0.google.com" crossorigin>
-<link rel="preconnect" href="https://www.gstatic.com" crossorigin>
-<link rel="dns-prefetch" href="https://mt1.google.com">
-<link rel="dns-prefetch" href="https://mt2.google.com">
-<link rel="dns-prefetch" href="https://mt3.google.com">
-  
+  <!-- Preconnect & DNS Prefetch -->
+  <link rel="preconnect" href="https://mt0.google.com" crossorigin>
+  <link rel="preconnect" href="https://www.gstatic.com" crossorigin>
+  <link rel="dns-prefetch" href="https://mt1.google.com">
+  <link rel="dns-prefetch" href="https://mt2.google.com">
+  <link rel="dns-prefetch" href="https://mt3.google.com">
 
-  <!-- 🌟 1. CSS LOKAL (Leaflet & MarkerCluster) -->
+  <!-- Preload Aset Kritis (Harus di atas tag script/stylesheet) -->
   <link rel="preload" href="leaflet.css" as="style">
+  <link rel="preload" href="leaflet.js" as="script">
+  <link rel="preload" href="setting.js" as="script">
+
+  <!-- 1. CSS LOKAL (Leaflet & MarkerCluster) -->
   <link rel="stylesheet" href="leaflet.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="leaflet.css"></noscript>
   <link rel="stylesheet" href="MarkerCluster.css" media="print" onload="this.media='all'">
@@ -26,29 +29,20 @@
     <link rel="stylesheet" href="MarkerCluster.Default.css">
   </noscript>
 
-  <!-- FontAwesome Lokal -->
-  <link rel="stylesheet" href="all.min.css" media="print" onload="this.media='all'">
-  <noscript><link rel="stylesheet" href="all.min.css"></noscript>
-  
-  <!-- PWA Settings -->
+   <!-- PWA Settings -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0288d1">
   <link rel="icon" href="kentongan-slit-drum.png" type="image/png">
-  <!-- Konfigurasi Khusus iOS PWA -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Papan 05">
   <link rel="apple-touch-icon" href="kentongan-slit-drum.png">
   
-<!-- 🌟 2. JAVASCRIPT LOKAL (Urutan eksekusi tetap terjamin berurutan dengan defer) -->
+  <!-- 2. JAVASCRIPT LOKAL (leaflet.markercluster.js dimuat dinamis di muatDataPetaWarga) -->
   <script src="leaflet.js" defer></script>
-  <script src="leaflet.markercluster.js" defer></script>
-  
-<!-- Konfigurasi Global & Utils (Gunakan type="module" untuk utils.js) -->
-<script type="module" src="utils.js"></script>
-<script src="setting.js" defer></script>
-
+  <script type="module" src="utils.js"></script>
+  <script src="setting.js" defer></script>
   
 
  <style>
@@ -1262,6 +1256,13 @@ window.addEventListener('firebaseSiapIndex', () => {
       chatBtn.classList.remove('chat-btn-animated');
     }
   }
+   // 🌟 LOAD FONT
+  window.addEventListener('load', () => {
+  const faLink = document.createElement('link');
+  faLink.rel = 'stylesheet';
+  faLink.href = 'all.min.css';
+  document.head.appendChild(faLink);
+});
 
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
@@ -1369,7 +1370,7 @@ function buatMarkerPin(pin) {
   }
   
 function muatDataPetaWarga() {
-  // 🌟 Ambil endpoint secara aman dari RT05_CONFIG
+  // Ambil endpoint secara aman dari RT05_CONFIG
   const endpointPeta = window.RT05_CONFIG && window.RT05_CONFIG.PETA_PROXY_URL;
   
   if (!endpointPeta) {
@@ -1377,11 +1378,11 @@ function muatDataPetaWarga() {
     return;
   }
 
-const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
-const headers = { 'Content-Type': 'application/json' };
-if (sessionToken) {
-  headers['Authorization'] = `Bearer ${sessionToken}`;
-}
+  const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
+  const headers = { 'Content-Type': 'application/json' };
+  if (sessionToken) {
+    headers['Authorization'] = `Bearer ${sessionToken}`;
+  }
 
   // 1. Ambil data melalui Cloudflare Worker proxy secara aman dengan Header Admin
   fetch(endpointPeta, { method: 'GET', headers: headers })
@@ -1392,143 +1393,141 @@ if (sessionToken) {
       return response.json();
     })
     .then(dataObj => {
-      // Pastikan markerGroup terpasang di peta menggunakan MarkerCluster lokal
-      if (typeof markerGroup === 'undefined' || !markerGroup) {
-        window.markerGroup = L.markerClusterGroup({
-          maxClusterRadius: 30 
-        });
-        window.markerGroup.addTo(map);
-      } else if (!map.hasLayer(markerGroup)) {
-        markerGroup.addTo(map);
-      }
-
-      markerGroup.clearLayers();
-      
-      // 🌟 PASTI KAN daftarPin & daftarDataPeta ada
-      daftarPin = [];
-      
-      if (!dataObj) return;
-
-      var baris = [];
-      Object.keys(dataObj).forEach(key => {
-        var item = dataObj[key];
-        if (item && (item.nama || item.name || item.Nama || item.kepalaKeluarga)) {
-          baris.push(item);
+      // Fungsi internal untuk memasang MarkerCluster & merender titik lokasi
+      const pasangClusterDanRender = () => {
+        if (typeof L.markerClusterGroup === 'function') {
+          if (typeof markerGroup === 'undefined' || !markerGroup) {
+            window.markerGroup = L.markerClusterGroup({
+              maxClusterRadius: 30
+            });
+            window.markerGroup.addTo(map);
+          } else if (!map.hasLayer(markerGroup)) {
+            markerGroup.addTo(map);
+          }
+          markerGroup.clearLayers();
         }
-      });
 
-      var index = 0;
-      var chunkSize = 20;
+        daftarPin = [];
+        if (!dataObj) return;
 
-      function prosesChunk() {
-        var batas = Math.min(index + chunkSize, baris.length);
-        
-        for (let i = index; i < batas; i++) {
-          var kolom = baris[i];
+        var baris = [];
+        Object.keys(dataObj).forEach(key => {
+          var item = dataObj[key];
+          if (item && (item.nama || item.name || item.Nama || item.kepalaKeluarga)) {
+            baris.push(item);
+          }
+        });
+
+        var index = 0;
+        var chunkSize = 20;
+
+        function prosesChunk() {
+          var batas = Math.min(index + chunkSize, baris.length);
           
-          var kepalaKeluarga = String(kolom.kepalaKeluarga || kolom.KepalaKeluarga || '').trim();
-          var noRumah = String(kolom.noRumah || kolom.NoRumah || '').trim();
-          var namaTempat = String(kolom.namaTempat || kolom.Nama || kolom.nama || kolom.name || '').trim();
-          var textAnggota = String(kolom.anggotaKeluarga || kolom.Anggota || kolom.anggota || '').trim(); 
-          var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
+          for (let i = index; i < batas; i++) {
+            var kolom = baris[i];
+            
+            var kepalaKeluarga = String(kolom.kepalaKeluarga || kolom.KepalaKeluarga || '').trim();
+            var noRumah = String(kolom.noRumah || kolom.NoRumah || '').trim();
+            var namaTempat = String(kolom.namaTempat || kolom.Nama || kolom.nama || kolom.name || '').trim();
+            var textAnggota = String(kolom.anggotaKeluarga || kolom.Anggota || kolom.anggota || '').trim(); 
+            var kategoriManual = String(kolom.Type || kolom.type || kolom.Kategori || kolom.kategori || '').trim().toLowerCase();
 
-// 1. Tentukan nama utama yang ditampilkan
-          var namaUtama = namaTempat !== '' ? namaTempat : kepalaKeluarga;
-          var namaTampilAsli = namaUtama;
+            var namaUtama = namaTempat !== '' ? namaTempat : kepalaKeluarga;
+            var namaTampilAsli = namaUtama;
 
-          if (namaTempat !== '' && noRumah !== '') {
-            // Jika berupa tempat/kost/warung yang punya nomor rumah
-            namaTampilAsli = `${namaTempat} (No. ${noRumah})`;
-          } else if (kepalaKeluarga !== '' && noRumah !== '') {
-            // Jika berupa rumah warga biasa
-            namaTampilAsli = `${kepalaKeluarga} (Rumah No. ${noRumah})`;
+            if (namaTempat !== '' && noRumah !== '') {
+              namaTampilAsli = `${namaTempat} (No. ${noRumah})`;
+            } else if (kepalaKeluarga !== '' && noRumah !== '') {
+              namaTampilAsli = `${kepalaKeluarga} (Rumah No. ${noRumah})`;
+            }
+
+            if (namaTampilAsli !== '') {
+              var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
+              var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
+              var latClean = perbaikiKoordinat(rawLat);
+              var lngClean = perbaikiKoordinat(rawLng);
+              
+              var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
+              var statusHidden = typeof rawHidden === 'boolean' 
+                ? rawHidden 
+                : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+
+              var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
+              
+              var latNum = parseFloat(latClean);
+              var lngNum = parseFloat(lngClean);
+              if (isNaN(latNum) || isNaN(lngNum)) continue;
+
+              var keywordPencarian = `${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
+              var dataIkon = getIkonKategori(namaTampilAsli, kategoriManual);
+
+              var dataPinItem = {
+                namaRaw: namaTampilAsli,
+                namaTempat: namaTempat,
+                kategoriManual: kategoriManual,
+                foto: urlFoto,
+                nama: keywordPencarian,
+                noRumah: noRumah.toLowerCase(),
+                kepalaKeluarga: kepalaKeluarga.toLowerCase(),
+                anggota: textAnggota.toLowerCase(),
+                searchHashes: Array.isArray(kolom.searchHashes) ? kolom.searchHashes : [],
+                marker: null,
+                lat: latNum,
+                lng: lngNum,
+                hidden: statusHidden,
+                kategori: kategoriManual || dataIkon.kategori
+              };
+
+              daftarPin.push(dataPinItem);
+
+              if (statusHidden) continue;
+
+              var markerPublik = buatMarkerPin(dataPinItem);
+
+              if (typeof markerGroup !== 'undefined' && markerGroup) {
+                markerGroup.addLayer(markerPublik);
+              } else {
+                markerPublik.addTo(map);
+              }
+            }
           }
 
-          if (namaTampilAsli !== '') {
-            var rawLat = kolom.Lat !== undefined ? kolom.Lat : (kolom.lat || kolom.latitude || '');
-            var rawLng = kolom.Lng !== undefined ? kolom.Lng : (kolom.lng || kolom.longitude || '');
-            var latClean = perbaikiKoordinat(rawLat);
-            var lngClean = perbaikiKoordinat(rawLng);
-            
-            var rawHidden = kolom.Hidden !== undefined ? kolom.Hidden : kolom.hidden;
-            var statusHidden = typeof rawHidden === 'boolean' 
-              ? rawHidden 
-              : (rawHidden ? String(rawHidden).trim().toUpperCase() === 'TRUE' : false);
+          index = batas;
 
-            var urlFoto = String(kolom['LINK GAMBAR/VIDEO'] || kolom.foto || kolom.Foto || '').trim();
-            
-            var item = {
-              name: namaTampilAsli,
-              nameAsli: namaTampilAsli,
-              lat: parseFloat(latClean),
-              lng: parseFloat(lngClean),
-              hidden: statusHidden,
-              foto: urlFoto,
-              anggota: textAnggota
-            };
-
-            if (isNaN(item.lat) || isNaN(item.lng)) continue;
-
-
-            var keywordPencarian = `${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
-            var dataIkon = getIkonKategori(namaTampilAsli, kategoriManual);
-
-            var dataPinItem = {
-              namaRaw: namaTampilAsli,
-              namaTempat: namaTempat,
-              kategoriManual: kategoriManual,
-              foto: urlFoto,
-              nama: keywordPencarian,
-              noRumah: noRumah.toLowerCase(),
-              kepalaKeluarga: kepalaKeluarga.toLowerCase(),
-              anggota: textAnggota.toLowerCase(),
-              searchHashes: Array.isArray(kolom.searchHashes) ? kolom.searchHashes : [],
-              marker: null, // Belum dibuat sampai dibutuhkan
-              lat: item.lat,
-              lng: item.lng,
-              hidden: statusHidden,
-              kategori: kategoriManual || dataIkon.kategori
-            };
-
-            daftarPin.push(dataPinItem);
-
-            // Jika hidden (rumah warga privat), JANGAN buat L.marker sekarang
-            if (statusHidden) continue;
-
-            // Hanya buat marker untuk lokasi publik yang langsung tampil di peta
-            var markerPublik = buatMarkerPin(dataPinItem);
-
-            if (typeof markerGroup !== 'undefined' && markerGroup) {
-              markerGroup.addLayer(markerPublik);
+          if (index < baris.length) {
+            if ('requestIdleCallback' in window) {
+              requestIdleCallback(prosesChunk, { timeout: 50 });
             } else {
-              markerPublik.addTo(map);
+              setTimeout(prosesChunk, 4);
+            }
+          } else {
+            if (typeof filterKategori === 'function') {
+              filterKategori('awal');
             }
           }
         }
 
-        index = batas;
-
-if (index < baris.length) {
-          if ('requestIdleCallback' in window) {
-            requestIdleCallback(prosesChunk, { timeout: 50 });
-          } else {
-            setTimeout(prosesChunk, 4);
-          }
+        if ('requestIdleCallback' in window) {
+          requestIdleCallback(prosesChunk, { timeout: 50 });
         } else {
-          if (typeof filterKategori === 'function') {
-            filterKategori('awal');
-          }
+          setTimeout(prosesChunk, 4);
         }
-      }
+      };
 
-      if ('requestIdleCallback' in window) {
-        requestIdleCallback(prosesChunk, { timeout: 50 });
+      // Muat leaflet.markercluster.js secara dinamis jika belum ada
+      if (typeof L.markerClusterGroup === 'undefined') {
+        const mcScript = document.createElement('script');
+        mcScript.src = 'leaflet.markercluster.js';
+        mcScript.onload = pasangClusterDanRender;
+        mcScript.onerror = pasangClusterDanRender; // Tetap render marker biasa jika skrip cluster gagal dimuat
+        document.head.appendChild(mcScript);
       } else {
-        setTimeout(prosesChunk, 4);
+        pasangClusterDanRender();
       }
     })
-      .catch(error => {
-      isDataReady = false; // Izinkan muat ulang otomatis saat kembali online
+    .catch(error => {
+      isDataReady = false;
       console.error("Gagal memuat peta warga dari Cloudflare Worker:", error);
       tampilkanToast("Data peta gagal dimuat dari server", "error");
     });
@@ -3298,7 +3297,7 @@ window.cetakLaporanJimpitan = function() {
 
     const dataChangelog = [
       {
-        versi: "v1.7.1",
+        versi: "v1.7.2",
         tanggal: "16 Nov 2026",
         status: "Terbaru",
         warna: "#4CAF50",
