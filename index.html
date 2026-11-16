@@ -2435,7 +2435,8 @@ function onScanJimpitanSuccess(decodedText) {
   const inputNominal = document.getElementById('jimpitanNominal');
   const modalJimpitan = document.getElementById('modal-jimpitan');
 
-  if (inputNama) inputNama.value = decodedText;
+  // Bersihkan nama pemilik rumah dalam kurung sebelum ditampilkan & disimpan ke Firebase
+  if (inputNama) inputNama.value = bersihkanNamaRumahJimpitan(decodedText);
   if (inputNominal) inputNominal.value = ''; 
   if (modalJimpitan) modalJimpitan.style.display = 'flex';
 }
@@ -2820,6 +2821,15 @@ let modeJimpitan = 'harian';
 function teksAman(str) {
   return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
 }
+  function bersihkanNamaRumahJimpitan(str) {
+  if (!str) return '-';
+  const teks = String(str).trim();
+  // Jika berawalan "Rumah No XX (Pak Nama Warga)", buang "(Pak Nama Warga)"
+  if (/^rumah\s*no\.?\s*\d+/i.test(teks)) {
+    return teks.replace(/\s*\(.*?\)\s*$/, '').trim();
+  }
+  return teks;
+}
 
 window.muatDataJimpitan = function() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
@@ -2849,7 +2859,7 @@ window.muatDataJimpitan = function() {
           // 🌟 Menggabungkan semua variasi nama properti (Format Lama & Baru)
           var tglStr = String(kolom.tanggal_waktu || kolom.tanggal || kolom.tgl || ''); 
           var malamManual = String(kolom.kelompok_malam || kolom.kelompokMalam || '');
-          var warga = String(kolom.nama_warga || kolom.warga || kolom.nama || '-'); 
+          var warga = bersihkanNamaRumahJimpitan(kolom.nama_warga || kolom.warga || kolom.nama || '-');
           var nominal = parseInt(kolom.nominal || kolom.jumlah || 0, 10) || 0;
 
           var angkaTanggal = tglStr.match(/\d+/g); 
