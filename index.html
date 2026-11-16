@@ -1334,34 +1334,39 @@ const jalankanTugasLatarBelakang = () => {
   }
 }
 
-  function buatMarkerPin(pin) {
-  // Jika marker sudah pernah dibuat sebelumnya, langsung kembalikan
-  if (pin.marker) return pin.marker;
+function buatMarkerPin(pin) {
+    // Jika marker sudah pernah dibuat sebelumnya, langsung kembalikan
+    if (pin.marker) return pin.marker;
 
-  const isBukanRumah = pin.namaTempat !== '' && pin.kategoriManual !== '' && !pin.kategoriManual.includes('rumah');
-  const namaTersensor = isBukanRumah
-    ? pin.namaRaw
-    : sensorNamaDepan(pin.namaRaw, pin.kategoriManual);
+    const isBukanRumah = pin.namaTempat !== '' && pin.kategoriManual !== '' && !pin.kategoriManual.includes('rumah');
+    const namaTersensor = isBukanRumah
+      ? pin.namaRaw
+      : sensorNamaDepan(pin.namaRaw, pin.kategoriManual);
 
-  const urlRute = `https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}`;
-  const htmlFoto = pin.foto
-    ? `<br><img src="${pin.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${pin.foto}" onError="this.style.display='none'">`
-    : '';
+    const safeNama = escapeHTML(namaTersensor);
+    const safeFoto = pin.foto ? escapeHTML(pin.foto) : '';
+    const safeLat = encodeURIComponent(pin.lat);
+    const safeLng = encodeURIComponent(pin.lng);
 
-  const popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-  const dataIkon = getIkonKategori(pin.namaRaw, pin.kategoriManual);
+    const urlRute = `https://www.google.com/maps/dir/?api=1&destination=${safeLat},${safeLng}`;
+    const htmlFoto = safeFoto
+      ? `<br><img src="${safeFoto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${safeFoto}" onError="this.style.display='none'">`
+      : '';
 
-  const customIcon = L.divIcon({
-    className: 'custom-pin',
-    html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
-    popupAnchor: [0, -14]
-  });
+    const popupContent = `<b>${safeNama}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+    const dataIkon = getIkonKategori(pin.namaRaw, pin.kategoriManual);
 
-  pin.marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
-  return pin.marker;
-}
+    const customIcon = L.divIcon({
+      className: 'custom-pin',
+      html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+      iconSize: [28, 28],
+      iconAnchor: [14, 14],
+      popupAnchor: [0, -14]
+    });
+
+    pin.marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+    return pin.marker;
+  }
   
 function muatDataPetaWarga() {
   // 🌟 Ambil endpoint secara aman dari RT05_CONFIG
@@ -1998,7 +2003,7 @@ window.tampilkanRekeningKoran = function() {
 };
     
 
-window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
+function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
   var tbody = document.getElementById(elementId);
   if (!tbody) return;
 
@@ -2013,13 +2018,13 @@ window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
     var tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid rgba(0,0,0,0.05)';
 
-   // 🌟 Menggunakan tombol pop-up modal agar gambar tampil full screen di tempat
+    // 🌟 Bungkus item.foto dengan escapeHTML agar aman dari injeksi atribut
     let htmlBukti = '';
     if (item.foto && item.foto.trim() !== '') {
-      htmlBukti = `<button type="button" data-click="bukaFotoBesar" data-arg="${item.foto}" style="font-size: 9.5px; background: #e0f2fe; color: #0288d1; padding: 2px 6px; border-radius: 4px; border: 1px solid #bae6fd; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">📄 Lihat Nota</button>`;
+      const safeFoto = escapeHTML(item.foto.trim());
+      htmlBukti = `<button type="button" data-click="bukaFotoBesar" data-arg="${safeFoto}" style="font-size: 9.5px; background: #e0f2fe; color: #0288d1; padding: 2px 6px; border-radius: 4px; border: 1px solid #bae6fd; font-weight: bold; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; white-space: nowrap;">📄 Lihat Nota</button>`;
     }
 
-    // 🌟 2. Bagi menjadi 3 kolom: Kiri (Keterangan), Tengah (Tombol Nota), Kanan (Nominal)
     tr.innerHTML = `
       <td style="padding:6px 0; width: 50%;">
         <span style="color:#666; font-size:10px; font-weight:bold;">${escapeHTML(item.tgl)}</span><br>
@@ -2029,12 +2034,12 @@ window.renderTabelKeuangan = function(elementId, dataset, warnaText, tanda) {
         ${htmlBukti}
       </td>
       <td style="padding:6px 0; text-align:right; color:${warnaText}; font-weight:bold; white-space:nowrap; vertical-align:top; width: 25%;">
-        ${tanda} Rp ${item.nominal.toLocaleString('id-ID')}
+        ${tanda} Rp ${Number(item.nominal || 0).toLocaleString('id-ID')}
       </td>
     `;
     tbody.appendChild(tr);
   });
-};
+}
 
 // 1. Fungsi Unduh Excel (CSV) Rekening Koran (Dengan Baris Total di Bawah)
 window.unduhExcelRekeningKoran = () => {
@@ -2114,15 +2119,15 @@ window.cetakPDFRekeningKoran = () => {
 
   // Buat baris tabel HTML secara dinamis
   var tableRows = '';
-  dataFilter.forEach(item => {
+dataFilter.forEach(item => {
     var formattedNominal = Number(item.nominal || 0).toLocaleString('id-ID');
     var warnaTeks = item.tipe === 'MASUK' ? '#16a34a' : '#dc2626';
     tableRows += `
       <tr>
-        <td>${item.tgl || '-'}</td>
-        <td style="text-transform: capitalize;">${item.divisi || '-'}</td>
-        <td style="font-weight: bold; color: ${warnaTeks};">${item.tipe || '-'}</td>
-        <td>${item.ket || '-'}</td>
+        <td>${escapeHTML(item.tgl || '-')}</td>
+        <td style="text-transform: capitalize;">${escapeHTML(item.divisi || '-')}</td>
+        <td style="font-weight: bold; color: ${warnaTeks};">${escapeHTML(item.tipe || '-')}</td>
+        <td>${escapeHTML(item.ket || '-')}</td>
         <td style="text-align: right; font-weight: bold;">Rp ${formattedNominal}</td>
       </tr>
     `;
@@ -2778,12 +2783,12 @@ window.cetakLaporanCatatanRonda = function() {
     if (!dataObj) return;
 
     let tableRows = '';
-    Object.keys(dataObj).forEach(key => {
+Object.keys(dataObj).forEach(key => {
       let item = dataObj[key];
       if (item) {
-        let warga = item.warga || item.nama_warga || '-';
+        let warga = escapeHTML(item.warga || item.nama_warga || '-');
         let nominal = Number(item.nominal || 0).toLocaleString('id-ID');
-        let tgl = item.tanggal || '-';
+        let tgl = escapeHTML(item.tanggal || '-');
         tableRows += `
           <tr>
             <td>${warga}</td>
