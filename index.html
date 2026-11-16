@@ -1167,7 +1167,13 @@ function initMainPageChatListener() {
 }
 
 // Tangkap sinyal siap Firebase di halaman utama
-window.addEventListener('firebaseSiapIndex', initMainPageChatListener);
+window.addEventListener('firebaseSiapIndex', () => {
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(initMainPageChatListener, { timeout: 2500 });
+  } else {
+    setTimeout(initMainPageChatListener, 1500);
+  }
+});
   
   window.toggleChatModal = function() {
   const modal = document.getElementById('chat-overlay-modal');
@@ -1296,10 +1302,21 @@ function initPetaDanData() {
     tileLayerUtama.addTo(map);
     perbaruiIndikatorSync();
 
-    setTimeout(() => {
-      let mapElement = document.getElementById('map');
-      if (mapElement) mapElement.classList.add('loaded');
-    }, 150);
+// 3. Tunda sinkronisasi background (jimpitan offline & badge) agar TBT awal rendah
+const jalankanTugasLatarBelakang = () => {
+    if (window.db && typeof window.firebaseRef === 'function') {
+      if (navigator.onLine) kirimDataPendingJimpitan();
+    }
+    if (typeof muatBadgeInfoRT === 'function') {
+      muatBadgeInfoRT();
+    }
+  };
+
+  if ('requestIdleCallback' in window) {
+    requestIdleCallback(jalankanTugasLatarBelakang, { timeout: 2500 });
+  } else {
+    setTimeout(jalankanTugasLatarBelakang, 1500);
+  }
   }
 
   // 1b. Gambar poligon batas wilayah (otomatis tergambar begitu RT05_CONFIG siap)
@@ -1325,6 +1342,35 @@ function initPetaDanData() {
   if (typeof muatBadgeInfoRT === 'function') {
     muatBadgeInfoRT();
   }
+}
+
+  function buatMarkerPin(pin) {
+  // Jika marker sudah pernah dibuat sebelumnya, langsung kembalikan
+  if (pin.marker) return pin.marker;
+
+  const isBukanRumah = pin.namaTempat !== '' && pin.kategoriManual !== '' && !pin.kategoriManual.includes('rumah');
+  const namaTersensor = isBukanRumah
+    ? pin.namaRaw
+    : sensorNamaDepan(pin.namaRaw, pin.kategoriManual);
+
+  const urlRute = `https://www.google.com/maps/dir/?api=1&destination=${pin.lat},${pin.lng}`;
+  const htmlFoto = pin.foto
+    ? `<br><img src="${pin.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${pin.foto}" onError="this.style.display='none'">`
+    : '';
+
+  const popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
+  const dataIkon = getIkonKategori(pin.namaRaw, pin.kategoriManual);
+
+  const customIcon = L.divIcon({
+    className: 'custom-pin',
+    html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+    popupAnchor: [0, -14]
+  });
+
+  pin.marker = L.marker([pin.lat, pin.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
+  return pin.marker;
 }
   
 function muatDataPetaWarga() {
@@ -1457,29 +1503,37 @@ var namaTersensor = isBukanRumah
             var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
             var keywordPencarian = `${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
+            var dataIkon = getIkonKategori(namaTampilAsli, kategoriManual);
 
-            // 🌟 Simpan ke Window Global
-            daftarPin.push({ 
+            var dataPinItem = {
               namaRaw: namaTampilAsli,
-              nama: keywordPencarian, 
+              namaTempat: namaTempat,
+              kategoriManual: kategoriManual,
+              foto: urlFoto,
+              nama: keywordPencarian,
               noRumah: noRumah.toLowerCase(),
               kepalaKeluarga: kepalaKeluarga.toLowerCase(),
               anggota: textAnggota.toLowerCase(),
-              searchHashes: Array.isArray(kolom.searchHashes) ? kolom.searchHashes : [], // <-- Tambahkan baris ini
-              marker: marker, 
-              lat: item.lat, 
+              searchHashes: Array.isArray(kolom.searchHashes) ? kolom.searchHashes : [],
+              marker: null, // Belum dibuat sampai dibutuhkan
+              lat: item.lat,
               lng: item.lng,
-              hidden: item.hidden,
-              kategori: kategoriManual || dataIkon.kategori 
-            });
+              hidden: statusHidden,
+              kategori: kategoriManual || dataIkon.kategori
+            };
 
-            // Abaikan penancapan pin di peta jika disembunyikan oleh Worker (untuk warga biasa)
+            daftarPin.push(dataPinItem);
+
+            // Jika hidden (rumah warga privat), JANGAN buat L.marker sekarang
             if (statusHidden) continue;
 
+            // Hanya buat marker untuk lokasi publik yang langsung tampil di peta
+            var markerPublik = buatMarkerPin(dataPinItem);
+
             if (typeof markerGroup !== 'undefined' && markerGroup) {
-              markerGroup.addLayer(marker);
+              markerGroup.addLayer(markerPublik);
             } else {
-              marker.addTo(map);
+              markerPublik.addTo(map);
             }
           }
         }
@@ -1582,15 +1636,17 @@ const targetDaftar = typeof daftarPin !== 'undefined' ? daftarPin : [];
     return cocokTeks || cocokHash;
   });
 
-  if (hasil) {
+if (hasil) {
+    const markerHasil = buatMarkerPin(hasil);
+
     if (window.pinRumahAktif && map.hasLayer(window.pinRumahAktif)) {  
       map.removeLayer(window.pinRumahAktif);  
       window.pinRumahAktif = null;  
     }
 
-    if (!map.hasLayer(hasil.marker)) {
-      hasil.marker.addTo(map);
-      window.pinRumahAktif = hasil.marker;
+    if (!map.hasLayer(markerHasil)) {
+      markerHasil.addTo(map);
+      window.pinRumahAktif = markerHasil;
     }
 
     var pointM = map.project([hasil.lat, hasil.lng], 19);
@@ -1598,10 +1654,9 @@ const targetDaftar = typeof daftarPin !== 'undefined' ? daftarPin : [];
     map.flyTo(map.unproject(pointC, 19), 19);
 
     map.once('moveend', function() {
-      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-      hasil.marker.openPopup();
+      if (markerHasil.getPopup()) markerHasil.getPopup().options.autoPan = false;
+      markerHasil.openPopup();
     });
-
   } else {
     tampilkanToast("Data \"" + kataKunci + "\" tidak ditemukan.", "error");
   }
@@ -1769,11 +1824,13 @@ window.sorotLokasi = function(target) {
   var hasil = daftarPin.find(pin => String(pin.namaRaw || '').trim().toLowerCase() === kataKunci) || 
               daftarPin.find(pin => String(pin.nama || '').includes(kataKunci));
 
-  if (hasil) {
+if (hasil) {
+    const markerHasil = buatMarkerPin(hasil);
+
     if (pinRumahAktif) { map.removeLayer(pinRumahAktif); pinRumahAktif = null; }
-    if (hasil.hidden || (!map.hasLayer(hasil.marker))) {
-      hasil.marker.addTo(map);
-      pinRumahAktif = hasil.marker;
+    if (hasil.hidden || (!map.hasLayer(markerHasil))) {
+      markerHasil.addTo(map);
+      pinRumahAktif = markerHasil;
     }
 
     var pointM = map.project([hasil.lat, hasil.lng], 19);
@@ -1781,8 +1838,8 @@ window.sorotLokasi = function(target) {
     map.flyTo(map.unproject(pointC, 19), 19);
 
     map.once('moveend', function() {
-      if (hasil.marker.getPopup()) hasil.marker.getPopup().options.autoPan = false;
-      hasil.marker.openPopup();
+      if (markerHasil.getPopup()) markerHasil.getPopup().options.autoPan = false;
+      markerHasil.openPopup();
     });
   }
 };
@@ -1799,11 +1856,13 @@ function filterKategori(kat, btnElement) {
 
   var kategoriPilihan = String(kat || 'awal').trim().toLowerCase();
 
-  // 2. Bersihkan layer penanda lama
+// 2. Bersihkan layer penanda lama
   if (typeof markerGroup !== 'undefined' && markerGroup) {
     markerGroup.clearLayers();
   } else {
-    daftarPin.forEach(pin => map.removeLayer(pin.marker));
+    daftarPin.forEach(pin => {
+      if (pin.marker) map.removeLayer(pin.marker);
+    });
   }
 
   daftarPin.forEach(function(pin) {
@@ -1851,12 +1910,13 @@ function filterKategori(kat, btnElement) {
       isMatch = isMinimarket;
     }
 
-    // 4. Tempelkan penanda yang sesuai kriteria ke peta
+// 4. Tempelkan penanda yang sesuai kriteria ke peta
     if (isMatch) {
+      const markerPin = buatMarkerPin(pin);
       if (typeof markerGroup !== 'undefined' && markerGroup) {
-        markerGroup.addLayer(pin.marker);
+        markerGroup.addLayer(markerPin);
       } else {
-        pin.marker.addTo(map);
+        markerPin.addTo(map);
       }
     }
   });
