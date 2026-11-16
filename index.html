@@ -1302,7 +1302,7 @@ function initPetaDanData() {
     tileLayerUtama.addTo(map);
     perbaruiIndikatorSync();
 
-// 3. Tunda sinkronisasi background (jimpitan offline & badge) agar TBT awal rendah
+// Tunda sinkronisasi background (jimpitan offline & badge) agar TBT awal rendah
 const jalankanTugasLatarBelakang = () => {
     if (window.db && typeof window.firebaseRef === 'function') {
       if (navigator.onLine) kirimDataPendingJimpitan();
@@ -1333,14 +1333,6 @@ const jalankanTugasLatarBelakang = () => {
       isDataReady = true;
       muatDataPetaWarga();
     }
-  }
-
-  // 3. Sinkronisasi jimpitan offline & badge
-  if (window.db && typeof window.firebaseRef === 'function') {
-    if (navigator.onLine) kirimDataPendingJimpitan();
-  }
-  if (typeof muatBadgeInfoRT === 'function') {
-    muatBadgeInfoRT();
   }
 }
 
@@ -1474,33 +1466,6 @@ if (sessionToken) {
 
             if (isNaN(item.lat) || isNaN(item.lng)) continue;
 
-        // 2. Logika Sensor Privasi (Hanya sensor jika bukan nama tempat/fasum)
-          var teksYangDisensor = namaUtama.split(' ').map(kata => {
-            if (kata.length <= 2) return kata;
-            return kata.substring(0, 2) + '*'.repeat(kata.length - 2);
-          }).join(' ');
-
-// Jika namaTempat diisi (Kost/Warung/Fasum), tampilkan utuh tanpa sensor.
-// Jika rumah warga biasa, gunakan fungsi sensorNamaDepan (otomatis mengecualikan Pak RT/RW).
-var isBukanRumah = namaTempat !== '' && kategoriManual !== '' && !kategoriManual.includes('rumah');
-var namaTersensor = isBukanRumah 
-  ? namaTampilAsli 
-  : sensorNamaDepan(namaTampilAsli, kategoriManual);
-
-            var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
-            var htmlFoto = item.foto ? `<br><img src="${item.foto}" class="img-popup" alt="Foto Depan" data-click="bukaFotoBesar" data-arg="${item.foto}" onError="this.style.display='none'">` : '';
-            
-            var popupContent = `<b>${namaTersensor}</b>${htmlFoto}<br><a href="${urlRute}" target="_blank" class="btn-rute">📍 Rute ke Sini</a>`;
-            
-            var dataIkon = getIkonKategori(namaTampilAsli, kategoriManual);
-
-            var customIcon = L.divIcon({
-              className: 'custom-pin',
-              html: `<div style="${dataIkon.bgStyle} border-radius: 50%; display: flex; align-items: center; justify-content: center; box-shadow: 0 5px 10px rgba(0,0,0,0.35), 0 2px 4px rgba(0,0,0,0.2);">${dataIkon.emoji}</div>`,
-              iconSize: [28, 28], iconAnchor: [14, 14], popupAnchor: [0, -14]
-            });
-            
-            var marker = L.marker([item.lat, item.lng], { icon: customIcon }).bindPopup(popupContent, { maxWidth: 220 });
 
             var keywordPencarian = `${namaTempat} ${kepalaKeluarga} ${textAnggota} ${noRumah}`.toLowerCase();
             var dataIkon = getIkonKategori(namaTampilAsli, kategoriManual);
