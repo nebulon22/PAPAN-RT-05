@@ -222,6 +222,14 @@ window.toggleSenterRonda = async function() {
 
 function bukaModalInventaris() {
     const modal = document.getElementById('modal-inventaris');
+    const iframe = document.getElementById('iframe-inventaris');
+    
+    // Lazy load: muat inventaris.html hanya saat modal pertama kali dibuka
+    if (iframe && !iframe.getAttribute('src')) {
+        const dataSrc = iframe.getAttribute('data-src');
+        if (dataSrc) iframe.src = dataSrc;
+    }
+    
     if (modal) modal.style.display = 'flex';
 }
 
@@ -229,7 +237,6 @@ function tutupModalInventaris() {
     const modal = document.getElementById('modal-inventaris');
     if (modal) modal.style.display = 'none';
 }
-
 // Event Delegation & Listener DOM (CSP-Compliant)
 document.addEventListener('click', function(e) {
     const target = e.target.closest('[data-click]');
