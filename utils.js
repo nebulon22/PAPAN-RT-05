@@ -280,17 +280,100 @@ window.toggleSenterRonda = async function() {
   }
 };
 
+let isInventarisListenerAktif = false;
+
 function bukaModalInventaris() {
-    const modal = document.getElementById('modal-inventaris');
-    const iframe = document.getElementById('iframe-inventaris');
-    
-    // Lazy load: muat inventaris.html hanya saat modal pertama kali dibuka
-    if (iframe && !iframe.getAttribute('src')) {
-        const dataSrc = iframe.getAttribute('data-src');
-        if (dataSrc) iframe.src = dataSrc;
+  const modal = document.getElementById('modal-inventaris');
+  if (modal) modal.style.display = 'flex';
+
+  if (!isInventarisListenerAktif) {
+    muatDataInventarisModal();
+  }
+}
+
+function muatDataInventarisModal() {
+  const container = document.getElementById('daftar-inventaris-modal');
+  if (!container) return;
+
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatDataInventarisModal, 100);
+    return;
+  }
+
+  isInventarisListenerAktif = true;
+  let dataPerkakas = [];
+  let dataPinjaman = [];
+
+  const renderKartu = () => {
+    if (dataPerkakas.length === 0) {
+      container.innerHTML = `<div style="text-align:center; padding:20px; color:#666; font-size:12px;">Belum ada data perkakas di database.</div>`;
+      return;
     }
-    
-    if (modal) modal.style.display = 'flex';
+
+    const rekapDipinjam = {};
+    dataPinjaman.forEach(row => {
+      if (row && String(row.status || '').trim().toLowerCase() === 'dipinjam') {
+        const namaBarang = String(row.barang || row.namaBarang || row[2] || '').trim();
+        const jumlah = parseInt(row.jumlah || row[3], 10) || 0;
+        if (namaBarang) {
+          rekapDipinjam[namaBarang] = (rekapDipinjam[namaBarang] || 0) + jumlah;
+        }
+      }
+    });
+
+    container.innerHTML = dataPerkakas.map(item => {
+      const namaItem = escapeHTML(item.namaBarang || item.nama || item.name || 'Perkakas RT');
+      const namaKey = String(item.namaBarang || item.nama || item.name || 'Perkakas RT').trim();
+      const fotoItem = item.foto || item.fotoUrl || item.image || '';
+      const terpakai = rekapDipinjam[namaKey] || 0;
+      const totalAwal = parseInt(item.totalStok !== undefined ? item.totalStok : (item.stok !== undefined ? item.stok : item.jumlah), 10) || 0;
+      const sisaStok = Math.max(0, totalAwal - terpakai);
+
+      const statusBadge = sisaStok > 0
+        ? `<span style="background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Tersedia</span>`
+        : `<span style="background: #fef2f2; color: #991b1b; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Habis Dipinjam</span>`;
+
+      const htmlFoto = fotoItem
+        ? `<img src="${escapeHTML(fotoItem)}" data-click="bukaFotoBesar" data-arg="${escapeHTML(fotoItem)}" style="width:100%; height:150px; object-fit:cover; border-radius:6px; margin-bottom:10px; cursor:pointer;" loading="lazy" onError="this.style.display='none'">`
+        : '';
+
+      return `
+        <div style="border: 1px solid #e5e7eb; padding: 14px; border-radius: 8px; margin-bottom: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          ${htmlFoto}
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h3 style="margin: 0; font-size: 15px; color: #111827;">${namaItem}</h3>
+            ${statusBadge}
+          </div>
+          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f9fafb; padding: 8px; border-radius: 6px; font-size: 12px; text-align: center; border: 1px solid #f3f4f6;">
+            <div>
+              <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Total Stok</span>
+              <strong style="color: #374151; font-size: 13px;">${totalAwal}</strong>
+            </div>
+            <div>
+              <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Dipinjam</span>
+              <strong style="color: #dc2626; font-size: 13px;">${terpakai}</strong>
+            </div>
+            <div>
+              <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Sisa Stok</span>
+              <strong style="color: #059669; font-size: 13px;">${sisaStok}</strong>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  };
+
+  window.firebaseOnValue(window.firebaseRef(window.db, 'inventaris'), (snap) => {
+    dataPerkakas = [];
+    if (snap.exists()) snap.forEach(child => { dataPerkakas.push(child.val()); });
+    renderKartu();
+  });
+
+  window.firebaseOnValue(window.firebaseRef(window.db, 'peminjaman'), (snap) => {
+    dataPinjaman = [];
+    if (snap.exists()) snap.forEach(child => { dataPinjaman.push(child.val()); });
+    renderKartu();
+  });
 }
 
 function tutupModalInventaris() {
