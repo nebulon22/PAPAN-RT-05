@@ -504,6 +504,57 @@
         </div>
       </form>
     </div>
+    <!-- Tombol Pemicu -->
+<button type="button" onclick="bukaModalGantiPin()" style="background:#f59e0b; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">
+  🔑 Ganti PIN Divisi
+</button>
+
+<!-- Modal Ganti PIN Divisi -->
+<div id="modal-ganti-pin" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; width:100%; max-width:380px; border-radius:12px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e5e7eb; padding-bottom:10px; margin-bottom:14px;">
+      <h3 style="margin:0; font-size:16px; color:#111827;">🔑 Ganti PIN Divisi</h3>
+      <button type="button" onclick="tutupModalGantiPin()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7280;">&times;</button>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">Pilih Divisi</label>
+      <select id="pilihDivisiGantiPin" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;">
+        <option value="sosial">Sosial</option>
+        <option value="tenda">Tenda</option>
+        <option value="sound system">Sound System</option>
+        <option value="pondokan rt 05">Pondokan RT 05</option>
+        <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
+        <option value="pekerjaan umum & kelistrikan">Pekerjaan Umum & Kelistrikan</option>
+        <option value="ronda harian & keamanan">Ronda Harian & Keamanan</option>
+        <option value="bendahara umum">Bendahara Umum</option>
+        <option value="tata ruang">Tata Ruang</option>
+        <option value="transportasi">Transportasi</option>
+        <option value="perkakas">Perkakas</option>
+      </select>
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">PIN Lama</label>
+      <input type="password" id="inputPinLama" inputmode="numeric" maxlength="10" placeholder="Masukkan PIN lama" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+    </div>
+
+    <div style="margin-bottom:12px;">
+      <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">PIN Baru</label>
+      <input type="password" id="inputPinBaru" inputmode="numeric" maxlength="10" placeholder="Minimal 6 angka" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+    </div>
+
+    <div style="margin-bottom:16px;">
+      <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">Konfirmasi Ulang PIN Baru</label>
+      <input type="password" id="inputKonfirmasiPinBaru" inputmode="numeric" maxlength="10" placeholder="Ketik ulang PIN baru" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+    </div>
+
+    <div style="display:flex; gap:8px;">
+      <button type="button" onclick="tutupModalGantiPin()" style="flex:1; padding:10px; background:#f3f4f6; color:#374151; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Batal</button>
+      <button type="button" id="btnSimpanPinBaru" onclick="prosesGantiPinDivisi()" style="flex:2; padding:10px; background:#0288d1; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Simpan PIN Baru</button>
+    </div>
+  </div>
+</div>
 
     <!-- ================= TAB 2: EDIT & KELOLA LAPORAN ================= -->
     <div id="panel-tab-edit" style="display: none; flex-direction: column; height: 100%;">
@@ -4493,6 +4544,139 @@ window.tutupModalEditAdmin = function() {
   idKeuanganSedangDiedit = null;
 };
 
+// =========================================================================
+// 1. HELPER AMBIL PIN DARI FIREBASE & MODAL GANTI PIN (DI LUAR FUNGSI SIMPAN)
+// =========================================================================
+async function ambilDaftarPinFirebase() {
+  const defaultPin = {
+    "sosial": "010101",
+    "tenda": "020202",
+    "sound system": "030303",
+    "pondokan rt 05": "040404",
+    "jimpitan bulanan & pengganti ronda": "050505",
+    "pekerjaan umum & kelistrikan": "060606",
+    "ronda harian & keamanan": "070707",
+    "bendahara umum": "080808",
+    "tata ruang": "090909",
+    "transportasi": "101010",
+    "perkakas": "121212"
+  };
+
+  try {
+    if (window.db && typeof window.firebaseGet === 'function' && typeof window.firebaseRef === 'function') {
+      const snap = await window.firebaseGet(window.firebaseRef(window.db, 'konfigurasi/pin_divisi'));
+      return snap.exists() ? { ...defaultPin, ...snap.val() } : defaultPin;
+    }
+    if (typeof firebase !== 'undefined' && firebase.database) {
+      const snap = await firebase.database().ref('konfigurasi/pin_divisi').once('value');
+      return snap.exists() ? { ...defaultPin, ...snap.val() } : defaultPin;
+    }
+  } catch (err) {
+    console.warn("Gagal mengambil PIN dari Firebase, menggunakan fallback:", err);
+  }
+  return defaultPin;
+}
+
+window.bukaModalGantiPin = function() {
+  document.getElementById('inputPinLama').value = '';
+  document.getElementById('inputPinBaru').value = '';
+  document.getElementById('inputKonfirmasiPinBaru').value = '';
+  document.getElementById('modal-ganti-pin').style.display = 'flex';
+};
+
+window.tutupModalGantiPin = function() {
+  document.getElementById('modal-ganti-pin').style.display = 'none';
+};
+
+window.prosesGantiPinDivisi = async function() {
+  const divisiKey = document.getElementById('pilihDivisiGantiPin').value.toLowerCase().trim();
+  const pinLama = document.getElementById('inputPinLama').value.trim();
+  const pinBaru = document.getElementById('inputPinBaru').value.trim();
+  const konfirmasiPin = document.getElementById('inputKonfirmasiPinBaru').value.trim();
+
+  if (!pinLama || !pinBaru || !konfirmasiPin) {
+    alert("⚠️ Mohon isi PIN lama, PIN baru, dan konfirmasi PIN baru!");
+    return;
+  }
+
+  if (!/^\d{6,10}$/.test(pinBaru)) {
+    alert("⚠️ PIN baru harus berupa 6 sampai 10 digit angka!");
+    return;
+  }
+
+  if (pinBaru !== konfirmasiPin) {
+    alert("❌ Konfirmasi PIN baru tidak cocok!");
+    return;
+  }
+
+  if (pinBaru === pinLama) {
+    alert("⚠️ PIN baru tidak boleh sama dengan PIN lama!");
+    return;
+  }
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    window.location.reload();
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanPinBaru');
+  btn.disabled = true;
+  btn.innerText = "⏳ Memverifikasi...";
+
+  try {
+    const daftarPinSaatIni = await ambilDaftarPinFirebase();
+    const pinLamaValid = String(daftarPinSaatIni[divisiKey] || "");
+
+    if (pinLama !== pinLamaValid) {
+      alert("❌ PIN lama untuk divisi tersebut salah!");
+      return;
+    }
+
+    btn.innerText = "⏳ Menyimpan PIN...";
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "konfigurasi/pin_divisi",
+        method: "PATCH",
+        data: {
+          [divisiKey]: pinBaru
+        }
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memperbarui PIN di server.");
+    }
+
+    alert(`✅ PIN untuk divisi "${divisiKey.toUpperCase()}" berhasil diubah!`);
+    window.tutupModalGantiPin();
+  } catch (err) {
+    alert("❌ Gagal mengganti PIN: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerText = "Simpan PIN Baru";
+  }
+};
+
+// =========================================================================
+// 2. FUNGSI SIMPAN PERUBAHAN KEUANGAN ADMIN (BERSIH & TERPISAH)
+// =========================================================================
 window.simpanPerubahanKeuanganAdmin = async function() {
   if (!idKeuanganSedangDiedit) return;
 
@@ -4503,7 +4687,6 @@ window.simpanPerubahanKeuanganAdmin = async function() {
   let nominalStr = document.getElementById('editNominal').value;
   let nominal = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
   let pinInput = document.getElementById('editPinDivisi').value.trim();
-  
   let fotoUrl = document.getElementById('editFotoUrl').value;
 
   if (!tglInput || !divisi || !keterangan || nominal <= 0) {
@@ -4516,24 +4699,13 @@ window.simpanPerubahanKeuanganAdmin = async function() {
     return;
   }
 
-  // 🛡️ Verifikasi PIN Divisi
-  const daftarPinDivisi = {
-    "sosial": "010101",
-    "tenda": "020202",
-    "sound system": "030303",
-    "pondokan rt 05": "040404",
-    "jimpitan bulanan & pengganti ronda": "050505",
-    "pekerjaan umum & kelistrikan": "060606",
-    "ronda harian & keamanan": "070707",
-    "bendahara umum": "080808",
-    "tata ruang": "090909",
-    "transportasi": "101010"
-  };
-
+  // 🛡️ Verifikasi PIN Divisi langsung dari Firebase
+  const daftarPinDivisi = await ambilDaftarPinFirebase();
   const divisiKey = divisi.toLowerCase().trim();
-  const pinSeharusnya = daftarPinDivisi[divisiKey] || "050505";
+  const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
+  const pinMaster = String(daftarPinDivisi["jimpitan bulanan & pengganti ronda"] || "");
 
-  if (pinInput !== pinSeharusnya && pinInput !== "050505") {
+  if (pinInput !== pinSeharusnya && pinInput !== pinMaster) {
     alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
     return;
   }
