@@ -1780,7 +1780,7 @@ window.markPublicGroupAsRead = () => {
         }, { passive: true });
       });
 
-      // 3. DETEKSI BERALIH TAB / MINIMIZE / TEKAN TOMBOL HOME
+// 3. DETEKSI BERALIH TAB / MINIMIZE / TEKAN TOMBOL HOME
       document.addEventListener('visibilitychange', () => {
         isChatVisible = !document.hidden;
         
@@ -1788,11 +1788,6 @@ window.markPublicGroupAsRead = () => {
           // 🛠️ KUNCINYA DI SINI: Saat minimize atau pindah tab, ubah jadi IDLE (Kuning)
           setMyState('idle'); 
         } else {
-          // Paksa Firebase mengaktifkan kembali WebSocket jika kembali dibuka
-          if (typeof firebase !== 'undefined' && firebase.database) {
-            firebase.database().goOnline();
-          }
-
           evaluateStatus(true); // Langsung kembalikan status jadi online
 
           if (activeChatType === 'private' && activePrivateUID) {
@@ -2269,38 +2264,6 @@ window.scrollToBottom = function(smooth = false) {
         btnScrollBottom.style.display = 'none';
     }
 };
-
-// Pantau pergerakan scroll pada stream chat
-if (chatStreamEl) {
-    chatStreamEl.addEventListener('scroll', () => {
-        // Hitung jarak dari posisi bawah (toleransi 150px)
-        const distanceFromBottom = chatStreamEl.scrollHeight - chatStreamEl.scrollTop - chatStreamEl.clientHeight;
-        
-        // Jika user menggulir ke atas menjauhi bagian bawah (> 150px)
-        if (distanceFromBottom > 150) {
-            if (btnScrollBottom) btnScrollBottom.style.display = 'flex';
-        } else {
-            if (btnScrollBottom) btnScrollBottom.style.display = 'none';
-        }
-
-        // Trigger pagination load more jika berada di paling atas (<= 5px)
-        if (!isLoadingMore && chatStreamEl.scrollTop <= 5) {
-            if (activeChatType === 'public') {
-                if (currentPublicLimit < MAX_SCROLL_LIMIT) {
-                    triggerLoadMorePublic();
-                }
-            } else if (activeChatType === 'private' && activePrivateUID) {
-                const roomID = [currentUser.uid, activePrivateUID].sort().join('_');
-                const currentLimit = currentPrivateLimit[roomID] || 50;
-                if (currentLimit < MAX_PRIVATE_LIMIT) {
-                    triggerLoadMorePrivate(roomID, activePrivateUID);
-                }
-            }
-        }
-    });
-}
-
-    
     
 // === VARIABEL KONTROL LIMIT & STATUS CHAT ===
 let currentPublicLimit = 50;
