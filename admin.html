@@ -502,13 +502,14 @@
           <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
             📤 Kirim Laporan Keuangan
           </button>
-        </div>
-      </form>
-    </div>
-    <!-- Tombol Pemicu -->
+              <!-- Tombol Pemicu -->
 <button type="button" onclick="bukaModalGantiPin()" style="background:#f59e0b; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">
   🔑 Ganti PIN Divisi
 </button>
+        </div>
+      </form>
+    </div>
+
 
 <!-- Modal Ganti PIN Divisi -->
 <div id="modal-ganti-pin" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; padding:16px;">
@@ -537,17 +538,17 @@
 
     <div style="margin-bottom:12px;">
       <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">PIN Lama</label>
-      <input type="password" id="inputPinLama" inputmode="numeric" maxlength="10" placeholder="Masukkan PIN lama" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+      <input type="password" id="inputPinLama" inputmode="numeric" maxlength="6" placeholder="Masukkan PIN lama" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
     </div>
 
     <div style="margin-bottom:12px;">
       <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">PIN Baru</label>
-      <input type="password" id="inputPinBaru" inputmode="numeric" maxlength="10" placeholder="Minimal 6 angka" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+      <input type="password" id="inputPinBaru" inputmode="numeric" maxlength="6" placeholder="Masukkan 6 angka" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
     </div>
 
     <div style="margin-bottom:16px;">
       <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">Konfirmasi Ulang PIN Baru</label>
-      <input type="password" id="inputKonfirmasiPinBaru" inputmode="numeric" maxlength="10" placeholder="Ketik ulang PIN baru" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+      <input type="password" id="inputKonfirmasiPinBaru" inputmode="numeric" maxlength="6" placeholder="Ketik ulang PIN baru" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
     </div>
 
     <div style="display:flex; gap:8px;">
@@ -612,6 +613,7 @@
           <option value="bendahara umum">Bendahara Umum</option>
           <option value="tata ruang">Tata Ruang</option>
           <option value="transportasi">Transportasi</option>
+          <option value="perkakas">Perkakas</option>
         </select>
       </div>
 
@@ -4525,7 +4527,11 @@ window.mulaiEditKeuanganAdmin = function(id) {
     if (p.length === 3) tglRaw = `${p[2]}-${p[1]}-${p[0]}`;
   }
   document.getElementById('editTanggal').value = tglRaw;
-  document.getElementById('editNamaDivisi').value = target.divisi || target.Divisi || '';
+
+  // Normalisasi ke huruf kecil agar selalu cocok dengan value <option> di HTML
+  const divisiRaw = String(target.divisi || target.Divisi || '').toLowerCase().trim();
+  document.getElementById('editNamaDivisi').value = divisiRaw;
+
   document.getElementById('editJenis').value = (String(target.tipe || '').toUpperCase() === 'KELUAR') ? 'Pengeluaran' : 'Pemasukan';
   document.getElementById('editKeterangan').value = target.keterangan || target.ket || '';
   document.getElementById('editNominal').value = Number(target.nominal || 0).toLocaleString('id-ID');
@@ -4535,6 +4541,10 @@ window.mulaiEditKeuanganAdmin = function(id) {
   document.getElementById('statusUploadBuktiEdit').innerHTML = target.foto ? `<span style="color:#16a34a;">✓ Nota lama terlampir</span>` : '';
   document.getElementById('editInputFoto').value = '';
 
+  // Kosongkan input PIN divisi setiap kali modal dibuka
+  const elPinEdit = document.getElementById('editPinDivisi');
+  if (elPinEdit) elPinEdit.value = '';
+
   const modal = document.getElementById('modal-edit-keuangan');
   if (modal) modal.style.display = 'flex';
 };
@@ -4542,6 +4552,11 @@ window.mulaiEditKeuanganAdmin = function(id) {
 window.tutupModalEditAdmin = function() {
   const modal = document.getElementById('modal-edit-keuangan');
   if (modal) modal.style.display = 'none';
+
+  // Bersihkan PIN divisi saat modal ditutup
+  const elPinEdit = document.getElementById('editPinDivisi');
+  if (elPinEdit) elPinEdit.value = '';
+
   idKeuanganSedangDiedit = null;
 };
 
@@ -4601,6 +4616,11 @@ window.prosesGantiPinDivisi = async function() {
   const pinBaru = document.getElementById('inputPinBaru').value.trim();
   const konfirmasiPin = document.getElementById('inputKonfirmasiPinBaru').value.trim();
 
+  if (!divisiKey) {
+    alert("⚠️ Mohon pilih divisi terlebih dahulu!");
+    return;
+  }
+
   if (!pinLama || !pinBaru || !konfirmasiPin) {
     alert("⚠️ Mohon isi PIN lama, PIN baru, dan konfirmasi PIN baru!");
     return;
@@ -4625,16 +4645,24 @@ window.prosesGantiPinDivisi = async function() {
   const sessionToken = sessionStorage.getItem('rt05_session_token');
   if (!sessionToken) {
     alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
     window.location.reload();
     return;
   }
 
   const btn = document.getElementById('btnSimpanPinBaru');
-  btn.disabled = true;
-  btn.innerText = "⏳ Memverifikasi...";
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Memverifikasi...";
+  }
 
   try {
     const daftarPinSaatIni = await ambilDaftarPinTerbaru();
+    if (!daftarPinSaatIni || Object.keys(daftarPinSaatIni).length === 0) {
+      alert("⚠️ Gagal memuat data PIN dari server. Periksa koneksi internet Anda lalu coba lagi.");
+      return;
+    }
+
     const pinLamaValid = String(daftarPinSaatIni[divisiKey] || "");
 
     if (pinLama !== pinLamaValid) {
@@ -4642,7 +4670,7 @@ window.prosesGantiPinDivisi = async function() {
       return;
     }
 
-    btn.innerText = "⏳ Menyimpan PIN...";
+    if (btn) btn.innerText = "⏳ Menyimpan PIN...";
     const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: "POST",
       headers: {
@@ -4677,8 +4705,10 @@ window.prosesGantiPinDivisi = async function() {
   } catch (err) {
     alert("❌ Gagal mengganti PIN: " + err.message);
   } finally {
-    btn.disabled = false;
-    btn.innerText = "Simpan PIN Baru";
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "Simpan PIN Baru";
+    }
   }
 };
 // =========================================================================
@@ -4706,7 +4736,6 @@ window.simpanPerubahanKeuanganAdmin = async function() {
     return;
   }
 
-  // Ambil token sesi admin terlebih dahulu
   const sessionToken = sessionStorage.getItem('rt05_session_token');
   if (!sessionToken) {
     alert("⚠️ Sesi admin habis. Silakan login ulang.");
@@ -4725,6 +4754,11 @@ window.simpanPerubahanKeuanganAdmin = async function() {
   try {
     // 🛡️ 1. Verifikasi PIN Divisi terbaru via Worker Proxy
     const daftarPinDivisi = await ambilDaftarPinTerbaru();
+    if (!daftarPinDivisi || Object.keys(daftarPinDivisi).length === 0) {
+      alert("⚠️ Gagal memuat data PIN dari server. Periksa koneksi internet Anda lalu coba lagi.");
+      return;
+    }
+
     const divisiKey = divisi.toLowerCase().trim();
     const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
     const pinMaster = String(daftarPinDivisi["jimpitan bulanan & pengganti ronda"] || "");
@@ -4822,6 +4856,7 @@ window.simpanPerubahanKeuanganAdmin = async function() {
     }
 
     alert("✅ Data keuangan & nota berhasil diperbarui!");
+    document.getElementById('editPinDivisi').value = '';
     window.tutupModalEditAdmin();
     if (typeof muatDataKelolaKeuanganAdmin === 'function') {
       muatDataKelolaKeuanganAdmin();
@@ -4847,7 +4882,6 @@ window.simpanPerubahanKeuanganAdmin = async function() {
 // 3. FUNGSI SIMPAN LAPORAN KEUANGAN BARU (TAB 1)
 // =========================================================================
 window.simpanLaporanDivisi = async function() {
-  // 1. Disesuaikan dengan ID di HTML ('laporanNamaDivisi')
   const divisi = document.getElementById('laporanNamaDivisi').value.trim();
   const pinInput = document.getElementById('laporanPinDivisi').value.trim();
   const jenis = document.getElementById('laporanJenis').value;
@@ -4856,11 +4890,8 @@ window.simpanLaporanDivisi = async function() {
   const keterangan = document.getElementById('laporanKeterangan').value.trim();
   const tglInput = document.getElementById('laporanTanggal').value;
   
-  // 2. Aman meski elemen 'laporanPelapor' tidak ada di HTML (fallback ke 'Admin')
   const elPelapor = document.getElementById('laporanPelapor');
   const pelapor = elPelapor ? elPelapor.value.trim() : (localStorage.getItem('adminUsername') || 'Admin');
-  
-  // 3. Disesuaikan dengan ID di HTML ('laporanInputFoto')
   const fileInput = document.getElementById('laporanInputFoto');
 
   if (!divisi || !tglInput || !keterangan || nominal <= 0) {
@@ -4873,17 +4904,6 @@ window.simpanLaporanDivisi = async function() {
     return;
   }
 
-  // 🛡️ Verifikasi PIN Divisi
-  const daftarPinDivisi = await ambilDaftarPinTerbaru();
-  const divisiKey = divisi.toLowerCase().trim();
-  const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
-  const pinMaster = String(daftarPinDivisi["jimpitan bulanan & pengganti ronda"] || "");
-
-  if (pinInput !== pinSeharusnya && pinInput !== pinMaster) {
-    alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
-    return;
-  }
-
   const sessionToken = sessionStorage.getItem('rt05_session_token');
   if (!sessionToken) {
     alert("⚠️ Sesi admin habis. Silakan login ulang.");
@@ -4893,9 +4913,25 @@ window.simpanLaporanDivisi = async function() {
   }
 
   const btn = document.getElementById('btnSimpanLaporan');
-  if (btn) { btn.disabled = true; btn.innerText = '⏳ Memproses...'; }
+  if (btn) { btn.disabled = true; btn.innerText = '⏳ Memverifikasi PIN...'; }
 
   try {
+    // 🛡️ Verifikasi PIN Divisi dari Firebase
+    const daftarPinDivisi = await ambilDaftarPinTerbaru();
+    if (!daftarPinDivisi || Object.keys(daftarPinDivisi).length === 0) {
+      alert("⚠️ Gagal memuat data PIN dari server. Periksa koneksi internet Anda lalu coba lagi.");
+      return;
+    }
+
+    const divisiKey = divisi.toLowerCase().trim();
+    const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
+    const pinMaster = String(daftarPinDivisi["jimpitan bulanan & pengganti ronda"] || "");
+
+    if (pinInput !== pinSeharusnya && pinInput !== pinMaster) {
+      alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
+      return;
+    }
+
     // 1. Upload foto bukti/nota ke R2 jika ada
     let fotoUrl = "";
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
@@ -4976,6 +5012,8 @@ window.simpanLaporanDivisi = async function() {
     document.getElementById('laporanNominal').value = '';
     document.getElementById('laporanKeterangan').value = '';
     if (fileInput) fileInput.value = '';
+    const statusUpload = document.getElementById('statusUploadBukti');
+    if (statusUpload) statusUpload.innerHTML = '';
 
     if (typeof tutupModalLaporan === 'function') tutupModalLaporan();
     if (typeof muatDataKelolaKeuanganAdmin === 'function') muatDataKelolaKeuanganAdmin();
