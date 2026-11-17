@@ -78,7 +78,6 @@ self.addEventListener('install', (e) => {
         './admin.html',
         './chat.html',          // 👈 Ditambahkan
         './pengumuman.html',    // 👈 Ditambahkan
-        './inventaris.html',
         './cetak-qr.html',
         './utils.js',           // 👈 Sangat penting
         './setting.js',         // 👈 Ditambahkan
