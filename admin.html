@@ -4689,44 +4689,32 @@ window.prosesGantiPinDivisi = async function() {
     btn.innerText = "Simpan PIN Baru";
   }
 };
-
 // =========================================================================
 // 2. FUNGSI SIMPAN PERUBAHAN KEUANGAN ADMIN (BERSIH & TERPISAH)
 // =========================================================================
 window.simpanPerubahanKeuanganAdmin = async function() {
   if (!idKeuanganSedangDiedit) return;
 
-  let tglInput = document.getElementById('editTanggal').value;
-  let divisi = document.getElementById('editNamaDivisi').value;
-  let jenis = document.getElementById('editJenis').value;
-  let keterangan = document.getElementById('editKeterangan').value.trim();
-  let nominalStr = document.getElementById('editNominal').value;
-  let nominal = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
-  let pinInput = document.getElementById('editPinDivisi').value.trim();
+  const tglInput = document.getElementById('editTanggal').value;
+  const divisi = document.getElementById('editNamaDivisi').value.trim();
+  const jenis = document.getElementById('editJenis').value;
+  const keterangan = document.getElementById('editKeterangan').value.trim();
+  const nominalStr = document.getElementById('editNominal').value;
+  const nominal = parseInt(String(nominalStr).replace(/[^0-9]/g, ''), 10) || 0;
+  const pinInput = document.getElementById('editPinDivisi').value.trim();
   let fotoUrl = document.getElementById('editFotoUrl').value;
 
   if (!tglInput || !divisi || !keterangan || nominal <= 0) {
-    alert("Mohon lengkapi semua data dengan benar!");
+    alert("⚠️ Mohon lengkapi semua data dengan benar!");
     return;
   }
 
   if (!pinInput) {
-    alert("Mohon masukkan PIN Khusus Divisi untuk melakukan perubahan!");
+    alert("⚠️ Mohon masukkan PIN Khusus Divisi untuk melakukan perubahan!");
     return;
   }
 
-  // 🛡️ Verifikasi PIN Divisi langsung dari Firebase
-  const daftarPinDivisi = await ambilDaftarPinFirebase();
-  const divisiKey = divisi.toLowerCase().trim();
-  const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
-  const pinMaster = String(daftarPinDivisi["jimpitan bulanan & pengganti ronda"] || "");
-
-  if (pinInput !== pinSeharusnya && pinInput !== pinMaster) {
-    alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
-    return;
-  }
-
-  // Ambil token sesi admin
+  // Ambil token sesi admin terlebih dahulu
   const sessionToken = sessionStorage.getItem('rt05_session_token');
   if (!sessionToken) {
     alert("⚠️ Sesi admin habis. Silakan login ulang.");
@@ -4737,12 +4725,27 @@ window.simpanPerubahanKeuanganAdmin = async function() {
 
   const btn = document.getElementById('btnSimpanEditAdmin');
   const statusDiv = document.getElementById('statusUploadBuktiEdit');
-  if (btn) { btn.disabled = true; btn.innerText = '⏳ Memproses...'; }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = '⏳ Memverifikasi PIN...';
+  }
 
   try {
-    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG DENGAN AUTHORIZATION
+    // 🛡️ 1. Verifikasi PIN Divisi terbaru via Worker Proxy
+    const daftarPinDivisi = await ambilDaftarPinTerbaru();
+    const divisiKey = divisi.toLowerCase().trim();
+    const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
+    const pinMaster = String(daftarPinDivisi["jimpitan bulanan & pengganti ronda"] || "");
+
+    if (pinInput !== pinSeharusnya && pinInput !== pinMaster) {
+      alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
+      return;
+    }
+
+    // 🌟 2. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG DENGAN AUTHORIZATION
     const fileInput = document.getElementById('editInputFoto');
     if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      if (btn) btn.innerText = '⏳ Mengunggah Nota...';
       if (statusDiv) {
         statusDiv.innerHTML = '⏳ Mengompres & mengunggah nota baru...';
         statusDiv.style.color = '#d97706';
@@ -4754,7 +4757,7 @@ window.simpanPerubahanKeuanganAdmin = async function() {
       }
 
       const workerUrl = RT05_CONFIG.UPLOADER_URL;
-      let response = await fetch(workerUrl, {
+      const response = await fetch(workerUrl, {
         method: "POST",
         headers: {
           "X-File-Name": encodeURIComponent("nota_edit_" + Date.now() + "_" + file.name),
@@ -4764,23 +4767,27 @@ window.simpanPerubahanKeuanganAdmin = async function() {
         body: file
       });
 
-      let textResult = await response.text();
-      let result = JSON.parse(textResult);
+      const textResult = await response.text();
+      const result = JSON.parse(textResult);
 
       if (response.ok && result.success && result.url) {
-        let urlAwal = new URL(result.url);
+        const urlAwal = new URL(result.url);
         fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname;
+        if (statusDiv) {
+          statusDiv.innerHTML = '✅ Nota baru berhasil diunggah';
+          statusDiv.style.color = '#16a34a';
+        }
       } else {
         throw new Error(result.error || "Gagal unggah file baru");
       }
     }
 
-    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE MELALUI ADMIN WORKER PROXY (PATCH)
-    if (btn) { btn.innerText = '⏳ Menyimpan ke Database...'; }
+    // 🌟 3. SIMPAN PERUBAHAN KE FIREBASE MELALUI ADMIN WORKER PROXY (PATCH)
+    if (btn) btn.innerText = '⏳ Menyimpan ke Database...';
 
-    let parts = tglInput.split('-');
-    let tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
-    let tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
+    const parts = tglInput.split('-');
+    const tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
+    const tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
 
     const updatePayload = {
       tanggal: tanggalRapi,
@@ -4831,11 +4838,157 @@ window.simpanPerubahanKeuanganAdmin = async function() {
       muatDataKeuangan();
     }
   } catch (err) {
+    if (statusDiv) {
+      statusDiv.innerHTML = '❌ Gagal mengunggah/menyimpan';
+      statusDiv.style.color = '#dc2626';
+    }
     alert("❌ Gagal memperbarui data: " + err.message);
   } finally {
     if (btn) {
       btn.disabled = false;
       btn.innerText = '💾 Simpan Perubahan';
+    }
+  }
+};
+
+// =========================================================================
+// 3. FUNGSI SIMPAN LAPORAN KEUANGAN BARU (TAB 1)
+// =========================================================================
+window.simpanLaporanDivisi = async function() {
+  const divisi = document.getElementById('laporanDivisi').value.trim();
+  const pinInput = document.getElementById('laporanPinDivisi').value.trim();
+  const jenis = document.getElementById('laporanJenis').value;
+  const nominalStr = document.getElementById('laporanNominal').value;
+  const nominal = parseInt(String(nominalStr).replace(/[^0-9]/g, ''), 10) || 0;
+  const keterangan = document.getElementById('laporanKeterangan').value.trim();
+  const tglInput = document.getElementById('laporanTanggal').value;
+  const pelapor = document.getElementById('laporanPelapor').value.trim();
+  const fileInput = document.getElementById('laporanFileBukti');
+
+  if (!divisi || !tglInput || !keterangan || nominal <= 0 || !pelapor) {
+    alert("⚠️ Mohon lengkapi semua data laporan dengan benar!");
+    return;
+  }
+
+  if (!pinInput) {
+    alert("⚠️ Mohon masukkan PIN Khusus Divisi!");
+    return;
+  }
+
+  // 🛡️ Verifikasi PIN Divisi (mengikuti aturan PIN divisi & pinMaster Anda)
+  const daftarPinDivisi = await ambilDaftarPinTerbaru();
+  const divisiKey = divisi.toLowerCase().trim();
+  const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
+  const pinMaster = String(daftarPinDivisi["jimpitan bulanan & pengganti ronda"] || "");
+
+  if (pinInput !== pinSeharusnya && pinInput !== pinMaster) {
+    alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
+    return;
+  }
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanLaporan');
+  if (btn) { btn.disabled = true; btn.innerText = '⏳ Memproses...'; }
+
+  try {
+    // 1. Upload foto bukti/nota ke R2 jika ada
+    let fotoUrl = "";
+    if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      if (btn) btn.innerText = '⏳ Mengunggah Nota...';
+      let file = fileInput.files[0];
+      if (typeof kompresGambar === 'function') {
+        file = await kompresGambar(file, 1200, 0.8);
+      }
+
+      const responseUpload = await fetch(RT05_CONFIG.UPLOADER_URL, {
+        method: "POST",
+        headers: {
+          "X-File-Name": encodeURIComponent("nota_baru_" + Date.now() + "_" + file.name),
+          "Content-Type": file.type || "application/octet-stream",
+          "Authorization": `Bearer ${sessionToken}`
+        },
+        body: file
+      });
+
+      const resultUpload = JSON.parse(await responseUpload.text());
+      if (responseUpload.ok && resultUpload.success && resultUpload.url) {
+        const urlAwal = new URL(resultUpload.url);
+        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname;
+      } else {
+        throw new Error(resultUpload.error || "Gagal mengunggah foto bukti");
+      }
+    }
+
+    // 2. Simpan laporan baru ke Firebase via Worker Proxy (POST ke path "keuangan")
+    if (btn) btn.innerText = '⏳ Menyimpan Laporan...';
+    const parts = tglInput.split('-');
+    const tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
+    const tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
+
+    const newPayload = {
+      tanggal: tanggalRapi,
+      tgl: tanggalRapi,
+      divisi: divisi,
+      Divisi: divisi,
+      tipe: tipeTrans,
+      keterangan: keterangan,
+      ket: keterangan,
+      nominal: nominal,
+      pelapor: pelapor,
+      foto: fotoUrl,
+      createdAt: Date.now()
+    };
+
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "keuangan",
+        method: "POST",
+        data: newPayload
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan laporan baru.");
+    }
+
+    alert("✅ Laporan keuangan berhasil dikirim!");
+    document.getElementById('laporanPinDivisi').value = '';
+    document.getElementById('laporanNominal').value = '';
+    document.getElementById('laporanKeterangan').value = '';
+    if (fileInput) fileInput.value = '';
+
+    if (typeof tutupModalLaporan === 'function') tutupModalLaporan();
+    if (typeof muatDataKelolaKeuanganAdmin === 'function') muatDataKelolaKeuanganAdmin();
+    if (typeof muatDataKeuangan === 'function') muatDataKeuangan();
+
+  } catch (err) {
+    alert("❌ Gagal menyimpan laporan: " + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = '📤 Kirim Laporan';
     }
   }
 };
