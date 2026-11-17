@@ -608,7 +608,7 @@ console.log("🚀 Script chat.html berhasil dimuat.");
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
@@ -772,20 +772,25 @@ function formatWaktuPesan(timestamp) {
         const userCredential = await createUserWithEmailAndPassword(auth, pseudoEmail, securePassword);
         const authUid = userCredential.user.uid;
 
-        const userData = {
+const userData = {
           uid: authUid,
           authEmail: pseudoEmail,
           nama: nama,
           username: nama,
           hunian: hunian,
-          pin: pin,
           role: 'warga',
           status: 'pending',
           state: 'offline',
           registeredAt: serverTimestamp()
         };
 
+        // 1. Simpan profil publik warga di /users (TANPA field pin)
         await set(ref(db, `users/${authUid}`), userData);
+
+        // 2. Simpan PIN rahasia di node terpisah /user_pins
+        await set(ref(db, `user_pins/${authUid}`), {
+          pin: String(pin)
+        });
         
         localStorage.setItem('rt05_chat_user', JSON.stringify(userData));
         currentUser = userData;
@@ -2123,51 +2128,7 @@ function checkUserStatus() {
   });
 }
 
-        // 🌟 3. VERIFIKASI KE DATABASE FIREBASE DI LATAR BELAKANG (SILENT SYNC)
-        const userRef = ref(db, `users/${currentUser.uid}`);
-        onValue(userRef, async (snapshot) => {
-            const val = snapshot.val();
-            if (!val) {
-                localStorage.removeItem('rt05_chat_user');
-                location.reload();
-                return;
-            }
-
-            currentUser.status = val.status;
-            currentUser.role = val.role || 'warga';
-            currentUser.username = val.username || val.nama;
-            currentUser.hunian = val.hunian || currentUser.hunian;
-            window.currentUser = currentUser;
-
-            localStorage.setItem('rt05_chat_user', JSON.stringify(currentUser));
-
-            if (val.status === 'pending') {
-                const pendingName = document.getElementById('pending-user-name');
-                if (pendingName) pendingName.innerText = `${val.nama} (${val.hunian})`;
-                if (pendingModal) pendingModal.classList.remove('hidden');
-                if (regModal) regModal.classList.add('hidden');
-                if (chatContainer) chatContainer.classList.add('hidden');
-                if (chatFooter) chatFooter.classList.add('hidden');
-                return;
-            }
-
-            // Perbarui label tampilan jika ada perubahan data dari admin
-            const userInfo = document.getElementById('user-info-text');
-            if (userInfo) userInfo.innerText = `${currentUser.username} • ${currentUser.hunian}`;
-
-            const btnCreatePoll = document.getElementById('btn-create-poll-admin');
-            if (btnCreatePoll) {
-                if (currentUser.role === 'admin' || currentUser.username === 'Admin1' || currentUser.nama === 'Admin1') {
-                    btnCreatePoll.style.display = 'inline-flex';
-                } else {
-                    btnCreatePoll.style.display = 'none';
-                }
-            }
-        
-            setupPresence();
-        }, { onlyOnce: true }); // 🌟 Mencegah onValue memicu ulang reset chat secara terus-menerus
-    }
-         
+    
     
     window.toggleAuthMode = (mode) => {
       const secReg = document.getElementById('section-register');
@@ -2186,7 +2147,17 @@ function checkUserStatus() {
 
 let allRegisteredUsers = [];
 
-    function loadLoginUserOptions() {
+async function loadLoginUserOptions() {
+      // Pastikan browser punya sesi Auth sementara agar lolos aturan ".read": "auth != null"
+      if (!auth.currentUser) {
+        try {
+          await signInAnonymously(auth);
+        } catch (err) {
+          console.error("Gagal inisialisasi sesi tamu:", err);
+          return;
+        }
+      }
+
       const usersRef = ref(db, 'users');
       get(usersRef).then((snapshot) => {
         allRegisteredUsers = [];
