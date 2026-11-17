@@ -5557,7 +5557,157 @@ async function hapusProgker(id) {
     }
   </script>
 
- 
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
+    authDomain: "papan05-21a56.firebaseapp.com",
+    databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "papan05-21a56",
+    storageBucket: "papan05-21a56.firebasestorage.app",
+    messagingSenderId: "1068108426437",
+    appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
+  };
+
+  // Mencegah duplikasi inisialisasi jika Firebase sudah dimuat di halaman
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const db = getDatabase(app, firebaseConfig.databaseURL);
+
+  function safeHTML(str) {
+    return str ? String(str).replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag] || tag)) : '';
+  }
+
+  // Pantau daftar akun chat warga secara realtime
+  const usersRef = ref(db, 'users');
+  onValue(usersRef, (snapshot) => {
+    const pendingListEl = document.getElementById('pending-users-list');
+    const allListEl = document.getElementById('all-users-list');
+    const pendingBadgeEl = document.getElementById('pending-badge');
+    const totalCountEl = document.getElementById('total-warga-count');
+
+    if (!pendingListEl || !allListEl) return;
+
+    if (!snapshot.exists()) {
+      pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada pendaftar baru.</td></tr>';
+      allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada akun terdaftar.</td></tr>';
+      if (pendingBadgeEl) pendingBadgeEl.innerText = '0';
+      if (totalCountEl) totalCountEl.innerText = '0';
+      return;
+    }
+
+    const usersObj = snapshot.val();
+    const pendingArr = [];
+    const activeArr = [];
+
+    Object.entries(usersObj).forEach(([uid, u]) => {
+      if (!u || typeof u !== 'object') return;
+      const item = { ...u, uid: u.uid || uid };
+      if (item.status === 'pending') {
+        pendingArr.push(item);
+      } else {
+        activeArr.push(item);
+      }
+    });
+
+    // Update badge & penghitung jumlah
+    if (pendingBadgeEl) {
+      pendingBadgeEl.innerText = pendingArr.length;
+      pendingBadgeEl.style.display = pendingArr.length > 0 ? 'inline-block' : 'none';
+    }
+    if (totalCountEl) {
+      totalCountEl.innerText = activeArr.length;
+    }
+
+    // 1. Render Tabel Menunggu ACC (Pending)
+    if (pendingArr.length === 0) {
+      pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Tidak ada pendaftar menunggu ACC.</td></tr>';
+    } else {
+      pendingListEl.innerHTML = pendingArr.map(u => `
+        <tr>
+          <td><strong>${safeHTML(u.nama)}</strong></td>
+          <td>${safeHTML(u.hunian)}</td>
+          <td><span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:11px;">Pending</span></td>
+          <td style="white-space:nowrap;">
+            <button onclick="accUserChat('${safeHTML(u.uid)}')" style="background:#10b981; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;">
+              ✔ ACC
+            </button>
+            <button onclick="hapusUserChat('${safeHTML(u.uid)}', '${safeHTML(u.nama)}')" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
+              ✖ Tolak
+            </button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    // 2. Render Tabel Warga Aktif
+    if (activeArr.length === 0) {
+      allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada warga aktif.</td></tr>';
+    } else {
+      allListEl.innerHTML = activeArr.map(u => {
+        const isAdmin = u.role === 'admin';
+        const roleLabel = isAdmin
+          ? '<span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">ADMIN</span>'
+          : '<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px;">Warga</span>';
+
+        return `
+          <tr>
+            <td>
+              <strong>${safeHTML(u.username || u.nama)}</strong>
+              <div style="font-size:10px; color:#64748b;">Asli: ${safeHTML(u.nama)}</div>
+            </td>
+            <td>${safeHTML(u.hunian)}</td>
+            <td>${roleLabel}</td>
+            <td style="white-space:nowrap;">
+              <button onclick="ubahRoleUserChat('${safeHTML(u.uid)}', '${isAdmin ? 'warga' : 'admin'}')" style="background:#3b82f6; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;" title="Ubah Peran">
+                ${isAdmin ? 'Jadikan Warga' : 'Jadikan Admin'}
+              </button>
+              <button onclick="hapusUserChat('${safeHTML(u.uid)}', '${safeHTML(u.nama)}')" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px;" title="Hapus Akun">
+                Hapus
+              </button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+  });
+
+  // Fungsi ACC Pendaftaran Warga
+  window.accUserChat = async (uid) => {
+    try {
+      await update(ref(db, `users/${uid}`), { status: 'aktif' });
+      alert('✅ Akun warga berhasil disetujui dan langsung aktif!');
+    } catch (err) {
+      console.error(err);
+      alert('❌ Gagal menyetujui akun: ' + err.message);
+    }
+  };
+
+  // Fungsi Ubah Role (Warga <-> Admin Chat)
+  window.ubahRoleUserChat = async (uid, roleBaru) => {
+    if (!confirm(`Ubah hak akses akun ini menjadi ${roleBaru.toUpperCase()}?`)) return;
+    try {
+      await update(ref(db, `users/${uid}`), { role: roleBaru });
+    } catch (err) {
+      alert('❌ Gagal mengubah role: ' + err.message);
+    }
+  };
+
+  // Fungsi Tolak / Hapus Akun Chat
+  window.hapusUserChat = async (uid, nama) => {
+    if (!confirm(`Yakin ingin menolak/menghapus akun chat "${nama}"?`)) return;
+    try {
+      await remove(ref(db, `users/${uid}`));
+      alert('🗑️ Akun berhasil dihapus.');
+    } catch (err) {
+      console.error(err);
+      alert('❌ Gagal menghapus akun: ' + err.message);
+    }
+  };
+</script> 
 
 
  <!-- FontAwesome Lokal dari Repositori Sendiri -->
