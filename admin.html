@@ -1369,7 +1369,8 @@ async function tanganiUploadR2DenganOpsiOffline({
       fileSiap = await kompresGambar(file, 1200, 0.8);
     }
 
-    const uploaderAuth = sessionStorage.getItem('rt05_admin_pin_aktif') || sessionToken;
+    // Prioritaskan sessionToken dari parameter, fallback ke PIN admin utama jika kosong
+    const uploaderAuth = sessionToken || sessionStorage.getItem('rt05_admin_pin_aktif') || '';
 
     const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
       method: "POST",
@@ -1415,7 +1416,6 @@ async function tanganiUploadR2DenganOpsiOffline({
     return { lanjut: false, url: fallbackUrl };
   }
 }
-
 // ==========================================
 // PROXY WORKER DENGAN ANTREAN OFFLINE
 // Mengembalikan: true (sukses online), 'OFFLINE' (masuk antrean), false (gagal)
@@ -1866,12 +1866,20 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
       payload.anggotaKeluarga = "";
     }
 
-    // ✅ Kirim via Worker Proxy menggunakan sessionToken
-    await kirimDataViaAdminWorker('peta_warga', payload, 'POST');
+    // ✅ Kirim via Worker Proxy menggunakan sessionToken & cek statusnya
+    const statusKirim = await kirimDataViaAdminWorker('peta_warga', payload, 'POST');
 
     btn.innerText = '💾 Simpan Data Lokasi';
     btn.disabled = false;
-    alert('✅ Data lokasi baru berhasil disimpan!');
+
+    // Berhenti jika gagal agar data di form tidak hilang
+    if (!statusKirim) return;
+
+    // Tampilkan alert sukses hanya jika benar-benar terkirim online
+    if (statusKirim === true) {
+      alert('✅ Data lokasi baru berhasil disimpan!');
+    }
+
     tutupModalForm();
     document.getElementById('dataForm').reset();
     
@@ -4775,9 +4783,6 @@ window.simpanPerubahanKeuanganAdmin = async function() {
       return;
     }
 
-    // Simpan PIN aktif ke sesi agar ikut tervalidasi oleh helper R2
-    sessionStorage.setItem('rt05_admin_pin_aktif', pinInput);
-
     // 2. Upload nota baru via helper R2 (mendukung konfirmasi lanjut tanpa foto saat offline)
     const fileInput = document.getElementById('editInputFoto');
     const fileDipilih = (fileInput && fileInput.files && fileInput.files.length > 0) ? fileInput.files[0] : null;
@@ -4900,8 +4905,6 @@ window.simpanLaporanDivisi = async function() {
       return;
     }
 
-    // Simpan PIN aktif ke sesi agar tervalidasi oleh helper R2
-    sessionStorage.setItem('rt05_admin_pin_aktif', pinInput);
 
     // 2. Upload foto bukti/nota via helper R2 (mendukung konfirmasi lanjut tanpa foto saat offline)
     const fileDipilih = (fileInput && fileInput.files && fileInput.files.length > 0) ? fileInput.files[0] : null;
@@ -5467,19 +5470,22 @@ function muatDataPetaUntukAdmin() {
         var safeNama = typeof escapeHTML === 'function' ? escapeHTML(labelTampil) : labelTampil;
         
         // 🌟 Menggunakan emoji ikon asli (rumah, fasum, minimarket, dll) dan background putih solid (#ffffff)
-        html += `
-          <div onclick="pilihLokasiPengumuman('${safeNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: #ffffff;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
-            <strong>${item.emoji || '🏠'} ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
-          </div>
-        `;
+        const encodedNama = encodeURIComponent(labelTampil);
+
+html += `
+  <div onclick="pilihLokasiPengumuman('${encodedNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: #ffffff;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
+    <strong>${item.emoji || '🏠'} ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
+  </div>
+`;
       });
 
       container.innerHTML = html;
       container.style.display = 'block';
     }
 
-    function pilihLokasiPengumuman(teksLokasi, lat, lng) {
-      document.getElementById('pengumumanLokasi').value = teksLokasi;
+  function pilihLokasiPengumuman(encodedNama, lat, lng) {
+      const namaAsli = decodeURIComponent(encodedNama);
+      document.getElementById('pengumumanLokasiTeks').value = namaAsli;
       document.getElementById('pengumumanLat').value = lat;
       document.getElementById('pengumumanLng').value = lng;
       document.getElementById('hasilPencarianLokasi').style.display = 'none';
