@@ -4546,9 +4546,9 @@ window.tutupModalEditAdmin = function() {
 };
 
 // =========================================================================
-// 1. HELPER AMBIL PIN DARI FIREBASE & MODAL GANTI PIN (DI LUAR FUNGSI SIMPAN)
+// 1. HELPER AMBIL PIN VIA WORKER & MODAL GANTI PIN
 // =========================================================================
-async function ambilDaftarPinFirebase() {
+async function ambilDaftarPinTerbaru() {
   const defaultPin = {
     "sosial": "010101",
     "tenda": "020202",
@@ -4563,17 +4563,31 @@ async function ambilDaftarPinFirebase() {
     "perkakas": "121212"
   };
 
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) return defaultPin;
+
   try {
-    if (window.db && typeof window.firebaseGet === 'function' && typeof window.firebaseRef === 'function') {
-      const snap = await window.firebaseGet(window.firebaseRef(window.db, 'konfigurasi/pin_divisi'));
-      return snap.exists() ? { ...defaultPin, ...snap.val() } : defaultPin;
-    }
-    if (typeof firebase !== 'undefined' && firebase.database) {
-      const snap = await firebase.database().ref('konfigurasi/pin_divisi').once('value');
-      return snap.exists() ? { ...defaultPin, ...snap.val() } : defaultPin;
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "konfigurasi/pin_divisi",
+        method: "GET"
+      })
+    });
+
+    const hasil = await response.json();
+    const dataPinDb = hasil.result !== undefined ? hasil.result : hasil.data;
+
+    if (response.ok && hasil.success && dataPinDb && typeof dataPinDb === 'object') {
+      return { ...defaultPin, ...dataPinDb };
     }
   } catch (err) {
-    console.warn("Gagal mengambil PIN dari Firebase, menggunakan fallback:", err);
+    console.warn("Gagal mengambil PIN dari Worker, menggunakan fallback:", err);
   }
   return defaultPin;
 }
@@ -4600,8 +4614,9 @@ window.prosesGantiPinDivisi = async function() {
     return;
   }
 
-  if (!/^\d{6,10}$/.test(pinBaru)) {
-    alert("⚠️ PIN baru harus berupa 6 sampai 10 digit angka!");
+  // Disamakan menjadi tepat 6 digit angka agar sesuai dengan maxlength="6" di form laporan
+  if (!/^\d{6}$/.test(pinBaru)) {
+    alert("⚠️ PIN baru harus berupa tepat 6 digit angka!");
     return;
   }
 
@@ -4627,7 +4642,7 @@ window.prosesGantiPinDivisi = async function() {
   btn.innerText = "⏳ Memverifikasi...";
 
   try {
-    const daftarPinSaatIni = await ambilDaftarPinFirebase();
+    const daftarPinSaatIni = await ambilDaftarPinTerbaru();
     const pinLamaValid = String(daftarPinSaatIni[divisiKey] || "");
 
     if (pinLama !== pinLamaValid) {
