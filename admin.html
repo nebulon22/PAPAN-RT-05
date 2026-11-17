@@ -4855,17 +4855,23 @@ window.simpanPerubahanKeuanganAdmin = async function() {
 // 3. FUNGSI SIMPAN LAPORAN KEUANGAN BARU (TAB 1)
 // =========================================================================
 window.simpanLaporanDivisi = async function() {
-  const divisi = document.getElementById('laporanDivisi').value.trim();
+  // 1. Disesuaikan dengan ID di HTML ('laporanNamaDivisi')
+  const divisi = document.getElementById('laporanNamaDivisi').value.trim();
   const pinInput = document.getElementById('laporanPinDivisi').value.trim();
   const jenis = document.getElementById('laporanJenis').value;
   const nominalStr = document.getElementById('laporanNominal').value;
   const nominal = parseInt(String(nominalStr).replace(/[^0-9]/g, ''), 10) || 0;
   const keterangan = document.getElementById('laporanKeterangan').value.trim();
   const tglInput = document.getElementById('laporanTanggal').value;
-  const pelapor = document.getElementById('laporanPelapor').value.trim();
-  const fileInput = document.getElementById('laporanFileBukti');
+  
+  // 2. Aman meski elemen 'laporanPelapor' tidak ada di HTML (fallback ke 'Admin')
+  const elPelapor = document.getElementById('laporanPelapor');
+  const pelapor = elPelapor ? elPelapor.value.trim() : (localStorage.getItem('adminUsername') || 'Admin');
+  
+  // 3. Disesuaikan dengan ID di HTML ('laporanInputFoto')
+  const fileInput = document.getElementById('laporanInputFoto');
 
-  if (!divisi || !tglInput || !keterangan || nominal <= 0 || !pelapor) {
+  if (!divisi || !tglInput || !keterangan || nominal <= 0) {
     alert("⚠️ Mohon lengkapi semua data laporan dengan benar!");
     return;
   }
@@ -4875,7 +4881,7 @@ window.simpanLaporanDivisi = async function() {
     return;
   }
 
-  // 🛡️ Verifikasi PIN Divisi (mengikuti aturan PIN divisi & pinMaster Anda)
+  // 🛡️ Verifikasi PIN Divisi
   const daftarPinDivisi = await ambilDaftarPinTerbaru();
   const divisiKey = divisi.toLowerCase().trim();
   const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
@@ -4988,7 +4994,7 @@ window.simpanLaporanDivisi = async function() {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.innerText = '📤 Kirim Laporan';
+      btn.innerText = '📤 Kirim Laporan Keuangan';
     }
   }
 };
@@ -5021,6 +5027,8 @@ function resetFormPengumumanKeModeBaru() {
 
   const fileInput = document.getElementById('inputUploadPengumuman');
   if (fileInput) fileInput.value = '';
+  const statusUpload = document.getElementById('statusUploadBukti');
+  if (statusUpload) statusUpload.innerHTML = '';
 
   const statusEl = document.getElementById('statusUploadPengumuman');
   if (statusEl) {
