@@ -4549,22 +4549,8 @@ window.tutupModalEditAdmin = function() {
 // 1. HELPER AMBIL PIN VIA WORKER & MODAL GANTI PIN
 // =========================================================================
 async function ambilDaftarPinTerbaru() {
-  const defaultPin = {
-    "sosial": "010101",
-    "tenda": "020202",
-    "sound system": "030303",
-    "pondokan rt 05": "040404",
-    "jimpitan bulanan & pengganti ronda": "050505",
-    "pekerjaan umum & kelistrikan": "060606",
-    "ronda harian & keamanan": "070707",
-    "bendahara umum": "080808",
-    "tata ruang": "090909",
-    "transportasi": "101010",
-    "perkakas": "121212"
-  };
-
   const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) return defaultPin;
+  if (!sessionToken) return {};
 
   try {
     const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
@@ -4584,12 +4570,18 @@ async function ambilDaftarPinTerbaru() {
     const dataPinDb = hasil.result !== undefined ? hasil.result : hasil.data;
 
     if (response.ok && hasil.success && dataPinDb && typeof dataPinDb === 'object') {
-      return { ...defaultPin, ...dataPinDb };
+      // Normalisasi semua key divisi menjadi huruf kecil agar selalu cocok
+      const normalizedPins = {};
+      for (const [key, val] of Object.entries(dataPinDb)) {
+        normalizedPins[key.toLowerCase().trim()] = String(val);
+      }
+      return normalizedPins;
     }
   } catch (err) {
-    console.warn("Gagal mengambil PIN dari Worker, menggunakan fallback:", err);
+    console.error("Gagal mengambil data PIN dari Firebase:", err);
   }
-  return defaultPin;
+  
+  return {};
 }
 
 window.bukaModalGantiPin = function() {
