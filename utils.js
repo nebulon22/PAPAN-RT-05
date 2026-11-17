@@ -29,10 +29,10 @@ const RT05_CONFIG = {
 async function initFirebaseLazy() {
   if (window.db && window.auth) return;
 
-  try {
+try {
     const [
       { initializeApp },
-      { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query },
+      { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query, goOffline, goOnline },
       {
         getAuth,
         initializeAuth,
@@ -72,6 +72,8 @@ async function initFirebaseLazy() {
     window.firebaseGet = get;
     window.firebaseLimitToLast = limitToLast;
     window.firebaseQuery = query;
+    window.firebaseGoOffline = goOffline;
+    window.firebaseGoOnline = goOnline;
     window.signInAnonymously = signInAnonymously;
     window.onAuthStateChanged = onAuthStateChanged;
 
@@ -109,6 +111,18 @@ if ('requestIdleCallback' in window) {
 } else {
   setTimeout(() => initFirebaseLazy(), 1200);
 }
+// Putus WebSocket sementara saat masuk Back-Forward Cache (bfcache) agar bebas error konsol & lolos audit Lighthouse
+window.addEventListener('pagehide', () => {
+  if (window.db && typeof window.firebaseGoOffline === 'function') {
+    window.firebaseGoOffline(window.db);
+  }
+});
+
+window.addEventListener('pageshow', (event) => {
+  if (event.persisted && window.db && typeof window.firebaseGoOnline === 'function') {
+    window.firebaseGoOnline(window.db);
+  }
+});
 
 // ==========================================
 // FUNGSI UTILITY PENDUKUNG & PENCARIAN
