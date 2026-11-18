@@ -79,13 +79,6 @@ html, body {
       text-decoration: none;
     }
 
-    .container {
-      max-width: 600px;
-      margin: 0 auto;
-      padding: 12px;
-      box-sizing: border-box;
-    }
-
     .card-info {
       background: #ffffff;
       border: 1px solid #e0e0e0;
@@ -300,7 +293,7 @@ function muatPengumumanFirebase() {
     // 🌟 PANGGIL OTOMATIS SAAT HALAMAN SELESAI DILOAD
 document.addEventListener('DOMContentLoaded', muatPengumumanFirebase);
 
-    function renderPengumumanUI() {
+function renderPengumumanUI() {
       var container = document.getElementById('list-pengumuman');
       if (!container) return;
 
@@ -313,15 +306,17 @@ document.addEventListener('DOMContentLoaded', muatPengumumanFirebase);
       daftarPengumuman.forEach(function(info) {
         var htmlFoto = '';
         if (info.foto) {
-          var urlFoto = info.foto.toLowerCase();
-          if (urlFoto.includes('.webm') || urlFoto.includes('.mp4')) {
+          var safeUrl = escapeHTML(info.foto);
+          var urlLower = info.foto.toLowerCase();
+
+          if (urlLower.includes('.webm') || urlLower.includes('.mp4')) {
             htmlFoto = `
-              <div onclick="bukaModalVideo('${info.foto}')" style="position: relative; width: 100%; max-height: 200px; border-radius: 6px; overflow: hidden; margin-top: 8px; background: #000; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                <video src="${info.foto}" preload="metadata" playsinline style="width: 100%; max-height: 200px; object-fit: cover; opacity: 0.8; pointer-events: none;"></video>
+              <div data-url="${safeUrl}" onclick="bukaModalVideo(this.dataset.url)" style="position: relative; width: 100%; max-height: 200px; border-radius: 6px; overflow: hidden; margin-top: 8px; background: #000; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+                <video src="${safeUrl}" preload="metadata" playsinline style="width: 100%; max-height: 200px; object-fit: cover; opacity: 0.8; pointer-events: none;"></video>
                 <div style="position: absolute; background: rgba(239, 68, 68, 0.9); color: #fff; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">▶</div>
               </div>`;
           } else {
-            htmlFoto = `<img src="${info.foto}" loading="lazy" class="img-popup" alt="Flyer" onclick="bukaFotoBesar('${info.foto}')" onError="this.style.display='none'">`;
+            htmlFoto = `<img src="${safeUrl}" data-url="${safeUrl}" loading="lazy" class="img-popup" alt="Flyer" onclick="bukaFotoBesar(this.dataset.url)" onerror="this.style.display='none'">`;
           }
         }
 
@@ -337,26 +332,37 @@ document.addEventListener('DOMContentLoaded', muatPengumumanFirebase);
       container.innerHTML = htmlKolektif;
     }
 
-    function muatProgkerWarga() {
-      const tbody = document.getElementById('tabel-progker-warga');
-      if (!tbody || isProgkerLoaded) return;
+function muatProgkerWarga() {
+  const tbody = document.getElementById('tabel-progker-warga');
+  if (!tbody || isProgkerLoaded) return;
 
-      const progkerRef = window.firebaseRef(window.db, "progker_rab");
-      window.firebaseOnValue(progkerRef, (snapshot) => {
-        isProgkerLoaded = true;
-        const dataObj = snapshot.val();
-        let dataArray = [];
+  // Pengaman: tunggu jika Firebase dari utils.js belum selesai inisialisasi
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatProgkerWarga, 100);
+    return;
+  }
 
-        if (dataObj) {
-          Object.keys(dataObj).forEach(key => {
-            dataArray.push(dataObj[key]);
-          });
+  isProgkerLoaded = true; // Set true saat listener dipasang agar tidak terjadi double-listener
+  const progkerRef = window.firebaseRef(window.db, "progker_rab");
+  
+  window.firebaseOnValue(progkerRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    let dataArray = [];
+
+    if (dataObj) {
+      Object.keys(dataObj).forEach(key => {
+        if (dataObj[key] && typeof dataObj[key] === 'object') {
+          dataArray.push(dataObj[key]);
         }
+      });
+      // Urutkan agar kegiatan terbaru muncul di atas
+      dataArray.sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+    }
 
-        if (dataArray.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
-          return;
-        }
+    if (dataArray.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:12px; color:#94a3b8;">Belum ada Rencana Anggaran Kegiatan.</td></tr>';
+      return;
+    }
 
         var totalRabPerencanaan = 0;
         var totalRealisasiSelesai = 0;
