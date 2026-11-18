@@ -210,6 +210,36 @@
     border-color: #f57c00;
   }
 
+.ticker-wrap {
+  width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  position: relative;
+  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+}
+
+.ticker-move {
+  display: inline-block;
+  white-space: nowrap;
+  padding-left: 100%;
+  animation: tickerBerjalan 18s linear infinite;
+}
+
+.ticker-wrap:hover .ticker-move,
+.ticker-wrap:active .ticker-move {
+  animation-play-state: paused;
+}
+
+@keyframes tickerBerjalan {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-100%, 0, 0);
+  }
+}
+   
    /* Styling Tombol Floating Chat & Badge */
 #floating-chat-btn {
   position: fixed;
@@ -575,21 +605,23 @@
     
 <div class="filter-container">
   <!-- BARIS 1: KARTU LIVE INFO RT (FULL WIDTH) -->
-  <a href="pengumuman.html" onclick="bukaInfoSmooth(event, this.href)" 
-     style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 8px 12px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 10px rgba(234, 88, 12, 0.35); border: 1px solid rgba(255,255,255,0.25); transition: transform 0.1s ease;">
-    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0;">
-      <span style="font-size: 16px; flex-shrink: 0;">📢</span>
-      <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
-        <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">
-          INFO & PENGUMUMAN RT
-        </span>
-        <span id="preview-judul-info" style="font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-          Lihat info & program kerja RT...
+<a href="pengumuman.html" onclick="bukaInfoSmooth(event, this.href)" 
+   style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 8px 12px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 10px rgba(234, 88, 12, 0.35); border: 1px solid rgba(255,255,255,0.25); transition: transform 0.1s ease;">
+  <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0; flex: 1;">
+    <span style="font-size: 16px; flex-shrink: 0;">📢</span>
+    <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1;">
+      <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">
+        INFO & PENGUMUMAN RT
+      </span>
+      <div class="ticker-wrap">
+        <span id="preview-judul-info" class="ticker-move" style="font-size: 12px; font-weight: bold;">
+          Memuat info & program kerja RT...
         </span>
       </div>
     </div>
-    <span id="badge-count" class="badge-count" style="display:none; background: #111827; color: #fbbf24; font-size: 11px; padding: 3px 8px; border-radius: 12px; flex-shrink: 0; margin-left: 6px;">0</span>
-  </a>
+  </div>
+  <span id="badge-count" class="badge-count" style="display:none; background: #111827; color: #fbbf24; font-size: 11px; padding: 3px 8px; border-radius: 12px; flex-shrink: 0; margin-left: 8px;">0</span>
+</a>
 
   <!-- BARIS 2: KEUANGAN & JIMPITAN -->
   <div class="filter-row">
@@ -1723,7 +1755,6 @@ window.addEventListener('pageshow', function(event) {
   document.body.style.transform = "none";
 });
   
-// 🌟 Fungsi untuk Memantau & Menampilkan Badge Jumlah Info RT Aktif di Index
 function muatBadgeInfoRT() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
     setTimeout(muatBadgeInfoRT, 100);
@@ -1734,7 +1765,7 @@ function muatBadgeInfoRT() {
   window.firebaseOnValue(pengumumanRef, (snapshot) => {
     const data = snapshot.val();
     let activeKeys = [];
-    let judulTerbaru = "";
+    let daftarJudul = [];
 
     if (data) {
       Object.keys(data).forEach(key => {
@@ -1743,16 +1774,31 @@ function muatBadgeInfoRT() {
         if (status === 'AKTIF') {
           activeKeys.push(key);
           if (item.judul) {
-            judulTerbaru = String(item.judul).trim();
+            daftarJudul.push(String(item.judul).trim());
           }
         }
       });
     }
 
-    // 🌟 Tampilkan judul pengumuman terbaru di kartu depan
+    // Urutkan dari event terbaru ke yang terlama
+    daftarJudul.reverse();
+
     var previewEl = document.getElementById('preview-judul-info');
     if (previewEl) {
-      previewEl.innerText = judulTerbaru || 'Belum ada pengumuman aktif';
+      if (daftarJudul.length > 0) {
+        const teksGabungan = daftarJudul
+          .map((judul, idx) => `${idx === 0 ? '🔥 TERBARU: ' : '📌 '}${judul}`)
+          .join('   •   ');
+        previewEl.innerText = teksGabungan;
+
+        // Sesuaikan durasi animasi secara otomatis agar kecepatan baca tetap nyaman
+        const durasiDetik = Math.max(12, Math.round(teksGabungan.length * 0.22));
+        previewEl.style.animationDuration = `${durasiDetik}s`;
+      } else {
+        previewEl.innerText = 'Belum ada pengumuman aktif saat ini';
+        previewEl.style.animation = 'none';
+        previewEl.style.paddingLeft = '0';
+      }
     }
 
     let readKeys = JSON.parse(localStorage.getItem('rt05_read_announcements') || '[]');
@@ -1776,6 +1822,7 @@ function muatBadgeInfoRT() {
     }
   });
 }
+  
 // Memastikan halaman kembali normal dan tidak transparan saat tombol Back HP ditekan
 window.addEventListener('pageshow', function(event) {
   if (event.persisted) {
