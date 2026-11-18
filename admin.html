@@ -2220,25 +2220,16 @@ function tutupModalIframeQR() {
 }
     
 function bukaModalPinjamAdmin() {
-      if (typeof muatPeminjamanAdmin === 'function') {
-        muatPeminjamanAdmin();
-      }
-
-      // Pastikan form stok & form pinjam kembali ke display default-nya
-      const formStok = document.getElementById('formStokBarang');
-      if (formStok) formStok.style.display = 'block';
-
-      const formPinjam = document.getElementById('formPinjamBarang');
-      if (formPinjam) formPinjam.style.display = 'block';
-
-      // Selalu buka di tab utama (Form Pinjam & Daftar Belum Dikembalikan)
-      if (typeof pilihTabInventarisAdmin === 'function') {
-        pilihTabInventarisAdmin('pinjam');
-      }
-
-      const modal = document.getElementById("modal-admin-inventaris");
-      if (modal) modal.style.display = "flex";
-    }
+  if (typeof muatPeminjamanAdmin === 'function') {
+    muatPeminjamanAdmin();
+  }
+  // Selalu buka di tab utama (Form Pinjam & Daftar Belum Dikembalikan)
+  if (typeof pilihTabInventarisAdmin === 'function') {
+    pilihTabInventarisAdmin('pinjam');
+  }
+  const modal = document.getElementById("modal-admin-inventaris");
+  if (modal) modal.style.display = "flex";
+}
     
     function tutupModalPinjamAdmin() {
       document.getElementById("modal-admin-inventaris").style.display = "none";
@@ -2588,51 +2579,57 @@ let idPeminjamanAkanDikembalikan = null;
       }
     };
 
-    // Eksekusi simpan ke riwayat_peminjaman & hapus dari peminjaman aktif
-    window.eksekusiPengembalianBarang = async function() {
-      if (!idPeminjamanAkanDikembalikan) return;
+// Eksekusi simpan ke riwayat_peminjaman & hapus dari peminjaman aktif
+window.eksekusiPengembalianBarang = async function() {
+  if (!idPeminjamanAkanDikembalikan) return;
 
-      const inputEl = document.getElementById('input-catatan-kembali');
-      const catatanKondisi = (inputEl ? inputEl.value.trim() : '') || 'Utuh';
-      const btnSubmit = document.getElementById('btn-submit-kembali');
+  const inputEl = document.getElementById('input-catatan-kembali');
+  const catatanKondisi = (inputEl ? inputEl.value.trim() : '') || 'Utuh';
+  const btnSubmit = document.getElementById('btn-submit-kembali');
 
-      if (btnSubmit) {
-        btnSubmit.innerText = '⏳ Menyimpan...';
-        btnSubmit.disabled = true;
-      }
+  if (btnSubmit) {
+    btnSubmit.innerText = '⏳ Menyimpan...';
+    btnSubmit.disabled = true;
+  }
 
-      try {
-        const id = idPeminjamanAkanDikembalikan;
-        const dataPinjam = await requestWorkerInventaris(`peminjaman/${id}`, 'GET');
-        if (!dataPinjam) {
-          alert("⚠️ Data peminjaman tidak ditemukan atau sudah diproses.");
-          tutupModalKonfirmasiKembali();
-          await muatPeminjamanAdmin();
-          return;
-        }
+  try {
+    const id = idPeminjamanAkanDikembalikan;
+    const dataPinjam = await requestWorkerInventaris(`peminjaman/${id}`, 'GET');
+    
+    if (!dataPinjam) {
+      alert("⚠️ Data peminjaman tidak ditemukan atau sudah diproses.");
+      tutupModalKonfirmasiKembali();
+      await muatPeminjamanAdmin();
+      return;
+    }
 
-        dataPinjam.status = "Dikembalikan";
-        dataPinjam.tglKembali = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
-        dataPinjam.catatanKembali = catatanKondisi;
-        dataPinjam.returnedAt = Date.now();
-
-        await requestWorkerInventaris(`riwayat_peminjaman/${id}`, 'PUT', dataPinjam);
-        await requestWorkerInventaris(`peminjaman/${id}`, 'DELETE');
-
-        tutupModalKonfirmasiKembali();
-        await muatPeminjamanAdmin();
-
-      } catch (err) {
-        if (err.message !== "SESSION_EXPIRED") {
-          alert("❌ Gagal memperbarui status pengembalian: " + err.message);
-        }
-      } finally {
-        if (btnSubmit) {
-          btnSubmit.innerText = '💾 Simpan Pengembalian';
-          btnSubmit.disabled = false;
-        }
-      }
+    // Lengkapi data pengembalian
+    const dataKembali = {
+      ...dataPinjam,
+      status: "Dikembalikan",
+      tglKembali: new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' }),
+      catatanKembali: catatanKondisi,
+      returnedAt: Date.now()
     };
+
+    // Jalankan secara paralel atau berurutan dengan penanganan aman
+    await requestWorkerInventaris(`riwayat_peminjaman/${id}`, 'PUT', dataKembali);
+    await requestWorkerInventaris(`peminjaman/${id}`, 'DELETE');
+
+    tutupModalKonfirmasiKembali();
+    await muatPeminjamanAdmin();
+
+  } catch (err) {
+    if (err.message !== "SESSION_EXPIRED") {
+      alert("❌ Gagal memperbarui status pengembalian: " + err.message);
+    }
+  } finally {
+    if (btnSubmit) {
+      btnSubmit.innerText = '💾 Simpan Pengembalian';
+      btnSubmit.disabled = false;
+    }
+  }
+};
 
     // ==========================================
     // SISTEM KERANJANG PEMINJAMAN (MULTI-ITEM VIA WORKER)
