@@ -5625,12 +5625,6 @@ async function hapusProgker(id) {
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const db = getDatabase(app, firebaseConfig.databaseURL);
 
-  function safeHTML(str) {
-    return str ? String(str).replace(/[&<>'"]/g, tag => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
-    }[tag] || tag)) : '';
-  }
-
   // Helper kirim perintah manajemen user via Cloudflare Admin Worker
   async function kirimAksiUserViaWorker(pathTujuan, metodeHttp, payloadData = null) {
     const sessionToken = sessionStorage.getItem('rt05_session_token');
@@ -5726,17 +5720,17 @@ async function hapusProgker(id) {
         pendingListEl.innerHTML = pendingArr.map(u => `
           <tr style="border-bottom:1px solid #1e293b;">
             <td style="padding:6px 4px; vertical-align:middle;">
-              <strong style="color:#f8fafc;">${safeHTML(u.nama)}</strong>
+              <strong style="color:#f8fafc;">${escapeHTML(u.nama)}</strong>
               <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">
-                ${safeHTML(u.hunian)}
+                ${escapeHTML(u.hunian)}
                 <span style="background:#fef3c7; color:#92400e; padding:1px 5px; border-radius:4px; font-size:8.5px; font-weight:600; margin-left:4px;">Pending</span>
               </div>
             </td>
             <td style="padding:6px 4px; text-align:right; vertical-align:middle; white-space:nowrap;">
-              <button type="button" data-uid="${safeHTML(u.uid)}" onclick="accUserChat(this.dataset.uid)" style="background:#10b981; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:600; margin-right:3px;">
+              <button type="button" data-uid="${escapeHTML(u.uid)}" onclick="accUserChat(this.dataset.uid)" style="background:#10b981; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:600; margin-right:3px;">
                 ✔ ACC
               </button>
-              <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:600;">
+              <button type="button" data-uid="${escapeHTML(u.uid)}" data-nama="${escapeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:600;">
                 ✖ Tolak
               </button>
             </td>
@@ -5755,21 +5749,21 @@ async function hapusProgker(id) {
             : '<span style="background:#334155; color:#cbd5e1; padding:1px 5px; border-radius:4px; font-size:8.5px; margin-left:4px;">Warga</span>';
 
           const displayName = u.username || u.nama;
-          const asliText = (u.username && u.username !== u.nama) ? `Asli: ${safeHTML(u.nama)} • ` : '';
+          const asliText = (u.username && u.username !== u.nama) ? `Asli: ${escapeHTML(u.nama)} • ` : '';
 
           return `
             <tr style="border-bottom:1px solid #1e293b;">
               <td style="padding:6px 4px; vertical-align:middle;">
-                <strong style="color:#f8fafc;">${safeHTML(displayName)}</strong>${roleLabel}
+                <strong style="color:#f8fafc;">${escapeHTML(displayName)}</strong>${roleLabel}
                 <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">
-                  ${asliText}${safeHTML(u.hunian)}
+                  ${asliText}${escapeHTML(u.hunian)}
                 </div>
               </td>
               <td style="padding:6px 4px; text-align:right; vertical-align:middle; white-space:nowrap;">
-                <button type="button" data-uid="${safeHTML(u.uid)}" data-role="${isAdmin ? 'warga' : 'admin'}" onclick="ubahRoleUserChat(this.dataset.uid, this.dataset.role)" style="background:#3b82f6; color:#fff; border:none; padding:4px 6px; border-radius:4px; cursor:pointer; font-size:9.5px; font-weight:600; margin-right:3px;" title="Ubah Peran">
+                <button type="button" data-uid="${escapeHTML(u.uid)}" data-role="${isAdmin ? 'warga' : 'admin'}" onclick="ubahRoleUserChat(this.dataset.uid, this.dataset.role)" style="background:#3b82f6; color:#fff; border:none; padding:4px 6px; border-radius:4px; cursor:pointer; font-size:9.5px; font-weight:600; margin-right:3px;" title="Ubah Peran">
                   ${isAdmin ? 'Jadikan Warga' : 'Jadikan Admin'}
                 </button>
-                <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 6px; border-radius:4px; cursor:pointer; font-size:9.5px; font-weight:600;" title="Hapus Akun">
+                <button type="button" data-uid="${escapeHTML(u.uid)}" data-nama="${escapeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 6px; border-radius:4px; cursor:pointer; font-size:9.5px; font-weight:600;" title="Hapus Akun">
                   Hapus
                 </button>
               </td>
