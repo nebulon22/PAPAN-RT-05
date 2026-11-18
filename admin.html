@@ -2060,16 +2060,20 @@ window.cariLokasiPetaAdmin = function(queryManual) {
 
   // Pencarian fleksibel mencakup semua properti pin
   var hasil = dataPin.find(pin => {
+    var noRumahAsli = String(pin.noRumah || '').toLowerCase().trim();
+    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
+    
+    // 🌟 Jika input murni angka, kunci pencarian HANYA pada kecocokan persis nomor rumah
+    if (isPureAngka) {
+      return noRumahTanpaNol === keywordBersih || noRumahAsli === kataKunci;
+    }
+
     var namaRaw = String(pin.namaRaw || pin.nameAsli || '').toLowerCase();
     var namaTeks = String(pin.nama || '').toLowerCase();
     var namaTempat = String(pin.namaTempat || pin.name || '').toLowerCase();
     var kepalaKeluarga = String(pin.kepalaKeluarga || '').toLowerCase();
     var anggotaKeluarga = String(pin.anggota || '').toLowerCase();
-    var noRumahAsli = String(pin.noRumah || '').toLowerCase();
-    var noRumahTanpaNol = noRumahAsli.replace(/^0+/, '');
     var kategori = String(pin.kategori || '').toLowerCase();
-    
-    if (isPureAngka && noRumahTanpaNol === keywordBersih) return true;
 
     return namaRaw.includes(kataKunci) ||
            namaTeks.includes(kataKunci) || 
