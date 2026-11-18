@@ -4207,8 +4207,8 @@ window.renderTabelKelolaAdmin = function(dataArray) {
 
     
 let badgeNota = item.foto
-  ? `<button type="button" onclick="window.open('${escapeHTML(item.foto)}', '_blank')" style="background:#e0f2fe; color:#0288d1; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:9.5px; cursor:pointer;">📄 Lihat</button>`
-  : `<span style="color:#aaa;">-</span>`;
+      ? `<button type="button" onclick="lihatFotoNotaAdmin('${escapeHTML(item.foto)}', '${escapeHTML(ket)}')" style="background:#e0f2fe; color:#0288d1; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:9.5px; cursor:pointer;">📄 Lihat</button>`
+      : `<span style="color:#aaa;">-</span>`;
 
     let tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid #e2e8f0';
@@ -4232,6 +4232,39 @@ let badgeNota = item.foto
     `;
     tbody.appendChild(tr);
   });
+};
+    window.lihatFotoNotaAdmin = function(urlFoto, keterangan = 'Bukti Nota Keuangan') {
+  if (!urlFoto) return;
+
+  // Jika di admin.html sudah tersedia fungsi bukaFotoBesar, langsung gunakan
+  if (typeof window.bukaFotoBesar === 'function') {
+    window.bukaFotoBesar(urlFoto, keterangan);
+    return;
+  }
+
+  // Buat atau tampilkan modal lightbox foto besar di dalam admin.html
+  let modal = document.getElementById('modal-foto-nota-admin');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-foto-nota-admin';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(2,6,23,0.88); backdrop-filter:blur(4px); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px;';
+    modal.innerHTML = `
+      <div style="position:relative; max-width:95vw; max-height:85vh; display:flex; flex-direction:column; align-items:center;">
+        <button type="button" onclick="document.getElementById('modal-foto-nota-admin').style.display='none'" style="position:absolute; top:-14px; right:-10px; background:#ef4444; color:#fff; border:2px solid #fff; width:30px; height:30px; border-radius:50%; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.4);">✕</button>
+        <img id="img-foto-nota-admin" src="" alt="Nota Keuangan" style="max-width:100%; max-height:78vh; border-radius:8px; border:2px solid #334155; object-fit:contain; background:#0f172a;">
+        <div id="caption-foto-nota-admin" style="color:#f8fafc; font-size:12px; margin-top:8px; text-align:center; font-weight:600;"></div>
+      </div>
+    `;
+    // Tutup modal saat area gelap di luar foto diklik
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById('img-foto-nota-admin').src = urlFoto;
+  document.getElementById('caption-foto-nota-admin').innerText = keterangan;
+  modal.style.display = 'flex';
 };
 
 // Fungsi pencarian cepat di tab edit
