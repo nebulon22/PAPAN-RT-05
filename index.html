@@ -574,48 +574,60 @@
     </div>
     
 <div class="filter-container">
-      <div class="filter-row">
-        <!-- Tombol Info RT yang dioptimalkan dengan transisi halus -->
-<a href="pengumuman.html" onclick="bukaInfoSmooth(event, this.href)" class="btn-filter btn-info-rt" style="text-decoration: none; display: flex; align-items: center; justify-content: center; transition: transform 0.1s ease;">
-  📢 Info RT <span id="badge-count" class="badge-count" style="display:none;">0</span>
-</a>
-        <!-- Tombol Keuangan yang sebelumnya hilang -->
-        <button class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1;" data-click="bukaModalKeuangan">
-          💰 Keuangan
-        </button>
+  <!-- BARIS 1: KARTU LIVE INFO RT (FULL WIDTH) -->
+  <a href="pengumuman.html" onclick="bukaInfoSmooth(event, this.href)" 
+     style="display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 8px 12px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 10px rgba(234, 88, 12, 0.35); border: 1px solid rgba(255,255,255,0.25); transition: transform 0.1s ease;">
+    <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0;">
+      <span style="font-size: 16px; flex-shrink: 0;">📢</span>
+      <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0;">
+        <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">
+          INFO & PENGUMUMAN RT
+        </span>
+        <span id="preview-judul-info" style="font-size: 12px; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+          Lihat info & program kerja RT...
+        </span>
       </div>
+    </div>
+    <span id="badge-count" class="badge-count" style="display:none; background: #111827; color: #fbbf24; font-size: 11px; padding: 3px 8px; border-radius: 12px; flex-shrink: 0; margin-left: 6px;">0</span>
+  </a>
 
-      <div class="filter-row">
-        <button type="button" data-click="bukaModalInventaris" class="btn-filter" style="background: #8b5cf6; color: white; border-color: #7c3aed; font-size: 11px; padding: 6px 4px; cursor: pointer;">
-            📦 Inventaris Perkakas
-        </button>
-        <button type="button" data-click="bukaModalWargaBaru" class="btn-filter" style="background: #0000FF; color: white; border-color: #512da8; font-size: 11px; padding: 6px 4px; cursor: pointer;">
-          📝 Form Warga Baru
-        </button>
+  <!-- BARIS 2: KEUANGAN & JIMPITAN -->
+  <div class="filter-row">
+    <button class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1;" data-click="bukaModalKeuangan">
+      💰 Keuangan
+    </button>
+    <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" onclick="bukaModalRiwayatJimpitan()">
+      🪙 Rekap Jimpitan
+    </button>
+  </div>
+
+  <!-- BARIS 3: INVENTARIS & WARGA BARU -->
+  <div class="filter-row">
+    <button type="button" data-click="bukaModalInventaris" class="btn-filter" style="background: #8b5cf6; color: white; border-color: #7c3aed; font-size: 11px; padding: 6px 4px; cursor: pointer;">
+      📦 Pinjam Perkakas
+    </button>
+    <button type="button" data-click="bukaModalWargaBaru" class="btn-filter" style="background: #0000FF; color: white; border-color: #512da8; font-size: 11px; padding: 6px 4px; cursor: pointer;">
+      📝 Lapor Warga Baru
+    </button>
+  </div>
+
+  <!-- BARIS 4: FILTER DENAH -->
+  <div class="filter-row">
+    <div style="flex: 1; position: relative;">
+      <button type="button" id="btn-toggle-denah" data-click="toggleDenahMenu" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
+        🗺️ Filter Denah RT 05
+      </button>
+
+      <div id="denah-filter-popup" style="display: none; position: fixed; top: 220px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 380px; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(4px); padding: 14px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255, 255, 255, 0.2); z-index: 9999; box-sizing: border-box;">
+        <button class="btn-filter active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua Lokasi</button>
+        <button class="btn-filter" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%; justify-content: center;">🏪 Minimarket</button>
+        <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%; justify-content: center;">🛏️ Kost</button>
+        <button class="btn-filter" data-click="pilihFilterDenah" data-arg="fasum" style="width: 100%; justify-content: center;">🏛️ Fasum</button>
+        <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kuliner" style="width: 100%; justify-content: center;">🍽️ Kuliner</button>
       </div>
-
-<div class="filter-row">
-  <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" onclick="bukaModalRiwayatJimpitan()">
-    🪙 Rekap Jimpitan
-  </button>
-
-<div style="flex: 1; position: relative;">
-  <!-- Tombol Utama Denah -->
-  <button type="button" id="btn-toggle-denah" data-click="toggleDenahMenu" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
-    🗺️ Denah RT 05
-  </button>
-
-  <!-- Popup Menu Filter yang Diposisikan di Tengah Layar -->
-  <div id="denah-filter-popup" style="display: none; position: fixed; top: 180px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 380px; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(4px); padding: 14px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255, 255, 255, 0.2); z-index: 9999; box-sizing: border-box;">
-    <button class="btn-filter active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua Lokasi</button>
-    <button class="btn-filter" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%; justify-content: center;">🏪 Minimarket</button>
-    <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%; justify-content: center;">🛏️ Kost</button>
-    <button class="btn-filter" data-click="pilihFilterDenah" data-arg="fasum" style="width: 100%; justify-content: center;">🏛️ Fasum</button>
-    <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kuliner" style="width: 100%; justify-content: center;">🍽️ Kuliner</button>
+    </div>
   </div>
 </div>
-</div>
-    </div>
   </div>
 
 <div id="modal-keuangan" class="modal-bg" data-click="tutupModalKeuanganLuar">
@@ -1722,6 +1734,7 @@ function muatBadgeInfoRT() {
   window.firebaseOnValue(pengumumanRef, (snapshot) => {
     const data = snapshot.val();
     let activeKeys = [];
+    let judulTerbaru = "";
 
     if (data) {
       Object.keys(data).forEach(key => {
@@ -1729,26 +1742,34 @@ function muatBadgeInfoRT() {
         var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
         if (status === 'AKTIF') {
           activeKeys.push(key);
+          if (item.judul) {
+            judulTerbaru = String(item.judul).trim();
+          }
         }
       });
     }
 
-    // Cek riwayat baca di LocalStorage perangkat warga
+    // 🌟 Tampilkan judul pengumuman terbaru di kartu depan
+    var previewEl = document.getElementById('preview-judul-info');
+    if (previewEl) {
+      previewEl.innerText = judulTerbaru || 'Belum ada pengumuman aktif';
+    }
+
     let readKeys = JSON.parse(localStorage.getItem('rt05_read_announcements') || '[]');
     let unreadKeys = activeKeys.filter(k => !readKeys.includes(k));
 
     var badge = document.getElementById('badge-count');
     if (badge) {
       if (unreadKeys.length > 0) {
-        // 🔴 Ada info baru yang belum dibaca (Menarik perhatian warga dengan warna merah menyala)
-        badge.innerText = unreadKeys.length;
+        badge.innerText = unreadKeys.length + ' Baru';
         badge.style.display = 'inline-block';
         badge.style.background = '#ef4444';
+        badge.style.color = '#ffffff';
       } else if (activeKeys.length > 0) {
-        // ⚪ Semua sudah dibaca, tampilkan total aktif dengan warna abu-abu netral
         badge.innerText = activeKeys.length;
         badge.style.display = 'inline-block';
-        badge.style.background = '#64748b';
+        badge.style.background = '#111827';
+        badge.style.color = '#fbbf24';
       } else {
         badge.style.display = 'none';
       }
