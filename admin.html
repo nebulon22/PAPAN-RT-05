@@ -4006,11 +4006,43 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 });
 
-   function bukaModalLaporan() {
-      const today = new Date().toISOString().split('T')[0];
-      document.getElementById('laporanTanggal').value = today;
-      document.getElementById('modal-laporan').style.display = 'flex';
-    }
+function bukaModalLaporan() {
+  // Format tanggal lokal YYYY-MM-DD (lebih akurat daripada toISOString() di zona WIB)
+  const now = new Date();
+  const yyyy = now.getFullYear();
+  const mm = String(now.getMonth() + 1).padStart(2, '0');
+  const dd = String(now.getDate()).padStart(2, '0');
+  document.getElementById('laporanTanggal').value = `${yyyy}-${mm}-${dd}`;
+
+  // Pastikan selalu mulai dari Tab Input Laporan Baru
+  if (typeof switchTabKeuangan === 'function') {
+    switchTabKeuangan('input');
+  }
+
+  document.getElementById('modal-laporan').style.display = 'flex';
+}
+
+function tutupModalLaporan() {
+  document.getElementById('modal-laporan').style.display = 'none';
+  document.getElementById('formLaporanDivisi').reset();
+  
+  const inputPinDiv = document.getElementById('laporanPinDivisi');
+  if (inputPinDiv) inputPinDiv.value = '';
+
+  const inputFotoBukti = document.getElementById('laporanInputFoto');
+  if (inputFotoBukti) inputFotoBukti.value = '';
+
+  const statusBukti = document.getElementById('statusUploadBukti');
+  if (statusBukti) statusBukti.innerHTML = '';
+
+  // Kembalikan state tab ke Input & bersihkan filter pencarian Tab Edit
+  const inputCariEdit = document.getElementById('pencarianKelolaAdmin');
+  if (inputCariEdit) inputCariEdit.value = '';
+
+  if (typeof switchTabKeuangan === 'function') {
+    switchTabKeuangan('input');
+  }
+}
 
 window.simpanPerubahanWargaBaru = async function(e) {
   if (e && typeof e.preventDefault === 'function') e.preventDefault();
@@ -4069,25 +4101,6 @@ window.simpanPerubahanWargaBaru = async function(e) {
     }
   }
 };
-
-  
-function tutupModalLaporan() {
-      document.getElementById('modal-laporan').style.display = 'none';
-      document.getElementById('formLaporanDivisi').reset();
-      
-      const inputPinDiv = document.getElementById('laporanPinDivisi');
-      if (inputPinDiv) inputPinDiv.value = '';
-
-      // 🌟 Tambahan untuk mereset form upload bukti transaksi
-      const inputFotoBukti = document.getElementById('laporanInputFoto');
-      if (inputFotoBukti) inputFotoBukti.value = '';
-
-      const urlFotoBukti = document.getElementById('laporanFotoUrl');
-      if (urlFotoBukti) urlFotoBukti.value = '';
-
-      const statusBukti = document.getElementById('statusUploadBukti');
-      if (statusBukti) statusBukti.innerHTML = '';
-    }
 
     // ===================================================
     // FORM EDIT DATA KEUANGAN ADMIN/KELOLA KEUANGAN ADMIN
