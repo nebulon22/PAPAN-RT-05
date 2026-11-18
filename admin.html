@@ -4207,8 +4207,8 @@ window.renderTabelKelolaAdmin = function(dataArray) {
 
     
 let badgeNota = item.foto
-      ? `<button type="button" onclick="lihatFotoNotaAdmin('${escapeHTML(item.foto)}', '${escapeHTML(ket)}')" style="background:#e0f2fe; color:#0288d1; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:9.5px; cursor:pointer;">📄 Lihat</button>`
-      : `<span style="color:#aaa;">-</span>`;
+  ? `<button type="button" data-foto="${escapeHTML(item.foto)}" data-ket="${escapeHTML(ket)}" onclick="lihatFotoNotaAdmin(this.dataset.foto, this.dataset.ket)" style="background:#e0f2fe; color:#0288d1; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:9.5px; cursor:pointer;">📄 Lihat</button>`
+  : `<span style="color:#aaa;">-</span>`;
 
     let tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid #e2e8f0';
@@ -4233,8 +4233,9 @@ let badgeNota = item.foto
     tbody.appendChild(tr);
   });
 };
-    window.lihatFotoNotaAdmin = function(urlFoto, keterangan = 'Bukti Nota Keuangan') {
-  if (!urlFoto) return;
+    
+window.lihatFotoNotaAdmin = function(urlFoto, keterangan = 'Bukti Nota Keuangan') {
+  if (!urlFoto || !/^https?:\/\//i.test(String(urlFoto).trim())) return;
 
   // Jika di admin.html sudah tersedia fungsi bukaFotoBesar, langsung gunakan
   if (typeof window.bukaFotoBesar === 'function') {
