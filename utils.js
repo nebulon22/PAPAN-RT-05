@@ -423,190 +423,81 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-window.bukaFotoBesar = function(urlFoto, event) {
-  if (event && typeof event.stopPropagation === 'function') {
-    event.stopPropagation();
+window.bukaFotoBesar = function(urlFoto, eventOrKeterangan = null) {
+  let keterangan = '';
+
+  // 1. Deteksi apakah parameter ke-2 adalah Event (dari index.html) atau String keterangan (dari admin.html)
+  if (eventOrKeterangan && typeof eventOrKeterangan === 'object' && typeof eventOrKeterangan.stopPropagation === 'function') {
+    eventOrKeterangan.stopPropagation();
+  } else if (typeof eventOrKeterangan === 'string') {
+    keterangan = eventOrKeterangan.trim();
   }
-  
+
+  // 2. Validasi ketat URL (hanya izinkan http/https atau path gambar lokal, blokir skema berbahaya seperti javascript:)
+  const urlBersih = String(urlFoto || '').trim();
+  if (!urlBersih || !/^(https?:\/\/|\.?\/)/i.test(urlBersih)) {
+    console.warn('URL foto tidak valid atau diblokir:', urlBersih);
+    return;
+  }
+
   let modalFoto = document.getElementById('modal-foto-besar');
   if (!modalFoto) {
     modalFoto = document.createElement('div');
     modalFoto.id = 'modal-foto-besar';
-    modalFoto.style.cssText = 'display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.85); z-index:999999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box;';
+    modalFoto.style.cssText = 'display:none; position:fixed; inset:0; width:100vw; height:100vh; background:rgba(2,6,23,0.88); backdrop-filter:blur(4px); z-index:999999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box;';
     modalFoto.innerHTML = `
-      <div style="position:relative; max-width:90%; max-height:90%;">
-        <button type="button" data-click="tutupFotoBesar" style="position:absolute; top:-40px; right:0; background:#ef4444; color:#fff; border:none; border-radius:50%; width:32px; height:32px; font-size:16px; cursor:pointer; font-weight:bold; z-index:1000000;">✕</button>
-        <img id="img-tampil-besar" src="" style="max-width:100%; max-height:85vh; border-radius:8px; object-fit:contain; display:block; margin:0 auto;" />
+      <div style="position:relative; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; align-items:center;">
+        <button type="button" id="btn-tutup-foto-besar" style="position:absolute; top:-14px; right:-10px; background:#ef4444; color:#fff; border:2px solid #fff; border-radius:50%; width:32px; height:32px; font-size:15px; cursor:pointer; font-weight:bold; z-index:1000000; box-shadow:0 4px 10px rgba(0,0,0,0.4);">✕</button>
+        <img id="img-tampil-besar" src="" alt="Pratinjau Foto" style="max-width:100%; max-height:78vh; border-radius:8px; border:2px solid #334155; object-fit:contain; background:#0f172a; display:block;" />
+        <div id="caption-tampil-besar" style="display:none; color:#f8fafc; font-size:12px; margin-top:10px; text-align:center; font-weight:600; max-width:85vw; word-break:break-word;"></div>
       </div>
     `;
-    modalFoto.onclick = function(e) {
+
+    // Pasang listener langsung agar berfungsi di semua halaman (index.html & admin.html)
+    modalFoto.querySelector('#btn-tutup-foto-besar').addEventListener('click', () => {
+      window.tutupFotoBesar();
+    });
+
+    modalFoto.addEventListener('click', (e) => {
       if (e.target.id === 'modal-foto-besar') {
         window.tutupFotoBesar();
       }
-    };
+    });
+
     document.body.appendChild(modalFoto);
   }
 
   const imgElem = document.getElementById('img-tampil-besar');
   if (imgElem) {
-    imgElem.src = urlFoto;
+    imgElem.src = urlBersih;
   }
+
+  // 3. Tampilkan keterangan menggunakan textContent (100% kebal XSS)
+  const captionElem = document.getElementById('caption-tampil-besar');
+  if (captionElem) {
+    if (keterangan) {
+      captionElem.textContent = keterangan;
+      captionElem.style.display = 'block';
+    } else {
+      captionElem.textContent = '';
+      captionElem.style.display = 'none';
+    }
+  }
+
   modalFoto.style.display = 'flex';
 };
 
 window.tutupFotoBesar = function() {
   const modalFoto = document.getElementById('modal-foto-besar');
-  if (modalFoto) {
-    modalFoto.style.display = 'none';
-  }
+  const imgElem = document.getElementById('img-tampil-besar');
+  if (modalFoto) modalFoto.style.display = 'none';
+  if (imgElem) imgElem.src = ''; // Kosongkan memori gambar saat ditutup
 };
 
-// ==========================================
-// MANAJEMEN PERSETUJUAN AKUN CHAT WARGA
-// ==========================================
-window.approveUser = (uid) => {
-  if (!uid) return;
-  window.firebaseUpdate(window.firebaseRef(window.db, `users/${uid}`), { status: 'aktif' })
-    .then(() => tampilkanToast("✅ Akun warga disetujui."))
-    .catch(err => alert("❌ Gagal menyetujui akun: " + err.message));
-};
-
-window.rejectUser = (uid, statusWarga = 'pending') => {
-  if (!uid) return;
-  const pesan = statusWarga === 'aktif' 
-    ? "PERINGATAN: Yakin ingin menghapus akun warga aktif ini secara permanen?" 
-    : "Hapus / Tolak pendaftaran warga ini?";
-    
-  if (confirm(pesan)) {
-    window.firebaseRemove(window.firebaseRef(window.db, `users/${uid}`))
-      .then(() => tampilkanToast("🗑️ Akun warga dihapus.", "warning"))
-      .catch(err => alert("❌ Gagal menghapus akun: " + err.message));
-  }
-};
-
-window.toggleRole = (uid, currentRole) => {
-  if (!uid) return;
-  const newRole = currentRole === 'admin' ? 'warga' : 'admin';
-  window.firebaseUpdate(window.firebaseRef(window.db, `users/${uid}`), { role: newRole })
-    .then(() => tampilkanToast(`🔄 Role diubah menjadi ${newRole.toUpperCase()}`))
-    .catch(err => alert("❌ Gagal mengubah role: " + err.message));
-};
-
-let isUsersListenerAktif = false;
 
 export function inisialisasiListenerUsersAdmin() {
-  if (isUsersListenerAktif) return;
-
-  const pendingTable = document.getElementById('pending-users-list');
-  const allUsersTable = document.getElementById('all-users-list');
-  if (!pendingTable || !allUsersTable) return;
-
-  isUsersListenerAktif = true;
-  const usersRef = window.firebaseRef(window.db, 'users');
-
-  window.firebaseOnValue(usersRef, (snapshot) => {
-    pendingTable.innerHTML = '';
-    allUsersTable.innerHTML = '';
-
-    const pBadge = document.getElementById('pending-badge');
-    const tWarga = document.getElementById('total-warga-count');
-
-    if (!snapshot.exists()) {
-      pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar.</td></tr>';
-      if (pBadge) pBadge.innerText = `0 Pending`;
-      if (tWarga) tWarga.innerText = 0;
-      return;
-    }
-
-    let pendingCount = 0;
-    let totalCount = 0;
-
-    snapshot.forEach((childSnap) => {
-      const u = childSnap.val();
-      const uid = childSnap.key;
-      if (!u) return;
-
-      const safeUid = escapeHTML(uid);
-
-      if (u.status === 'pending') {
-        pendingCount++;
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = "1px solid #1e293b";
-        tr.innerHTML = `
-          <td style="padding: 6px;">
-            <strong style="color: #fff; display: block;">${escapeHTML(u.nama)}</strong>
-            <span style="color: #94a3b8; font-size: 10px;">${escapeHTML(u.hunian)}</span>
-          </td>
-          <td style="padding: 6px; text-align: center; white-space: nowrap;">
-            <button type="button" data-click="approveUser" data-arg="${safeUid}" style="background-color: #10b981; color: #022c22; font-weight: bold; border: none; padding: 4px 8px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
-              ACC
-            </button>
-            <button type="button" data-click="rejectUser" data-arg="${safeUid}" style="background-color: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); padding: 4px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;">
-              Tolak
-            </button>
-          </td>
-        `;
-        pendingTable.appendChild(tr);
-      } else if (u.status === 'aktif') {
-        totalCount++;
-        const tr = document.createElement('tr');
-        tr.style.borderBottom = "1px solid #1e293b";
-        
-        const isAdmin = u.role === 'admin';
-        const roleBadge = isAdmin 
-          ? '<span style="background: rgba(56, 189, 248, 0.2); color: #38bdf8; padding: 1px 4px; border-radius: 3px; font-size: 9px; font-weight: bold;">ADMIN</span>' 
-          : '<span style="background: #334155; color: #94a3b8; padding: 1px 4px; border-radius: 3px; font-size: 9px;">WARGA</span>';
-
-        tr.innerHTML = `
-          <td style="padding: 6px;">
-            <strong style="color: #e2e8f0; display: block;">${escapeHTML(u.username || u.nama)} ${roleBadge}</strong>
-            <span style="color: #64748b; font-size: 10px;">${escapeHTML(u.hunian)}</span>
-          </td>
-          <td style="padding: 6px; text-align: center; white-space: nowrap;">
-            <button type="button" class="btn-toggle-role" style="background: #334155; color: #cbd5e1; border: none; padding: 3px 6px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-right: 2px;">
-              ${isAdmin ? 'Warga' : 'Jadi Admin'}
-            </button>
-            <button type="button" class="btn-hapus-warga" style="background: transparent; color: #f87171; border: none; padding: 3px 4px; font-size: 10px; cursor: pointer;">
-              ❌Hapus Akun
-            </button>
-          </td>
-        `;
-
-        tr.querySelector('.btn-toggle-role').addEventListener('click', () => window.toggleRole(uid, u.role));
-        tr.querySelector('.btn-hapus-warga').addEventListener('click', () => window.rejectUser(uid, 'aktif'));
-
-        allUsersTable.appendChild(tr);
-      }
-    });
-
-    if (pendingCount === 0) {
-      pendingTable.innerHTML = '<tr><td colspan="2" style="padding: 8px; text-align: center; color: #64748b;">Belum ada pendaftar pending.</td></tr>';
-    }
-
-    if (pBadge) pBadge.innerText = `${pendingCount} Pending`;
-    if (tWarga) tWarga.innerText = totalCount;
-
-    const detailsElem = document.getElementById('details-chat-admin');
-    if (detailsElem) {
-      if (pendingCount > 0) {
-        detailsElem.open = true;
-        if (pBadge) {
-          pBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.2)';
-          pBadge.style.color = '#f87171';
-          pBadge.style.borderColor = 'rgba(239, 68, 68, 0.4)';
-        }
-      } else {
-        detailsElem.open = false;
-        if (pBadge) {
-          pBadge.style.backgroundColor = 'rgba(245, 158, 11, 0.2)';
-          pBadge.style.color = '#fbbf24';
-          pBadge.style.borderColor = 'rgba(245, 158, 11, 0.4)';
-        }
-      }
-    }
-  }, (error) => {
-    console.error("🔴 Gagal membaca daftar users Firebase:", error);
-  });
+  // Dikelola langsung oleh modul Admin Worker di admin.html
+  return;
 }
 
 

@@ -627,7 +627,7 @@
       
      <div style="margin-bottom: 12px;">
   <label for="filterDivisi" style="font-size:12px; font-weight:bold; color:#555;">Pilih Divisi / Kas:</label>
- <select id="filterDivisi" data-change="tampilkanRekeningKoran" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
+<select id="filterDivisi" data-change="tampilkanRekeningKoran" style="width:100%; padding:8px; border-radius:6px; border:1px solid #ccc; font-weight:bold;">
     <option value="semua">-- Semua Divisi (Total Kas RT) --</option>
     <option value="tenda">Tenda</option>
     <option value="sound system">Sound System</option>
@@ -639,6 +639,7 @@
     <option value="bendahara umum">Bendahara Umum</option>
     <option value="tata ruang">Tata Ruang</option>
     <option value="transportasi">Transportasi</option>
+    <option value="perkakas">Perkakas</option>
   </select>
 </div>
       <!-- 🌟 TOMBOL EXPORT EXCEL & PDF DI SINI -->
@@ -1347,7 +1348,9 @@ function buatMarkerPin(pin) {
       : sensorNamaDepan(pin.namaRaw, pin.kategoriManual);
 
     const safeNama = escapeHTML(namaTersensor);
-    const safeFoto = pin.foto ? escapeHTML(pin.foto) : '';
+    const safeFoto = (pin.foto && /^https?:\/\//i.test(String(pin.foto).trim()))
+      ? escapeHTML(String(pin.foto).trim())
+      : '';
     const safeLat = encodeURIComponent(pin.lat);
     const safeLng = encodeURIComponent(pin.lng);
 
@@ -3299,7 +3302,7 @@ window.cetakLaporanJimpitan = function() {
 
     const dataChangelog = [
       {
-        versi: "v1.7.3",
+        versi: "v1.7.4",
         tanggal: "16 Nov 2026",
         status: "Terbaru",
         warna: "#4CAF50",

@@ -204,11 +204,11 @@
 <div id="login-overlay">
   <div class="login-box">
     <h2>🔒 Akses Admin</h2>
-    <form onsubmit="event.preventDefault(); cekLogin();">
-  <input type="text" name="username" value="admin" autocomplete="username" style="display:none;" aria-hidden="true">
+<form onsubmit="event.preventDefault(); cekLogin();">
+  <input type="text" name="username" value="admin" autocomplete="username" readonly style="display:none;" aria-hidden="true">
   <input type="password" id="adminPin" name="adminPin" autocomplete="current-password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••">
   <button type="submit">Buka Kunci</button>
-    </form>
+</form>
   </div>
 </div>
 
@@ -447,7 +447,7 @@
 
           <div class="form-group" style="margin-top: 10px;">
             <label style="font-size: 12px; font-weight: bold; color: #333;">Divisi / Pos:</label>
-            <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
+           <select id="laporanNamaDivisi" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; margin-top: 4px; font-size: 13px; box-sizing: border-box;" required>
               <option value="">-- Pilih Divisi / Pos --</option>
               <option value="sosial">Sosial</option>
               <option value="tenda">Tenda</option>
@@ -459,6 +459,7 @@
               <option value="bendahara umum">Bendahara Umum</option>
               <option value="tata ruang">Tata Ruang</option>
               <option value="transportasi">Transportasi</option>
+              <option value="perkakas">Perkakas</option>
             </select>
           </div>
 
@@ -501,6 +502,10 @@
           <button type="button" id="btnSimpanLaporan" onclick="simpanLaporanDivisi()" style="width: 100%; padding: 10px; background: #8b5cf6; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer;">
             📤 Kirim Laporan Keuangan
           </button>
+              <!-- Tombol Pemicu -->
+<button type="button" onclick="bukaModalGantiPin()" style="background:#f59e0b; color:#fff; border:none; padding:8px 14px; border-radius:6px; font-weight:bold; font-size:12px; cursor:pointer;">
+  🔑 Ganti PIN Divisi
+</button>
         </div>
       </form>
     </div>
@@ -528,6 +533,54 @@
       </div>
     </div>
 
+  </div>
+</div>
+<!-- Modal Ganti PIN Divisi -->
+<div id="modal-ganti-pin" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.6); z-index:9999; align-items:center; justify-content:center; padding:16px;">
+  <div style="background:#fff; width:100%; max-width:380px; border-radius:12px; padding:20px; box-shadow:0 10px 25px rgba(0,0,0,0.2);">
+    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid #e5e7eb; padding-bottom:10px; margin-bottom:14px;">
+      <h3 style="margin:0; font-size:16px; color:#111827;">🔑 Ganti PIN Divisi</h3>
+      <button type="button" onclick="tutupModalGantiPin()" style="background:none; border:none; font-size:20px; cursor:pointer; color:#6b7280;">&times;</button>
+    </div>
+
+    <form onsubmit="event.preventDefault();">
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">Pilih Divisi</label>
+        <select id="pilihDivisiGantiPin" style="width:100%; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:13px;">
+          <option value="sosial">Sosial</option>
+          <option value="tenda">Tenda</option>
+          <option value="sound system">Sound System</option>
+          <option value="pondokan rt 05">Pondokan RT 05</option>
+          <option value="jimpitan bulanan & pengganti ronda">Jimpitan Bulanan & Pengganti Ronda</option>
+          <option value="pekerjaan umum & kelistrikan">Pekerjaan Umum & Kelistrikan</option>
+          <option value="ronda harian & keamanan">Ronda Harian & Keamanan</option>
+          <option value="bendahara umum">Bendahara Umum</option>
+          <option value="tata ruang">Tata Ruang</option>
+          <option value="transportasi">Transportasi</option>
+          <option value="perkakas">Perkakas</option>
+        </select>
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">PIN Lama</label>
+        <input type="password" id="inputPinLama" inputmode="numeric" maxlength="6" autocomplete="current-password" placeholder="Masukkan PIN lama" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+      </div>
+
+      <div style="margin-bottom:12px;">
+        <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">PIN Baru</label>
+        <input type="password" id="inputPinBaru" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="Masukkan 6 angka" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+      </div>
+
+      <div style="margin-bottom:16px;">
+        <label style="display:block; font-size:12px; font-weight:bold; margin-bottom:4px; color:#374151;">Konfirmasi Ulang PIN Baru</label>
+        <input type="password" id="inputKonfirmasiPinBaru" inputmode="numeric" maxlength="6" autocomplete="new-password" placeholder="Ketik ulang PIN baru" style="width:100%; box-sizing:border-box; padding:10px; border:1px solid #d1d5db; border-radius:6px; font-size:14px;">
+      </div>
+
+      <div style="display:flex; gap:8px;">
+        <button type="button" onclick="tutupModalGantiPin()" style="flex:1; padding:10px; background:#f3f4f6; color:#374151; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Batal</button>
+        <button type="button" id="btnSimpanPinBaru" onclick="prosesGantiPinDivisi()" style="flex:2; padding:10px; background:#0288d1; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer;">Simpan PIN Baru</button>
+      </div>
+    </form>
   </div>
 </div>
 <!-- MODAL FORM EDIT KEUANGAN ADMIN (LENGKAP) -->
@@ -560,6 +613,7 @@
           <option value="bendahara umum">Bendahara Umum</option>
           <option value="tata ruang">Tata Ruang</option>
           <option value="transportasi">Transportasi</option>
+          <option value="perkakas">Perkakas</option>
         </select>
       </div>
 
@@ -1317,7 +1371,8 @@ async function tanganiUploadR2DenganOpsiOffline({
       fileSiap = await kompresGambar(file, 1200, 0.8);
     }
 
-    const uploaderAuth = sessionStorage.getItem('rt05_admin_pin_aktif') || sessionToken;
+    // Prioritaskan sessionToken dari parameter, fallback ke PIN admin utama jika kosong
+    const uploaderAuth = sessionToken || sessionStorage.getItem('rt05_admin_pin_aktif') || '';
 
     const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
       method: "POST",
@@ -1363,7 +1418,6 @@ async function tanganiUploadR2DenganOpsiOffline({
     return { lanjut: false, url: fallbackUrl };
   }
 }
-
 // ==========================================
 // PROXY WORKER DENGAN ANTREAN OFFLINE
 // Mengembalikan: true (sukses online), 'OFFLINE' (masuk antrean), false (gagal)
@@ -1469,6 +1523,7 @@ async function kirimDataPendingAdmin() {
   sedangMengirimAdmin = true;
   perbaruiIndikatorSyncAdmin(); // Nyalakan badge biru "Sedang Menyinkronkan..."
   let idTerkirim = [];
+  let pathTerkirim = [];
 
   try {
     for (const item of antrean) {
@@ -1494,12 +1549,13 @@ async function kirimDataPendingAdmin() {
         const resJson = await response.json();
 
         if (response.status === 401 || resJson.code === 'SESSION_EXPIRED') {
-          break; 
+          if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+          break;
         }
 
-        // Pastikan mengecek resJson.success agar konsisten dengan Worker Anda
         if (response.ok && resJson.success !== false && !resJson.error) {
           idTerkirim.push(item.id || item.time);
+          pathTerkirim.push(targetPath);
         }
       } catch (err) {
         console.warn("Gagal sinkron item antrean, akan dicoba lagi nanti:", err);
@@ -1511,6 +1567,16 @@ async function kirimDataPendingAdmin() {
       let sisaAntrean = antreanTerbaru.filter(item => !idTerkirim.includes(item.id || item.time));
       localStorage.setItem('antrean_admin', JSON.stringify(sisaAntrean));
       console.log(`✅ ${idTerkirim.length} data dari antrean_admin berhasil disinkronkan.`);
+
+      // Segarkan tampilan layar sesuai modul yang baru disinkronkan
+      if (typeof muatSemuaDataAdmin === 'function') await muatSemuaDataAdmin();
+      if (pathTerkirim.some(p => p.startsWith('peta_warga')) && typeof muatPinPetaAdmin === 'function') {
+        muatPinPetaAdmin();
+      }
+      if (pathTerkirim.some(p => p.startsWith('keuangan'))) {
+        if (typeof muatDataKelolaKeuanganAdmin === 'function') muatDataKelolaKeuanganAdmin();
+        if (typeof muatDataKeuangan === 'function') muatDataKeuangan();
+      }
     }
   } finally {
     sedangMengirimAdmin = false;
@@ -1690,7 +1756,9 @@ function bukaAkses() {
   setTimeout(() => {
     muatSemuaDataAdmin();
     
-    // Pindahkan pemanggilan muatDataPetaUntukAdmin ke sini (aman karena token sudah ada)
+    // Jalankan pemantauan akun warga hanya setelah PIN admin dibuka
+    if (typeof window.mulaiPantauUsersAdmin === 'function') window.mulaiPantauUsersAdmin();
+    
     if (typeof muatDataPetaUntukAdmin === 'function') muatDataPetaUntukAdmin();
     if (typeof muatDataProgker === 'function') muatDataProgker();
     if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
@@ -1728,35 +1796,6 @@ async function logoutAdmin() {
   window.location.href = "index.html";
 }
     
-function logoutAdminSilent() {
-  localStorage.removeItem('authAdmin');
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('verifiedPin');
-  localStorage.removeItem('admin_login_time');
-  localStorage.removeItem('rt05_admin_session');
-  localStorage.removeItem('rt05_admin_token');
-  localStorage.removeItem('rt05_admin_pin');
-}
-
-    // 🌟 Buat fungsi baru ini untuk memunculkan overlay login admin
-    function bukaFormLoginAdmin() {
-      const overlay = document.getElementById('login-overlay');
-      if (overlay) {
-        overlay.style.display = 'flex'; // Tampilkan overlay
-        document.getElementById('adminPin').value = ''; // Bersihkan input PIN sebelumnya
-        
-        // Otomatis fokus dan buka keyboard di HP
-        setTimeout(() => {
-          const inputPin = document.getElementById('adminPin');
-          if (inputPin) {
-            inputPin.focus();
-            inputPin.click();
-          }
-        }, 100);
-      }
-    }
-
-
 document.getElementById('dataForm').addEventListener('submit', async function(e) {
   e.preventDefault();
   const btn = document.getElementById('btnSubmitForm');
@@ -1802,12 +1841,20 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
       payload.anggotaKeluarga = "";
     }
 
-    // ✅ Kirim via Worker Proxy menggunakan sessionToken
-    await kirimDataViaAdminWorker('peta_warga', payload, 'POST');
+    // ✅ Kirim via Worker Proxy menggunakan sessionToken & cek statusnya
+    const statusKirim = await kirimDataViaAdminWorker('peta_warga', payload, 'POST');
 
     btn.innerText = '💾 Simpan Data Lokasi';
     btn.disabled = false;
-    alert('✅ Data lokasi baru berhasil disimpan!');
+
+    // Berhenti jika gagal agar data di form tidak hilang
+    if (!statusKirim) return;
+
+    // Tampilkan alert sukses hanya jika benar-benar terkirim online
+    if (statusKirim === true) {
+      alert('✅ Data lokasi baru berhasil disimpan!');
+    }
+
     tutupModalForm();
     document.getElementById('dataForm').reset();
     
@@ -2197,34 +2244,6 @@ function bukaModalPinjamAdmin() {
       document.getElementById("modal-admin-inventaris").style.display = "none";
     }
 
-window.toggleFormStok = function() {
-  const formStok = document.getElementById('formStokBarang');
-  const formPinjam = document.getElementById('formPinjamBarang');
-  const btnToggle = document.getElementById('btnToggleStok');
-
-//  console.log("Tombol diklik!", formStok, formPinjam); // Untuk tes di console
-
-  if (!formStok || !formPinjam) {
-    console.warn("Elemen formStok atau formPinjam tidak ditemukan!");
-    return;
-  }
-
-  if (formStok.style.display === 'none' || !formStok.style.display) {
-    formStok.style.display = 'block';
-    formPinjam.style.display = 'none';
-    if (btnToggle) {
-      btnToggle.innerText = '📝 Kembali ke Form Pinjam';
-      btnToggle.style.background = '#4b5563';
-    }
-  } else {
-    formStok.style.display = 'none';
-    formPinjam.style.display = 'grid';
-    if (btnToggle) {
-      btnToggle.innerText = '➕/✏️ Tambah & Edit Stok Barang';
-      btnToggle.style.background = '#2563eb';
-    }
-  }
-};
 
     function cekPilihBarangStok(el) {
       const inputBaru = document.getElementById('stokNamaBarangBaru');
@@ -2739,22 +2758,6 @@ window.simpanSemuaPeminjamanAdmin = async function() {
       }
     };
 
-// Toggle buka/tutup panel riwayat peminjaman
-    window.toggleRiwayatPeminjamanAdmin = function() {
-      const panel = document.getElementById("panel-riwayat-peminjaman");
-      const icon = document.getElementById("icon-toggle-riwayat");
-      if (!panel) return;
-
-      const sedangTutup = panel.style.display === "none";
-      panel.style.display = sedangTutup ? "block" : "none";
-      if (icon) icon.innerText = sedangTutup ? "▲" : "▼";
-
-      // Muat data otomatis saat panel dibuka
-      if (sedangTutup) {
-        muatRiwayatPeminjamanAdmin();
-      }
-    };
-
 // Muat Data Riwayat Peminjaman dari node 'riwayat_peminjaman' via Worker
     window.muatRiwayatPeminjamanAdmin = async function() {
       const tbody = document.getElementById("tabel-riwayat-peminjaman-admin");
@@ -2962,17 +2965,6 @@ async function simpanPerubahanWarga(event) {
         fileBaruDipilih = null;
         const inputEl = document.getElementById('inputUploadSemiManual');
         if (inputEl) inputEl.value = '';
-
-        const preview = document.getElementById('previewFotoRumah');
-        if (preview) {
-          if (urlLama) {
-            preview.src = urlLama;
-            preview.style.display = 'inline-block';
-          } else {
-            preview.src = '';
-            preview.style.display = 'none';
-          }
-        }
       }
     });
 
@@ -3018,7 +3010,7 @@ async function simpanPerubahanWarga(event) {
       dataUpdate.anggotaKeluarga = '';
     }
 
-    // 3. Kirim PATCH via kirimDataViaAdminWorker (otomatis masuk antrean_admin jika offline)
+ // 3. Kirim PATCH via kirimDataViaAdminWorker (otomatis masuk antrean_admin jika offline)
     btnSimpan.innerText = '⏳ Menyimpan ke Database...';
     const statusKirim = await kirimDataViaAdminWorker(`peta_warga/${idWarga}`, dataUpdate, 'PATCH');
     if (!statusKirim) return;
@@ -3026,16 +3018,14 @@ async function simpanPerubahanWarga(event) {
     if (typeof fileBaruDipilih !== 'undefined') fileBaruDipilih = null;
     tutupModalEditWarga();
 
-    // 4. Jika terkirim online, langsung refresh data & peta
+    // 4. Jika terkirim online, langsung refresh data & pin peta tanpa me-reset posisi zoom
     if (statusKirim === true) {
       alert('✅ Perubahan data lokasi berhasil disimpan!');
       if (typeof muatSemuaDataAdmin === 'function') {
         await muatSemuaDataAdmin();
       }
-      if (map) {
-        map.remove();
-        map = null;
-        initMap();
+      if (typeof muatPinPetaAdmin === 'function') {
+        muatPinPetaAdmin();
       }
     }
 
@@ -3473,31 +3463,6 @@ async function muatSemuaDataAdmin() {
     }
 }
     
-function prosesDanTampilkanStatistik(resWarga) {
-    if (!Array.isArray(resWarga) || resWarga.length <= 1) {
-        document.getElementById("badge-total-jiwa").innerText = "0 Jiwa";
-        document.getElementById("stat-total-kk").innerText = "0 KK";
-        document.getElementById("stat-total-jiwa").innerText = "0 Orang";
-        return;
-    }
-
-    const barisData = resWarga.slice(1).filter(row => row && row[0] && String(row[0]).trim() !== '');
-    const totalKK = barisData.length;
-
-    const totalJiwa = barisData.reduce((total, row) => {
-        let val = parseInt(row[3], 10);
-        if (isNaN(val) || val <= 0) {
-            let JmlAnggota = row[1] ? String(row[1]).split(',').filter(Boolean).length : 0;
-            val = 1 + JmlAnggota;
-        }
-        return total + val;
-    }, 0);
-
-    document.getElementById("badge-total-jiwa").innerText = totalJiwa + " Jiwa";
-    document.getElementById("stat-total-kk").innerText = totalKK + " KK";
-    document.getElementById("stat-total-jiwa").innerText = totalJiwa + " Orang";
-}
-
 // ==========================================
 // 2. KELOLA MODAL & TAB ADMIN
 // ==========================================
@@ -3556,8 +3521,8 @@ async function cariDetailKeluargaAdmin() {
             throw new Error("Data kosong dari server.");
         }
 
-        // Simpan data mentah asli agar tidak merusak struktur globalDataWarga
-        window.globalDataWarga = dataObj;
+        // Simpan data mentah asli dengan nama berbeda agar tidak menimpa Array globalDataWarga
+        window.rawPetaWarga = dataObj;
 
         let daftarWargaWorker = [];
         const items = Array.isArray(dataObj) ? dataObj : Object.keys(dataObj).map(k => ({ ...dataObj[k], _id: k }));
@@ -3712,18 +3677,9 @@ function bukaModalEditWargaAdminById(id) {
 
   // 4. Set Foto & Preview
   const inputFoto = document.getElementById('editWargaFotoURL');
-  const preview = document.getElementById('previewFotoRumah');
   const fotoVal = data.foto || data.Foto || '';
 
   if (inputFoto) inputFoto.value = fotoVal;
-  if (preview) {
-    if (fotoVal) {
-      preview.src = fotoVal;
-      preview.style.display = 'inline-block';
-    } else {
-      preview.style.display = 'none';
-    }
-  }
 
   // 5. Tampilkan modal
   const modal = document.getElementById('modal-edit-warga');
@@ -3847,133 +3803,25 @@ function toggleFieldKategoriEdit(kategoriVal = null) {
 }
     
 
-async function prosesUploadR2Universal(jenisTarget = 'warga') {
-  // Tentukan elemen berdasarkan jenis target
-  const isSemiManual = jenisTarget === 'semimanual';
-  const fileInputId = isSemiManual ? 'inputUploadSemiManual' : 'inputUploadFotoWarga';
-  const statusEl = isSemiManual 
-    ? document.getElementById('statusSemiManual') 
-    : (document.getElementById('statusUploadInfo') || buatLabelStatus());
-  
-  const fileInput = document.getElementById(fileInputId);
-  if (!fileInput || fileInput.files.length === 0) {
-    if (isSemiManual) alert("Silakan pilih file foto/video terlebih dahulu!");
-    return;
-  }
 
-  // 📴 CEK KONEKSI OFFLINE DI AWAL
-  if (!navigator.onLine) {
-    const msg = "❌ Tidak dapat mengunggah file saat offline. Harap sambungkan internet terlebih dahulu.";
-    if (isSemiManual) {
-      statusEl.innerHTML = msg;
-    } else {
-      statusEl.innerText = msg;
-    }
-    statusEl.style.color = "#dc2626";
-    return;
-  }
-
-  // Ambil session token dari sessionStorage
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    alert("⚠️ Sesi admin habis. Silakan login ulang.");
-    return;
-  }
-
-  // Set status loading
-  if (isSemiManual) {
-    statusEl.innerHTML = "⏳ Sedang mengkompres & mengunggah file ke R2...";
-    statusEl.style.color = "#d97706";
-  } else {
-    statusEl.innerText = "⏳ Sedang mengunggah ke Cloudflare R2...";
-    statusEl.style.color = "#d97706";
-  }
-
-  try {
-    let file = fileInput.files[0];
-
-    // Kompres otomatis jika berupa gambar
-    if (typeof kompresGambar === 'function' && file.type.startsWith('image/')) {
-      file = await kompresGambar(file, 1200, 0.8);
-    }
-
-    const ekstensi = file.name.split('.').pop() || 'jpg';
-    const namaFileKustom = `${jenisTarget}_${Date.now()}.${ekstensi}`;
-
-    // Kirim ke Cloudflare Worker menggunakan Bearer Session Token
-    const response = await fetch(RT05_CONFIG.UPLOADER_URL, {
-      method: "POST",
-      headers: {
-        "X-File-Name": encodeURIComponent(namaFileKustom),
-        "Authorization": `Bearer ${sessionToken}`,
-        "Content-Type": file.type || "application/octet-stream"
-      },
-      body: file
-    });
-
-    const textResult = await response.text();
-    let result;
-    try {
-      result = JSON.parse(textResult);
-    } catch (e) {
-      throw new Error("Respon dari server uploader bukan JSON valid: " + textResult);
-    }
-
-    if (result.success && result.url) {
-      let urlAwal = new URL(result.url);
-      let urlFinal = "https://storage.papan05.my.id" + urlAwal.pathname;
-
-      // Masukkan ke input target form warga (hanya jika target bukan semimanual)
-      if (!isSemiManual) {
-        const inputUrlTarget = document.getElementById('editWargaFoto');
-        if (inputUrlTarget) inputUrlTarget.value = urlFinal;
-
-        const preview = document.getElementById('previewFotoRumah');
-        if (preview) {
-          preview.src = urlFinal;
-          preview.style.display = 'inline-block';
-        }
-      }
-
-      // Update pesan sukses
-      if (isSemiManual) {
-        statusEl.innerHTML = `✅ Berhasil dikompres & diunggah! Link R2:<br><a href="${urlFinal}" target="_blank" style="color: #2563eb; word-break: break-all;"><b>${urlFinal}</b></a>`;
-      } else {
-        statusEl.innerText = "✅ Berhasil diunggah ke R2!";
-      }
-      statusEl.style.color = "#10b981";
-
-    } else {
-      throw new Error(result.error || "Gagal mendapatkan URL dari server.");
-    }
-  } catch (err) {
-    console.error(err);
-    if (isSemiManual) {
-      statusEl.innerHTML = `❌ Gagal: ${err.message}`;
-    } else {
-      statusEl.innerText = `❌ Gagal: ${err.message}`;
-    }
-    statusEl.style.color = "#dc2626";
-  }
-}
 
 // 🌟 Fungsi Kompresi Gambar Otomatis (Menggantikan peran Squoosh secara instan)
 async function kompresGambar(file, maxWidth = 1200, quality = 0.8) {
-  // Jika file yang diunggah adalah video atau bukan gambar, lewati kompresi
   if (!file || !file.type.startsWith('image/')) return file;
 
   return new Promise((resolve) => {
     const reader = new FileReader();
+    reader.onerror = () => resolve(file);
     reader.readAsDataURL(file);
     reader.onload = (event) => {
       const img = new Image();
+      img.onerror = () => resolve(file);
       img.src = event.target.result;
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let width = img.width;
         let height = img.height;
 
-        // Batasi lebar maksimal (default 1200px agar ringan dan tetap tajam)
         if (width > maxWidth) {
           height = Math.round((height * maxWidth) / width);
           width = maxWidth;
@@ -3985,29 +3833,17 @@ async function kompresGambar(file, maxWidth = 1200, quality = 0.8) {
         ctx.drawImage(img, 0, 0, width, height);
 
         canvas.toBlob((blob) => {
-          // Buat objek File baru yang ukurannya sudah terkompresi
-          const compressedFile = new File([blob], file.name, {
+          if (!blob) return resolve(file);
+          resolve(new File([blob], file.name, {
             type: 'image/jpeg',
             lastModified: Date.now(),
-          });
-          resolve(compressedFile);
+          }));
         }, 'image/jpeg', quality);
       };
     };
   });
 }
 
-// Fungsi pembantu kecil untuk membuat teks status di bawah input file
-function buatLabelStatus() {
-  const inputEl = document.getElementById('inputUploadFotoWarga');
-  const div = document.createElement('div');
-  div.id = 'statusUploadInfo';
-  div.style.fontSize = '11px';
-  div.style.marginTop = '4px';
-  div.style.fontWeight = 'bold';
-  inputEl.parentNode.appendChild(div);
-  return div;
-}
 
 // Variabel global sementara untuk menampung file di memori browser
 let fileBaruDipilih = null;
@@ -4123,25 +3959,6 @@ document.addEventListener("click", function(e) {
     }
 });
 
-// Live Preview Foto Rumah saat URL diketik
-const editFotoInput = document.getElementById('editWargaFoto');
-if (editFotoInput) {
-    editFotoInput.addEventListener('input', function(e) {
-        const url = e.target.value.trim();
-        const preview = document.getElementById('previewFotoRumah');
-        if (!preview) return;
-        
-        if (url) {
-            preview.src = url;
-            preview.style.display = 'inline-block';
-            preview.onerror = function() {
-                preview.style.display = 'none'; 
-            };
-        } else {
-            preview.style.display = 'none';
-        }
-    });
-}
 
 // Memunculkan atau menyembunyikan tombol ✕ berdasarkan isi input
 function toggleBtnClearWarga(val) {
@@ -4202,14 +4019,13 @@ window.simpanPerubahanWargaBaru = async function(e) {
   const nama = document.getElementById('editWargaBaruNama').value.trim();
   const noRumah = document.getElementById('editWargaBaruNoRumah').value.trim();
   const hp = document.getElementById('editWargaBaruHp').value.trim();
-  // Menyesuaikan ID select status hunian pada modal-edit-warga-baru Anda
   const elStatus = document.getElementById('edit-status-hunian') || document.getElementById('editWargaBaruStatus');
   const status = elStatus ? elStatus.value : 'Kontrakan';
   const cerita = document.getElementById('editWargaBaruCerita').value.trim();
   const btn = document.getElementById('btnSimpanEditWargaBaru');
 
   if (!id || !nama || !noRumah || !hp) {
-    alert("Mohon lengkapi kolom yang wajib diisi!");
+    alert("⚠️ Mohon lengkapi kolom yang wajib diisi!");
     return;
   }
 
@@ -4223,41 +4039,16 @@ window.simpanPerubahanWargaBaru = async function(e) {
 
   if (btn) {
     btn.disabled = true;
-    btn.innerText = "⏳ Memproses...";
+    btn.innerText = "⏳ Menyimpan ke Database...";
   }
 
-  const inputFotoLama = document.getElementById('editWargaBaruFoto');
-  let fotoFinalUrl = inputFotoLama ? inputFotoLama.value : '';
-
   try {
-    const fileInput = document.getElementById('inputUploadSemiManual');
-    const fileDipilih = (fileInput && fileInput.files && fileInput.files.length > 0) ? fileInput.files[0] : null;
-    const namaClean = nama.replace(/[^a-zA-Z0-9]/g, '_');
-    const ekstensi = fileDipilih ? (fileDipilih.name.split('.').pop() || 'jpg') : 'jpg';
-
-    const hasilUpload = await tanganiUploadR2DenganOpsiOffline({
-      file: fileDipilih,
-      namaFileKustom: `wargabaru_${namaClean}_${Date.now()}.${ekstensi}`,
-      sessionToken,
-      statusEl: document.getElementById('statusSemiManual'),
-      fallbackUrl: fotoFinalUrl,
-      onHapusFoto: () => {
-        if (fileInput) fileInput.value = '';
-      }
-    });
-
-    if (!hasilUpload.lanjut) return;
-    fotoFinalUrl = hasilUpload.url;
-
-    if (btn) btn.innerText = "⏳ Menyimpan ke Database...";
-
     const dataUpdate = {
       nama: nama,
       noRumah: noRumah,
       hp: hp,
       status: status,
       cerita: cerita,
-      foto: fotoFinalUrl,
       updatedAt: Date.now()
     };
 
@@ -4417,7 +4208,9 @@ window.renderTabelKelolaAdmin = function(dataArray) {
     let tanda = (tipe === 'MASUK') ? '+ Rp ' : '- Rp ';
 
     
-let badgeNota = item.foto ? `<button type="button" data-click="bukaFotoBesar" data-arg="${item.foto}" style="background:#e0f2fe; color:#0288d1; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:9.5px; cursor:pointer;">📄 Lihat</button>` : `<span style="color:#aaa;">-</span>`;
+let badgeNota = item.foto
+  ? `<button type="button" data-foto="${escapeHTML(item.foto)}" data-ket="${escapeHTML(ket)}" onclick="lihatFotoNotaAdmin(this.dataset.foto, this.dataset.ket)" style="background:#e0f2fe; color:#0288d1; border:none; padding:4px 8px; border-radius:4px; font-weight:bold; font-size:9.5px; cursor:pointer;">📄 Lihat</button>`
+  : `<span style="color:#aaa;">-</span>`;
 
     let tr = document.createElement('tr');
     tr.style.borderBottom = '1px solid #e2e8f0';
@@ -4441,6 +4234,40 @@ let badgeNota = item.foto ? `<button type="button" data-click="bukaFotoBesar" da
     `;
     tbody.appendChild(tr);
   });
+};
+    
+window.lihatFotoNotaAdmin = function(urlFoto, keterangan = 'Bukti Nota Keuangan') {
+  if (!urlFoto || !/^https?:\/\//i.test(String(urlFoto).trim())) return;
+
+  // Jika di admin.html sudah tersedia fungsi bukaFotoBesar, langsung gunakan
+  if (typeof window.bukaFotoBesar === 'function') {
+    window.bukaFotoBesar(urlFoto, keterangan);
+    return;
+  }
+
+  // Buat atau tampilkan modal lightbox foto besar di dalam admin.html
+  let modal = document.getElementById('modal-foto-nota-admin');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'modal-foto-nota-admin';
+    modal.style.cssText = 'position:fixed; inset:0; background:rgba(2,6,23,0.88); backdrop-filter:blur(4px); z-index:99999; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:16px;';
+    modal.innerHTML = `
+      <div style="position:relative; max-width:95vw; max-height:85vh; display:flex; flex-direction:column; align-items:center;">
+        <button type="button" onclick="document.getElementById('modal-foto-nota-admin').style.display='none'" style="position:absolute; top:-14px; right:-10px; background:#ef4444; color:#fff; border:2px solid #fff; width:30px; height:30px; border-radius:50%; font-weight:bold; cursor:pointer; box-shadow:0 4px 10px rgba(0,0,0,0.4);">✕</button>
+        <img id="img-foto-nota-admin" src="" alt="Nota Keuangan" style="max-width:100%; max-height:78vh; border-radius:8px; border:2px solid #334155; object-fit:contain; background:#0f172a;">
+        <div id="caption-foto-nota-admin" style="color:#f8fafc; font-size:12px; margin-top:8px; text-align:center; font-weight:600;"></div>
+      </div>
+    `;
+    // Tutup modal saat area gelap di luar foto diklik
+    modal.addEventListener('click', (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    });
+    document.body.appendChild(modal);
+  }
+
+  document.getElementById('img-foto-nota-admin').src = urlFoto;
+  document.getElementById('caption-foto-nota-admin').innerText = keterangan;
+  modal.style.display = 'flex';
 };
 
 // Fungsi pencarian cepat di tab edit
@@ -4473,7 +4300,11 @@ window.mulaiEditKeuanganAdmin = function(id) {
     if (p.length === 3) tglRaw = `${p[2]}-${p[1]}-${p[0]}`;
   }
   document.getElementById('editTanggal').value = tglRaw;
-  document.getElementById('editNamaDivisi').value = target.divisi || target.Divisi || '';
+
+  // Normalisasi ke huruf kecil agar selalu cocok dengan value <option> di HTML
+  const divisiRaw = String(target.divisi || target.Divisi || '').toLowerCase().trim();
+  document.getElementById('editNamaDivisi').value = divisiRaw;
+
   document.getElementById('editJenis').value = (String(target.tipe || '').toUpperCase() === 'KELUAR') ? 'Pengeluaran' : 'Pemasukan';
   document.getElementById('editKeterangan').value = target.keterangan || target.ket || '';
   document.getElementById('editNominal').value = Number(target.nominal || 0).toLocaleString('id-ID');
@@ -4483,6 +4314,10 @@ window.mulaiEditKeuanganAdmin = function(id) {
   document.getElementById('statusUploadBuktiEdit').innerHTML = target.foto ? `<span style="color:#16a34a;">✓ Nota lama terlampir</span>` : '';
   document.getElementById('editInputFoto').value = '';
 
+  // Kosongkan input PIN divisi setiap kali modal dibuka
+  const elPinEdit = document.getElementById('editPinDivisi');
+  if (elPinEdit) elPinEdit.value = '';
+
   const modal = document.getElementById('modal-edit-keuangan');
   if (modal) modal.style.display = 'flex';
 };
@@ -4490,55 +4325,214 @@ window.mulaiEditKeuanganAdmin = function(id) {
 window.tutupModalEditAdmin = function() {
   const modal = document.getElementById('modal-edit-keuangan');
   if (modal) modal.style.display = 'none';
+
+  // Bersihkan PIN divisi saat modal ditutup
+  const elPinEdit = document.getElementById('editPinDivisi');
+  if (elPinEdit) elPinEdit.value = '';
+
   idKeuanganSedangDiedit = null;
 };
 
+// =========================================================================
+// 1. HELPER AMBIL PIN VIA WORKER & MODAL GANTI PIN
+// =========================================================================
+async function ambilDaftarPinTerbaru() {
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) return {};
+
+  const bacaCachePin = () => {
+    try {
+      const raw = sessionStorage.getItem('rt05_cache_pin_divisi');
+      return raw ? JSON.parse(raw) : {};
+    } catch (e) {
+      return {};
+    }
+  };
+
+  // Jika sedang offline, gunakan cache PIN terakhir di sesi ini
+  if (!navigator.onLine) {
+    return bacaCachePin();
+  }
+
+  try {
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "konfigurasi/pin_divisi",
+        method: "GET"
+      })
+    });
+
+    const hasil = await response.json();
+
+    if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return {};
+    }
+
+    const dataPinDb = hasil.result !== undefined ? hasil.result : hasil.data;
+
+    if (response.ok && hasil.success && dataPinDb && typeof dataPinDb === 'object') {
+      const normalizedPins = {};
+      for (const [key, val] of Object.entries(dataPinDb)) {
+        normalizedPins[key.toLowerCase().trim()] = String(val);
+      }
+      // Simpan ke sessionStorage sebagai cadangan saat sinyal terputus
+      sessionStorage.setItem('rt05_cache_pin_divisi', JSON.stringify(normalizedPins));
+      return normalizedPins;
+    }
+  } catch (err) {
+    console.warn("Gagal mengambil data PIN dari server, memakai cache sesi:", err);
+    return bacaCachePin();
+  }
+
+  return bacaCachePin();
+}
+
+window.bukaModalGantiPin = function() {
+  document.getElementById('inputPinLama').value = '';
+  document.getElementById('inputPinBaru').value = '';
+  document.getElementById('inputKonfirmasiPinBaru').value = '';
+  document.getElementById('modal-ganti-pin').style.display = 'flex';
+};
+
+window.tutupModalGantiPin = function() {
+  document.getElementById('modal-ganti-pin').style.display = 'none';
+};
+
+window.prosesGantiPinDivisi = async function() {
+  const divisiKey = document.getElementById('pilihDivisiGantiPin').value.toLowerCase().trim();
+  const pinLama = document.getElementById('inputPinLama').value.trim();
+  const pinBaru = document.getElementById('inputPinBaru').value.trim();
+  const konfirmasiPin = document.getElementById('inputKonfirmasiPinBaru').value.trim();
+
+  if (!divisiKey) {
+    alert("⚠️ Mohon pilih divisi terlebih dahulu!");
+    return;
+  }
+
+  if (!pinLama || !pinBaru || !konfirmasiPin) {
+    alert("⚠️ Mohon isi PIN lama, PIN baru, dan konfirmasi PIN baru!");
+    return;
+  }
+
+  // Disamakan menjadi tepat 6 digit angka agar sesuai dengan maxlength="6" di form laporan
+  if (!/^\d{6}$/.test(pinBaru)) {
+    alert("⚠️ PIN baru harus berupa tepat 6 digit angka!");
+    return;
+  }
+
+  if (pinBaru !== konfirmasiPin) {
+    alert("❌ Konfirmasi PIN baru tidak cocok!");
+    return;
+  }
+
+  if (pinBaru === pinLama) {
+    alert("⚠️ PIN baru tidak boleh sama dengan PIN lama!");
+    return;
+  }
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanPinBaru');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = "⏳ Memverifikasi...";
+  }
+
+  try {
+    const daftarPinSaatIni = await ambilDaftarPinTerbaru();
+    if (!daftarPinSaatIni || Object.keys(daftarPinSaatIni).length === 0) {
+      alert("⚠️ Gagal memuat data PIN dari server. Periksa koneksi internet Anda lalu coba lagi.");
+      return;
+    }
+
+    const pinLamaValid = String(daftarPinSaatIni[divisiKey] || "");
+
+    if (pinLama !== pinLamaValid) {
+      alert("❌ PIN lama untuk divisi tersebut salah!");
+      return;
+    }
+
+    if (btn) btn.innerText = "⏳ Menyimpan PIN...";
+    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify({
+        sessionToken: sessionToken,
+        path: "konfigurasi/pin_divisi",
+        method: "PATCH",
+        data: {
+          [divisiKey]: pinBaru
+        }
+      })
+    });
+
+    const hasilProxy = await responseProxy.json();
+
+    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+      window.location.reload();
+      return;
+    }
+
+    if (!responseProxy.ok || !hasilProxy.success) {
+      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memperbarui PIN di server.");
+    }
+
+    alert(`✅ PIN untuk divisi "${divisiKey.toUpperCase()}" berhasil diubah!`);
+    window.tutupModalGantiPin();
+  } catch (err) {
+    alert("❌ Gagal mengganti PIN: " + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = "Simpan PIN Baru";
+    }
+  }
+};
+// =========================================================================
+// 2. FUNGSI SIMPAN PERUBAHAN KEUANGAN ADMIN (BERSIH & TERPISAH)
+// =========================================================================
 window.simpanPerubahanKeuanganAdmin = async function() {
   if (!idKeuanganSedangDiedit) return;
 
-  let tglInput = document.getElementById('editTanggal').value;
-  let divisi = document.getElementById('editNamaDivisi').value;
-  let jenis = document.getElementById('editJenis').value;
-  let keterangan = document.getElementById('editKeterangan').value.trim();
-  let nominalStr = document.getElementById('editNominal').value;
-  let nominal = parseInt(nominalStr.replace(/[^0-9]/g, ''), 10) || 0;
-  let pinInput = document.getElementById('editPinDivisi').value.trim();
-  
+  const tglInput = document.getElementById('editTanggal').value;
+  const divisi = document.getElementById('editNamaDivisi').value.trim();
+  const jenis = document.getElementById('editJenis').value;
+  const keterangan = document.getElementById('editKeterangan').value.trim();
+  const nominalStr = document.getElementById('editNominal').value;
+  const nominal = parseInt(String(nominalStr).replace(/[^0-9]/g, ''), 10) || 0;
+  const pinInput = document.getElementById('editPinDivisi').value.trim();
   let fotoUrl = document.getElementById('editFotoUrl').value;
 
   if (!tglInput || !divisi || !keterangan || nominal <= 0) {
-    alert("Mohon lengkapi semua data dengan benar!");
+    alert("⚠️ Mohon lengkapi semua data dengan benar!");
     return;
   }
 
   if (!pinInput) {
-    alert("Mohon masukkan PIN Khusus Divisi untuk melakukan perubahan!");
+    alert("⚠️ Mohon masukkan PIN Khusus Divisi untuk melakukan perubahan!");
     return;
   }
 
-  // 🛡️ Verifikasi PIN Divisi
-  const daftarPinDivisi = {
-    "sosial": "010101",
-    "tenda": "020202",
-    "sound system": "030303",
-    "pondokan rt 05": "040404",
-    "jimpitan bulanan & pengganti ronda": "050505",
-    "pekerjaan umum & kelistrikan": "060606",
-    "ronda harian & keamanan": "070707",
-    "bendahara umum": "080808",
-    "tata ruang": "090909",
-    "transportasi": "101010"
-  };
-
-  const divisiKey = divisi.toLowerCase().trim();
-  const pinSeharusnya = daftarPinDivisi[divisiKey] || "050505";
-
-  if (pinInput !== pinSeharusnya && pinInput !== "050505") {
-    alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
-    return;
-  }
-
-  // Ambil token sesi admin
   const sessionToken = sessionStorage.getItem('rt05_session_token');
   if (!sessionToken) {
     alert("⚠️ Sesi admin habis. Silakan login ulang.");
@@ -4549,50 +4543,55 @@ window.simpanPerubahanKeuanganAdmin = async function() {
 
   const btn = document.getElementById('btnSimpanEditAdmin');
   const statusDiv = document.getElementById('statusUploadBuktiEdit');
-  if (btn) { btn.disabled = true; btn.innerText = '⏳ Memproses...'; }
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = '⏳ Memverifikasi PIN...';
+  }
 
   try {
-    // 🌟 1. JIKA ADA FILE BARU YANG DIPILIH, UPLOAD SEKARANG DENGAN AUTHORIZATION
-    const fileInput = document.getElementById('editInputFoto');
-    if (fileInput && fileInput.files && fileInput.files.length > 0) {
-      if (statusDiv) {
-        statusDiv.innerHTML = '⏳ Mengompres & mengunggah nota baru...';
-        statusDiv.style.color = '#d97706';
-      }
-
-      let file = fileInput.files[0];
-      if (typeof kompresGambar === 'function') {
-        file = await kompresGambar(file, 1200, 0.8);
-      }
-
-      const workerUrl = RT05_CONFIG.UPLOADER_URL;
-      let response = await fetch(workerUrl, {
-        method: "POST",
-        headers: {
-          "X-File-Name": encodeURIComponent("nota_edit_" + Date.now() + "_" + file.name),
-          "Content-Type": file.type || "application/octet-stream",
-          "Authorization": `Bearer ${sessionToken}`
-        },
-        body: file
-      });
-
-      let textResult = await response.text();
-      let result = JSON.parse(textResult);
-
-      if (response.ok && result.success && result.url) {
-        let urlAwal = new URL(result.url);
-        fotoUrl = "https://storage.papan05.my.id" + urlAwal.pathname;
-      } else {
-        throw new Error(result.error || "Gagal unggah file baru");
-      }
+    // 1. Verifikasi PIN Divisi (otomatis fallback ke cache sesi jika offline)
+    const daftarPinDivisi = await ambilDaftarPinTerbaru();
+    if (!daftarPinDivisi || Object.keys(daftarPinDivisi).length === 0) {
+      alert("⚠️ Gagal memuat data PIN. Periksa koneksi internet Anda lalu coba lagi.");
+      return;
     }
 
-    // 🌟 2. SIMPAN PERUBAHAN KE FIREBASE MELALUI ADMIN WORKER PROXY (PATCH)
-    if (btn) { btn.innerText = '⏳ Menyimpan ke Database...'; }
+    const divisiKey = divisi.toLowerCase().trim();
+    const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
+    const pinMaster = String(daftarPinDivisi["jimpitan bulanan & pengganti ronda"] || "");
 
-    let parts = tglInput.split('-');
-    let tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
-    let tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
+    if (pinInput !== pinSeharusnya && pinInput !== pinMaster) {
+      alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
+      return;
+    }
+
+    // 2. Upload nota baru via helper R2 (mendukung konfirmasi lanjut tanpa foto saat offline)
+    const fileInput = document.getElementById('editInputFoto');
+    const fileDipilih = (fileInput && fileInput.files && fileInput.files.length > 0) ? fileInput.files[0] : null;
+    const ekstensi = fileDipilih ? (fileDipilih.name.split('.').pop() || 'jpg') : 'jpg';
+
+    if (fileDipilih && btn) btn.innerText = '⏳ Mengunggah Nota...';
+
+    const hasilUpload = await tanganiUploadR2DenganOpsiOffline({
+      file: fileDipilih,
+      namaFileKustom: `nota_edit_${Date.now()}.${ekstensi}`,
+      sessionToken,
+      statusEl: statusDiv,
+      fallbackUrl: fotoUrl,
+      onHapusFoto: () => {
+        if (fileInput) fileInput.value = '';
+      }
+    });
+
+    if (!hasilUpload.lanjut) return;
+    fotoUrl = hasilUpload.url;
+
+    // 3. Simpan perubahan ke Firebase via Admin Worker (otomatis masuk antrean_admin jika offline)
+    if (btn) btn.innerText = '⏳ Menyimpan ke Database...';
+
+    const parts = tglInput.split('-');
+    const tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
+    const tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
 
     const updatePayload = {
       tanggal: tanggalRapi,
@@ -4607,47 +4606,150 @@ window.simpanPerubahanKeuanganAdmin = async function() {
       updatedAt: Date.now()
     };
 
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: `keuangan/${idKeuanganSedangDiedit}`,
-        method: "PATCH",
-        data: updatePayload
-      })
-    });
+    const statusKirim = await kirimDataViaAdminWorker(`keuangan/${idKeuanganSedangDiedit}`, updatePayload, "PATCH");
+    if (!statusKirim) return;
 
-    const hasilProxy = await responseProxy.json();
-
-    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
-    }
-
-    if (!responseProxy.ok || !hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memperbarui data via Worker Admin.");
-    }
-
-    alert("✅ Data keuangan & nota berhasil diperbarui!");
+    document.getElementById('editPinDivisi').value = '';
+    if (fileInput) fileInput.value = '';
     window.tutupModalEditAdmin();
-    if (typeof muatDataKelolaKeuanganAdmin === 'function') {
-      muatDataKelolaKeuanganAdmin();
-    }
-    if (typeof muatDataKeuangan === 'function') {
-      muatDataKeuangan();
+
+    if (statusKirim === true) {
+      alert("✅ Data keuangan & nota berhasil diperbarui!");
+      if (typeof muatDataKelolaKeuanganAdmin === 'function') muatDataKelolaKeuanganAdmin();
+      if (typeof muatDataKeuangan === 'function') muatDataKeuangan();
     }
   } catch (err) {
+    if (statusDiv) {
+      statusDiv.innerHTML = '❌ Gagal mengunggah/menyimpan';
+      statusDiv.style.color = '#dc2626';
+    }
     alert("❌ Gagal memperbarui data: " + err.message);
   } finally {
     if (btn) {
       btn.disabled = false;
       btn.innerText = '💾 Simpan Perubahan';
+    }
+  }
+};
+
+// =========================================================================
+// 3. FUNGSI SIMPAN LAPORAN KEUANGAN BARU (TAB 1)
+// =========================================================================
+window.simpanLaporanDivisi = async function() {
+  const divisi = document.getElementById('laporanNamaDivisi').value.trim();
+  const pinInput = document.getElementById('laporanPinDivisi').value.trim();
+  const jenis = document.getElementById('laporanJenis').value;
+  const nominalStr = document.getElementById('laporanNominal').value;
+  const nominal = parseInt(String(nominalStr).replace(/[^0-9]/g, ''), 10) || 0;
+  const keterangan = document.getElementById('laporanKeterangan').value.trim();
+  const tglInput = document.getElementById('laporanTanggal').value;
+  
+  const elPelapor = document.getElementById('laporanPelapor');
+  const pelapor = elPelapor ? elPelapor.value.trim() : (localStorage.getItem('adminUsername') || 'Admin');
+  const fileInput = document.getElementById('laporanInputFoto');
+  const statusUpload = document.getElementById('statusUploadBukti');
+
+  if (!divisi || !tglInput || !keterangan || nominal <= 0) {
+    alert("⚠️ Mohon lengkapi semua data laporan dengan benar!");
+    return;
+  }
+
+  if (!pinInput) {
+    alert("⚠️ Mohon masukkan PIN Khusus Divisi!");
+    return;
+  }
+
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    return;
+  }
+
+  const btn = document.getElementById('btnSimpanLaporan');
+  if (btn) { btn.disabled = true; btn.innerText = '⏳ Memverifikasi PIN...'; }
+
+  try {
+    // 1. Verifikasi PIN Divisi (otomatis fallback ke cache sesi jika offline)
+    const daftarPinDivisi = await ambilDaftarPinTerbaru();
+    if (!daftarPinDivisi || Object.keys(daftarPinDivisi).length === 0) {
+      alert("⚠️ Gagal memuat data PIN. Periksa koneksi internet Anda lalu coba lagi.");
+      return;
+    }
+
+    const divisiKey = divisi.toLowerCase().trim();
+    const pinSeharusnya = String(daftarPinDivisi[divisiKey] || "");
+    const pinMaster = String(daftarPinDivisi["jimpitan bulanan & pengganti ronda"] || "");
+
+    if (pinInput !== pinSeharusnya && pinInput !== pinMaster) {
+      alert("❌ PIN Khusus untuk divisi " + divisi + " salah!");
+      return;
+    }
+
+
+    // 2. Upload foto bukti/nota via helper R2 (mendukung konfirmasi lanjut tanpa foto saat offline)
+    const fileDipilih = (fileInput && fileInput.files && fileInput.files.length > 0) ? fileInput.files[0] : null;
+    const ekstensi = fileDipilih ? (fileDipilih.name.split('.').pop() || 'jpg') : 'jpg';
+
+    if (fileDipilih && btn) btn.innerText = '⏳ Mengunggah Nota...';
+
+    const hasilUpload = await tanganiUploadR2DenganOpsiOffline({
+      file: fileDipilih,
+      namaFileKustom: `nota_baru_${Date.now()}.${ekstensi}`,
+      sessionToken,
+      statusEl: statusUpload,
+      fallbackUrl: "",
+      onHapusFoto: () => {
+        if (fileInput) fileInput.value = '';
+      }
+    });
+
+    if (!hasilUpload.lanjut) return;
+    const fotoUrl = hasilUpload.url;
+
+    // 3. Simpan laporan baru ke Firebase via Admin Worker (otomatis masuk antrean_admin jika offline)
+    if (btn) btn.innerText = '⏳ Menyimpan Laporan...';
+    const parts = tglInput.split('-');
+    const tanggalRapi = parts.length === 3 ? `${parts[2]}/${parts[1]}/${parts[0]}` : tglInput;
+    const tipeTrans = (jenis === 'Pemasukan') ? 'MASUK' : 'KELUAR';
+
+    const newPayload = {
+      tanggal: tanggalRapi,
+      tgl: tanggalRapi,
+      divisi: divisi,
+      Divisi: divisi,
+      tipe: tipeTrans,
+      keterangan: keterangan,
+      ket: keterangan,
+      nominal: nominal,
+      pelapor: pelapor,
+      foto: fotoUrl,
+      createdAt: Date.now()
+    };
+
+    const statusKirim = await kirimDataViaAdminWorker("keuangan", newPayload, "POST");
+    if (!statusKirim) return;
+
+    document.getElementById('laporanPinDivisi').value = '';
+    document.getElementById('laporanNominal').value = '';
+    document.getElementById('laporanKeterangan').value = '';
+    if (fileInput) fileInput.value = '';
+    if (statusUpload) statusUpload.innerHTML = '';
+
+    if (typeof tutupModalLaporan === 'function') tutupModalLaporan();
+
+    if (statusKirim === true) {
+      alert("✅ Laporan keuangan berhasil dikirim!");
+      if (typeof muatDataKelolaKeuanganAdmin === 'function') muatDataKelolaKeuanganAdmin();
+      if (typeof muatDataKeuangan === 'function') muatDataKeuangan();
+    }
+  } catch (err) {
+    alert("❌ Gagal menyimpan laporan: " + err.message);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = '📤 Kirim Laporan Keuangan';
     }
   }
 };
@@ -5148,23 +5250,26 @@ function muatDataPetaUntukAdmin() {
         var safeNama = typeof escapeHTML === 'function' ? escapeHTML(labelTampil) : labelTampil;
         
         // 🌟 Menggunakan emoji ikon asli (rumah, fasum, minimarket, dll) dan background putih solid (#ffffff)
-        html += `
-          <div onclick="pilihLokasiPengumuman('${safeNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: #ffffff;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
-            <strong>${item.emoji || '🏠'} ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
-          </div>
-        `;
+        const encodedNama = encodeURIComponent(labelTampil);
+
+html += `
+  <div onclick="pilihLokasiPengumuman('${encodedNama}', '${item.lat}', '${item.lng}')" style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f1f5f9; font-size: 11px; background: #ffffff;" onmouseover="this.style.background='#f8fafc'" onmouseout="this.style.background='#ffffff'">
+    <strong>${item.emoji || '🏠'} ${safeNama}</strong> <span style="color: #64748b; font-size: 10px;">(Koordinat Siap)</span>
+  </div>
+`;
       });
 
       container.innerHTML = html;
       container.style.display = 'block';
     }
 
-    function pilihLokasiPengumuman(teksLokasi, lat, lng) {
-      document.getElementById('pengumumanLokasi').value = teksLokasi;
-      document.getElementById('pengumumanLat').value = lat;
-      document.getElementById('pengumumanLng').value = lng;
-      document.getElementById('hasilPencarianLokasi').style.display = 'none';
-    }
+function pilihLokasiPengumuman(encodedNama, lat, lng) {
+  const namaAsli = decodeURIComponent(encodedNama);
+  document.getElementById('pengumumanLokasi').value = namaAsli; // Ubah dari pengumumanLokasiTeks
+  document.getElementById('pengumumanLat').value = lat;
+  document.getElementById('pengumumanLng').value = lng;
+  document.getElementById('hasilPencarianLokasi').style.display = 'none';
+}
     
     document.addEventListener('click', function(e) {
       var container = document.getElementById('hasilPencarianLokasi');
@@ -5490,7 +5595,218 @@ async function hapusProgker(id) {
     }
   </script>
 
- 
+<script type="module">
+  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
+    authDomain: "papan05-21a56.firebaseapp.com",
+    databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "papan05-21a56",
+    storageBucket: "papan05-21a56.firebasestorage.app",
+    messagingSenderId: "1068108426437",
+    appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
+  };
+
+  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+  const db = getDatabase(app, firebaseConfig.databaseURL);
+
+  function safeHTML(str) {
+    return str ? String(str).replace(/[&<>'"]/g, tag => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+    }[tag] || tag)) : '';
+  }
+
+  // Helper kirim perintah manajemen user via Cloudflare Admin Worker
+  async function kirimAksiUserViaWorker(pathTujuan, metodeHttp, payloadData = null) {
+    const sessionToken = sessionStorage.getItem('rt05_session_token');
+    if (!sessionToken) {
+      alert('⚠️ Sesi admin habis. Silakan login ulang.');
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      window.location.reload();
+      throw new Error('SESSION_EXPIRED');
+    }
+
+    const bodyReq = {
+      sessionToken: sessionToken,
+      path: pathTujuan,
+      method: metodeHttp
+    };
+    if (payloadData !== null) bodyReq.data = payloadData;
+
+    const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify(bodyReq)
+    });
+
+    const hasil = await res.json();
+    if (res.status === 401 || hasil.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert('⚠️ Sesi telah kedaluwarsa. Silakan login ulang.');
+      window.location.reload();
+      throw new Error('SESSION_EXPIRED');
+    }
+
+    if (!res.ok || !hasil.success) {
+      throw new Error(hasil.error || hasil.message || 'Gagal memproses permintaan di server.');
+    }
+    return hasil;
+  }
+
+  let isPantauUsersAktif = false;
+
+  // Baru dijalankan setelah PIN admin berhasil dibuka (dipanggil dari bukaAkses)
+  window.mulaiPantauUsersAdmin = function() {
+    if (isPantauUsersAktif) return;
+
+    // Tunggu sampai sesi Firebase Auth aktif agar tidak muncul error permission_denied
+    if (!window.auth || !window.auth.currentUser) {
+      window.addEventListener('firebaseSiap', () => window.mulaiPantauUsersAdmin(), { once: true });
+      return;
+    }
+
+    isPantauUsersAktif = true;
+    const usersRef = ref(db, 'users');
+
+    onValue(usersRef, (snapshot) => {
+      const pendingListEl = document.getElementById('pending-users-list');
+      const allListEl = document.getElementById('all-users-list');
+      const pendingBadgeEl = document.getElementById('pending-badge');
+      const totalCountEl = document.getElementById('total-warga-count');
+
+      if (!pendingListEl || !allListEl) return;
+
+      if (!snapshot.exists()) {
+        pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada pendaftar baru.</td></tr>';
+        allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada akun terdaftar.</td></tr>';
+        if (pendingBadgeEl) pendingBadgeEl.innerText = '0 Pending';
+        if (totalCountEl) totalCountEl.innerText = '0';
+        return;
+      }
+
+      const usersObj = snapshot.val();
+      const pendingArr = [];
+      const activeArr = [];
+
+      Object.entries(usersObj).forEach(([uid, u]) => {
+        if (!u || typeof u !== 'object') return;
+        const item = { ...u, uid: u.uid || uid };
+        if (item.status === 'pending') {
+          pendingArr.push(item);
+        } else {
+          activeArr.push(item);
+        }
+      });
+
+      if (pendingBadgeEl) pendingBadgeEl.innerText = `${pendingArr.length} Pending`;
+      if (totalCountEl) totalCountEl.innerText = activeArr.length;
+
+      // 1. Render Tabel Menunggu ACC (Pending)
+      if (pendingArr.length === 0) {
+        pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Tidak ada pendaftar menunggu ACC.</td></tr>';
+      } else {
+        pendingListEl.innerHTML = pendingArr.map(u => `
+          <tr>
+            <td><strong>${safeHTML(u.nama)}</strong></td>
+            <td>${safeHTML(u.hunian)}</td>
+            <td><span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:11px;">Pending</span></td>
+            <td style="white-space:nowrap;">
+              <button type="button" data-uid="${safeHTML(u.uid)}" onclick="accUserChat(this.dataset.uid)" style="background:#10b981; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;">
+                ✔ ACC
+              </button>
+              <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
+                ✖ Tolak
+              </button>
+            </td>
+          </tr>
+        `).join('');
+      }
+
+      // 2. Render Tabel Warga Aktif
+      if (activeArr.length === 0) {
+        allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada warga aktif.</td></tr>';
+      } else {
+        allListEl.innerHTML = activeArr.map(u => {
+          const isAdmin = u.role === 'admin';
+          const roleLabel = isAdmin
+            ? '<span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">ADMIN</span>'
+            : '<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px;">Warga</span>';
+
+          return `
+            <tr>
+              <td>
+                <strong>${safeHTML(u.username || u.nama)}</strong>
+                <div style="font-size:10px; color:#64748b;">Asli: ${safeHTML(u.nama)}</div>
+              </td>
+              <td>${safeHTML(u.hunian)}</td>
+              <td>${roleLabel}</td>
+              <td style="white-space:nowrap;">
+                <button type="button" data-uid="${safeHTML(u.uid)}" data-role="${isAdmin ? 'warga' : 'admin'}" onclick="ubahRoleUserChat(this.dataset.uid, this.dataset.role)" style="background:#3b82f6; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;" title="Ubah Peran">
+                  ${isAdmin ? 'Jadikan Warga' : 'Jadikan Admin'}
+                </button>
+                <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px;" title="Hapus Akun">
+                  Hapus
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }, (error) => {
+      isPantauUsersAktif = false;
+      console.error("Gagal memantau daftar users:", error);
+    });
+  };
+
+  // 1. Fungsi ACC Pendaftaran Warga
+  window.accUserChat = async (uid) => {
+    try {
+      await kirimAksiUserViaWorker(`users/${uid}`, 'PATCH', { status: 'aktif' });
+      alert('✅ Akun warga berhasil disetujui dan langsung aktif!');
+    } catch (err) {
+      if (err.message !== 'SESSION_EXPIRED') {
+        console.error(err);
+        alert('❌ Gagal menyetujui akun: ' + err.message);
+      }
+    }
+  };
+
+  // 2. Fungsi Ubah Role (Warga <-> Admin Chat)
+  window.ubahRoleUserChat = async (uid, roleBaru) => {
+    if (!confirm(`Ubah hak akses akun ini menjadi ${roleBaru.toUpperCase()}?`)) return;
+    try {
+      await kirimAksiUserViaWorker(`users/${uid}`, 'PATCH', { role: roleBaru });
+      alert(`✅ Hak akses akun berhasil diubah menjadi ${roleBaru.toUpperCase()}.`);
+    } catch (err) {
+      if (err.message !== 'SESSION_EXPIRED') {
+        console.error(err);
+        alert('❌ Gagal mengubah role: ' + err.message);
+      }
+    }
+  };
+
+  // 3. Fungsi Tolak / Hapus Akun Chat (Sekaligus bersihkan PIN di user_pins)
+  window.hapusUserChat = async (uid, nama) => {
+    if (!confirm(`Yakin ingin menolak/menghapus akun chat "${nama}"?`)) return;
+    try {
+      await Promise.all([
+        kirimAksiUserViaWorker(`users/${uid}`, 'DELETE'),
+        kirimAksiUserViaWorker(`user_pins/${uid}`, 'DELETE')
+      ]);
+      alert('🗑️ Akun dan PIN berhasil dihapus.');
+    } catch (err) {
+      if (err.message !== 'SESSION_EXPIRED') {
+        console.error(err);
+        alert('❌ Gagal menghapus akun: ' + err.message);
+      }
+    }
+  };
+</script>
 
 
  <!-- FontAwesome Lokal dari Repositori Sendiri -->
