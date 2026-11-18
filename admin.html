@@ -5297,7 +5297,7 @@ function pilihLokasiPengumuman(encodedNama, lat, lng) {
 var dataProgkerGlobal = [];
 
 async function muatDataProgker() {
-  var tbody = document.getElementById('list-tabel-progker');
+  const tbody = document.getElementById('list-tabel-progker');
   if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
 
   const sessionToken = sessionStorage.getItem('rt05_session_token');
@@ -5322,9 +5322,13 @@ async function muatDataProgker() {
 
     const resJson = await response.json();
     if (response.status === 401 || resJson.code === 'SESSION_EXPIRED') {
-      bersihkanStorageAdmin();
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
       window.location.reload();
       return;
+    }
+
+    if (!response.ok || !resJson.success) {
+      throw new Error(resJson.error || resJson.message || "Gagal mengambil data program kerja.");
     }
 
     const dataObj = resJson.result !== undefined ? resJson.result : resJson.data;
@@ -5335,17 +5339,23 @@ async function muatDataProgker() {
         const item = dataObj[key];
         if (item && typeof item === 'object') {
           dataProgkerGlobal.push({
-            id: item.id || key,
-            kegiatan: item.Nama_Kegiatan || item.kegiatan || '',
-            divisi: item.Divisi || item.divisi || '',
-            anggaran: item.Anggaran !== undefined ? item.Anggaran : (item.anggaran || 0),
-            realisasi: item.Realisasi !== undefined ? item.Realisasi : (item.realisasi || 0),
-            status: item.Status || item.status || 'Perencanaan',
-            detail: item.Detail || item.detail || ''
+            id: key,
+            kegiatan: item.kegiatan || item.Nama_Kegiatan || '',
+            divisi: item.divisi || item.Divisi || '',
+            anggaran: Number(item.anggaran !== undefined ? item.anggaran : (item.Anggaran || 0)),
+            realisasi: Number(item.realisasi !== undefined ? item.realisasi : (item.Realisasi || 0)),
+            status: item.status || item.Status || 'Perencanaan',
+            detail: item.detail || item.Detail || '',
+            tanggal: item.tanggal || item.Tanggal || '',
+            updatedAt: Number(item.updatedAt || 0)
           });
         }
       });
+
+      // Urutkan dari yang paling baru diperbarui
+      dataProgkerGlobal.sort((a, b) => b.updatedAt - a.updatedAt);
     }
+
     renderTabelProgker(dataProgkerGlobal);
   } catch (error) {
     console.error("Gagal memuat progker dari Worker:", error);
