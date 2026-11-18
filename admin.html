@@ -309,39 +309,39 @@
       </span>
     </summary>
 
-    <!-- Konten Utama (Hanya muncul jika panel diklik/dibuka) -->
-    <div style="margin-top: 8px; border-top: 1px solid #1e293b; padding-top: 8px;">
-      <div style="max-height: 140px; overflow-y: auto;">
-        <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
-          <thead>
-            <tr style="border-bottom: 1px solid #334155; color: #94a3b8; text-transform: uppercase; font-size: 9.5px;">
-              <th style="padding: 4px;">Nama / No Rumah</th>
-              <th style="padding: 4px; text-align: center;">Aksi</th>
-            </tr>
-          </thead>
-          <tbody id="pending-users-list">
-            <tr>
-              <td colspan="2" style="padding: 8px; text-align: center; color: #64748b; font-style: italic;">
-                Memuat pendaftar...
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+<!-- Konten Utama (Hanya muncul jika panel diklik/dibuka) -->
+<div style="margin-top: 8px; border-top: 1px solid #1e293b; padding-top: 8px;">
+  <div style="max-height: 150px; overflow-y: auto;">
+    <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
+      <thead>
+        <tr style="border-bottom: 1px solid #334155; color: #94a3b8; text-transform: uppercase; font-size: 9.5px;">
+          <th style="padding: 4px;">Warga / Hunian</th>
+          <th style="padding: 4px; text-align: right;">Aksi</th>
+        </tr>
+      </thead>
+      <tbody id="pending-users-list">
+        <tr>
+          <td colspan="2" style="padding: 8px; text-align: center; color: #64748b; font-style: italic;">
+            Memuat pendaftar...
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 
-      <!-- Sub-panel Kelola Seluruh Warga -->
-      <details style="margin-top: 8px; border-top: 1px dotted #334155; padding-top: 6px; font-size: 10.5px;">
-        <summary style="cursor: pointer; color: #94a3b8; font-weight: 500; user-select: none;">
-          ⚙️ Kelola Akun Seluruh Warga (<span id="total-warga-count">0</span>)
-        </summary>
-        <div style="max-height: 120px; overflow-y: auto; margin-top: 6px;">
-          <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
-            <tbody id="all-users-list">
-            </tbody>
-          </table>
-        </div>
-      </details>
+  <!-- Sub-panel Kelola Seluruh Warga -->
+  <details style="margin-top: 8px; border-top: 1px dotted #334155; padding-top: 6px; font-size: 10.5px;">
+    <summary style="cursor: pointer; color: #94a3b8; font-weight: 500; user-select: none;">
+      ⚙️ Kelola Akun Seluruh Warga (<span id="total-warga-count">0</span>)
+    </summary>
+    <div style="max-height: 140px; overflow-y: auto; margin-top: 6px;">
+      <table style="width: 100%; font-size: 11px; text-align: left; border-collapse: collapse;">
+        <tbody id="all-users-list">
+        </tbody>
+      </table>
     </div>
+  </details>
+</div>
     
   </details>
 </div>
@@ -5706,20 +5706,24 @@ async function hapusProgker(id) {
       if (pendingBadgeEl) pendingBadgeEl.innerText = `${pendingArr.length} Pending`;
       if (totalCountEl) totalCountEl.innerText = activeArr.length;
 
-      // 1. Render Tabel Menunggu ACC (Pending)
+     // 1. Render Tabel Menunggu ACC (Pending)
       if (pendingArr.length === 0) {
-        pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Tidak ada pendaftar menunggu ACC.</td></tr>';
+        pendingListEl.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#94a3b8; padding:12px;">Tidak ada pendaftar menunggu ACC.</td></tr>';
       } else {
         pendingListEl.innerHTML = pendingArr.map(u => `
-          <tr>
-            <td><strong>${safeHTML(u.nama)}</strong></td>
-            <td>${safeHTML(u.hunian)}</td>
-            <td><span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:11px;">Pending</span></td>
-            <td style="white-space:nowrap;">
-              <button type="button" data-uid="${safeHTML(u.uid)}" onclick="accUserChat(this.dataset.uid)" style="background:#10b981; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;">
+          <tr style="border-bottom:1px solid #1e293b;">
+            <td style="padding:6px 4px; vertical-align:middle;">
+              <strong style="color:#f8fafc;">${safeHTML(u.nama)}</strong>
+              <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">
+                ${safeHTML(u.hunian)}
+                <span style="background:#fef3c7; color:#92400e; padding:1px 5px; border-radius:4px; font-size:8.5px; font-weight:600; margin-left:4px;">Pending</span>
+              </div>
+            </td>
+            <td style="padding:6px 4px; text-align:right; vertical-align:middle; white-space:nowrap;">
+              <button type="button" data-uid="${safeHTML(u.uid)}" onclick="accUserChat(this.dataset.uid)" style="background:#10b981; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:600; margin-right:3px;">
                 ✔ ACC
               </button>
-              <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
+              <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:10px; font-weight:600;">
                 ✖ Tolak
               </button>
             </td>
@@ -5727,29 +5731,32 @@ async function hapusProgker(id) {
         `).join('');
       }
 
-      // 2. Render Tabel Warga Aktif
+// 2. Render Tabel Warga Aktif
       if (activeArr.length === 0) {
-        allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada warga aktif.</td></tr>';
+        allListEl.innerHTML = '<tr><td colspan="2" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada warga aktif.</td></tr>';
       } else {
         allListEl.innerHTML = activeArr.map(u => {
           const isAdmin = u.role === 'admin';
           const roleLabel = isAdmin
-            ? '<span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">ADMIN</span>'
-            : '<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px;">Warga</span>';
+            ? '<span style="background:#dbeafe; color:#1e40af; padding:1px 5px; border-radius:4px; font-size:8.5px; font-weight:bold; margin-left:4px;">ADMIN</span>'
+            : '<span style="background:#334155; color:#cbd5e1; padding:1px 5px; border-radius:4px; font-size:8.5px; margin-left:4px;">Warga</span>';
+
+          const displayName = u.username || u.nama;
+          const asliText = (u.username && u.username !== u.nama) ? `Asli: ${safeHTML(u.nama)} • ` : '';
 
           return `
-            <tr>
-              <td>
-                <strong>${safeHTML(u.username || u.nama)}</strong>
-                <div style="font-size:10px; color:#64748b;">Asli: ${safeHTML(u.nama)}</div>
+            <tr style="border-bottom:1px solid #1e293b;">
+              <td style="padding:6px 4px; vertical-align:middle;">
+                <strong style="color:#f8fafc;">${safeHTML(displayName)}</strong>${roleLabel}
+                <div style="font-size:9.5px; color:#94a3b8; margin-top:2px;">
+                  ${asliText}${safeHTML(u.hunian)}
+                </div>
               </td>
-              <td>${safeHTML(u.hunian)}</td>
-              <td>${roleLabel}</td>
-              <td style="white-space:nowrap;">
-                <button type="button" data-uid="${safeHTML(u.uid)}" data-role="${isAdmin ? 'warga' : 'admin'}" onclick="ubahRoleUserChat(this.dataset.uid, this.dataset.role)" style="background:#3b82f6; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;" title="Ubah Peran">
+              <td style="padding:6px 4px; text-align:right; vertical-align:middle; white-space:nowrap;">
+                <button type="button" data-uid="${safeHTML(u.uid)}" data-role="${isAdmin ? 'warga' : 'admin'}" onclick="ubahRoleUserChat(this.dataset.uid, this.dataset.role)" style="background:#3b82f6; color:#fff; border:none; padding:4px 6px; border-radius:4px; cursor:pointer; font-size:9.5px; font-weight:600; margin-right:3px;" title="Ubah Peran">
                   ${isAdmin ? 'Jadikan Warga' : 'Jadikan Admin'}
                 </button>
-                <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px;" title="Hapus Akun">
+                <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 6px; border-radius:4px; cursor:pointer; font-size:9.5px; font-weight:600;" title="Hapus Akun">
                   Hapus
                 </button>
               </td>
