@@ -5291,47 +5291,54 @@ function pilihLokasiPengumuman(encodedNama, lat, lng) {
       }
     });
 
-    // ==========================================
-    // PENGELOLAAN PROGRAM KERJA & RAB (FIREBASE)
-    // ==========================================
+   // ==========================================
+// PENGELOLAAN PROGRAM KERJA & RAB (FIREBASE)
+// ==========================================
 var dataProgkerGlobal = [];
+
+// Helper terpusat untuk semua request ke Worker Admin
+async function panggilWorkerAdmin(path, method = 'GET', data = null) {
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    throw new Error("SESSION_EXPIRED");
+  }
+
+  const bodyPayload = { sessionToken, path, method };
+  if (data !== null) bodyPayload.data = data;
+
+  const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${sessionToken}`
+    },
+    body: JSON.stringify(bodyPayload)
+  });
+
+  const resJson = await response.json();
+  if (response.status === 401 || resJson.code === 'SESSION_EXPIRED') {
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
+    window.location.reload();
+    throw new Error("SESSION_EXPIRED");
+  }
+
+  if (!response.ok || !resJson.success) {
+    throw new Error(resJson.error || resJson.message || "Gagal memproses permintaan ke server.");
+  }
+
+  return resJson.result !== undefined ? resJson.result : resJson.data;
+}
 
 async function muatDataProgker() {
   const tbody = document.getElementById('list-tabel-progker');
   if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">Memuat data...</td></tr>';
 
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Sesi habis. Silakan login ulang.</td></tr>';
-    return;
-  }
-
   try {
-    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: "progker_rab",
-        method: "GET"
-      })
-    });
-
-    const resJson = await response.json();
-    if (response.status === 401 || resJson.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      window.location.reload();
-      return;
-    }
-
-    if (!response.ok || !resJson.success) {
-      throw new Error(resJson.error || resJson.message || "Gagal mengambil data program kerja.");
-    }
-
-    const dataObj = resJson.result !== undefined ? resJson.result : resJson.data;
+    const dataObj = await panggilWorkerAdmin("progker_rab", "GET");
     dataProgkerGlobal = [];
 
     if (dataObj && typeof dataObj === 'object') {
@@ -5352,269 +5359,194 @@ async function muatDataProgker() {
         }
       });
 
-      // Urutkan dari yang paling baru diperbarui
       dataProgkerGlobal.sort((a, b) => b.updatedAt - a.updatedAt);
     }
 
     renderTabelProgker(dataProgkerGlobal);
   } catch (error) {
     console.error("Gagal memuat progker dari Worker:", error);
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data dari server.</td></tr>';
+    if (tbody && error.message !== "SESSION_EXPIRED") {
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">Gagal memuat data dari server.</td></tr>';
+    }
   }
 }
 
-    function renderTabelProgker(list) {
-      var tbody = document.getElementById('list-tabel-progker');
-      if (!tbody) return;
-      tbody.innerHTML = '';
+function renderTabelProgker(list) {
+  const tbody = document.getElementById('list-tabel-progker');
+  if (!tbody) return;
+  tbody.innerHTML = '';
 
-      if (list.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#94a3b8;">Belum ada program kerja yang dicatat.</td></tr>';
-        document.getElementById('total-rab-perencanaan').innerText = 'Rp 0';
-        document.getElementById('total-rab-disetujui').innerText = 'Rp 0';
-        return;
-      }
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#94a3b8;">Belum ada program kerja yang dicatat.</td></tr>';
+    document.getElementById('total-rab-perencanaan').innerText = 'Rp 0';
+    document.getElementById('total-rab-disetujui').innerText = 'Rp 0';
+    return;
+  }
 
-      var totalRabPerencanaan = 0; 
-      var totalRealisasiSelesai = 0; 
+  let totalRabPerencanaan = 0;
+  let totalRealisasiSelesai = 0;
 
-      list.forEach(item => {
-        var nominal = Number(item.anggaran) || 0;
-        var realisasi = Number(item.realisasi) || 0;
-        var statusRaw = String(item.status || 'Perencanaan').trim();
-        var statusLower = statusRaw.toLowerCase();
+  list.forEach(item => {
+    const nominal = Number(item.anggaran) || 0;
+    const realisasi = Number(item.realisasi) || 0;
+    const statusRaw = String(item.status || 'Perencanaan').trim();
+    const statusLower = statusRaw.toLowerCase();
 
-        totalRabPerencanaan += nominal;
-
-        if (statusLower === 'selesai') {
-          totalRealisasiSelesai += (realisasi > 0 ? realisasi : nominal);
-        }
-
-        var badgeColor = '#94a3b8';
-        if (statusRaw === 'Perencanaan') badgeColor = '#eab308';
-        if (statusRaw === 'Disetujui') badgeColor = '#3b82f6';
-        if (statusRaw === 'Berjalan') badgeColor = '#10b981';
-        if (statusRaw === 'Selesai') badgeColor = '#6b7280';
-
-       // Menyiapkan teks keterangan tambahan di bawah nominal RAB berdasarkan status
-        var infoTambahanHTML = '';
-        if (statusLower === 'selesai' && realisasi > 0) {
-          infoTambahanHTML = `<br><span style="font-size:10px; color:#10b981; font-weight:600;">Realisasi: Rp ${realisasi.toLocaleString('id-ID')}</span>`;
-        } else if (statusLower === 'berjalan') {
-          infoTambahanHTML = `<br><span style="font-size:10px; color:#059669; font-weight:600;">Dana Siap</span>`;
-        } else if (statusLower === 'disetujui') {
-          infoTambahanHTML = `<br><span style="font-size:10px; color:#2563eb; font-weight:600;">Dana Terkumpul Sebagian</span>`;
-        } else if (statusLower === 'perencanaan') {
-          infoTambahanHTML = `<br><span style="font-size:10px; color:#d97706; font-weight:600;">Sedang Mencari Dana</span>`;
-        }
-
-        var tr = document.createElement('tr');
-        tr.style.borderBottom = '1px solid #f1f5f9';
-        tr.innerHTML = `
-          <td style="padding: 10px;">
-            <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
-            <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
-          </td>
-          <td style="padding: 10px; font-weight:bold; color:#0f172a;">
-            Rp ${nominal.toLocaleString('id-ID')}
-            ${infoTambahanHTML}
-          </td>
-          <td style="padding: 10px;">
-            <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
-              ${escapeHTML(item.status)}
-            </span>
-          </td>
-          <td style="padding: 10px; text-align: center; white-space: nowrap;">
-            <button onclick="editProgker('${item.id}')" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer; margin-right:4px;">✏️ Edit</button>
-            <button onclick="hapusProgker('${item.id}')" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">🗑️</button>
-          </td>
-        `;
-        tbody.appendChild(tr);
-      });
-
-      document.getElementById('total-rab-perencanaan').innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
-      document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
+    totalRabPerencanaan += nominal;
+    if (statusLower === 'selesai') {
+      totalRealisasiSelesai += (realisasi > 0 ? realisasi : nominal);
     }
 
-    
+    let badgeColor = '#94a3b8';
+    if (statusRaw === 'Perencanaan') badgeColor = '#eab308';
+    else if (statusRaw === 'Disetujui') badgeColor = '#3b82f6';
+    else if (statusRaw === 'Berjalan') badgeColor = '#10b981';
+    else if (statusRaw === 'Selesai') badgeColor = '#6b7280';
+
+    let infoTambahanHTML = '';
+    if (statusLower === 'selesai' && realisasi > 0) {
+      infoTambahanHTML = `<br><span style="font-size:10px; color:#10b981; font-weight:600;">Realisasi: Rp ${realisasi.toLocaleString('id-ID')}</span>`;
+    } else if (statusLower === 'berjalan') {
+      infoTambahanHTML = `<br><span style="font-size:10px; color:#059669; font-weight:600;">Dana Siap</span>`;
+    } else if (statusLower === 'disetujui') {
+      infoTambahanHTML = `<br><span style="font-size:10px; color:#2563eb; font-weight:600;">Dana Terkumpul Sebagian</span>`;
+    } else if (statusLower === 'perencanaan') {
+      infoTambahanHTML = `<br><span style="font-size:10px; color:#d97706; font-weight:600;">Sedang Mencari Dana</span>`;
+    }
+
+    const safeId = escapeHTML(item.id);
+    const tr = document.createElement('tr');
+    tr.style.borderBottom = '1px solid #f1f5f9';
+    tr.innerHTML = `
+      <td style="padding: 10px;">
+        <strong style="color:#1e293b; display:block;">${escapeHTML(item.kegiatan)}</strong>
+        <span style="font-size:10px; color:#64748b;">🏷️ ${escapeHTML(item.divisi)}</span>
+      </td>
+      <td style="padding: 10px; font-weight:bold; color:#0f172a;">
+        Rp ${nominal.toLocaleString('id-ID')}
+        ${infoTambahanHTML}
+      </td>
+      <td style="padding: 10px;">
+        <span style="background:${badgeColor}; color:white; padding:3px 8px; border-radius:12px; font-size:10px; font-weight:bold;">
+          ${escapeHTML(item.status)}
+        </span>
+      </td>
+      <td style="padding: 10px; text-align: center; white-space: nowrap;">
+        <button data-id="${safeId}" onclick="editProgker(this.dataset.id)" style="background:#3b82f6; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer; margin-right:4px;">✏️ Edit</button>
+        <button data-id="${safeId}" onclick="hapusProgker(this.dataset.id)" style="background:#ef4444; color:white; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">🗑️</button>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('total-rab-perencanaan').innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
+  document.getElementById('total-rab-disetujui').innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
+}
+
 async function simpanDataProgker(e) {
-      if (e) e.preventDefault();
+  if (e) e.preventDefault();
 
-      const sessionToken = sessionStorage.getItem('rt05_session_token');
-      if (!sessionToken) {
-        alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
-        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-        window.location.reload();
-        return;
-      }
+  const btn = document.getElementById('btnSimpanProgker');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = '⏳ Menyimpan...';
+  }
 
-      var btn = document.getElementById('btnSimpanProgker');
-      if (btn) {
-        btn.disabled = true;
-        btn.innerText = '⏳ Menyimpan...';
-      }
+  const existingId = document.getElementById('progkerId').value.trim();
+  const progkerId = existingId || ('progker_' + Date.now());
 
-      var status = document.getElementById('progkerStatus').value;
-      var kegiatan = document.getElementById('progkerKegiatan').value;
-      var divisi = document.getElementById('progkerDivisi').value;
-      
-      var rawAnggaran = document.getElementById('progkerAnggaran').value.replace(/\./g, '');
-      var rawRealisasi = document.getElementById('progkerRealisasi').value.replace(/\./g, '');
-      var detail = document.getElementById('progkerDetail').value;
-      var existingId = document.getElementById('progkerId').value;
+  const payload = {
+    id: progkerId,
+    kegiatan: document.getElementById('progkerKegiatan').value.trim(),
+    divisi: document.getElementById('progkerDivisi').value,
+    anggaran: Number(document.getElementById('progkerAnggaran').value.replace(/\D/g, '')) || 0,
+    realisasi: Number(document.getElementById('progkerRealisasi').value.replace(/\D/g, '')) || 0,
+    status: document.getElementById('progkerStatus').value,
+    detail: document.getElementById('progkerDetail').value.trim(),
+    tanggal: new Date().toLocaleDateString('id-ID'),
+    updatedAt: Date.now()
+  };
 
-      var progkerId = existingId ? existingId : 'progker_' + Date.now();
-
-      var payload = {
-        ID: progkerId,
-        id: progkerId,
-        Nama_Kegiatan: kegiatan,
-        kegiatan: kegiatan,
-        Divisi: divisi,
-        divisi: divisi,
-        Anggaran: Number(rawAnggaran) || 0,
-        anggaran: Number(rawAnggaran) || 0,
-        Realisasi: Number(rawRealisasi) || 0,
-        realisasi: Number(rawRealisasi) || 0,
-        Status: status,
-        status: status,
-        Detail: detail,
-        detail: detail,
-        Tanggal: new Date().toLocaleDateString('id-ID'),
-        tanggal: new Date().toLocaleDateString('id-ID'),
-        updatedAt: Date.now()
-      };
-
-      try {
-        const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${sessionToken}`
-          },
-          body: JSON.stringify({
-            sessionToken: sessionToken,
-            path: `progker_rab/${progkerId}`,
-            method: "PUT",
-            data: payload
-          })
-        });
-
-        const hasilProxy = await responseProxy.json();
-
-        if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-          if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-          alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-          window.location.reload();
-          return;
-        }
-
-        if (!responseProxy.ok || !hasilProxy.success) {
-          throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menyimpan program kerja via Worker Admin.");
-        }
-
-        tutupModalFormProgker();
-        alert('✅ Program Kerja berhasil disimpan ke database!');
-        if (typeof muatDataProgker === 'function') muatDataProgker();
-      } catch (err) {
-        alert('❌ Gagal menyimpan program kerja: ' + err.message);
-      } finally {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerText = '💾 Simpan Program Kerja';
-        }
-      }
+  try {
+    if (existingId) {
+      await panggilWorkerAdmin(`progker_rab/${existingId}`, 'DELETE');
     }
+    await panggilWorkerAdmin(`progker_rab/${progkerId}`, 'PUT', payload);
 
-    function bukaModalFormProgker() {
-      document.getElementById('formProgker').reset();
-      document.getElementById('progkerId').value = '';
-      document.getElementById('judul-modal-progker').innerText = '➕ Tambah Program Kerja';
-      document.getElementById('modal-form-progker').style.display = 'flex';
+    tutupModalFormProgker();
+    alert('✅ Program Kerja berhasil disimpan ke database!');
+    await muatDataProgker();
+  } catch (err) {
+    if (err.message !== "SESSION_EXPIRED") {
+      alert('❌ Gagal menyimpan program kerja: ' + err.message);
     }
-
-    function tutupModalFormProgker() {
-      document.getElementById('modal-form-progker').style.display = 'none';
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = '💾 Simpan Program Kerja';
     }
+  }
+}
 
-    function editProgker(id) {
-      var item = dataProgkerGlobal.find(x => String(x.id) === String(id));
-      if (!item) return;
+function bukaModalFormProgker() {
+  document.getElementById('formProgker').reset();
+  document.getElementById('progkerId').value = '';
+  document.getElementById('judul-modal-progker').innerText = '➕ Tambah Program Kerja';
+  document.getElementById('modal-form-progker').style.display = 'flex';
+}
 
-      document.getElementById('progkerId').value = item.id;
-      document.getElementById('progkerKegiatan').value = item.kegiatan;
-      document.getElementById('progkerDivisi').value = item.divisi;
-      document.getElementById('progkerAnggaran').value = item.anggaran ? Number(item.anggaran).toLocaleString('id-ID') : '';
-      document.getElementById('progkerRealisasi').value = item.realisasi ? Number(item.realisasi).toLocaleString('id-ID') : '';
-      document.getElementById('progkerStatus').value = item.status;
-      document.getElementById('progkerDetail').value = item.detail;
+function tutupModalFormProgker() {
+  document.getElementById('modal-form-progker').style.display = 'none';
+}
 
-      document.getElementById('judul-modal-progker').innerText = '✏️ Edit Program Kerja';
-      document.getElementById('modal-form-progker').style.display = 'flex';
-    }
+function editProgker(id) {
+  const item = dataProgkerGlobal.find(x => String(x.id) === String(id));
+  if (!item) return;
+
+  document.getElementById('progkerId').value = item.id;
+  document.getElementById('progkerKegiatan').value = item.kegiatan;
+  document.getElementById('progkerDivisi').value = item.divisi;
+  document.getElementById('progkerAnggaran').value = item.anggaran ? Number(item.anggaran).toLocaleString('id-ID') : '';
+  document.getElementById('progkerRealisasi').value = item.realisasi ? Number(item.realisasi).toLocaleString('id-ID') : '';
+  document.getElementById('progkerStatus').value = item.status;
+  document.getElementById('progkerDetail').value = item.detail;
+
+  document.getElementById('judul-modal-progker').innerText = '✏️ Edit Program Kerja';
+  document.getElementById('modal-form-progker').style.display = 'flex';
+}
 
 async function hapusProgker(id) {
-      if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
+  if (!confirm('Yakin ingin menghapus program kerja ini?')) return;
 
-      const sessionToken = sessionStorage.getItem('rt05_session_token');
-      if (!sessionToken) {
-        alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
-        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-        window.location.reload();
-        return;
-      }
-
-      try {
-        const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${sessionToken}`
-          },
-          body: JSON.stringify({
-            sessionToken: sessionToken,
-            path: `progker_rab/${id}`,
-            method: "DELETE"
-          })
-        });
-
-        const hasilProxy = await responseProxy.json();
-
-        if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-          if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-          alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-          window.location.reload();
-          return;
-        }
-
-        if (!responseProxy.ok || !hasilProxy.success) {
-          throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus program kerja via Worker Admin.");
-        }
-
-        alert('🗑️ Program kerja berhasil dihapus.');
-        if (typeof muatDataProgker === 'function') muatDataProgker();
-      } catch (err) {
-        alert('❌ Gagal menghapus: ' + err.message);
-      }
+  try {
+    await panggilWorkerAdmin(`progker_rab/${id}`, 'DELETE');
+    alert('🗑️ Program kerja berhasil dihapus.');
+    await muatDataProgker();
+  } catch (err) {
+    if (err.message !== "SESSION_EXPIRED") {
+      alert('❌ Gagal menghapus: ' + err.message);
     }
+  }
+}
 
-    function tutupTabProgker() {
-      var tabProgker = document.getElementById('tab-progker');
-      if (tabProgker) tabProgker.style.display = 'none';
+function tutupTabProgker() {
+  const tabProgker = document.getElementById('tab-progker');
+  if (tabProgker) tabProgker.style.display = 'none';
+}
+
+function bukaTabAdmin(tabName) {
+  document.querySelectorAll('.content-tab-admin').forEach(el => {
+    el.style.display = 'none';
+  });
+
+  if (tabName === 'progker') {
+    const tabProgker = document.getElementById('tab-progker');
+    if (tabProgker) {
+      tabProgker.style.display = 'flex';
+      muatDataProgker();
     }
-
-    function bukaTabAdmin(tabName) {
-      var allTabs = document.querySelectorAll('.content-tab-admin');
-      allTabs.forEach(function(el) { el.style.display = 'none'; });
-
-      if (tabName === 'progker') {
-        var tabProgker = document.getElementById('tab-progker');
-        if (tabProgker) {
-          tabProgker.style.display = 'flex';
-          muatDataProgker();
-        }
-      }
-    }
+  }
+}
   </script>
 
 <script type="module">
