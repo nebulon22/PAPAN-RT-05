@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.7.4'; // 🌟 Naikkan versi cache agar browser menghapus cache 404 lama
+const CACHE_NAME = 'rt-kayen-v1.7.5'; // 🌟 Naikkan versi cache agar browser menghapus cache 404 lama
 
 // 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
@@ -133,7 +133,8 @@ self.addEventListener('fetch', (event) => {
   if (
     url.hostname.includes('workers.dev') ||
     url.hostname === 'peta.papan05.my.id' ||
-    url.hostname === 'uploader.papan05.my.id'
+    url.hostname === 'uploader.papan05.my.id' ||
+    url.hostname === 'admin-worker.papan05.my.id'
   ) {
     return; // Biarkan browser menanganinya langsung tanpa campur tangan SW
   }
