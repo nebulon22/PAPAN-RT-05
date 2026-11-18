@@ -77,7 +77,7 @@ try {
     window.signInAnonymously = signInAnonymously;
     window.onAuthStateChanged = onAuthStateChanged;
 
-    // Autentikasi Anonim Otomatis + Jalankan Listener Users setelah Auth Siap
+// Autentikasi Anonim Otomatis + Kirim Sinyal Kesiapan Firebase
     onAuthStateChanged(auth, (user) => {
       if (!user) {
         signInAnonymously(auth).then(() => {
@@ -87,17 +87,9 @@ try {
         });
       } else {
         console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
-        // 🌟 Kirim sinyal ke index.html bahwa Firebase Auth & DB sudah siap
+        window.isFirebaseAuthReady = true;
         window.dispatchEvent(new Event('firebaseSiapIndex'));
         window.dispatchEvent(new Event('firebaseSiap'));
-
-        if (typeof inisialisasiListenerUsersAdmin === 'function') {
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', inisialisasiListenerUsersAdmin);
-          } else {
-            inisialisasiListenerUsersAdmin();
-          }
-        }
       }
     });
   } catch (err) {
@@ -245,7 +237,7 @@ function tampilkanToast(pesan, tipe = 'sukses') {
     }, 3000);
 }
 
-// Fitur Senter Ronda
+// Fitur Senter Ronda (Deteksi Dukungan Torch Secara Langsung)
 let mediaStreamSenter = null;
 let isSenterAktif = false;
 
@@ -254,32 +246,68 @@ window.toggleSenterRonda = async function() {
   const icon = document.getElementById('icon-senter-ronda');
   const status = document.getElementById('status-senter-ronda');
 
-  try {
-    if (!isSenterAktif) {
-      mediaStreamSenter = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', advanced: [{ torch: true }] }
-      });
-      isSenterAktif = true;
-      if (btn) { btn.style.background = '#fbbf24'; btn.style.color = '#0f172a'; btn.style.borderColor = '#f59e0b'; }
-      if (icon) { icon.style.color = '#0f172a'; }
-      if (status) status.innerText = 'ON';
-    } else {
-      if (mediaStreamSenter) {
-        mediaStreamSenter.getTracks().forEach(track => track.stop());
-        mediaStreamSenter = null;
-      }
-      isSenterAktif = false;
-      if (btn) { btn.style.background = '#1e293b'; btn.style.color = '#fbbf24'; btn.style.borderColor = '#334155'; }
-      if (icon) { icon.className = 'fa-solid fa-lightbulb'; icon.style.color = '#fbbf24'; }
-      if (status) status.innerText = 'OFF';
+  const setTampilanSenter = (aktif) => {
+    isSenterAktif = aktif;
+    if (btn) {
+      btn.style.background = aktif ? '#fbbf24' : '#1e293b';
+      btn.style.color = aktif ? '#0f172a' : '#fbbf24';
+      btn.style.borderColor = aktif ? '#f59e0b' : '#334155';
     }
+    if (icon) {
+      icon.style.color = aktif ? '#0f172a' : '#fbbf24';
+    }
+    if (status) {
+      status.innerText = aktif ? 'ON' : 'OFF';
+    }
+  };
+
+  if (isSenterAktif) {
+    if (mediaStreamSenter) {
+      mediaStreamSenter.getTracks().forEach(track => track.stop());
+      mediaStreamSenter = null;
+    }
+    setTampilanSenter(false);
+    return;
+  }
+
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error("NO_MEDIA_DEVICES");
+    }
+
+    mediaStreamSenter = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment' }
+    });
+
+    const track = mediaStreamSenter.getVideoTracks()[0];
+    const capabilities = (track && typeof track.getCapabilities === 'function')
+      ? track.getCapabilities()
+      : {};
+
+    // Cek langsung apakah hardware/browser mengizinkan kontrol torch
+    if (!capabilities.torch || typeof track.applyConstraints !== 'function') {
+      throw new Error("TORCH_UNSUPPORTED");
+    }
+
+    await track.applyConstraints({
+      advanced: [{ torch: true }]
+    });
+
+    setTampilanSenter(true);
   } catch (err) {
-    alert("❌ Fitur senter tidak didukung di browser HP ini atau izin kamera belum diberikan.");
-    isSenterAktif = false;
-    if (status) status.innerText = 'OFF';
+    if (mediaStreamSenter) {
+      mediaStreamSenter.getTracks().forEach(track => track.stop());
+      mediaStreamSenter = null;
+    }
+    setTampilanSenter(false);
+
+    if (err.message === "TORCH_UNSUPPORTED") {
+      alert("ℹ️ Browser pada perangkat ini (seperti iOS/iPhone) membatasi kontrol lampu flash dari web.\n\nSilakan nyalakan senter langsung dari Pusat Kontrol HP sebelum scan QR.");
+    } else {
+      alert("❌ Senter gagal dinyalakan. Pastikan izin kamera aktif atau gunakan senter bawaan HP.");
+    }
   }
 };
-
 let isInventarisListenerAktif = false;
 
 function bukaModalInventaris() {
@@ -493,14 +521,6 @@ window.tutupFotoBesar = function() {
   if (modalFoto) modalFoto.style.display = 'none';
   if (imgElem) imgElem.src = ''; // Kosongkan memori gambar saat ditutup
 };
-
-
-export function inisialisasiListenerUsersAdmin() {
-  // Dikelola langsung oleh modul Admin Worker di admin.html
-  return;
-}
-
-
 
 // DAFTARKAN SEMUA FUNGSI KE WINDOW GLOBAL
 window.RT05_CONFIG = RT05_CONFIG;
