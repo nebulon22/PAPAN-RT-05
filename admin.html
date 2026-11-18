@@ -5561,7 +5561,7 @@ async function hapusProgker(id) {
 
 <script type="module">
   import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue, update, remove } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
 
   const firebaseConfig = {
     apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
@@ -5583,6 +5583,46 @@ async function hapusProgker(id) {
     }[tag] || tag)) : '';
   }
 
+  // Helper kirim perintah manajemen user via Cloudflare Admin Worker
+  async function kirimAksiUserViaWorker(pathTujuan, metodeHttp, payloadData = null) {
+    const sessionToken = sessionStorage.getItem('rt05_session_token');
+    if (!sessionToken) {
+      alert('⚠️ Sesi admin habis. Silakan login ulang.');
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      window.location.reload();
+      throw new Error('SESSION_EXPIRED');
+    }
+
+    const bodyReq = {
+      sessionToken: sessionToken,
+      path: pathTujuan,
+      method: metodeHttp
+    };
+    if (payloadData !== null) bodyReq.data = payloadData;
+
+    const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${sessionToken}`
+      },
+      body: JSON.stringify(bodyReq)
+    });
+
+    const hasil = await res.json();
+    if (res.status === 401 || hasil.code === 'SESSION_EXPIRED') {
+      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+      alert('⚠️ Sesi telah kedaluwarsa. Silakan login ulang.');
+      window.location.reload();
+      throw new Error('SESSION_EXPIRED');
+    }
+
+    if (!res.ok || !hasil.success) {
+      throw new Error(hasil.error || hasil.message || 'Gagal memproses permintaan di server.');
+    }
+    return hasil;
+  }
+
   // Pantau daftar akun chat warga secara realtime
   const usersRef = ref(db, 'users');
   onValue(usersRef, (snapshot) => {
@@ -5596,7 +5636,7 @@ async function hapusProgker(id) {
     if (!snapshot.exists()) {
       pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada pendaftar baru.</td></tr>';
       allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada akun terdaftar.</td></tr>';
-      if (pendingBadgeEl) pendingBadgeEl.innerText = '0';
+      if (pendingBadgeEl) pendingBadgeEl.innerText = '0 Pending';
       if (totalCountEl) totalCountEl.innerText = '0';
       return;
     }
@@ -5617,8 +5657,7 @@ async function hapusProgker(id) {
 
     // Update badge & penghitung jumlah
     if (pendingBadgeEl) {
-      pendingBadgeEl.innerText = pendingArr.length;
-      pendingBadgeEl.style.display = pendingArr.length > 0 ? 'inline-block' : 'none';
+      pendingBadgeEl.innerText = `${pendingArr.length} Pending`;
     }
     if (totalCountEl) {
       totalCountEl.innerText = activeArr.length;
@@ -5637,7 +5676,7 @@ async function hapusProgker(id) {
             <button onclick="accUserChat('${safeHTML(u.uid)}')" style="background:#10b981; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;">
               ✔ ACC
             </button>
-            <button onclick="hapusUserChat('${safeHTML(u.uid)}', '${safeHTML(u.nama)}')" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
+            <button onclick="hapusUserChat('${safeHTML(u.uid)}', '${safeHTML(u.nama).replace(/'/g, "\\'")}')" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
               ✖ Tolak
             </button>
           </td>
@@ -5667,7 +5706,7 @@ async function hapusProgker(id) {
               <button onclick="ubahRoleUserChat('${safeHTML(u.uid)}', '${isAdmin ? 'warga' : 'admin'}')" style="background:#3b82f6; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;" title="Ubah Peran">
                 ${isAdmin ? 'Jadikan Warga' : 'Jadikan Admin'}
               </button>
-              <button onclick="hapusUserChat('${safeHTML(u.uid)}', '${safeHTML(u.nama)}')" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px;" title="Hapus Akun">
+              <button onclick="hapusUserChat('${safeHTML(u.uid)}', '${safeHTML(u.nama).replace(/'/g, "\\'")}')" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px;" title="Hapus Akun">
                 Hapus
               </button>
             </td>
@@ -5677,39 +5716,50 @@ async function hapusProgker(id) {
     }
   });
 
-  // Fungsi ACC Pendaftaran Warga
+  // 1. Fungsi ACC Pendaftaran Warga
   window.accUserChat = async (uid) => {
     try {
-      await update(ref(db, `users/${uid}`), { status: 'aktif' });
+      await kirimAksiUserViaWorker(`users/${uid}`, 'PATCH', { status: 'aktif' });
       alert('✅ Akun warga berhasil disetujui dan langsung aktif!');
     } catch (err) {
-      console.error(err);
-      alert('❌ Gagal menyetujui akun: ' + err.message);
+      if (err.message !== 'SESSION_EXPIRED') {
+        console.error(err);
+        alert('❌ Gagal menyetujui akun: ' + err.message);
+      }
     }
   };
 
-  // Fungsi Ubah Role (Warga <-> Admin Chat)
+  // 2. Fungsi Ubah Role (Warga <-> Admin Chat)
   window.ubahRoleUserChat = async (uid, roleBaru) => {
     if (!confirm(`Ubah hak akses akun ini menjadi ${roleBaru.toUpperCase()}?`)) return;
     try {
-      await update(ref(db, `users/${uid}`), { role: roleBaru });
+      await kirimAksiUserViaWorker(`users/${uid}`, 'PATCH', { role: roleBaru });
+      alert(`✅ Hak akses akun berhasil diubah menjadi ${roleBaru.toUpperCase()}.`);
     } catch (err) {
-      alert('❌ Gagal mengubah role: ' + err.message);
+      if (err.message !== 'SESSION_EXPIRED') {
+        console.error(err);
+        alert('❌ Gagal mengubah role: ' + err.message);
+      }
     }
   };
 
-  // Fungsi Tolak / Hapus Akun Chat
+  // 3. Fungsi Tolak / Hapus Akun Chat (Sekaligus bersihkan PIN di user_pins)
   window.hapusUserChat = async (uid, nama) => {
     if (!confirm(`Yakin ingin menolak/menghapus akun chat "${nama}"?`)) return;
     try {
-      await remove(ref(db, `users/${uid}`));
-      alert('🗑️ Akun berhasil dihapus.');
+      await Promise.all([
+        kirimAksiUserViaWorker(`users/${uid}`, 'DELETE'),
+        kirimAksiUserViaWorker(`user_pins/${uid}`, 'DELETE')
+      ]);
+      alert('🗑️ Akun dan PIN berhasil dihapus.');
     } catch (err) {
-      console.error(err);
-      alert('❌ Gagal menghapus akun: ' + err.message);
+      if (err.message !== 'SESSION_EXPIRED') {
+        console.error(err);
+        alert('❌ Gagal menghapus akun: ' + err.message);
+      }
     }
   };
-</script> 
+</script>
 
 
  <!-- FontAwesome Lokal dari Repositori Sendiri -->
