@@ -1756,7 +1756,9 @@ function bukaAkses() {
   setTimeout(() => {
     muatSemuaDataAdmin();
     
-    // Pindahkan pemanggilan muatDataPetaUntukAdmin ke sini (aman karena token sudah ada)
+    // Jalankan pemantauan akun warga hanya setelah PIN admin dibuka
+    if (typeof window.mulaiPantauUsersAdmin === 'function') window.mulaiPantauUsersAdmin();
+    
     if (typeof muatDataPetaUntukAdmin === 'function') muatDataPetaUntukAdmin();
     if (typeof muatDataProgker === 'function') muatDataProgker();
     if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
@@ -5607,7 +5609,6 @@ async function hapusProgker(id) {
     appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
   };
 
-  // Mencegah duplikasi inisialisasi jika Firebase sudah dimuat di halaman
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
   const db = getDatabase(app, firebaseConfig.databaseURL);
 
@@ -5657,98 +5658,110 @@ async function hapusProgker(id) {
     return hasil;
   }
 
-  // Pantau daftar akun chat warga secara realtime
-  const usersRef = ref(db, 'users');
-  onValue(usersRef, (snapshot) => {
-    const pendingListEl = document.getElementById('pending-users-list');
-    const allListEl = document.getElementById('all-users-list');
-    const pendingBadgeEl = document.getElementById('pending-badge');
-    const totalCountEl = document.getElementById('total-warga-count');
+  let isPantauUsersAktif = false;
 
-    if (!pendingListEl || !allListEl) return;
+  // Baru dijalankan setelah PIN admin berhasil dibuka (dipanggil dari bukaAkses)
+  window.mulaiPantauUsersAdmin = function() {
+    if (isPantauUsersAktif) return;
 
-    if (!snapshot.exists()) {
-      pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada pendaftar baru.</td></tr>';
-      allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada akun terdaftar.</td></tr>';
-      if (pendingBadgeEl) pendingBadgeEl.innerText = '0 Pending';
-      if (totalCountEl) totalCountEl.innerText = '0';
+    // Tunggu sampai sesi Firebase Auth aktif agar tidak muncul error permission_denied
+    if (!window.auth || !window.auth.currentUser) {
+      window.addEventListener('firebaseSiap', () => window.mulaiPantauUsersAdmin(), { once: true });
       return;
     }
 
-    const usersObj = snapshot.val();
-    const pendingArr = [];
-    const activeArr = [];
+    isPantauUsersAktif = true;
+    const usersRef = ref(db, 'users');
 
-    Object.entries(usersObj).forEach(([uid, u]) => {
-      if (!u || typeof u !== 'object') return;
-      const item = { ...u, uid: u.uid || uid };
-      if (item.status === 'pending') {
-        pendingArr.push(item);
-      } else {
-        activeArr.push(item);
+    onValue(usersRef, (snapshot) => {
+      const pendingListEl = document.getElementById('pending-users-list');
+      const allListEl = document.getElementById('all-users-list');
+      const pendingBadgeEl = document.getElementById('pending-badge');
+      const totalCountEl = document.getElementById('total-warga-count');
+
+      if (!pendingListEl || !allListEl) return;
+
+      if (!snapshot.exists()) {
+        pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada pendaftar baru.</td></tr>';
+        allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada akun terdaftar.</td></tr>';
+        if (pendingBadgeEl) pendingBadgeEl.innerText = '0 Pending';
+        if (totalCountEl) totalCountEl.innerText = '0';
+        return;
       }
-    });
 
-    // Update badge & penghitung jumlah
-    if (pendingBadgeEl) {
-      pendingBadgeEl.innerText = `${pendingArr.length} Pending`;
-    }
-    if (totalCountEl) {
-      totalCountEl.innerText = activeArr.length;
-    }
+      const usersObj = snapshot.val();
+      const pendingArr = [];
+      const activeArr = [];
 
-    // 1. Render Tabel Menunggu ACC (Pending)
-    if (pendingArr.length === 0) {
-      pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Tidak ada pendaftar menunggu ACC.</td></tr>';
-    } else {
-      pendingListEl.innerHTML = pendingArr.map(u => `
-        <tr>
-          <td><strong>${safeHTML(u.nama)}</strong></td>
-          <td>${safeHTML(u.hunian)}</td>
-          <td><span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:11px;">Pending</span></td>
-          <td style="white-space:nowrap;">
-            <button onclick="accUserChat('${safeHTML(u.uid)}')" style="background:#10b981; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;">
-              ✔ ACC
-            </button>
-            <button onclick="hapusUserChat('${safeHTML(u.uid)}', '${safeHTML(u.nama).replace(/'/g, "\\'")}')" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
-              ✖ Tolak
-            </button>
-          </td>
-        </tr>
-      `).join('');
-    }
+      Object.entries(usersObj).forEach(([uid, u]) => {
+        if (!u || typeof u !== 'object') return;
+        const item = { ...u, uid: u.uid || uid };
+        if (item.status === 'pending') {
+          pendingArr.push(item);
+        } else {
+          activeArr.push(item);
+        }
+      });
 
-    // 2. Render Tabel Warga Aktif
-    if (activeArr.length === 0) {
-      allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada warga aktif.</td></tr>';
-    } else {
-      allListEl.innerHTML = activeArr.map(u => {
-        const isAdmin = u.role === 'admin';
-        const roleLabel = isAdmin
-          ? '<span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">ADMIN</span>'
-          : '<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px;">Warga</span>';
+      if (pendingBadgeEl) pendingBadgeEl.innerText = `${pendingArr.length} Pending`;
+      if (totalCountEl) totalCountEl.innerText = activeArr.length;
 
-        return `
+      // 1. Render Tabel Menunggu ACC (Pending)
+      if (pendingArr.length === 0) {
+        pendingListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Tidak ada pendaftar menunggu ACC.</td></tr>';
+      } else {
+        pendingListEl.innerHTML = pendingArr.map(u => `
           <tr>
-            <td>
-              <strong>${safeHTML(u.username || u.nama)}</strong>
-              <div style="font-size:10px; color:#64748b;">Asli: ${safeHTML(u.nama)}</div>
-            </td>
+            <td><strong>${safeHTML(u.nama)}</strong></td>
             <td>${safeHTML(u.hunian)}</td>
-            <td>${roleLabel}</td>
+            <td><span style="background:#fef3c7; color:#92400e; padding:2px 6px; border-radius:4px; font-size:11px;">Pending</span></td>
             <td style="white-space:nowrap;">
-              <button onclick="ubahRoleUserChat('${safeHTML(u.uid)}', '${isAdmin ? 'warga' : 'admin'}')" style="background:#3b82f6; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;" title="Ubah Peran">
-                ${isAdmin ? 'Jadikan Warga' : 'Jadikan Admin'}
+              <button type="button" data-uid="${safeHTML(u.uid)}" onclick="accUserChat(this.dataset.uid)" style="background:#10b981; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;">
+                ✔ ACC
               </button>
-              <button onclick="hapusUserChat('${safeHTML(u.uid)}', '${safeHTML(u.nama).replace(/'/g, "\\'")}')" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px;" title="Hapus Akun">
-                Hapus
+              <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:11px;">
+                ✖ Tolak
               </button>
             </td>
           </tr>
-        `;
-      }).join('');
-    }
-  });
+        `).join('');
+      }
+
+      // 2. Render Tabel Warga Aktif
+      if (activeArr.length === 0) {
+        allListEl.innerHTML = '<tr><td colspan="4" style="text-align:center; color:#94a3b8; padding:12px;">Belum ada warga aktif.</td></tr>';
+      } else {
+        allListEl.innerHTML = activeArr.map(u => {
+          const isAdmin = u.role === 'admin';
+          const roleLabel = isAdmin
+            ? '<span style="background:#dbeafe; color:#1e40af; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold;">ADMIN</span>'
+            : '<span style="background:#f1f5f9; color:#475569; padding:2px 6px; border-radius:4px; font-size:10px;">Warga</span>';
+
+          return `
+            <tr>
+              <td>
+                <strong>${safeHTML(u.username || u.nama)}</strong>
+                <div style="font-size:10px; color:#64748b;">Asli: ${safeHTML(u.nama)}</div>
+              </td>
+              <td>${safeHTML(u.hunian)}</td>
+              <td>${roleLabel}</td>
+              <td style="white-space:nowrap;">
+                <button type="button" data-uid="${safeHTML(u.uid)}" data-role="${isAdmin ? 'warga' : 'admin'}" onclick="ubahRoleUserChat(this.dataset.uid, this.dataset.role)" style="background:#3b82f6; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px; margin-right:4px;" title="Ubah Peran">
+                  ${isAdmin ? 'Jadikan Warga' : 'Jadikan Admin'}
+                </button>
+                <button type="button" data-uid="${safeHTML(u.uid)}" data-nama="${safeHTML(u.nama)}" onclick="hapusUserChat(this.dataset.uid, this.dataset.nama)" style="background:#ef4444; color:#fff; border:none; padding:4px 7px; border-radius:4px; cursor:pointer; font-size:11px;" title="Hapus Akun">
+                  Hapus
+                </button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+    }, (error) => {
+      isPantauUsersAktif = false;
+      console.error("Gagal memantau daftar users:", error);
+    });
+  };
 
   // 1. Fungsi ACC Pendaftaran Warga
   window.accUserChat = async (uid) => {
