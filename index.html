@@ -1188,9 +1188,13 @@ window.perbaruiAplikasiSekarang = function() {
 // ==========================================
 // PEMANTAU UNREAD CHAT PUBLIK DI HALAMAN UTAMA
 // ==========================================
+let isMainChatListenerAktif = false;
+
 function initMainPageChatListener() {
+  if (isMainChatListenerAktif) return;
   if (typeof window.firebaseRef !== 'function' || !window.db) return;
 
+  isMainChatListenerAktif = true;
   const chatsRef = window.firebaseQuery(window.firebaseRef(window.db, 'chats'), window.firebaseLimitToLast(30));
 
   window.firebaseOnValue(chatsRef, (snapshot) => {
@@ -1313,18 +1317,6 @@ window.addEventListener('firebaseSiapIndex', () => {
     }
   });
 
-  function updatePWABadge(totalUnread) {
-    if ('setAppBadge' in navigator) {
-      try {
-        if (totalUnread > 0) {
-          navigator.setAppBadge(totalUnread).catch(err => console.log("Badge PWA error:", err));
-        } else {
-          navigator.clearAppBadge().catch(err => console.log("Clear badge error:", err));
-        }
-      } catch (e) {}
-    }
-  }
-
   function updatePublicTabBadge(count) {
     const badge = document.getElementById('badge-chat-main');
     const chatBtn = document.getElementById('floating-chat-btn');
@@ -1359,6 +1351,26 @@ var pinRumahAktif = null;
 var isDataReady = false;
 var isPolygonDrawn = false;
 
+// Hemat kuota & baterai HP: putus WebSocket Firebase saat aplikasi diminimize/pindah tab
+let timerPutusFirebase = null;
+document.addEventListener('visibilitychange', () => {
+  if (!window.db || typeof window.firebaseGoOffline !== 'function') return;
+
+  if (document.hidden) {
+    // Beri jeda 15 detik sebelum memutus koneksi agar perpindahan cepat antar-tab tidak memutus-nyambung
+    timerPutusFirebase = setTimeout(() => {
+      window.firebaseGoOffline(window.db);
+    }, 15000);
+  } else {
+    if (timerPutusFirebase) {
+      clearTimeout(timerPutusFirebase);
+      timerPutusFirebase = null;
+    }
+    if (typeof window.firebaseGoOnline === 'function') {
+      window.firebaseGoOnline(window.db);
+    }
+  }
+});  
 function initPetaDanData() {
   // 1. Render Peta Leaflet secara sinkron dan instan
   if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
@@ -1862,12 +1874,17 @@ window.addEventListener('pageshow', function(event) {
   });
 })();
   
+let isBadgeInfoListenerAktif = false;
+
 function muatBadgeInfoRT() {
+  if (isBadgeInfoListenerAktif) return;
+
   if (typeof window.firebaseRef !== 'function' || !window.db) {
     setTimeout(muatBadgeInfoRT, 100);
     return;
   }
 
+  isBadgeInfoListenerAktif = true;
   const pengumumanRef = window.firebaseRef(window.db, "pengumuman");
   window.firebaseOnValue(pengumumanRef, (snapshot) => {
     const data = snapshot.val();
