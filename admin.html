@@ -1973,7 +1973,9 @@ function muatPinPetaAdmin(forceRefresh = false) {
 
         var urlRute = `https://www.google.com/maps/dir/?api=1&destination=${itemLat},${itemLng}`;
         var urlFoto = String(val['LINK GAMBAR/VIDEO'] || val.foto || val.Foto || '').trim();
-        var htmlFoto = urlFoto ? `<br><img src="${urlFoto}" class="img-popup" alt="Foto Depan" onError="this.style.display='none'">` : '';
+        var htmlFoto = urlFoto
+          ? `<br><img src="${escapeHTML(urlFoto)}" data-foto="${escapeHTML(urlFoto)}" data-nama="${escapeHTML(namaTampilAsli)}" onclick="bukaFotoBesar(this.dataset.foto, this.dataset.nama)" class="img-popup" style="cursor:pointer;" title="Klik untuk memperbesar foto" alt="Foto Depan" onError="this.style.display='none'">`
+          : '';
 
         var htmlPemilik = (!isRumah && kepalaKeluarga)
           ? `<div style="font-size: 11px; color: #64748b; margin-top: 2px;">Pemilik: ${escapeHTML(kepalaKeluarga)}</div>`
@@ -3414,7 +3416,7 @@ async function cariDetailKeluargaAdmin() {
                 : `<span style="font-size:11px; color:#94a3b8;">(Koordinat Belum Ada)</span>`;
 
             const htmlFoto = match.foto 
-                ? `<div style="margin-top:6px;"><img src="${escapeHTML(match.foto)}" style="max-height:80px; border-radius:4px;" onerror="this.style.display='none'" /></div>` 
+                ? `<div style="margin-top:6px;"><img src="${escapeHTML(match.foto)}" data-foto="${escapeHTML(match.foto)}" data-nama="${escapeHTML(kepala)}" onclick="bukaFotoBesar(this.dataset.foto, this.dataset.nama)" style="max-height:80px; border-radius:4px; cursor:pointer; border:1px solid #cbd5e1;" title="Klik untuk memperbesar foto" onerror="this.style.display='none'" /></div>` 
                 : '';
 
             return `
