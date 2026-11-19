@@ -2810,40 +2810,8 @@ window.bukaModalWargaBaruAdmin = async function() {
 
   listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #64748b; padding: 10px;">⏳ Memuat data...</div>';
 
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    listContainer.innerHTML = '<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">⚠️ Sesi admin habis. Silakan login ulang.</div>';
-    return;
-  }
-
   try {
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: "warga_baru",
-        method: "GET"
-      })
-    });
-
-    const hasilProxy = await responseProxy.json();
-
-    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
-    }
-
-    if (!hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari server.");
-    }
-
-    const data = hasilProxy.result || hasilProxy.data;
+    const data = await apiAdminWorker("warga_baru", "GET");
     const badgeCount = document.getElementById('badge-warga-baru-count');
 
     if (!data || Object.keys(data).length === 0) {
@@ -2860,7 +2828,6 @@ window.bukaModalWargaBaruAdmin = async function() {
       const item = data[key];
       if (!item) return;
 
-      // Encode objek data secara utuh untuk dilempar ke modal Edit
       const encodedData = encodeURIComponent(JSON.stringify({
         id: key,
         nama: item.nama || '',
@@ -2890,10 +2857,11 @@ window.bukaModalWargaBaruAdmin = async function() {
     });
 
     listContainer.innerHTML = html;
-
   } catch (err) {
-    console.error("Error memuat warga baru:", err);
-    listContainer.innerHTML = `<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">❌ Gagal memuat: ${escapeHTML(err.message)}</div>`;
+    if (err.message !== 'SESSION_EXPIRED') {
+      console.error("Error memuat warga baru:", err);
+      listContainer.innerHTML = `<div style="text-align: center; font-size: 11px; color: #dc2626; padding: 10px;">❌ Gagal memuat: ${escapeHTML(err.message)}</div>`;
+    }
   }
 };
 
@@ -3008,90 +2976,22 @@ async function simpanPerubahanWarga(event) {
   }
 }
 
-// 🗑️ Fungsi Hapus Laporan Warga Baru via Session Token
+// Hapus Laporan Warga Baru
 window.hapusWargaBaruAdmin = async function(id) {
   if (!confirm("Yakin ingin menghapus laporan warga/tamu ini?")) return;
-
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    alert("⚠️ Sesi admin habis. Silakan login ulang.");
-    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    window.location.reload();
-    return;
-  }
-
   try {
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: `warga_baru/${id}`,
-        method: "DELETE"
-      })
-    });
-
-    const hasilProxy = await responseProxy.json();
-
-    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
-    }
-
-    if (!hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus data via Worker Admin.");
-    }
-
+    await apiAdminWorker(`warga_baru/${id}`, "DELETE");
     alert('🗑️ Laporan berhasil dihapus.');
     window.bukaModalWargaBaruAdmin();
   } catch (err) {
-    alert('❌ Gagal menghapus: ' + err.message);
+    if (err.message !== 'SESSION_EXPIRED') alert('❌ Gagal menghapus: ' + err.message);
   }
 };
 
-// 📥 Fungsi Unduh Data Warga Baru ke Excel (CSV) via Session Token
+// Unduh Data Warga Baru ke Excel (CSV)
 window.exportWargaBaruToCSV = async function() {
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    alert("⚠️ Sesi admin habis. Silakan login ulang.");
-    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    window.location.reload();
-    return;
-  }
-
   try {
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: "warga_baru",
-        method: "GET"
-      })
-    });
-
-    const hasilProxy = await responseProxy.json();
-
-    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
-    }
-
-    if (!hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal mengambil data dari Worker Admin.");
-    }
-
-    const rawData = hasilProxy.result || hasilProxy.data;
+    const rawData = await apiAdminWorker("warga_baru", "GET");
     if (!rawData || Object.keys(rawData).length === 0) {
       alert("Tidak ada data laporan warga baru di database.");
       return;
@@ -3104,14 +3004,12 @@ window.exportWargaBaruToCSV = async function() {
       const data = rawData[key];
       if (!data) return;
       total++;
-
       const nama = String(data.nama || '-').replace(/"/g, '""');
       const noRumah = String(data.noRumah || '-').replace(/"/g, '""');
       const hp = String(data.hp || '-').replace(/"/g, '""');
       const status = String(data.status || '-').replace(/"/g, '""');
       const cerita = String(data.cerita || '-').replace(/"/g, '""');
       const tanggal = String(data.tanggal || '-').replace(/"/g, '""');
-
       rowsData.push(`"${nama}";"${noRumah}";"${hp}";"${status}";"${cerita}";"${tanggal}"`);
     });
 
@@ -3120,23 +3018,23 @@ window.exportWargaBaruToCSV = async function() {
       return;
     }
 
-    let csvContent = "\uFEFF";
-    csvContent += `"LAPORAN WARGA BARU & TAMU RT 05 KAYEN"\n`;
-    csvContent += `"Total Laporan: ${total} Orang"\n\n`;
-    csvContent += `"Nama Lengkap";"Tempat / No Rumah";"No HP / WhatsApp";"Status Hunian";"Cerita / Kegiatan";"Tanggal Laporan"\n`;
-    csvContent += rowsData.join("\n") + "\n";
+    let csvContent = "\uFEFF" +
+      `"LAPORAN WARGA BARU & TAMU RT 05 KAYEN"\n` +
+      `"Total Laporan: ${total} Orang"\n\n` +
+      `"Nama Lengkap";"Tempat / No Rumah";"No HP / WhatsApp";"Status Hunian";"Cerita / Kegiatan";"Tanggal Laporan"\n` +
+      rowsData.join("\n") + "\n";
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Laporan_Warga_Baru_RT05_${new Date().toISOString().slice(0,10)}.csv`);
+    link.href = url;
+    link.download = `Laporan_Warga_Baru_RT05_${new Date().toISOString().slice(0,10)}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   } catch (err) {
-    alert("Gagal mengunduh data warga baru: " + err.message);
+    if (err.message !== 'SESSION_EXPIRED') alert("Gagal mengunduh data warga baru: " + err.message);
   }
 };
 
@@ -4805,47 +4703,15 @@ window.tutupModalPengumumanAdmin = function() {
   resetFormPengumumanKeModeBaru();
 };
 
-// 1. Muat Daftar & Arsip Pengumuman via Worker Admin
+// 1. Muat Daftar & Arsip Pengumuman via apiAdminWorker
 window.muatDaftarPengumumanAdmin = async function() {
   const tbody = document.getElementById('tabel-pengumuman-admin');
   if (!tbody) return;
 
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#dc2626; padding:12px;">⚠️ Sesi admin habis.</td></tr>`;
-    return;
-  }
-
   tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; padding:12px;">⏳ Memuat daftar pengumuman...</td></tr>`;
 
   try {
-    const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: "pengumuman",
-        method: "GET"
-      })
-    });
-
-    const jsonWorker = await res.json();
-
-    if (res.status === 401 || jsonWorker.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
-    }
-
-    if (!res.ok || !jsonWorker.success) {
-      throw new Error(jsonWorker.error || `HTTP ${res.status} saat mengambil data pengumuman.`);
-    }
-
-    const data = jsonWorker.result || {};
+    const data = (await apiAdminWorker("pengumuman", "GET")) || {};
     cacheDaftarPengumumanAdmin = data;
 
     const keys = Object.keys(data);
@@ -4879,10 +4745,33 @@ window.muatDaftarPengumumanAdmin = async function() {
         </tr>
       `;
     }).join('');
-
   } catch (err) {
-    console.error("Gagal memuat pengumuman admin:", err);
-    tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#dc2626; padding:12px;">❌ Gagal memuat data: ${escapeHTML(err.message)}</td></tr>`;
+    if (err.message !== 'SESSION_EXPIRED') {
+      tbody.innerHTML = `<tr><td colspan="3" style="text-align:center; color:#dc2626; padding:12px;">❌ Gagal memuat data: ${escapeHTML(err.message)}</td></tr>`;
+    }
+  }
+};
+
+// 2. Ubah Status Aktif / Arsip
+window.toggleStatusPengumuman = async function(idUnik, statusBaru) {
+  try {
+    await apiAdminWorker(`pengumuman/${idUnik}`, "PATCH", { status: statusBaru, updatedAt: Date.now() });
+    muatDaftarPengumumanAdmin();
+  } catch (err) {
+    if (err.message !== 'SESSION_EXPIRED') alert("❌ Gagal mengubah status: " + err.message);
+  }
+};
+
+// 3. Hapus Pengumuman
+window.hapusPengumumanAdmin = async function(idUnik) {
+  if (!confirm("Yakin ingin menghapus pengumuman ini secara permanen?")) return;
+  try {
+    await apiAdminWorker(`pengumuman/${idUnik}`, "DELETE");
+    if (currentEditPengumumanId === idUnik) resetFormPengumumanKeModeBaru();
+    alert("🗑️ Pengumuman berhasil dihapus.");
+    muatDaftarPengumumanAdmin();
+  } catch (err) {
+    if (err.message !== 'SESSION_EXPIRED') alert("❌ Gagal menghapus pengumuman: " + err.message);
   }
 };
 
@@ -5076,99 +4965,6 @@ window.simpanPengumumanAdmin = async function() {
   }
 };
 
-// 4. Ubah Status Aktif / Arsip via Worker Admin Proxy
-window.toggleStatusPengumuman = async function(idUnik, statusBaru) {
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
-    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    window.location.reload();
-    return;
-  }
-
-  try {
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: `pengumuman/${idUnik}`,
-        method: "PATCH",
-        data: { status: statusBaru, updatedAt: Date.now() }
-      })
-    });
-
-    const hasilProxy = await responseProxy.json();
-
-    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
-    }
-
-    if (!responseProxy.ok || !hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memperbarui status via Worker.");
-    }
-
-    muatDaftarPengumumanAdmin();
-  } catch (err) {
-    alert("❌ Gagal mengubah status: " + err.message);
-  }
-};
-
-// 5. Hapus Pengumuman via Worker Admin Proxy (Sebelumnya belum ada)
-window.hapusPengumumanAdmin = async function(idUnik) {
-  if (!confirm("Yakin ingin menghapus pengumuman ini secara permanen?")) return;
-
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
-    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    window.location.reload();
-    return;
-  }
-
-  try {
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: `pengumuman/${idUnik}`,
-        method: "DELETE"
-      })
-    });
-
-    const hasilProxy = await responseProxy.json();
-
-    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
-    }
-
-    if (!responseProxy.ok || !hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal menghapus pengumuman via Worker.");
-    }
-
-    if (currentEditPengumumanId === idUnik) {
-      resetFormPengumumanKeModeBaru();
-    }
-
-    alert("🗑️ Pengumuman berhasil dihapus.");
-    muatDaftarPengumumanAdmin();
-  } catch (err) {
-    alert("❌ Gagal menghapus pengumuman: " + err.message);
-  }
-};
    // ==========================================
     // PENCARIAN LOKASI / AUTOCOMPLETE PENGUMUMAN (DENGAN IKON & BERSIH)
     // ==========================================
