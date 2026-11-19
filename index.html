@@ -204,12 +204,6 @@
     border-color: #00c853;
   }
 
- .btn-info-rt {
-  background: linear-gradient(135deg, #9a3412, #7c2d12);
-  color: #fef08a;
-  border-color: #fb923c;
-}
-
 .ticker-wrap {
   width: 100%;
   overflow: hidden;
@@ -234,6 +228,20 @@
   animation-play-state: paused;
 }
 
+ .btn-info-rt {
+  background: linear-gradient(135deg, #9a3412, #7c2d12);
+  color: #fef08a;
+  border-color: #fb923c;
+}
+.btn-info-rt:hover .ticker-move,
+.btn-info-rt:active .ticker-move,
+.btn-info-rt:focus-visible .ticker-move {
+  animation-play-state: paused;
+}
+.btn-info-rt.is-paused .ticker-move {
+  animation-play-state: paused;
+}
+   
 @keyframes tickerBerjalan {
   0% {
     transform: translate3d(0, 0, 0);
@@ -249,11 +257,6 @@
     padding-left: 0;
     white-space: normal;
   }
-}
-.btn-info-rt:hover .ticker-move,
-.btn-info-rt:active .ticker-move,
-.btn-info-rt:focus-visible .ticker-move {
-  animation-play-state: paused;
 }
    
    /* Styling Tombol Floating Chat & Badge */
@@ -621,7 +624,7 @@
     
 <div class="filter-container">
 <!-- BARIS 1: KARTU LIVE INFO RT (FULL WIDTH) -->
-<button type="button" class="btn-info-rt" onclick="bukaInfoSmooth(event, 'pengumuman.html')"
+<button type="button" id="btnInfoRT" class="btn-info-rt"
    style="width: 100%; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 9px 12px; border-radius: 12px; text-align: left; cursor: pointer; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.32); border-width: 1px; border-style: solid; transition: transform 0.1s ease; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
   <div style="display: flex; align-items: center; gap: 9px; overflow: hidden; min-width: 0; flex: 1;">
     <span style="font-size: 17px; flex-shrink: 0;">📢</span>
@@ -1770,6 +1773,78 @@ window.addEventListener('pageshow', function(event) {
   document.body.style.opacity = "1";
   document.body.style.transform = "none";
 });
+(function() {
+  const btnInfo = document.getElementById('btnInfoRT');
+  if (!btnInfo) return;
+
+  const HOLD_THRESHOLD_MS = 220; // Tahan >= 220ms dianggap mode baca (pause saja)
+  let holdTimer = null;
+  let isHoldMode = false;
+  let suppressNextClick = false;
+
+  function setPaused(paused) {
+    btnInfo.classList.toggle('is-paused', paused);
+  }
+
+  function clearHoldTimer() {
+    if (holdTimer !== null) {
+      clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+  }
+
+  function startPress() {
+    clearHoldTimer();
+    isHoldMode = false;
+    holdTimer = setTimeout(() => {
+      isHoldMode = true;
+      suppressNextClick = true;
+      setPaused(true);
+    }, HOLD_THRESHOLD_MS);
+  }
+
+  function endPress() {
+    clearHoldTimer();
+    if (isHoldMode) {
+      // Lepas setelah mode tahan/baca: lanjutkan jalan dan jangan buka halaman
+      setPaused(false);
+      isHoldMode = false;
+      setTimeout(() => {
+        suppressNextClick = false;
+      }, 50);
+    }
+  }
+
+  // Sentuh layar (HP / Tablet)
+  btnInfo.addEventListener('touchstart', startPress, { passive: true });
+  btnInfo.addEventListener('touchend', endPress, { passive: true });
+  btnInfo.addEventListener('touchcancel', endPress, { passive: true });
+
+  // Klik / tahan mouse (Desktop)
+  btnInfo.addEventListener('mousedown', (e) => {
+    if (e.button === 0) startPress();
+  });
+  btnInfo.addEventListener('mouseup', endPress);
+  btnInfo.addEventListener('mouseleave', () => {
+    if (isHoldMode) endPress();
+    else clearHoldTimer();
+  });
+
+  // Tangani klik: buka halaman jika tap singkat, batalkan jika habis tahan lama
+  btnInfo.addEventListener('click', (e) => {
+    if (suppressNextClick) {
+      suppressNextClick = false;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (typeof bukaInfoSmooth === 'function') {
+      bukaInfoSmooth(e, 'pengumuman.html');
+    } else {
+      window.location.href = 'pengumuman.html';
+    }
+  });
+})();
   
 function muatBadgeInfoRT() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
