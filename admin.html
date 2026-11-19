@@ -1302,6 +1302,42 @@
  <!-- JAVASCRIPT LOGIC SCRIPT UTAMA -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    // SATU HELPER TERPUSAT UNTUK SEMUA REQUEST KE ADMIN WORKER
+async function apiAdminWorker(path, method = 'GET', data = null, opsi = {}) {
+  const sessionToken = sessionStorage.getItem('rt05_session_token');
+  if (!sessionToken) {
+    if (!opsi.silent) alert('⚠️ Sesi admin habis. Silakan login ulang.');
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    window.location.reload();
+    throw new Error('SESSION_EXPIRED');
+  }
+
+  const bodyReq = { sessionToken, path, method };
+  if (data !== null) bodyReq.data = data;
+
+  const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${sessionToken}`
+    },
+    body: JSON.stringify(bodyReq)
+  });
+
+  const hasil = await response.json();
+  if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
+    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
+    alert('⚠️ Sesi telah kedaluwarsa. Silakan login ulang.');
+    window.location.reload();
+    throw new Error('SESSION_EXPIRED');
+  }
+
+  if (!response.ok || !hasil.success) {
+    throw new Error(hasil.error || hasil.message || `Gagal memproses permintaan (${response.status})`);
+  }
+
+  return hasil.result !== undefined ? hasil.result : hasil.data;
+}
     
 function escapeHTML(str) {
   if (str === null || str === undefined) return '';
@@ -1424,52 +1460,22 @@ async function tanganiUploadR2DenganOpsiOffline({
 // Mengembalikan: true (sukses online), 'OFFLINE' (masuk antrean), false (gagal)
 // ==========================================
 async function kirimDataViaAdminWorker(pathTujuan, payloadData, metodeHttp = "POST") {
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    alert("⚠️ Sesi admin habis. Silakan login kembali.");
-    bersihkanStorageAdmin();
-    document.getElementById('login-overlay').style.display = 'flex';
-    return false;
-  }
-
-  // 1. Jika perangkat offline, masukkan data teks ke localStorage (antrean_admin)
   if (!navigator.onLine) {
     simpanPayloadKeAntrean(pathTujuan, payloadData, pathTujuan, metodeHttp);
     return 'OFFLINE';
   }
 
   try {
-    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: pathTujuan,
-        method: metodeHttp,
-        data: payloadData
-      })
-    });
-
-    const hasil = await response.json();
-    if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      bersihkanStorageAdmin();
-      window.location.reload();
-      return false;
-    }
-
-    if (hasil.success) return true;
-    alert("❌ Gagal: " + (hasil.error || "Terjadi Kesalahan"));
-    return false;
-
+    await apiAdminWorker(pathTujuan, metodeHttp, payloadData);
+    return true;
   } catch (err) {
-    // 2. Fallback jika sinyal tiba-tiba hilang saat fetch berjalan
-    console.warn("Koneksi terputus saat mengirim, mengalihkan ke antrean offline:", err);
-    simpanPayloadKeAntrean(pathTujuan, payloadData, pathTujuan, metodeHttp);
-    return 'OFFLINE';
+    if (err.message === 'SESSION_EXPIRED') return false;
+    if (!navigator.onLine || err.name === 'TypeError') {
+      simpanPayloadKeAntrean(pathTujuan, payloadData, pathTujuan, metodeHttp);
+      return 'OFFLINE';
+    }
+    alert("❌ Gagal: " + err.message);
+    return false;
   }
 }
 
@@ -2276,48 +2282,9 @@ let cachePerkakas = [];
 let cachePeminjaman = [];
 
     // Helper internal khusus inventaris agar konsisten dengan Worker Admin Anda
-    async function requestWorkerInventaris(pathTujuan, metodeHttp = "GET", payloadData = null) {
-      const sessionToken = sessionStorage.getItem('rt05_session_token');
-      if (!sessionToken) {
-        alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
-        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-        window.location.reload();
-        throw new Error("SESSION_EXPIRED");
-      }
-
-      const bodyReq = {
-        sessionToken: sessionToken,
-        path: pathTujuan,
-        method: metodeHttp
-      };
-      if (payloadData !== null) {
-        bodyReq.data = payloadData;
-      }
-
-      const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${sessionToken}`
-        },
-        body: JSON.stringify(bodyReq)
-      });
-
-      const hasilProxy = await responseProxy.json();
-
-      if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-        if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-        alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-        window.location.reload();
-        throw new Error("SESSION_EXPIRED");
-      }
-
-      if (!responseProxy.ok || !hasilProxy.success) {
-        throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memproses permintaan melalui Worker Admin.");
-      }
-
-      return hasilProxy.result !== undefined ? hasilProxy.result : hasilProxy.data;
-    }
+async function requestWorkerInventaris(pathTujuan, metodeHttp = "GET", payloadData = null) {
+  return await apiAdminWorker(pathTujuan, metodeHttp, payloadData);
+}
 
     // 1. Muat Data Inventaris & Peminjaman Aktif via Worker
     async function muatPeminjamanAdmin() {
@@ -5302,39 +5269,7 @@ var dataProgkerGlobal = [];
 
 // Helper terpusat untuk semua request ke Worker Admin
 async function panggilWorkerAdmin(path, method = 'GET', data = null) {
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    alert("⚠️ Sesi admin telah habis. Silakan login ulang.");
-    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    window.location.reload();
-    throw new Error("SESSION_EXPIRED");
-  }
-
-  const bodyPayload = { sessionToken, path, method };
-  if (data !== null) bodyPayload.data = data;
-
-  const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": `Bearer ${sessionToken}`
-    },
-    body: JSON.stringify(bodyPayload)
-  });
-
-  const resJson = await response.json();
-  if (response.status === 401 || resJson.code === 'SESSION_EXPIRED') {
-    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-    window.location.reload();
-    throw new Error("SESSION_EXPIRED");
-  }
-
-  if (!response.ok || !resJson.success) {
-    throw new Error(resJson.error || resJson.message || "Gagal memproses permintaan ke server.");
-  }
-
-  return resJson.result !== undefined ? resJson.result : resJson.data;
+  return await apiAdminWorker(path, method, data);
 }
 
 async function muatDataProgker() {
