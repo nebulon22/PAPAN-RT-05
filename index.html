@@ -223,11 +223,6 @@
   animation: tickerBerjalan 16s linear infinite;
 }
 
-.ticker-wrap:hover .ticker-move,
-.ticker-wrap:active .ticker-move {
-  animation-play-state: paused;
-}
-
 .btn-info-rt {
   background: linear-gradient(135deg, #9a3412, #7c2d12);
   color: #fef08a;
@@ -235,16 +230,18 @@
   touch-action: manipulation;
 }
 
-/* Hanya untuk mouse/kursor di desktop */
+/* Hover hanya aktif di PC (mouse), tidak nyangkut di layar sentuh PWA */
 @media (hover: hover) and (pointer: fine) {
   .btn-info-rt:hover .ticker-move {
     animation-play-state: paused;
   }
 }
 
+/* Kontrol pause khusus saat disentuh/ditahan di HP/PWA */
 .btn-info-rt.is-paused .ticker-move {
   animation-play-state: paused;
 }
+
 .btn-info-rt:hover .ticker-move,
 .btn-info-rt:active .ticker-move,
 .btn-info-rt:focus-visible .ticker-move {
@@ -1785,6 +1782,7 @@ window.addEventListener('pageshow', function(event) {
   document.body.style.opacity = "1";
   document.body.style.transform = "none";
 });
+//fungsi release touch panel info RT running text
 (function() {
   const btnInfo = document.getElementById('btnInfoRT');
   if (!btnInfo) return;
@@ -1792,7 +1790,7 @@ window.addEventListener('pageshow', function(event) {
   let touchStartTime = 0;
   let wasHeld = false;
   let suppressNextClick = false;
-  const TAP_MAX_MS = 180; // Sentuh sangat singkat (<180ms) dianggap tap buka halaman
+  const TAP_MAX_MS = 180;
 
   function setPaused(paused) {
     btnInfo.classList.toggle('is-paused', paused);
@@ -1801,38 +1799,30 @@ window.addEventListener('pageshow', function(event) {
   btnInfo.addEventListener('touchstart', () => {
     touchStartTime = Date.now();
     wasHeld = false;
-    setPaused(true); // Langsung pause saat jari menyentuh box
+    setPaused(true);
   }, { passive: true });
 
-function releaseTouch() {
-  const durasiSentuh = Date.now() - touchStartTime;
-  btnInfo.classList.remove('is-paused');
-  if (typeof btnInfo.blur === 'function') {
-    btnInfo.blur();
+  function releaseTouch() {
+    const durasiSentuh = Date.now() - touchStartTime;
+    setPaused(false);
+    if (typeof btnInfo.blur === 'function') {
+      btnInfo.blur();
+    }
+
+    if (durasiSentuh >= TAP_MAX_MS) {
+      wasHeld = true;
+      suppressNextClick = true;
+      setTimeout(() => {
+        suppressNextClick = false;
+      }, 60);
+    } else {
+      wasHeld = false;
+    }
   }
 
-  if (durasiSentuh >= TAP_MAX_MS) {
-    wasHeld = true;
-    suppressNextClick = true;
-    setTimeout(() => {
-      suppressNextClick = false;
-    }, 60);
-  } else {
-    wasHeld = false;
-  }
-}
+  btnInfo.addEventListener('touchend', releaseTouch, { passive: true });
+  btnInfo.addEventListener('touchcancel', releaseTouch, { passive: true });
 
-btnInfo.addEventListener('touchend', () => {
-  btnInfo.classList.remove('is-paused');
-  btnInfo.blur();
-}, { passive: true });
-
-btnInfo.addEventListener('touchcancel', () => {
-  btnInfo.classList.remove('is-paused');
-  btnInfo.blur();
-}, { passive: true });
-
-  // Kalau jari digeser keluar dari box sambil ditahan, lepaskan pause
   btnInfo.addEventListener('touchmove', (e) => {
     if (!e.touches || !e.touches.length) return;
     const t = e.touches[0];
