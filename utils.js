@@ -454,10 +454,16 @@ document.addEventListener('DOMContentLoaded', function() {
 window.bukaFotoBesar = function(urlFoto, eventOrKeterangan = null) {
   let keterangan = '';
 
+  // Deteksi apakah halaman saat ini adalah halaman admin
+  const isHalamanAdmin =
+    /admin/i.test(window.location.pathname) ||
+    Boolean(document.getElementById('adminPin')) ||
+    typeof window.muatPinPetaAdmin === 'function';
+
   // 1. Deteksi apakah parameter ke-2 adalah Event (dari index.html) atau String keterangan (dari admin.html)
   if (eventOrKeterangan && typeof eventOrKeterangan === 'object' && typeof eventOrKeterangan.stopPropagation === 'function') {
     eventOrKeterangan.stopPropagation();
-  } else if (typeof eventOrKeterangan === 'string') {
+  } else if (isHalamanAdmin && typeof eventOrKeterangan === 'string') {
     keterangan = eventOrKeterangan.trim();
   }
 
@@ -500,10 +506,10 @@ window.bukaFotoBesar = function(urlFoto, eventOrKeterangan = null) {
     imgElem.src = urlBersih;
   }
 
-  // 3. Tampilkan keterangan menggunakan textContent (100% kebal XSS)
+// 3. Tampilkan keterangan HANYA di halaman admin menggunakan textContent (100% kebal XSS)
   const captionElem = document.getElementById('caption-tampil-besar');
   if (captionElem) {
-    if (keterangan) {
+    if (isHalamanAdmin && keterangan) {
       captionElem.textContent = keterangan;
       captionElem.style.display = 'block';
     } else {
