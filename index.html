@@ -555,6 +555,37 @@
     object-fit: contain !important;
     transition: transform 0.3s ease !important;
   }
+   /* Matikan seleksi teks & menu tahan lama pada seluruh tombol, link UI, dan ikon */
+button,
+a.btn-back-floating,
+.btn-filter,
+.btn-qr-floating,
+#floating-chat-btn,
+#btn-senter-ronda,
+#top-panel,
+#top-panel * {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Mencegah gambar/ikon di dalam tombol memicu menu "Salin Gambar / URL" */
+button img,
+.btn-qr-floating img,
+button i,
+a i {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Tetap izinkan seleksi teks di kolom pencarian & form input */
+input,
+textarea,
+select {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
 </style>
 </head>
 <body>
@@ -3817,6 +3848,16 @@ window.simpanWargaBaru = async function() {
     alert('❌ Gagal menyimpan data: ' + err.message);
   }
 };
+  document.addEventListener('contextmenu', function(e) {
+  const tag = e.target.tagName;
+  // Tetap izinkan klik tahan (paste/copy) pada kolom ketik & form
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+  // Blokir popup salin/URL jika yang ditahan adalah tombol, link, ikon, atau gambar
+  if (e.target.closest('button, a, img, #top-panel, .modal-header')) {
+    e.preventDefault();
+  }
+});
   // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
 if (document.readyState === 'complete') {
     initPetaDanData();
