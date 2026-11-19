@@ -5152,17 +5152,17 @@ async function kirimAksiUserViaWorker(pathTujuan, metodeHttp, payloadData = null
   let isPantauUsersAktif = false;
 
   // Baru dijalankan setelah PIN admin berhasil dibuka (dipanggil dari bukaAkses)
-  window.mulaiPantauUsersAdmin = function() {
+    window.mulaiPantauUsersAdmin = function() {
     if (isPantauUsersAktif) return;
 
-    // Tunggu sampai sesi Firebase Auth aktif agar tidak muncul error permission_denied
-    if (!window.auth || !window.auth.currentUser) {
+    // Tunggu sampai Firebase selesai dimuat lazy & sesi Auth aktif
+    if (!window.db || !window.firebaseRef || !window.firebaseOnValue || !window.auth || !window.auth.currentUser) {
       window.addEventListener('firebaseSiap', () => window.mulaiPantauUsersAdmin(), { once: true });
       return;
     }
 
     isPantauUsersAktif = true;
-    const usersRef = ref(db, 'users');
+    const usersRef = window.firebaseRef(window.db, 'users');
 
     onValue(usersRef, (snapshot) => {
       const pendingListEl = document.getElementById('pending-users-list');
