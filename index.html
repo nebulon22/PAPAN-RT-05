@@ -1930,16 +1930,7 @@ function muatBadgeInfoRT() {
   });
 }
   
-// Memastikan halaman kembali normal dan tidak transparan saat tombol Back HP ditekan
-window.addEventListener('pageshow', function(event) {
-  if (event.persisted) {
-    document.body.style.transition = 'none';
-    document.body.style.opacity = '1';
-    document.body.style.transform = 'none';
-  }
-});
-  
-  window.bukaModalSetting = function() {
+window.bukaModalSetting = function() {
   var modal = document.getElementById('modal-setting');
   if (modal) modal.style.display = 'flex';
 };
@@ -2227,15 +2218,76 @@ function renderTabelKeuangan(elementId, dataset, warnaText, tanda) {
     tbody.appendChild(tr);
   });
 }
+// Helper terpusat untuk unduh file Excel (CSV)
+function unduhFileCSV(namaFile, barisHeaderJudul, kolomHeader, barisData, barisFooter = []) {
+  let csvContent = "\uFEFF";
+  barisHeaderJudul.forEach(judul => { csvContent += `"${judul}"\n`; });
+  csvContent += "\n" + kolomHeader.map(h => `"${h}"`).join(";") + "\n";
 
-// 1. Fungsi Unduh Excel (CSV) Rekening Koran (Dengan Baris Total di Bawah)
+  barisData.forEach(row => {
+    csvContent += row.map(val => typeof val === 'number' ? val : `"${String(val ?? '').replace(/"/g, '""')}"`).join(";") + "\n";
+  });
+
+  if (barisFooter.length > 0) {
+    csvContent += "\n" + barisFooter.map(val => `"${val}"`).join(";") + "\n";
+  }
+
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = namaFile;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+// Helper terpusat untuk cetak / simpan PDF
+function cetakDokumenPDF({ title, heading, subtitle, boxInfo, headers, rowsHTML, warnaUtama = '#0288d1' }) {
+  const printWindow = window.open('', '_blank', 'height=700,width=900');
+  if (!printWindow) return;
+
+  printWindow.document.write(`
+    <html>
+      <head>
+        <title>${escapeHTML(title)}</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 25px; color: #333; }
+          h2 { text-align: center; margin: 0 0 5px 0; color: ${warnaUtama}; }
+          .subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 15px; }
+          .info-box { background: ${warnaUtama}; color: white; padding: 10px; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 14px; border-radius: 6px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+          th { background: #f1f5f9; font-weight: bold; }
+          tr:nth-child(even) { background-color: #f8fafc; }
+          .text-right { text-align: right; }
+        </style>
+      </head>
+      <body>
+        <h2>${escapeHTML(heading)}</h2>
+        <div class="subtitle">${subtitle}</div>
+        <div class="info-box">${escapeHTML(boxInfo)}</div>
+        <table>
+          <thead><tr>${headers.map(h => `<th class="${h.align === 'right' ? 'text-right' : ''}">${escapeHTML(h.label)}</th>`).join('')}</tr></thead>
+          <tbody>${rowsHTML}</tbody>
+        </table>
+      </body>
+    </html>
+  `);
+  printWindow.document.close();
+  printWindow.focus();
+  setTimeout(() => {
+    printWindow.print();
+    printWindow.close();
+  }, 450);
+}
 window.unduhExcelRekeningKoran = () => {
-  var selectDivisi = document.getElementById('filterDivisi');
-  var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
-  var selectedText = selectDivisi ? selectDivisi.options[selectDivisi.selectedIndex].text : 'Semua Divisi';
+  const selectDivisi = document.getElementById('filterDivisi');
+  const divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+  const selectedText = selectDivisi ? selectDivisi.options[selectDivisi.selectedIndex].text : 'Semua Divisi';
 
-  // Filter data dari array dataKeuangan sesuai pilihan di dropdown
-  var dataFilter = (divisiTerpilih === 'semua')
+  const dataFilter = (divisiTerpilih === 'semua')
     ? dataKeuangan
     : dataKeuangan.filter(item => item.divisi && item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
 
@@ -2244,58 +2296,29 @@ window.unduhExcelRekeningKoran = () => {
     return;
   }
 
-  // Hitung total saldo / akumulasi nominal dari data yang difilter
   let totalNominal = 0;
-  dataFilter.forEach(item => {
-    let nominal = Number(item.nominal || 0);
-    if (item.tipe === 'KELUAR') {
-      totalNominal -= nominal;
-    } else {
-      totalNominal += nominal;
-    }
+  const rows = dataFilter.map(item => {
+    const nominal = Number(item.nominal || 0);
+    totalNominal += (item.tipe === 'KELUAR') ? -nominal : nominal;
+    return [item.tanggal || item.tgl || '', item.divisi || '', item.tipe || '', item.keterangan || item.ket || '', nominal];
   });
 
-  // Susun format CSV (Menggunakan titik koma ';' agar otomatis rapi di Excel Indonesia)
-  let csvContent = "\uFEFF";
-  csvContent += `"REKENING KORAN KEUANGAN - RT 05 KAYEN"\n`;
-  csvContent += `"Kategori: ${selectedText}"\n\n`;
-  csvContent += `"Tanggal";"Divisi";"Jenis";"Keterangan";"Nominal"\n`;
-
-  dataFilter.forEach(item => {
-    var row = [
-      item.tanggal || item.tgl || '',
-      `"${item.divisi || ''}"`,
-      item.tipe || '',
-      `"${(item.keterangan || item.ket || '').replace(/"/g, '""')}"`,
-      item.nominal || 0
-    ];
-    csvContent += row.join(";") + "\n";
-  });
-
-  // Tambahkan baris kosong dan baris Total Saldo di bagian bawah
-  csvContent += `\n`;
-  csvContent += `"TOTAL / SALDO AKHIR";"";"";"";"${totalNominal}"\n`;
-
-  // Proses trigger unduh file CSV
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", `Rekening_Koran_${divisiTerpilih.toUpperCase()}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
+  unduhFileCSV(
+    `Rekening_Koran_${divisiTerpilih.toUpperCase()}.csv`,
+    ["REKENING KORAN KEUANGAN - RT 05 KAYEN", `Kategori: ${selectedText}`],
+    ["Tanggal", "Divisi", "Jenis", "Keterangan", "Nominal"],
+    rows,
+    ["TOTAL / SALDO AKHIR", "", "", "", totalNominal]
+  );
 };
 
-// 2. Fungsi Cetak / Simpan PDF Rekening Koran
 window.cetakPDFRekeningKoran = () => {
-  var selectDivisi = document.getElementById('filterDivisi');
-  var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
-  var selectedText = selectDivisi ? selectDivisi.options[selectDivisi.selectedIndex].text : 'Semua Divisi';
-  var saldoText = document.getElementById('saldo-kas')?.innerText || 'Rp 0';
+  const selectDivisi = document.getElementById('filterDivisi');
+  const divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
+  const selectedText = selectDivisi ? selectDivisi.options[selectDivisi.selectedIndex].text : 'Semua Divisi';
+  const saldoText = document.getElementById('saldo-kas')?.innerText || 'Rp 0';
 
-  // Filter data dari array dataKeuangan sesuai pilihan di dropdown
-  var dataFilter = (divisiTerpilih === 'semua')
+  const dataFilter = (divisiTerpilih === 'semua')
     ? dataKeuangan
     : dataKeuangan.filter(item => item.divisi && item.divisi.toLowerCase() === divisiTerpilih.toLowerCase());
 
@@ -2304,74 +2327,24 @@ window.cetakPDFRekeningKoran = () => {
     return;
   }
 
-  // Buat baris tabel HTML secara dinamis
-  var tableRows = '';
-dataFilter.forEach(item => {
-    var formattedNominal = Number(item.nominal || 0).toLocaleString('id-ID');
-    var warnaTeks = item.tipe === 'MASUK' ? '#16a34a' : '#dc2626';
-    tableRows += `
-      <tr>
-        <td>${escapeHTML(item.tgl || '-')}</td>
-        <td style="text-transform: capitalize;">${escapeHTML(item.divisi || '-')}</td>
-        <td style="font-weight: bold; color: ${warnaTeks};">${escapeHTML(item.tipe || '-')}</td>
-        <td>${escapeHTML(item.ket || '-')}</td>
-        <td style="text-align: right; font-weight: bold;">Rp ${formattedNominal}</td>
-      </tr>
-    `;
-  });
+  const rowsHTML = dataFilter.map(item => `
+    <tr>
+      <td>${escapeHTML(item.tgl || '-')}</td>
+      <td style="text-transform: capitalize;">${escapeHTML(item.divisi || '-')}</td>
+      <td style="font-weight: bold; color: ${item.tipe === 'MASUK' ? '#16a34a' : '#dc2626'};">${escapeHTML(item.tipe || '-')}</td>
+      <td>${escapeHTML(item.ket || '-')}</td>
+      <td class="text-right" style="font-weight: bold;">Rp ${Number(item.nominal || 0).toLocaleString('id-ID')}</td>
+    </tr>
+  `).join('');
 
-  // Buka jendela baru khusus cetak/PDF yang bersih
-  var printWindow = window.open('', '_blank', 'height=700,width=900');
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Rekening Koran - RT 05 Kayen</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 25px; color: #333; }
-          h2, h3 { margin: 0 0 5px 0; }
-          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
-          .subtitle { font-size: 13px; color: #555; margin-bottom: 15px; text-align: center; }
-          .saldo-box { background: #f0f9ff; border: 1px solid #0288d1; padding: 10px; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 14px; border-radius: 6px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
-          th { background: #f1f5f9; font-weight: bold; }
-          .text-right { text-align: right; }
-        </style>
-      </head>
-      <body>
-        <div class="header">
-          <h2>RT 05 KAYEN - REKENING KORAN KEUANGAN</h2>
-          <div class="subtitle">Kategori: <b>${selectedText}</b> | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-        </div>
-        <div class="saldo-box">
-          Saldo Saat Ini: ${saldoText}
-        </div>
-        <h3>Rincian Transaksi</h3>
-      <table>
-          <thead>
-            <tr>
-              <th>Tanggal</th>
-              <th>Divisi</th>
-              <th>Jenis</th>
-              <th>Keterangan</th>
-              <th class="text-right">Nominal</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${tableRows}
-          </tbody>
-        </table>
-      </body>
-    </html>
-  `);
-  
-  printWindow.document.close();
-  
-  // Berikan jeda sebentar agar konten selesai dimuat, lalu cetak
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 400);
+  cetakDokumenPDF({
+    title: 'Rekening Koran - RT 05 Kayen',
+    heading: 'RT 05 KAYEN - REKENING KORAN KEUANGAN',
+    subtitle: `Kategori: <b>${escapeHTML(selectedText)}</b> | Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+    boxInfo: `Saldo Saat Ini: ${saldoText}`,
+    headers: [{ label: 'Tanggal' }, { label: 'Divisi' }, { label: 'Jenis' }, { label: 'Keterangan' }, { label: 'Nominal', align: 'right' }],
+    rowsHTML
+  });
 };
 
 let isDenahOpen = false;
@@ -2916,111 +2889,50 @@ window.muatDataCatatanRonda = function() {
   }, { onlyOnce: true });
 };
 
-// Fungsi Unduh Excel untuk Catatan Malam Minggu
 window.exportCatatanRondaToCSV = function() {
-  const grid = document.getElementById('grid-catatan-ronda');
-  if (!grid) return;
-  
   const totalText = document.getElementById('total-catatan-ronda-Val')?.innerText || "Rp 0";
-  const refCatatan = window.firebaseRef(window.db, 'catatan_ronda');
-  
-  // Mengambil data langsung dari Firebase untuk diexport rapi ke CSV
-  window.firebaseGet(refCatatan).then((snapshot) => {
+  window.firebaseGet(window.firebaseRef(window.db, 'catatan_ronda')).then((snapshot) => {
     const dataObj = snapshot.val();
     if (!dataObj) return;
 
-    let csvContent = "\uFEFF";
-    csvContent += `"LAPORAN CATATAN KHUSUS MALAM MINGGU - RT 05"\n`;
-    csvContent += `"Total Keseluruhan: ${totalText}"\n\n`;
-    csvContent += `"Warga / Keterangan";"Nominal";"Tanggal"\n`;
+    const rows = Object.values(dataObj).filter(Boolean).map(item => [
+      item.warga || item.nama_warga || '-',
+      item.nominal || 0,
+      item.tanggal || '-'
+    ]);
 
-    Object.keys(dataObj).forEach(key => {
-      let item = dataObj[key];
-      if (item) {
-        let warga = (item.warga || item.nama_warga || '-').replace(/"/g, '""');
-        let nominal = item.nominal || 0;
-        let tgl = item.tanggal || '-';
-        csvContent += `"${warga}";"${nominal}";"${tgl}"\n`;
-      }
-    });
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.setAttribute("href", url);
-    link.setAttribute("download", `Catatan_Malam_Minggu_RT05.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    unduhFileCSV(
+      `Catatan_Malam_Minggu_RT05.csv`,
+      ["LAPORAN CATATAN KHUSUS MALAM MINGGU - RT 05", `Total Keseluruhan: ${totalText}`],
+      ["Warga / Keterangan", "Nominal", "Tanggal"],
+      rows
+    );
   });
 };
 
-// Fungsi Cetak PDF untuk Catatan Malam Minggu
 window.cetakLaporanCatatanRonda = function() {
-  const refCatatan = window.firebaseRef(window.db, 'catatan_ronda');
   const totalText = document.getElementById('total-catatan-ronda-Val')?.innerText || "Rp 0";
-
-  window.firebaseGet(refCatatan).then((snapshot) => {
+  window.firebaseGet(window.firebaseRef(window.db, 'catatan_ronda')).then((snapshot) => {
     const dataObj = snapshot.val();
     if (!dataObj) return;
 
-    let tableRows = '';
-Object.keys(dataObj).forEach(key => {
-      let item = dataObj[key];
-      if (item) {
-        let warga = escapeHTML(item.warga || item.nama_warga || '-');
-        let nominal = Number(item.nominal || 0).toLocaleString('id-ID');
-        let tgl = escapeHTML(item.tanggal || '-');
-        tableRows += `
-          <tr>
-            <td>${warga}</td>
-            <td>${tgl}</td>
-            <td style="text-align: right; font-weight: bold;">Rp ${nominal}</td>
-          </tr>
-        `;
-      }
-    });
+    const rowsHTML = Object.values(dataObj).filter(Boolean).map(item => `
+      <tr>
+        <td>${escapeHTML(item.warga || item.nama_warga || '-')}</td>
+        <td>${escapeHTML(item.tanggal || '-')}</td>
+        <td class="text-right" style="font-weight: bold;">Rp ${Number(item.nominal || 0).toLocaleString('id-ID')}</td>
+      </tr>
+    `).join('');
 
-    const printWindow = window.open('', '_blank', 'height=700,width=900');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Catatan Khusus Malam Minggu - RT 05 Kayen</title>
-          <style>
-            body { font-family: Arial, sans-serif; padding: 25px; color: #333; }
-            h2 { text-align: center; margin-bottom: 5px; color: #b45309; }
-            .subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 15px; }
-            .total-box { background: #f59e0b; color: white; padding: 10px; text-align: center; margin-bottom: 20px; font-weight: bold; font-size: 14px; border-radius: 6px; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-            th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
-            th { background: #f1f5f9; font-weight: bold; }
-            .text-right { text-align: right; }
-          </style>
-        </head>
-        <body>
-          <h2>RT 05 KAYEN - CATATAN KHUSUS MALAM MINGGU</h2>
-          <div class="subtitle">Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}</div>
-          <div class="total-box">TOTAL KESELURUHAN: ${totalText}</div>
-          <table>
-            <thead>
-              <tr>
-                <th>Warga / Rumah</th>
-                <th>Tanggal Dicatat</th>
-                <th class="text-right">Nominal</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${tableRows}
-            </tbody>
-          </table>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 400);
+    cetakDokumenPDF({
+      title: 'Catatan Khusus Malam Minggu - RT 05 Kayen',
+      heading: 'RT 05 KAYEN - CATATAN KHUSUS MALAM MINGGU',
+      subtitle: `Tanggal Cetak: ${new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`,
+      boxInfo: `TOTAL KESELURUHAN: ${totalText}`,
+      headers: [{ label: 'Warga / Rumah' }, { label: 'Tanggal Dicatat' }, { label: 'Nominal', align: 'right' }],
+      rowsHTML,
+      warnaUtama: '#f59e0b'
+    });
   });
 };
 
@@ -3032,9 +2944,8 @@ var arrayBulan = [];
 let isJimpitanLoaded = false;
 let modeJimpitan = 'harian'; 
 
-function teksAman(str) {
-  return str ? String(str).replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
-}
+const teksAman = escapeHTML;
+  
   function bersihkanNamaRumahJimpitan(str) {
   if (!str) return '-';
   const teks = String(str).trim();
@@ -3350,8 +3261,8 @@ window.switchModeJimpitan = function(mode) {
   renderDropdownTanggal();
 };
 
-// 1. Fungsi Unduh ke Excel (Format CSV) langsung dari Cache Data
-window.exportJimpitanToCSV = function() {
+// Helper internal ambil baris rekap jimpitan sesuai mode aktif
+function ambilDataEksporJimpitan() {
   const selectPeriode = document.getElementById('select-bulan-jimpitan');
   const keyTerpilih = selectPeriode ? selectPeriode.value : '';
   const namaPeriode = selectPeriode && selectPeriode.selectedIndex >= 0
@@ -3363,133 +3274,58 @@ window.exportJimpitanToCSV = function() {
 
   if (modeJimpitan === 'harian' && cacheDataHarian[keyTerpilih]) {
     totalNominal = cacheDataHarian[keyTerpilih].subtotal;
-    rows = cacheDataHarian[keyTerpilih].items.map(item => [
-      item.warga,
-      item.nominal
-    ]);
+    rows = cacheDataHarian[keyTerpilih].items.map(item => [item.warga, Number(item.nominal || 0)]);
   } else if (modeJimpitan === 'bulanan' && cacheDataBulanan[keyTerpilih]) {
     totalNominal = cacheDataBulanan[keyTerpilih].total;
     const rekap = cacheDataBulanan[keyTerpilih].rekapMalam;
     const urutanMalam = ['Malam Senin', 'Malam Selasa', 'Malam Rabu', 'Malam Kamis', 'Malam Jumat', 'Malam Sabtu', 'Malam Minggu'];
-    
     const daftarMalam = Object.keys(rekap).sort((a, b) => {
       const idxA = urutanMalam.indexOf(a);
       const idxB = urutanMalam.indexOf(b);
       return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
     });
-
-    rows = daftarMalam.map(malam => [
-      malam,
-      rekap[malam].subtotal
-    ]);
+    rows = daftarMalam.map(malam => [malam, Number(rekap[malam].subtotal || 0)]);
   }
 
+  return { namaPeriode, rows, totalNominal };
+}
+
+window.exportJimpitanToCSV = function() {
+  const { namaPeriode, rows, totalNominal } = ambilDataEksporJimpitan();
   if (rows.length === 0) {
     alert("Tidak ada data untuk diunduh pada periode ini.");
     return;
   }
 
-  let csvContent = "\uFEFF";
-  csvContent += `"LAPORAN REKAP JIMPITAN RT 05 KAYEN"\n`;
-  csvContent += `"Periode: ${namaPeriode.replace(/"/g, '""')}"\n`;
-  csvContent += `"Total Keseluruhan: Rp ${totalNominal.toLocaleString('id-ID')}"\n\n`;
-  csvContent += `"Nama Warga / Keterangan";"Nominal Jimpitan"\n`;
-
-  rows.forEach(([col1, col2]) => {
-    csvContent += `"${String(col1).replace(/"/g, '""')}";"${col2}"\n`;
-  });
-
-  csvContent += `\n"TOTAL KESELURUHAN";"${totalNominal}"\n`;
-
-  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`);
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  unduhFileCSV(
+    `Rekap_Jimpitan_${namaPeriode.replace(/[^a-zA-Z0-9]/g, '_')}.csv`,
+    ["LAPORAN REKAP JIMPITAN RT 05 KAYEN", `Periode: ${namaPeriode}`, `Total Keseluruhan: Rp ${totalNominal.toLocaleString('id-ID')}`],
+    ["Nama Warga / Keterangan", "Nominal Jimpitan"],
+    rows,
+    ["TOTAL KESELURUHAN", totalNominal]
+  );
 };
 
-// 2. Fungsi Cetak / Simpan ke PDF via Print Dialog Browser
 window.cetakLaporanJimpitan = function() {
-  const selectPeriode = document.getElementById('select-bulan-jimpitan');
-  const keyTerpilih = selectPeriode ? selectPeriode.value : '';
-  const namaPeriode = selectPeriode && selectPeriode.selectedIndex >= 0
-    ? selectPeriode.options[selectPeriode.selectedIndex].text
-    : "Rekap_Jimpitan";
-
-  let rows = [];
-  let totalNominal = 0;
-
-  if (modeJimpitan === 'harian' && cacheDataHarian[keyTerpilih]) {
-    totalNominal = cacheDataHarian[keyTerpilih].subtotal;
-    rows = cacheDataHarian[keyTerpilih].items.map(item => [
-      item.warga,
-      `Rp ${Number(item.nominal || 0).toLocaleString('id-ID')}`
-    ]);
-  } else if (modeJimpitan === 'bulanan' && cacheDataBulanan[keyTerpilih]) {
-    totalNominal = cacheDataBulanan[keyTerpilih].total;
-    const rekap = cacheDataBulanan[keyTerpilih].rekapMalam;
-    const urutanMalam = ['Malam Senin', 'Malam Selasa', 'Malam Rabu', 'Malam Kamis', 'Malam Jumat', 'Malam Sabtu', 'Malam Minggu'];
-    
-    const daftarMalam = Object.keys(rekap).sort((a, b) => {
-      const idxA = urutanMalam.indexOf(a);
-      const idxB = urutanMalam.indexOf(b);
-      return (idxA === -1 ? 99 : idxA) - (idxB === -1 ? 99 : idxB);
-    });
-
-    rows = daftarMalam.map(malam => [
-      malam,
-      `Rp ${Number(rekap[malam].subtotal || 0).toLocaleString('id-ID')}`
-    ]);
-  }
-
+  const { namaPeriode, rows, totalNominal } = ambilDataEksporJimpitan();
   if (rows.length === 0) {
     alert("Tidak ada data untuk dicetak pada periode ini.");
     return;
   }
 
-  const tableRowsHTML = rows.map(([col1, col2]) =>
-    `<tr><td>${escapeHTML(col1)}</td><td class="text-right">${escapeHTML(col2)}</td></tr>`
+  const rowsHTML = rows.map(([col1, col2]) =>
+    `<tr><td>${escapeHTML(col1)}</td><td class="text-right">Rp ${col2.toLocaleString('id-ID')}</td></tr>`
   ).join('');
 
-  const printWindow = window.open('', '_blank', 'height=700,width=900');
-  printWindow.document.write(`
-    <html>
-      <head>
-        <title>Laporan Rekap Jimpitan RT 05 Kayen</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 30px; color: #111; }
-          h2 { text-align: center; color: #0288d1; margin-bottom: 5px; font-size: 18px; }
-          .subtitle { text-align: center; font-size: 13px; color: #555; margin-bottom: 20px; }
-          .total-box { background: #10b981; color: white; padding: 12px; border-radius: 6px; text-align: center; font-weight: bold; margin-bottom: 20px; font-size: 15px; }
-          table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 12px; text-align: left; }
-          th { background-color: #f1f5f9; color: #1e293b; font-weight: bold; }
-          tr:nth-child(even) { background-color: #f8fafc; }
-          .text-right { text-align: right; }
-        </style>
-      </head>
-      <body>
-        <h2>RT 05 KAYEN - LAPORAN REKAP JIMPITAN</h2>
-        <div class="subtitle">Periode Laporan: ${escapeHTML(namaPeriode)}</div>
-        <div class="total-box">TOTAL KESELURUHAN: Rp ${totalNominal.toLocaleString('id-ID')}</div>
-        <table>
-          <thead><tr><th>Nama Warga / Keterangan / Malam</th><th class="text-right">Nominal (Rp)</th></tr></thead>
-          <tbody>${tableRowsHTML}</tbody>
-        </table>
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 600);
+  cetakDokumenPDF({
+    title: 'Laporan Rekap Jimpitan RT 05 Kayen',
+    heading: 'RT 05 KAYEN - LAPORAN REKAP JIMPITAN',
+    subtitle: `Periode Laporan: ${escapeHTML(namaPeriode)}`,
+    boxInfo: `TOTAL KESELURUHAN: Rp ${totalNominal.toLocaleString('id-ID')}`,
+    headers: [{ label: 'Nama Warga / Keterangan / Malam' }, { label: 'Nominal (Rp)', align: 'right' }],
+    rowsHTML,
+    warnaUtama: '#10b981'
+  });
 };
 
     const dataChangelog = [
