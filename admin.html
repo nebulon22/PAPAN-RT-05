@@ -27,11 +27,16 @@
   }
     #map { width: 100%; height: 100vh; }
     
-    #login-overlay {
-      position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: #111827; z-index: 9999; display: flex; flex-direction: column;
-      align-items: center; justify-content: center; color: white;
-    }
+html.has-session-token #login-overlay {
+  display: none !important;
+}
+
+#login-overlay {
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: #111827; z-index: 9999; display: flex; flex-direction: column;
+  align-items: center; justify-content: center; color: white;
+  view-transition-name: none;
+}
     .login-box {
       background: white; color: #111; padding: 30px 24px; border-radius: 16px;
       box-shadow: 0 10px 25px rgba(0,0,0,0.5); text-align: center; width: 80%; max-width: 320px;
@@ -200,7 +205,11 @@
     }
   </script>
 
-
+<script>
+    if (sessionStorage.getItem('rt05_session_token')) {
+      document.documentElement.classList.add('has-session-token');
+    }
+  </script>
 <div id="login-overlay">
   <div class="login-box">
     <h2>🔒 Akses Admin</h2>
@@ -1647,6 +1656,7 @@ function bersihkanStorageAdmin() {
   sessionStorage.removeItem('adminPin');
   sessionStorage.removeItem('rt05_session_token');
   sessionStorage.removeItem('rt05_admin_pin_aktif');
+  document.documentElement.classList.remove('has-session-token');
 }
 
 // 2. Eksekusi Login murni melalui Worker
@@ -3835,12 +3845,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     perbaruiIndikatorSyncAdmin();
   }
 
-  const sesiValid = await periksaSesiAdminViaWorker();
+  const adaToken = Boolean(sessionStorage.getItem('rt05_session_token'));
 
-  if (sesiValid) {
-    // Cukup panggil bukaAkses(), karena muatPeminjamanAdmin() & kirimDataPendingAdmin() sudah ada di dalamnya
+  if (adaToken) {
     bukaAkses();
+
+    const sesiValid = await periksaSesiAdminViaWorker();
+    if (!sesiValid) {
+      document.documentElement.classList.remove('has-session-token');
+      const overlay = document.getElementById('login-overlay');
+      if (overlay) overlay.style.display = 'flex';
+      document.body.style.overflow = 'hidden';
+      setTimeout(() => document.getElementById('adminPin')?.focus(), 200);
+    }
   } else {
+    document.documentElement.classList.remove('has-session-token');
     const overlay = document.getElementById('login-overlay');
     if (overlay) overlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
