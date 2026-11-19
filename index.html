@@ -228,10 +228,23 @@
   animation-play-state: paused;
 }
 
- .btn-info-rt {
+.btn-info-rt {
   background: linear-gradient(135deg, #9a3412, #7c2d12);
   color: #fef08a;
   border-color: #fb923c;
+  touch-action: manipulation;
+}
+
+/* Hanya untuk mouse/kursor di desktop */
+@media (hover: hover) and (pointer: fine) {
+  .btn-info-rt:hover .ticker-move {
+    animation-play-state: paused;
+  }
+}
+
+/* Dikontrol langsung saat tekan/tahan di PWA/HP */
+.btn-info-rt.is-paused .ticker-move {
+  animation-play-state: paused;
 }
 .btn-info-rt:hover .ticker-move,
 .btn-info-rt:active .ticker-move,
@@ -1792,20 +1805,23 @@ window.addEventListener('pageshow', function(event) {
     setPaused(true); // Langsung pause saat jari menyentuh box
   }, { passive: true });
 
-  function releaseTouch() {
-    const durasiSentuh = Date.now() - touchStartTime;
-    setPaused(false); // Langsung jalan lagi saat jari dilepas
-
-    if (durasiSentuh >= TAP_MAX_MS) {
-      wasHeld = true;
-      suppressNextClick = true;
-      setTimeout(() => {
-        suppressNextClick = false;
-      }, 60);
-    } else {
-      wasHeld = false;
-    }
+function releaseTouch() {
+  const durasiSentuh = Date.now() - touchStartTime;
+  btnInfo.classList.remove('is-paused');
+  if (typeof btnInfo.blur === 'function') {
+    btnInfo.blur();
   }
+
+  if (durasiSentuh >= TAP_MAX_MS) {
+    wasHeld = true;
+    suppressNextClick = true;
+    setTimeout(() => {
+      suppressNextClick = false;
+    }, 60);
+  } else {
+    wasHeld = false;
+  }
+}
 
   btnInfo.addEventListener('touchend', releaseTouch, { passive: true });
   btnInfo.addEventListener('touchcancel', releaseTouch, { passive: true });
