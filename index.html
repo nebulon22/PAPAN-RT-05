@@ -219,7 +219,6 @@
   padding-left: 100%;
   color: #ffffff;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
-  will-change: transform;
   animation: tickerBerjalan 16s linear infinite;
 }
 
@@ -230,27 +229,6 @@
   touch-action: manipulation;
 }
 
-/* Hover hanya aktif di PC (mouse), tidak nyangkut di layar sentuh PWA */
-@media (hover: hover) and (pointer: fine) {
-  .btn-info-rt:hover .ticker-move {
-    animation-play-state: paused;
-  }
-}
-
-/* Kontrol pause khusus saat disentuh/ditahan di HP/PWA */
-.btn-info-rt.is-paused .ticker-move {
-  animation-play-state: paused;
-}
-
-.btn-info-rt:hover .ticker-move,
-.btn-info-rt:active .ticker-move,
-.btn-info-rt:focus-visible .ticker-move {
-  animation-play-state: paused;
-}
-.btn-info-rt.is-paused .ticker-move {
-  animation-play-state: paused;
-}
-   
 @keyframes tickerBerjalan {
   0% {
     transform: translate3d(0, 0, 0);
@@ -1785,63 +1763,61 @@ window.addEventListener('pageshow', function(event) {
 //fungsi release touch panel info RT running text
 (function() {
   const btnInfo = document.getElementById('btnInfoRT');
-  if (!btnInfo) return;
+  const tickerEl = document.getElementById('preview-judul-info');
+  if (!btnInfo || !tickerEl) return;
 
   let touchStartTime = 0;
-  let wasHeld = false;
   let suppressNextClick = false;
-  const TAP_MAX_MS = 180;
+  const TAP_MAX_MS = 200;
 
-  function setPaused(paused) {
-    btnInfo.classList.toggle('is-paused', paused);
+  function setTickerPaused(paused) {
+    // Kendalikan langsung timeline animasi GPU di Chrome/Android
+    if (typeof tickerEl.getAnimations === 'function') {
+      const anims = tickerEl.getAnimations();
+      if (anims.length > 0) {
+        anims.forEach(anim => {
+          if (paused) anim.pause();
+          else anim.play();
+        });
+        return;
+      }
+    }
+    tickerEl.style.animationPlayState = paused ? 'paused' : 'running';
   }
 
+  // Cegah menu long-press Android memutus sentuhan saat tombol ditahan lama
+  btnInfo.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
+
+  // --- KONTROL SENTUH DI HP / PWA ---
   btnInfo.addEventListener('touchstart', () => {
     touchStartTime = Date.now();
-    wasHeld = false;
-    setPaused(true);
+    setTickerPaused(true);
   }, { passive: true });
 
-  function releaseTouch() {
-    const durasiSentuh = Date.now() - touchStartTime;
-    setPaused(false);
-    if (typeof btnInfo.blur === 'function') {
-      btnInfo.blur();
-    }
+  function handleTouchEnd() {
+    const durasi = Date.now() - touchStartTime;
+    setTickerPaused(false);
+    btnInfo.blur();
 
-    if (durasiSentuh >= TAP_MAX_MS) {
-      wasHeld = true;
+    if (durasi >= TAP_MAX_MS) {
       suppressNextClick = true;
-      setTimeout(() => {
-        suppressNextClick = false;
-      }, 60);
-    } else {
-      wasHeld = false;
+      setTimeout(() => { suppressNextClick = false; }, 100);
     }
   }
 
-  btnInfo.addEventListener('touchend', releaseTouch, { passive: true });
-  btnInfo.addEventListener('touchcancel', releaseTouch, { passive: true });
+  btnInfo.addEventListener('touchend', handleTouchEnd, { passive: true });
+  btnInfo.addEventListener('touchcancel', handleTouchEnd, { passive: true });
 
-  btnInfo.addEventListener('touchmove', (e) => {
-    if (!e.touches || !e.touches.length) return;
-    const t = e.touches[0];
-    const rect = btnInfo.getBoundingClientRect();
-    const diLuarBox =
-      t.clientX < rect.left ||
-      t.clientX > rect.right ||
-      t.clientY < rect.top ||
-      t.clientY > rect.bottom;
+  // --- KONTROL MOUSE DI PC ---
+  btnInfo.addEventListener('mouseenter', () => setTickerPaused(true));
+  btnInfo.addEventListener('mouseleave', () => setTickerPaused(false));
 
-    if (diLuarBox) {
-      setPaused(false);
-    }
-  }, { passive: true });
-
+  // --- KLIK SINGKAT BUKA HALAMAN INFO ---
   btnInfo.addEventListener('click', (e) => {
-    if (suppressNextClick || wasHeld) {
+    if (suppressNextClick) {
       suppressNextClick = false;
-      wasHeld = false;
       e.preventDefault();
       e.stopPropagation();
       return;
