@@ -1576,7 +1576,7 @@ async function kirimDataPendingAdmin() {
       console.log(`✅ ${idTerkirim.length} data dari antrean_admin berhasil disinkronkan.`);
 
       // Segarkan tampilan layar sesuai modul yang baru disinkronkan
-      if (typeof muatSemuaDataAdmin === 'function') await muatSemuaDataAdmin();
+      if (typeof muatSemuaDataAdmin === 'function') await muatSemuaDataAdmin(true);
       if (pathTerkirim.some(p => p.startsWith('peta_warga')) && typeof muatPinPetaAdmin === 'function') {
         muatPinPetaAdmin();
       }
@@ -1767,8 +1767,6 @@ function bukaAkses() {
     if (typeof window.mulaiPantauUsersAdmin === 'function') window.mulaiPantauUsersAdmin();
     
     if (typeof muatDataPetaUntukAdmin === 'function') muatDataPetaUntukAdmin();
-    if (typeof muatDataProgker === 'function') muatDataProgker();
-    if (typeof muatPeminjamanAdmin === 'function') muatPeminjamanAdmin();
     
     if (navigator.onLine && typeof kirimDataPendingAdmin === 'function') {
       kirimDataPendingAdmin();
@@ -1870,7 +1868,8 @@ document.getElementById('dataForm').addEventListener('submit', async function(e)
       sesuaikanFormKategori();
     }
     
-    muatSemuaDataAdmin();
+    await muatSemuaDataAdmin(true);
+    muatPinPetaAdmin(false);
 
   } catch (err) {
     btn.innerText = '💾 Simpan Data Lokasi';
@@ -1930,17 +1929,8 @@ function initMap() {
   muatPinPetaAdmin();
 }
 
-function muatPinPetaAdmin() {
-  const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
-
-  fetch(RT05_CONFIG.PETA_PROXY_URL, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${sessionToken}`,
-      'Content-Type': 'application/json'
-    }
-  })
-    .then(response => response.json())
+function muatPinPetaAdmin(forceRefresh = false) {
+  ambilDataWargaWorker(forceRefresh)
     .then(dataObj => {
       markerGroup.clearLayers();
       window.daftarPin = [];
@@ -2960,10 +2950,10 @@ async function simpanPerubahanWarga(event) {
     if (statusKirim === true) {
       alert('✅ Perubahan data lokasi berhasil disimpan!');
       if (typeof muatSemuaDataAdmin === 'function') {
-        await muatSemuaDataAdmin();
+        await muatSemuaDataAdmin(true);
       }
       if (typeof muatPinPetaAdmin === 'function') {
-        muatPinPetaAdmin();
+        muatPinPetaAdmin(false);
       }
     }
 
@@ -3064,8 +3054,13 @@ window.tutupModalEditWargaBaru = function() {
   if (modal) modal.style.display = 'none';
 };
 
-// 1. Helper terpusat untuk mengambil data peta_warga dengan Session Token
-async function ambilDataWargaWorker() {
+window.cachePetaWargaObj = null;
+// 1. Helper terpusat untuk mengambil data peta_warga dengan Session Token & Cache Memori
+async function ambilDataWargaWorker(forceRefresh = false) {
+  if (!forceRefresh && window.cachePetaWargaObj) {
+    return window.cachePetaWargaObj;
+  }
+
   const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
   const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, {
     method: 'GET',
@@ -3082,7 +3077,12 @@ async function ambilDataWargaWorker() {
     return null;
   }
 
-  return await response.json();
+  if (!response.ok) {
+    throw new Error(`HTTP error status: ${response.status}`);
+  }
+
+  window.cachePetaWargaObj = await response.json();
+  return window.cachePetaWargaObj;
 }
 
 async function exportSensusToCSV() {
@@ -3228,33 +3228,9 @@ let listSemuaRumahAdmin = [];
 // ==========================================
 // 1. MEMUAT DATA ADMIN SECARA KONSISTEN
 // ==========================================
-async function muatSemuaDataAdmin() {
+async function muatSemuaDataAdmin(forceRefresh = false) {
     try {
-        // 🌟 1. Ambil sessionToken aktif dari sessionStorage
-        const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
-
-        // 🌟 2. Sertakan header Authorization Bearer agar Worker mengenali sesi admin & memberikan 100% data (termasuk yang Hidden)
-        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, {
-            method: 'GET',
-            headers: {
-                'Authorization': `Bearer ${sessionToken}`,
-                'Content-Type': 'application/json'
-            }
-        });
-
-        // Jika sesi ditolak / kedaluwarsa, bersihkan & kunci ulang halaman
-        if (response.status === 401 || response.status === 403) {
-            if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-            alert('⚠️ Sesi admin telah berakhir. Silakan login kembali.');
-            location.reload();
-            return;
-        }
-
-        if (!response.ok) {
-            throw new Error(`HTTP error status: ${response.status}`);
-        }
-
-        const dataObj = await response.json();
+        const dataObj = await ambilDataWargaWorker(forceRefresh);
 
         globalDataWarga = [];
         listSemuaRumahAdmin = [];
@@ -3378,12 +3354,7 @@ async function cariDetailKeluargaAdmin() {
     }
 
     try {
-        // 1. Sertakan token admin agar rumah dengan status Hidden: true tetap terbaca
-        const sessionToken = sessionStorage.getItem('rt05_session_token');
-        const headers = sessionToken ? { 'Authorization': `Bearer ${sessionToken}` } : {};
-        
-        const response = await fetch(RT05_CONFIG.PETA_PROXY_URL, { headers });
-        const dataObj = await response.json();
+        const dataObj = await ambilDataWargaWorker(false);
 
         if (!dataObj) {
             throw new Error("Data kosong dari server.");
@@ -4010,44 +3981,15 @@ window.switchTabKeuangan = function(targetTab) {
   }
 };
 
-// 3. Perbaikan muatDataKelolaKeuanganAdmin agar 100% via Worker (bukan Firebase SDK)
+// 3. Perbaikan muatDataKelolaKeuanganAdmin via apiAdminWorker
 window.muatDataKelolaKeuanganAdmin = async function() {
   const tbody = document.getElementById('tabel-kelola-keuangan-admin');
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-
-  if (!sessionToken) {
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">⚠️ Sesi admin habis.</td></tr>';
-    return;
-  }
-
   if (tbody) {
     tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:#888;">⏳ Memuat data keuangan...</td></tr>';
   }
 
   try {
-    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: "keuangan",
-        method: "GET"
-      })
-    });
-
-    const hasil = await response.json();
-
-    if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
-    }
-
-    const dataObj = hasil.result !== undefined ? hasil.result : hasil.data;
+    const dataObj = await apiAdminWorker("keuangan", "GET");
     cacheDataKeuanganAdmin = [];
 
     if (!dataObj) {
@@ -4063,8 +4005,10 @@ window.muatDataKelolaKeuanganAdmin = async function() {
 
     renderTabelKelolaAdmin(cacheDataKeuanganAdmin);
   } catch (err) {
-    console.error("Gagal memuat data keuangan via Worker:", err);
-    if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">❌ Gagal memuat data dari server.</td></tr>';
+    if (err.message !== 'SESSION_EXPIRED') {
+      console.error("Gagal memuat data keuangan:", err);
+      if (tbody) tbody.innerHTML = '<tr><td colspan="4" style="text-align:center; padding:15px; color:red;">❌ Gagal memuat data dari server.</td></tr>';
+    }
   }
 };
 // Render baris tabel daftar keuangan
@@ -4218,9 +4162,6 @@ window.tutupModalEditAdmin = function() {
 // 1. HELPER AMBIL PIN VIA WORKER & MODAL GANTI PIN
 // =========================================================================
 async function ambilDaftarPinTerbaru() {
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) return {};
-
   const bacaCachePin = () => {
     try {
       const raw = sessionStorage.getItem('rt05_cache_pin_divisi');
@@ -4230,48 +4171,21 @@ async function ambilDaftarPinTerbaru() {
     }
   };
 
-  // Jika sedang offline, gunakan cache PIN terakhir di sesi ini
-  if (!navigator.onLine) {
-    return bacaCachePin();
-  }
+  if (!navigator.onLine) return bacaCachePin();
 
   try {
-    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: "konfigurasi/pin_divisi",
-        method: "GET"
-      })
-    });
-
-    const hasil = await response.json();
-
-    if (response.status === 401 || hasil.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return {};
-    }
-
-    const dataPinDb = hasil.result !== undefined ? hasil.result : hasil.data;
-
-    if (response.ok && hasil.success && dataPinDb && typeof dataPinDb === 'object') {
+    const dataPinDb = await apiAdminWorker("konfigurasi/pin_divisi", "GET", null, { silent: true });
+    if (dataPinDb && typeof dataPinDb === 'object') {
       const normalizedPins = {};
       for (const [key, val] of Object.entries(dataPinDb)) {
         normalizedPins[key.toLowerCase().trim()] = String(val);
       }
-      // Simpan ke sessionStorage sebagai cadangan saat sinyal terputus
       sessionStorage.setItem('rt05_cache_pin_divisi', JSON.stringify(normalizedPins));
       return normalizedPins;
     }
   } catch (err) {
+    if (err.message === 'SESSION_EXPIRED') return {};
     console.warn("Gagal mengambil data PIN dari server, memakai cache sesi:", err);
-    return bacaCachePin();
   }
 
   return bacaCachePin();
@@ -4294,45 +4208,14 @@ window.prosesGantiPinDivisi = async function() {
   const pinBaru = document.getElementById('inputPinBaru').value.trim();
   const konfirmasiPin = document.getElementById('inputKonfirmasiPinBaru').value.trim();
 
-  if (!divisiKey) {
-    alert("⚠️ Mohon pilih divisi terlebih dahulu!");
-    return;
-  }
-
-  if (!pinLama || !pinBaru || !konfirmasiPin) {
-    alert("⚠️ Mohon isi PIN lama, PIN baru, dan konfirmasi PIN baru!");
-    return;
-  }
-
-  // Disamakan menjadi tepat 6 digit angka agar sesuai dengan maxlength="6" di form laporan
-  if (!/^\d{6}$/.test(pinBaru)) {
-    alert("⚠️ PIN baru harus berupa tepat 6 digit angka!");
-    return;
-  }
-
-  if (pinBaru !== konfirmasiPin) {
-    alert("❌ Konfirmasi PIN baru tidak cocok!");
-    return;
-  }
-
-  if (pinBaru === pinLama) {
-    alert("⚠️ PIN baru tidak boleh sama dengan PIN lama!");
-    return;
-  }
-
-  const sessionToken = sessionStorage.getItem('rt05_session_token');
-  if (!sessionToken) {
-    alert("⚠️ Sesi admin habis. Silakan login ulang.");
-    if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-    window.location.reload();
-    return;
-  }
+  if (!divisiKey) return alert("⚠️ Mohon pilih divisi terlebih dahulu!");
+  if (!pinLama || !pinBaru || !konfirmasiPin) return alert("⚠️ Mohon isi PIN lama, PIN baru, dan konfirmasi PIN baru!");
+  if (!/^\d{6}$/.test(pinBaru)) return alert("⚠️ PIN baru harus berupa tepat 6 digit angka!");
+  if (pinBaru !== konfirmasiPin) return alert("❌ Konfirmasi PIN baru tidak cocok!");
+  if (pinBaru === pinLama) return alert("⚠️ PIN baru tidak boleh sama dengan PIN lama!");
 
   const btn = document.getElementById('btnSimpanPinBaru');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerText = "⏳ Memverifikasi...";
-  }
+  if (btn) { btn.disabled = true; btn.innerText = "⏳ Memverifikasi..."; }
 
   try {
     const daftarPinSaatIni = await ambilDaftarPinTerbaru();
@@ -4341,52 +4224,24 @@ window.prosesGantiPinDivisi = async function() {
       return;
     }
 
-    const pinLamaValid = String(daftarPinSaatIni[divisiKey] || "");
-
-    if (pinLama !== pinLamaValid) {
+    if (pinLama !== String(daftarPinSaatIni[divisiKey] || "")) {
       alert("❌ PIN lama untuk divisi tersebut salah!");
       return;
     }
 
     if (btn) btn.innerText = "⏳ Menyimpan PIN...";
-    const responseProxy = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify({
-        sessionToken: sessionToken,
-        path: "konfigurasi/pin_divisi",
-        method: "PATCH",
-        data: {
-          [divisiKey]: pinBaru
-        }
-      })
-    });
+    await apiAdminWorker("konfigurasi/pin_divisi", "PATCH", { [divisiKey]: pinBaru });
 
-    const hasilProxy = await responseProxy.json();
-
-    if (responseProxy.status === 401 || hasilProxy.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert("⚠️ Sesi telah kedaluwarsa. Silakan login ulang.");
-      window.location.reload();
-      return;
-    }
-
-    if (!responseProxy.ok || !hasilProxy.success) {
-      throw new Error(hasilProxy.error || hasilProxy.message || "Gagal memperbarui PIN di server.");
-    }
+    // Perbarui cache PIN di sesi ini agar langsung sinkron
+    daftarPinSaatIni[divisiKey] = pinBaru;
+    sessionStorage.setItem('rt05_cache_pin_divisi', JSON.stringify(daftarPinSaatIni));
 
     alert(`✅ PIN untuk divisi "${divisiKey.toUpperCase()}" berhasil diubah!`);
     window.tutupModalGantiPin();
   } catch (err) {
-    alert("❌ Gagal mengganti PIN: " + err.message);
+    if (err.message !== 'SESSION_EXPIRED') alert("❌ Gagal mengganti PIN: " + err.message);
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = "Simpan PIN Baru";
-    }
+    if (btn) { btn.disabled = false; btn.innerText = "Simpan PIN Baru"; }
   }
 };
 // =========================================================================
@@ -5285,60 +5140,13 @@ function bukaTabAdmin(tabName) {
   </script>
 
 <script type="module">
-  import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
+  const db = window.db;
+  const ref = window.firebaseRef;
+  const onValue = window.firebaseOnValue;
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
-    authDomain: "papan05-21a56.firebaseapp.com",
-    databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "papan05-21a56",
-    storageBucket: "papan05-21a56.firebasestorage.app",
-    messagingSenderId: "1068108426437",
-    appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
-  };
-
-  const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  const db = getDatabase(app, firebaseConfig.databaseURL);
-
-  // Helper kirim perintah manajemen user via Cloudflare Admin Worker
-  async function kirimAksiUserViaWorker(pathTujuan, metodeHttp, payloadData = null) {
-    const sessionToken = sessionStorage.getItem('rt05_session_token');
-    if (!sessionToken) {
-      alert('⚠️ Sesi admin habis. Silakan login ulang.');
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      window.location.reload();
-      throw new Error('SESSION_EXPIRED');
-    }
-
-    const bodyReq = {
-      sessionToken: sessionToken,
-      path: pathTujuan,
-      method: metodeHttp
-    };
-    if (payloadData !== null) bodyReq.data = payloadData;
-
-    const res = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${sessionToken}`
-      },
-      body: JSON.stringify(bodyReq)
-    });
-
-    const hasil = await res.json();
-    if (res.status === 401 || hasil.code === 'SESSION_EXPIRED') {
-      if (typeof bersihkanStorageAdmin === 'function') bersihkanStorageAdmin();
-      alert('⚠️ Sesi telah kedaluwarsa. Silakan login ulang.');
-      window.location.reload();
-      throw new Error('SESSION_EXPIRED');
-    }
-
-    if (!res.ok || !hasil.success) {
-      throw new Error(hasil.error || hasil.message || 'Gagal memproses permintaan di server.');
-    }
-    return hasil;
+  // Helper kirim perintah manajemen user via apiAdminWorker
+async function kirimAksiUserViaWorker(pathTujuan, metodeHttp, payloadData = null) {
+    return await apiAdminWorker(pathTujuan, metodeHttp, payloadData);
   }
 
   let isPantauUsersAktif = false;
