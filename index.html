@@ -1777,63 +1777,59 @@ window.addEventListener('pageshow', function(event) {
   const btnInfo = document.getElementById('btnInfoRT');
   if (!btnInfo) return;
 
-  const HOLD_THRESHOLD_MS = 220; // Tahan >= 220ms dianggap mode baca (pause saja)
-  let holdTimer = null;
-  let isHoldMode = false;
+  let touchStartTime = 0;
+  let wasHeld = false;
   let suppressNextClick = false;
+  const TAP_MAX_MS = 180; // Sentuh sangat singkat (<180ms) dianggap tap buka halaman
 
   function setPaused(paused) {
     btnInfo.classList.toggle('is-paused', paused);
   }
 
-  function clearHoldTimer() {
-    if (holdTimer !== null) {
-      clearTimeout(holdTimer);
-      holdTimer = null;
-    }
-  }
+  btnInfo.addEventListener('touchstart', () => {
+    touchStartTime = Date.now();
+    wasHeld = false;
+    setPaused(true); // Langsung pause saat jari menyentuh box
+  }, { passive: true });
 
-  function startPress() {
-    clearHoldTimer();
-    isHoldMode = false;
-    holdTimer = setTimeout(() => {
-      isHoldMode = true;
+  function releaseTouch() {
+    const durasiSentuh = Date.now() - touchStartTime;
+    setPaused(false); // Langsung jalan lagi saat jari dilepas
+
+    if (durasiSentuh >= TAP_MAX_MS) {
+      wasHeld = true;
       suppressNextClick = true;
-      setPaused(true);
-    }, HOLD_THRESHOLD_MS);
-  }
-
-  function endPress() {
-    clearHoldTimer();
-    if (isHoldMode) {
-      // Lepas setelah mode tahan/baca: lanjutkan jalan dan jangan buka halaman
-      setPaused(false);
-      isHoldMode = false;
       setTimeout(() => {
         suppressNextClick = false;
-      }, 50);
+      }, 60);
+    } else {
+      wasHeld = false;
     }
   }
 
-  // Sentuh layar (HP / Tablet)
-  btnInfo.addEventListener('touchstart', startPress, { passive: true });
-  btnInfo.addEventListener('touchend', endPress, { passive: true });
-  btnInfo.addEventListener('touchcancel', endPress, { passive: true });
+  btnInfo.addEventListener('touchend', releaseTouch, { passive: true });
+  btnInfo.addEventListener('touchcancel', releaseTouch, { passive: true });
 
-  // Klik / tahan mouse (Desktop)
-  btnInfo.addEventListener('mousedown', (e) => {
-    if (e.button === 0) startPress();
-  });
-  btnInfo.addEventListener('mouseup', endPress);
-  btnInfo.addEventListener('mouseleave', () => {
-    if (isHoldMode) endPress();
-    else clearHoldTimer();
-  });
+  // Kalau jari digeser keluar dari box sambil ditahan, lepaskan pause
+  btnInfo.addEventListener('touchmove', (e) => {
+    if (!e.touches || !e.touches.length) return;
+    const t = e.touches[0];
+    const rect = btnInfo.getBoundingClientRect();
+    const diLuarBox =
+      t.clientX < rect.left ||
+      t.clientX > rect.right ||
+      t.clientY < rect.top ||
+      t.clientY > rect.bottom;
 
-  // Tangani klik: buka halaman jika tap singkat, batalkan jika habis tahan lama
+    if (diLuarBox) {
+      setPaused(false);
+    }
+  }, { passive: true });
+
   btnInfo.addEventListener('click', (e) => {
-    if (suppressNextClick) {
+    if (suppressNextClick || wasHeld) {
       suppressNextClick = false;
+      wasHeld = false;
       e.preventDefault();
       e.stopPropagation();
       return;
