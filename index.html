@@ -2069,12 +2069,20 @@ function filterKategori(kat, btnElement) {
   });
 }
 
+let isKeuanganListenerAktif = false;
+
 window.muatDataKeuangan = function() {
+  if (isKeuanganListenerAktif) {
+    if (typeof tampilkanRekeningKoran === 'function') tampilkanRekeningKoran();
+    return;
+  }
+
   if (typeof window.firebaseRef !== 'function' || !window.db) {
     setTimeout(window.muatDataKeuangan, 50);
     return;
   }
 
+  isKeuanganListenerAktif = true;
   const keuanganRef = window.firebaseRef(window.db, "keuangan");
 
   window.firebaseOnValue(keuanganRef, (snapshot) => {
@@ -3038,10 +3046,18 @@ function teksAman(str) {
 }
 
 window.muatDataJimpitan = function() {
+  if (isJimpitanLoaded) {
+    setupToggleJimpitan();
+    renderDropdownTanggal();
+    return;
+  }
+
   if (typeof window.firebaseRef !== 'function' || !window.db) {
     setTimeout(window.muatDataJimpitan, 50);
     return;
   }
+
+  isJimpitanLoaded = true;
 
   var gridContainer = document.getElementById('grid-jimpitan');
   if (gridContainer) {
@@ -3140,6 +3156,7 @@ window.muatDataJimpitan = function() {
     setupToggleJimpitan();
     renderDropdownTanggal();
   }, (error) => {
+    isJimpitanLoaded = false;
     console.error("Gagal memuat rekap jimpitan dari Firebase:", error);
     if (gridContainer) {
       gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data dari Firebase.</div>';
