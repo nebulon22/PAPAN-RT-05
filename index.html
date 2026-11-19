@@ -204,12 +204,6 @@
     border-color: #00c853;
   }
 
-  .btn-info-rt {
-    background: #ff9800;
-    color: white;
-    border-color: #f57c00;
-  }
-
 .ticker-wrap {
   width: 100%;
   overflow: hidden;
@@ -223,12 +217,16 @@
   display: inline-block;
   white-space: nowrap;
   padding-left: 100%;
-  animation: tickerBerjalan 18s linear infinite;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+  animation: tickerBerjalan 16s linear infinite;
 }
 
-.ticker-wrap:hover .ticker-move,
-.ticker-wrap:active .ticker-move {
-  animation-play-state: paused;
+.btn-info-rt {
+  background: linear-gradient(135deg, #9a3412, #7c2d12);
+  color: #fef08a;
+  border-color: #fb923c;
+  touch-action: manipulation;
 }
 
 @keyframes tickerBerjalan {
@@ -239,10 +237,12 @@
     transform: translate3d(-100%, 0, 0);
   }
 }
-   @media (prefers-reduced-motion: reduce) {
+
+@media (prefers-reduced-motion: reduce) {
   .ticker-move {
     animation: none;
     padding-left: 0;
+    white-space: normal;
   }
 }
    
@@ -555,6 +555,38 @@
     object-fit: contain !important;
     transition: transform 0.3s ease !important;
   }
+   /* Matikan seleksi teks & menu tahan lama pada seluruh tombol, link UI, dan ikon */
+button,
+a.btn-back-floating,
+.btn-filter,
+.btn-qr-floating,
+#floating-chat-btn,
+#btn-senter-ronda,
+#top-panel,
+#top-panel * {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* Mencegah gambar/ikon di dalam tombol memicu menu "Salin Gambar / URL" */
+button img,
+.btn-qr-floating img,
+button i,
+a i {
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+/* Tetap izinkan seleksi teks di kolom pencarian & form input */
+input,
+textarea,
+select {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  -webkit-touch-callout: default !important;
+}
 </style>
 </head>
 <body>
@@ -610,23 +642,23 @@
     </div>
     
 <div class="filter-container">
-  <!-- BARIS 1: KARTU LIVE INFO RT (FULL WIDTH) -->
-<button type="button" onclick="bukaInfoSmooth(event, 'pengumuman.html')" 
-   style="width: 100%; display: flex; align-items: center; justify-content: space-between; background: linear-gradient(135deg, #f97316, #ea580c); color: white; padding: 8px 12px; border-radius: 12px; text-align: left; cursor: pointer; box-shadow: 0 4px 10px rgba(234, 88, 12, 0.35); border: 1px solid rgba(255,255,255,0.25); transition: transform 0.1s ease; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
-  <div style="display: flex; align-items: center; gap: 8px; overflow: hidden; min-width: 0; flex: 1;">
-    <span style="font-size: 16px; flex-shrink: 0;">📢</span>
-    <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1;">
-      <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; opacity: 0.9;">
+<!-- BARIS 1: KARTU LIVE INFO RT (FULL WIDTH) -->
+<button type="button" id="btnInfoRT" class="btn-info-rt"
+   style="width: 100%; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 9px 12px; border-radius: 12px; text-align: left; cursor: pointer; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.32); border-width: 1px; border-style: solid; transition: transform 0.1s ease; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
+  <div style="display: flex; align-items: center; gap: 9px; overflow: hidden; min-width: 0; flex: 1;">
+    <span style="font-size: 17px; flex-shrink: 0;">📢</span>
+    <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1; gap: 2px;">
+      <span style="font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;">
         INFO & PENGUMUMAN RT
       </span>
       <div class="ticker-wrap">
-        <span id="preview-judul-info" class="ticker-move" style="font-size: 12px; font-weight: bold;">
+        <span id="preview-judul-info" class="ticker-move" style="font-size: 12.5px; font-weight: 700;">
           Memuat info & program kerja RT...
         </span>
       </div>
     </div>
   </div>
-  <span id="badge-count" class="badge-count" style="display:none; background: #111827; color: #fbbf24; font-size: 11px; padding: 3px 8px; border-radius: 12px; flex-shrink: 0; margin-left: 8px;">0</span>
+  <span id="badge-count" class="badge-count" style="display:none; background: #facc15; color: #0f172a; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 12px; flex-shrink: 0; margin-left: 8px;">0</span>
 </button>
 
   <!-- BARIS 2: KEUANGAN & JIMPITAN -->
@@ -1760,6 +1792,75 @@ window.addEventListener('pageshow', function(event) {
   document.body.style.opacity = "1";
   document.body.style.transform = "none";
 });
+//fungsi release touch panel info RT running text
+(function() {
+  const btnInfo = document.getElementById('btnInfoRT');
+  const tickerEl = document.getElementById('preview-judul-info');
+  if (!btnInfo || !tickerEl) return;
+
+  let touchStartTime = 0;
+  let suppressNextClick = false;
+  const TAP_MAX_MS = 200;
+
+  function setTickerPaused(paused) {
+    // Kendalikan langsung timeline animasi GPU di Chrome/Android
+    if (typeof tickerEl.getAnimations === 'function') {
+      const anims = tickerEl.getAnimations();
+      if (anims.length > 0) {
+        anims.forEach(anim => {
+          if (paused) anim.pause();
+          else anim.play();
+        });
+        return;
+      }
+    }
+    tickerEl.style.animationPlayState = paused ? 'paused' : 'running';
+  }
+
+  // Cegah menu long-press Android memutus sentuhan saat tombol ditahan lama
+  btnInfo.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+  });
+
+  // --- KONTROL SENTUH DI HP / PWA ---
+  btnInfo.addEventListener('touchstart', () => {
+    touchStartTime = Date.now();
+    setTickerPaused(true);
+  }, { passive: true });
+
+  function handleTouchEnd() {
+    const durasi = Date.now() - touchStartTime;
+    setTickerPaused(false);
+    btnInfo.blur();
+
+    if (durasi >= TAP_MAX_MS) {
+      suppressNextClick = true;
+      setTimeout(() => { suppressNextClick = false; }, 100);
+    }
+  }
+
+  btnInfo.addEventListener('touchend', handleTouchEnd, { passive: true });
+  btnInfo.addEventListener('touchcancel', handleTouchEnd, { passive: true });
+
+  // --- KONTROL MOUSE DI PC ---
+  btnInfo.addEventListener('mouseenter', () => setTickerPaused(true));
+  btnInfo.addEventListener('mouseleave', () => setTickerPaused(false));
+
+  // --- KLIK SINGKAT BUKA HALAMAN INFO ---
+  btnInfo.addEventListener('click', (e) => {
+    if (suppressNextClick) {
+      suppressNextClick = false;
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    if (typeof bukaInfoSmooth === 'function') {
+      bukaInfoSmooth(e, 'pengumuman.html');
+    } else {
+      window.location.href = 'pengumuman.html';
+    }
+  });
+})();
   
 function muatBadgeInfoRT() {
   if (typeof window.firebaseRef !== 'function' || !window.db) {
@@ -3748,6 +3849,16 @@ window.simpanWargaBaru = async function() {
     alert('❌ Gagal menyimpan data: ' + err.message);
   }
 };
+  document.addEventListener('contextmenu', function(e) {
+  const tag = e.target.tagName;
+  // Tetap izinkan klik tahan (paste/copy) pada kolom ketik & form
+  if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+
+  // Blokir popup salin/URL jika yang ditahan adalah tombol, link, ikon, atau gambar
+  if (e.target.closest('button, a, img, #top-panel, .modal-header')) {
+    e.preventDefault();
+  }
+});
   // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
 if (document.readyState === 'complete') {
     initPetaDanData();
