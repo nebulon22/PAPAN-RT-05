@@ -488,18 +488,19 @@ function deteksiKategoriInfo(judul, detail) {
       return selisihHari >= 0 && selisihHari <= 4;
     }
 
-    function bagikanInfoWarga(index) {
+function bagikanInfoWarga(index) {
       const item = daftarPengumuman[index];
       if (!item) return;
-      const teksShare = `*${item.judul}*\n📅 ${item.tanggal}${item.lokasi ? '\n📍 ' + item.lokasi : ''}\n\n${item.detail}\n\n— Papan Info RT 05 Kayen`;
 
-      if (navigator.share) {
-        navigator.share({ title: item.judul, text: teksShare }).catch(() => {});
-      } else if (navigator.clipboard) {
-        navigator.clipboard.writeText(teksShare).then(() => {
-          alert('Info disalin! Siap ditempel ke grup WA.');
-        });
-      }
+      const teksShare =
+        `📢 *INFO RT 05 KAYEN*\n` +
+        `*${item.judul}*\n` +
+        (item.tanggal ? `📅 ${item.tanggal}\n` : '') +
+        (item.lokasi ? `📍 Lokasi: ${item.lokasi}\n` : '') +
+        `\n${item.detail}`;
+
+      const waUrl = `https://wa.me/?text=${encodeURIComponent(teksShare)}`;
+      window.open(waUrl, '_blank');
     }
     
 function renderPengumumanUI() {
@@ -532,6 +533,17 @@ function renderPengumumanUI() {
           }
         }
 
+        let htmlLokasi = '';
+        if (info.lokasi) {
+          const isUrl = /^https?:\/\//i.test(info.lokasi.trim());
+          const hrefLokasi = isUrl
+            ? escapeHTML(info.lokasi.trim())
+            : `index.html?lokasi=${encodeURIComponent(info.lokasi.trim())}`;
+          const targetAttr = isUrl ? 'target="_blank" rel="noopener"' : '';
+
+          htmlLokasi = `<a href="${hrefLokasi}" ${targetAttr} class="chip-lokasi" style="text-decoration: none; cursor: pointer;">📍 ${escapeHTML(info.lokasi)} ↗</a>`;
+        }
+
         const kategori = deteksiKategoriInfo(info.judul, info.detail);
         const isBaru = cekInfoBaru(info.tanggal);
 
@@ -545,11 +557,11 @@ function renderPengumumanUI() {
               <span class="badge-kategori">${kategori.label}</span>
             </div>
             <div class="judul">${escapeHTML(info.judul)}</div>
-            ${info.lokasi ? `<div class="chip-lokasi">📍 ${escapeHTML(info.lokasi)}</div>` : ''}
+            ${htmlLokasi}
             <div class="detail">${escapeHTML(info.detail)}</div>
             ${htmlFoto}
             <div class="card-footer-wa">
-              <button type="button" class="btn-share-wa" onclick="bagikanInfoWarga(${index})">📤 Bagikan ke WA</button>
+              <button type="button" class="btn-share-wa" onclick="bagikanInfoWarga(${index})">💬 Kirim ke WA</button>
             </div>
           </div>
         `;
