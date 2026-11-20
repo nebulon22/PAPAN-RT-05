@@ -1257,9 +1257,9 @@ html.has-session-token #login-overlay {
           <textarea id="pengumumanDetail" rows="2" placeholder="Ketik rincian acara..." style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; resize: vertical;"></textarea>
         </div>
 
-        <div class="form-group" style="margin-bottom: 8px; position: relative;">
-          <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Ketik Nama Warga / Pilih):</label>
-          <input type="text" id="pengumumanLokasi" placeholder="Ketik nama warga (misal: Bejo)..." autocomplete="off" oninput="cariLokasiPengumuman(this.value)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
+<div class="form-group" style="margin-bottom: 8px; position: relative;">
+          <label for="pengumumanLokasi" style="font-size: 11px; font-weight: bold;">Lokasi (Ketik Nama Warga atau Tempel Link GMaps):</label>
+          <input type="text" id="pengumumanLokasi" placeholder="Nama warga / Pos Ronda / https://maps.app.goo.gl/..." autocomplete="off" oninput="cariLokasiPengumuman(this.value)" style="width: 100%; padding: 6px; font-size: 12px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;">
           <div id="hasilPencarianLokasi" style="display: none; position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ccc; border-radius: 4px; max-height: 140px; overflow-y: auto; z-index: 1050; box-shadow: 0 4px 6px rgba(0,0,0,0.1);"></div>
           <input type="hidden" id="pengumumanLat" value="">
           <input type="hidden" id="pengumumanLng" value="">
@@ -4599,7 +4599,7 @@ window.muatDaftarPengumumanAdmin = async function() {
 
     keys.sort((a, b) => (data[b]?.timestamp || data[b]?.createdAt || 0) - (data[a]?.timestamp || data[a]?.createdAt || 0));
 
-    tbody.innerHTML = keys.map(id => {
+tbody.innerHTML = keys.map(id => {
       const item = data[id];
       if (!item) return '';
       const isArsip = String(item.status || '').toUpperCase() === 'ARSIP' || item.arsip === true;
@@ -4608,11 +4608,15 @@ window.muatDaftarPengumumanAdmin = async function() {
         ? `<button type="button" onclick="toggleStatusPengumuman('${escapeHTML(id)}', '${statusBerikutnya}')" title="Klik untuk aktifkan kembali" style="background:#f3f4f6; color:#4b5563; border:1px solid #d1d5db; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer;">📦 Arsip</button>`
         : `<button type="button" onclick="toggleStatusPengumuman('${escapeHTML(id)}', '${statusBerikutnya}')" title="Klik untuk arsipkan" style="background:#dcfce7; color:#15803d; border:1px solid #86efac; padding:2px 6px; border-radius:4px; font-size:10px; font-weight:bold; cursor:pointer;">🟢 Aktif</button>`;
 
+      const teksLokasiAdmin = item.lokasi
+        ? (item.lokasi.includes('|') ? item.lokasi.split('|')[0].trim() : (/^https?:\/\//i.test(item.lokasi) ? 'Link Google Maps' : item.lokasi))
+        : '';
+
       return `
         <tr style="border-bottom: 1px solid #e5e7eb;">
           <td style="padding: 8px 6px;">
             <div style="font-weight: bold; color: #1e293b;">${escapeHTML(item.judul || '(Tanpa Judul)')}</div>
-            <div style="font-size: 10.5px; color: #64748b;">📅 ${escapeHTML(item.tanggal || '-')} ${item.lokasi ? '• 📍 ' + escapeHTML(item.lokasi) : ''}</div>
+            <div style="font-size: 10.5px; color: #64748b;">📅 ${escapeHTML(item.tanggal || '-')} ${teksLokasiAdmin ? '• 📍 ' + escapeHTML(teksLokasiAdmin) : ''}</div>
           </td>
           <td style="padding: 8px 6px; text-align: center;">${badgeStatus}</td>
           <td style="padding: 8px 6px; text-align: right; white-space: nowrap;">
@@ -4881,6 +4885,14 @@ function muatDataPetaUntukAdmin() {
         container.style.display = 'none';
         return;
       }
+      // Deteksi jika admin menempel link Google Maps (langsung atau format "Nama Tempat | https://...")
+      if (/https?:\/\//i.test(keyword)) {
+        document.getElementById('pengumumanLat').value = '';
+        document.getElementById('pengumumanLng').value = '';
+        container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #0369a1; font-weight: bold; background: #e0f2fe;">📍 Link Google Maps terdeteksi (Siap disimpan)</div>`;
+        container.style.display = 'block';
+        return;
+      }
 
       var query = keyword.toLowerCase();
       var sumberData = cacheDataPetaAdmin;
@@ -4891,6 +4903,8 @@ function muatDataPetaUntukAdmin() {
       });
 
       if (hasil.length === 0) {
+        document.getElementById('pengumumanLat').value = '';
+        document.getElementById('pengumumanLng').value = '';
         // 🌟 Beri background putih solid agar tidak tembus pandang / kotak hitam
         container.innerHTML = `<div style="padding: 8px 12px; font-size: 11px; color: #64748b; background: #ffffff;">Ketik bebas (Tidak ada data di peta)</div>`;
         container.style.display = 'block';

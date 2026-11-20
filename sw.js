@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.7.5'; // 🌟 Naikkan versi cache agar browser menghapus cache 404 lama
+const CACHE_NAME = 'rt-kayen-v1.7.6'; // 🌟 Naikkan versi cache agar browser menghapus cache 404 lama
 
 // 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
@@ -69,22 +69,21 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 self.addEventListener('install', (e) => {
-  self.skipWaiting(); // 🌟 Langsung aktifkan SW versi terbaru
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
         './',
         './index.html',
         './admin.html',
-        './chat.html',          // 👈 Ditambahkan
-        './pengumuman.html',    // 👈 Ditambahkan
+        './chat.html',
+        './pengumuman.html',
         './cetak-qr.html',
-        './utils.js',           // 👈 Sangat penting
-        './setting.js',         // 👈 Ditambahkan
-        './manifest.json',      // 👈 Ditambahkan
-        './all.min.css',        // 👈 Ditambahkan
-        './leaflet.css',        // 👈 Ditambahkan
-        './leaflet.js',         // 👈 Ditambahkan
+        './utils.js',
+        './setting.js',
+        './manifest.json',
+        './all.min.css',
+        './leaflet.css',
+        './leaflet.js',
         './leaflet.markercluster.js',
         './MarkerCluster.css',
         './MarkerCluster.Default.css',
