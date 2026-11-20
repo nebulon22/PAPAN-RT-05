@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.7.5'; // 🌟 Naikkan versi cache agar browser menghapus cache 404 lama
+const CACHE_NAME = 'rt-kayen-v1.7.6'; // 🌟 Naikkan versi cache agar browser menghapus cache 404 lama
 
 // 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
