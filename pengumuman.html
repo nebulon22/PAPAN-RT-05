@@ -239,9 +239,11 @@ html, body {
       white-space: pre-line;
     }
 
-    .img-popup {
+.img-popup {
       width: 100%;
       max-height: 215px;
+      aspect-ratio: 16 / 10;
+      background-color: #e2e8f0;
       object-fit: cover;
       border-radius: 8px;
       margin-top: 4px;
@@ -614,10 +616,14 @@ function muatPengumumanFirebase() {
           return dateB - dateA;
         });
 
-        // 🌟 2. SIMPAN KE CACHE DAN RENDER ULANG DATA TERBARU
-        localStorage.setItem('rt05_cached_pengumuman', JSON.stringify(daftarPengumuman));
-        renderPengumumanUI();
-      });
+// 🌟 2. BANDINGKAN DENGAN CACHE: RENDER ULANG HANYA JIKA DATA BENAR-BENAR BERUBAH
+        const jsonBaru = JSON.stringify(daftarPengumuman);
+        const jsonLama = localStorage.getItem('rt05_cached_pengumuman');
+
+        if (jsonBaru !== jsonLama) {
+          localStorage.setItem('rt05_cached_pengumuman', jsonBaru);
+          renderPengumumanUI();
+        }
     }
     // 🌟 PANGGIL OTOMATIS SAAT HALAMAN SELESAI DILOAD
 document.addEventListener('DOMContentLoaded', muatPengumumanFirebase);
@@ -685,7 +691,8 @@ function renderPengumumanUI() {
                 <div style="position: absolute; background: rgba(239, 68, 68, 0.9); color: #fff; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">▶</div>
               </div>`;
           } else {
-            htmlFoto = `<img src="${safeUrl}" data-url="${safeUrl}" loading="lazy" class="img-popup" alt="Flyer" onclick="bukaFotoBesar(this.dataset.url)" onerror="this.style.display='none'">`;
+            const lazyAttr = index >= 2 ? 'loading="lazy"' : 'decoding="async"';
+            htmlFoto = `<img src="${safeUrl}" data-url="${safeUrl}" ${lazyAttr} class="img-popup" alt="Flyer" onclick="bukaFotoBesar(this.dataset.url)" onerror="this.style.display='none'">`;
           }
         }
 
