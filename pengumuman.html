@@ -420,6 +420,15 @@ html, body {
   padding: 0 !important;
   z-index: 999999 !important;
 }
+    .btn-back:active,
+    .tab-menu-btn:active,
+    .btn-share-wa:active,
+    .progker-filter-btn:active,
+    .chip-lokasi:active,
+    .img-popup:active {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
   </style>
 </head>
 <body>
@@ -482,11 +491,11 @@ html, body {
 
       <!-- Filter Status Cepat -->
       <div class="progker-filter-bar" id="progker-filter-bar">
-        <button type="button" class="progker-filter-btn active" onclick="setFilterProgker('semua', this)">Semua</button>
-        <button type="button" class="progker-filter-btn" onclick="setFilterProgker('berjalan', this)">🟢 Berjalan</button>
-        <button type="button" class="progker-filter-btn" onclick="setFilterProgker('disetujui', this)">🔵 Disetujui</button>
-        <button type="button" class="progker-filter-btn" onclick="setFilterProgker('perencanaan', this)">🟡 Cari Dana</button>
-        <button type="button" class="progker-filter-btn" onclick="setFilterProgker('selesai', this)">⚪ Selesai</button>
+        <button type="button" id="flt-semua" class="progker-filter-btn active" onclick="setFilterProgker('semua', this)">Semua</button>
+        <button type="button" id="flt-berjalan" class="progker-filter-btn" onclick="setFilterProgker('berjalan', this)">🟢 Berjalan</button>
+        <button type="button" id="flt-disetujui" class="progker-filter-btn" onclick="setFilterProgker('disetujui', this)">🔵 Disetujui</button>
+        <button type="button" id="flt-perencanaan" class="progker-filter-btn" onclick="setFilterProgker('perencanaan', this)">🟡 Cari Dana</button>
+        <button type="button" id="flt-selesai" class="progker-filter-btn" onclick="setFilterProgker('selesai', this)">⚪ Selesai</button>
       </div>
 
       <!-- Daftar Kartu Progker -->
@@ -754,7 +763,7 @@ let htmlLokasi = '';
       renderProgkerWargaUI();
     }
 
-    function renderProgkerWargaUI() {
+function renderProgkerWargaUI() {
       const container = document.getElementById('list-progker-warga');
       if (!container) return;
 
@@ -768,6 +777,7 @@ let htmlLokasi = '';
 
       var totalRabPerencanaan = 0;
       var totalRealisasiSelesai = 0;
+      let cntBerjalan = 0, cntDisetujui = 0, cntCariDana = 0, cntSelesai = 0;
 
       dataProgkerCache.forEach(item => {
         var angPlan = Number(item.Anggaran || item.anggaran || item.anggaran_disetujui || item.nominal || 0);
@@ -777,8 +787,24 @@ let htmlLokasi = '';
         totalRabPerencanaan += angPlan;
         if (statusLower === 'selesai') {
           totalRealisasiSelesai += (angRealisasi > 0 ? angRealisasi : angPlan);
+          cntSelesai++;
+        } else if (statusLower === 'berjalan') {
+          cntBerjalan++;
+        } else if (statusLower === 'disetujui') {
+          cntDisetujui++;
+        } else {
+          cntCariDana++;
         }
       });
+
+      const elFltSemua = document.getElementById('flt-semua');
+      if (elFltSemua) {
+        elFltSemua.innerText = `Semua (${dataProgkerCache.length})`;
+        document.getElementById('flt-berjalan').innerText = `🟢 Berjalan (${cntBerjalan})`;
+        document.getElementById('flt-disetujui').innerText = `🔵 Disetujui (${cntDisetujui})`;
+        document.getElementById('flt-perencanaan').innerText = `🟡 Cari Dana (${cntCariDana})`;
+        document.getElementById('flt-selesai').innerText = `⚪ Selesai (${cntSelesai})`;
+      }
 
       document.getElementById('warga-total-rab').innerText = 'Rp ' + totalRabPerencanaan.toLocaleString('id-ID');
       document.getElementById('warga-total-realisasi').innerText = 'Rp ' + totalRealisasiSelesai.toLocaleString('id-ID');
