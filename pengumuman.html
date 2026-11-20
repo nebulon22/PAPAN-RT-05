@@ -533,15 +533,28 @@ function renderPengumumanUI() {
           }
         }
 
-        let htmlLokasi = '';
+let htmlLokasi = '';
         if (info.lokasi) {
-          const isUrl = /^https?:\/\//i.test(info.lokasi.trim());
-          const hrefLokasi = isUrl
-            ? escapeHTML(info.lokasi.trim())
-            : `index.html?lokasi=${encodeURIComponent(info.lokasi.trim())}`;
-          const targetAttr = isUrl ? 'target="_blank" rel="noopener"' : '';
+          const rawLokasi = info.lokasi.trim();
+          let labelLokasi = rawLokasi;
+          let hrefLokasi = `index.html?lokasi=${encodeURIComponent(rawLokasi)}`;
+          let isExternal = false;
 
-          htmlLokasi = `<a href="${hrefLokasi}" ${targetAttr} class="chip-lokasi" style="text-decoration: none; cursor: pointer;">📍 ${escapeHTML(info.lokasi)} ↗</a>`;
+          if (rawLokasi.includes('|')) {
+            // Format: "Nama Tempat | https://maps.app.goo.gl/..."
+            const parts = rawLokasi.split('|');
+            labelLokasi = parts[0].trim();
+            hrefLokasi = parts[1].trim();
+            isExternal = true;
+          } else if (/^https?:\/\//i.test(rawLokasi)) {
+            // Format langsung link GMaps: "https://..."
+            labelLokasi = 'Buka Lokasi di Google Maps';
+            hrefLokasi = rawLokasi;
+            isExternal = true;
+          }
+
+          const targetAttr = isExternal ? 'target="_blank" rel="noopener"' : '';
+          htmlLokasi = `<a href="${escapeHTML(hrefLokasi)}" ${targetAttr} class="chip-lokasi" style="text-decoration: none; cursor: pointer;">📍 ${escapeHTML(labelLokasi)} ↗</a>`;
         }
 
         const kategori = deteksiKategoriInfo(info.judul, info.detail);
