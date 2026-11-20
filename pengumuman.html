@@ -23,7 +23,7 @@ html, body {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
-  background-color: #f8fafc;
+  background-color: #f1f5f9;
   color: #333;
   overflow-x: hidden;
 }
@@ -116,7 +116,53 @@ html, body {
       white-space: nowrap;
       box-shadow: 0 2px 4px rgba(0,0,0,0.2);
     }
+    
+    .tab-wrapper {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: #e2e8f0;
+      padding: 5px;
+      border-radius: 10px;
+      margin-bottom: 14px;
+      border: 1px solid #cbd5e1;
+    }
 
+    .tab-menu-btn {
+      padding: 9px 8px;
+      border: none;
+      border-radius: 7px;
+      background: transparent;
+      color: #475569;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.18s ease;
+    }
+
+    .tab-menu-btn.active {
+      background: #0f172a;
+      color: #fde047;
+      box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+    }
+
+    .tab-badge {
+      background: rgba(100, 116, 139, 0.2);
+      color: inherit;
+      font-size: 10px;
+      padding: 1px 6px;
+      border-radius: 999px;
+      font-weight: 800;
+    }
+
+    .tab-menu-btn.active .tab-badge {
+      background: #b45309;
+      color: #ffffff;
+    }
     .card-info {
       background: #ffffff;
       border: 1px solid #e0e0e0;
@@ -174,13 +220,13 @@ html, body {
 
   <div class="container">
     
-    <!-- Tab Menu (Informasi Umum & RAB) -->
-    <div style="display: flex; gap: 6px; margin-bottom: 12px; border-bottom: 2px solid #e2e8f0; padding-bottom: 6px;">
-      <button type="button" id="btn-tab-info" onclick="switchTabWarga('info')" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #0288d1; color: white; font-weight: bold; font-size: 12px; cursor: pointer;">
-        📢 Informasi Umum
+ <!-- Tab Menu (Informasi Umum & RAB) -->
+    <div class="tab-wrapper">
+      <button type="button" id="btn-tab-info" class="tab-menu-btn active" onclick="switchTabWarga('info')">
+        📢 Informasi <span id="badge-count-info" class="tab-badge">0</span>
       </button>
-      <button type="button" id="btn-tab-rab" onclick="switchTabWarga('rab')" style="flex: 1; padding: 8px; border: none; border-radius: 6px; background: #f1f5f9; color: #64748b; font-weight: bold; font-size: 12px; cursor: pointer;">
-        📋 RAB & Progker
+      <button type="button" id="btn-tab-rab" class="tab-menu-btn" onclick="switchTabWarga('rab')">
+        📋 RAB & Progker <span id="badge-count-rab" class="tab-badge">•</span>
       </button>
     </div>
 
@@ -248,7 +294,7 @@ html, body {
       return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
     }
 
-    function switchTabWarga(target) {
+function switchTabWarga(target) {
       const tab = (typeof target === 'string') ? target : target?.dataset?.arg;
       const panelInfo = document.getElementById('panel-tab-info');
       const panelRab = document.getElementById('panel-tab-rab');
@@ -258,13 +304,13 @@ html, body {
       if (tab === 'info') {
         if (panelInfo) panelInfo.style.display = 'block';
         if (panelRab) panelRab.style.display = 'none';
-        if (btnInfo) { btnInfo.style.background = '#0288d1'; btnInfo.style.color = '#ffffff'; }
-        if (btnRab) { btnRab.style.background = '#f1f5f9'; btnRab.style.color = '#64748b'; }
+        if (btnInfo) btnInfo.classList.add('active');
+        if (btnRab) btnRab.classList.remove('active');
       } else {
         if (panelInfo) panelInfo.style.display = 'none';
         if (panelRab) panelRab.style.display = 'block';
-        if (btnRab) { btnRab.style.background = '#0288d1'; btnRab.style.color = '#ffffff'; }
-        if (btnInfo) { btnInfo.style.background = '#f1f5f9'; btnInfo.style.color = '#64748b'; }
+        if (btnRab) btnRab.classList.add('active');
+        if (btnInfo) btnInfo.classList.remove('active');
         
         if (typeof muatProgkerWarga === 'function') {
           muatProgkerWarga();
@@ -342,6 +388,9 @@ function renderPengumumanUI() {
       var container = document.getElementById('list-pengumuman');
       if (!container) return;
 
+  const badgeInfo = document.getElementById('badge-count-info');
+      if (badgeInfo) badgeInfo.innerText = daftarPengumuman ? daftarPengumuman.length : 0;
+  
       if (!daftarPengumuman || daftarPengumuman.length === 0) {
         container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px; margin-top:30px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
         return;
