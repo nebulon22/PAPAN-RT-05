@@ -440,6 +440,8 @@ function muatPengumumanFirebase() {
                 judul: item.judul || '',
                 detail: item.detail || '',
                 lokasi: item.lokasi || '',
+                lat: item.lat || '',
+                lng: item.lng || '',
                 foto: item.foto || ''
               });
             }
@@ -537,24 +539,28 @@ let htmlLokasi = '';
         if (info.lokasi) {
           const rawLokasi = info.lokasi.trim();
           let labelLokasi = rawLokasi;
-          let hrefLokasi = `index.html?lokasi=${encodeURIComponent(rawLokasi)}`;
-          let isExternal = false;
+          let hrefLokasi = '';
 
           if (rawLokasi.includes('|')) {
-            // Format: "Nama Tempat | https://maps.app.goo.gl/..."
+            // 1. Format "Nama Tempat | https://maps.app.goo.gl/..."
             const parts = rawLokasi.split('|');
             labelLokasi = parts[0].trim();
             hrefLokasi = parts[1].trim();
-            isExternal = true;
           } else if (/^https?:\/\//i.test(rawLokasi)) {
-            // Format langsung link GMaps: "https://..."
+            // 2. Format langsung link Google Maps
             labelLokasi = 'Buka Lokasi di Google Maps';
             hrefLokasi = rawLokasi;
-            isExternal = true;
+          } else if (info.lat && info.lng) {
+            // 3. Format autocomplete warga (punya koordinat lat & lng)
+            labelLokasi = rawLokasi;
+            hrefLokasi = `https://www.google.com/maps?q=${encodeURIComponent(info.lat)},${encodeURIComponent(info.lng)}`;
+          } else {
+            // 4. Ketik nama tempat manual tanpa koordinat
+            labelLokasi = rawLokasi;
+            hrefLokasi = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawLokasi)}`;
           }
 
-          const targetAttr = isExternal ? 'target="_blank" rel="noopener"' : '';
-          htmlLokasi = `<a href="${escapeHTML(hrefLokasi)}" ${targetAttr} class="chip-lokasi" style="text-decoration: none; cursor: pointer;">📍 ${escapeHTML(labelLokasi)} ↗</a>`;
+          htmlLokasi = `<a href="${escapeHTML(hrefLokasi)}" target="_blank" rel="noopener" class="chip-lokasi" style="text-decoration: none; cursor: pointer;">📍 ${escapeHTML(labelLokasi)} ↗</a>`;
         }
 
         const kategori = deteksiKategoriInfo(info.judul, info.detail);
