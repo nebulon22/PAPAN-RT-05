@@ -1,11 +1,9 @@
-const CACHE_NAME = 'rt-kayen-v1.7.7'; // 🌟 Naikkan versi cache agar browser menghapus cache 404 lama
+const CACHE_NAME = 'rt-kayen-v1.7.8'; // 🌟 Naikkan versi agar HP warga memperbarui SW
 
-// 🌟 WAJIB: Impor Firebase Compat khusus untuk Service Worker
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
-// Inisialisasi Firebase di dalam Service Worker
 firebase.initializeApp({
   apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
   authDomain: "papan05-21a56.firebaseapp.com",
@@ -18,53 +16,42 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
-// 🌟 MENANGANI PESAN LATAR BELAKANG FCM & APP BADGE SEKALIGUS
+// 🌟 MENANGANI PESAN LATAR BELAKANG FCM & APP BADGE SAAT PWA TERTUTUP/MINIMIZE
 messaging.onBackgroundMessage((payload) => {
-  console.log('[sw.js] Menerima pesan background FCM:', payload);
-  
-  const title = payload.notification?.title || payload.data?.title || 'RT 05 Kayen';
-  const body = payload.notification?.body || payload.data?.body || 'Anda menerima pesan baru.';
-  const url = payload.notification?.click_action || payload.data?.url || './index.html';
-  const count = payload.data?.unreadCount ? parseInt(payload.data.unreadCount, 10) : 1;
-  const notifMode = payload.data?.mode || 'normal';
+  const data = payload.data || {};
+  const notif = payload.notification || {};
 
-  const options = {
-    body: body,
-    icon: './kentongan-slit-drum.png',
-    badge: './kentongan-slit-drum.png',
-    tag: payload.data?.tag || 'grup-chat-rt05',
-    renotify: true,
-    data: { url: url }
-  };
+  const title = data.title || notif.title || 'RT 05 Kayen';
+  const body = data.body || notif.body || 'Anda menerima pesan baru.';
+  const url = data.url || notif.click_action || './index.html';
+  const count = data.unreadCount ? parseInt(data.unreadCount, 10) : 1;
+  const notifMode = data.mode || 'normal';
 
-  // Pengaturan Mode Suara / Getar Notifikasi
-  if (notifMode === 'silent') {
-    options.silent = true;
-  } else if (notifMode === 'vibrate_only') {
-    options.silent = true;
-    options.vibrate = [100, 50, 100];
-  } else {
-    options.silent = false;
-    options.vibrate = [100, 50, 100];
+  // 1. Pasang angka badge di ikon PWA layar utama HP
+  if (self.navigator && 'setAppBadge' in self.navigator) {
+    self.navigator.setAppBadge(count).catch(() => {});
   }
 
-  if (self.registration && typeof self.registration.waitUntil === 'function') {
-    self.registration.waitUntil(
-      Promise.all([
-        self.registration.showNotification(title, options),
-        (async () => {
-          if ('setAppBadge' in navigator) {
-            try {
-              await navigator.setAppBadge(count);
-            } catch (err) {
-              console.log('Gagal memperbarui app badge:', err);
-            }
-          }
-        })()
-      ])
-    );
-  } else {
-    self.registration.showNotification(title, options);
+  // 2. Jika payload dari server sudah membawa blok "notification", browser otomatis menampilkannya
+  // Jika payload hanya membawa blok "data" (data-only), kita tampilkan manual agar tidak ganda:
+  if (!payload.notification) {
+    const options = {
+      body: body,
+      icon: './kentongan-slit-drum.png',
+      badge: './kentongan-slit-drum.png',
+      tag: data.tag || 'grup-chat-rt05',
+      renotify: true,
+      data: { url: url }
+    };
+
+    if (notifMode === 'silent') {
+      options.silent = true;
+    } else {
+      options.silent = false;
+      options.vibrate = [200, 100, 200];
+    }
+
+    return self.registration.showNotification(title, options);
   }
 });
 
@@ -197,35 +184,5 @@ self.addEventListener('notificationclick', (event) => {
         return clients.openWindow(targetUrl);
       }
     })
-  );
-});
-
-// Tangkap pesan push fallback FCM saat aplikasi di latar belakang / ditutup
-self.addEventListener('push', (event) => {
-  let data = {};
-  if (event.data) {
-    try {
-      data = event.data.json();
-    } catch (e) {
-      data = { notification: { title: "RT 05 Kayen", body: event.data.text() } };
-    }
-  }
-
-  const title = data.notification?.title || data.data?.title || "Notifikasi RT 05";
-  const body = data.notification?.body || data.data?.body || "Anda menerima pesan baru.";
-  const url = data.notification?.click_action || data.data?.url || './index.html';
-  const tag = data.data?.tag || 'grup-chat-rt05';
-
-  const options = {
-    body: body,
-    icon: './kentongan-slit-drum.png',
-    badge: './kentongan-slit-drum.png',
-    tag: tag,
-    renotify: true,
-    data: { url: url }
-  };
-
-  event.waitUntil(
-    self.registration.showNotification(title, options)
   );
 });
