@@ -599,6 +599,17 @@
     </div>
   </div>
 
+    <script>
+  // Helper ID unik per browser/perangkat
+function getDeviceId() {
+  let devId = localStorage.getItem('rt05_device_id');
+  if (!devId) {
+    devId = 'DEV-' + Math.random().toString(36).substring(2, 10);
+    localStorage.setItem('rt05_device_id', devId);
+  }
+  return devId;
+}
+    </script>
 <!-- Firebase SDK Modular & Logika Aplikasi -->
   <script type="module">
 
@@ -868,35 +879,47 @@ const userData = {
     };
 
     // === LOGOUT ===
-   window.logoutUser = async () => {
-      if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
-        if (currentUser && currentUser.uid) {
-          // Hapus token FCM dari database untuk user ini di perangkat ini sebelum logout
-          try {
-            await set(ref(db, `users/${currentUser.uid}/fcmToken`), null);
-          } catch (err) {
-            console.log(err);
-          }
-          await set(ref(db, `users/${currentUser.uid}/state`), 'offline');
-        }
-        
-        try {
-          await signOut(auth);
-        } catch (e) {
-          console.log(e);
+window.logoutUser = async () => {
+  if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
+    if (currentUser && currentUser.uid) {
+      try {
+        const deviceId = localStorage.getItem('rt05_device_id');
+        const currentLocalToken = localStorage.getItem('rt05_current_fcm_token');
+
+        // 1. Hapus token khusus HP ini dari daftar multi-perangkat akun
+        if (deviceId) {
+          await set(ref(db, `users/${currentUser.uid}/fcmTokens/${deviceId}`), null);
         }
 
-        // 🧹 Bersihkan semua data terkait chat & sesi di localStorage
-        localStorage.removeItem('rt05_chat_user');
-        localStorage.removeItem('rt05_open_private_rooms');
-        localStorage.removeItem('rt05_chat_last_read_key');
-        localStorage.removeItem('rt05_chat_last_read_public_key');
-
-        currentUser = null;
-        window.currentUser = null;
-        location.reload();
+        // 2. Hapus fcmToken utama HANYA JIKA nilainya sama dengan token HP yang sedang logout
+        const tokenSnap = await get(ref(db, `users/${currentUser.uid}/fcmToken`));
+        if (tokenSnap.exists() && tokenSnap.val() === currentLocalToken) {
+          await set(ref(db, `users/${currentUser.uid}/fcmToken`), null);
+        }
+      } catch (err) {
+        console.log(err);
       }
-    };
+      await set(ref(db, `users/${currentUser.uid}/state`), 'offline');[cite: 1]
+    }
+    
+    try {
+      await signOut(auth);[cite: 1]
+    } catch (e) {
+      console.log(e);[cite: 1]
+    }
+
+    // Bersihkan sesi lokal (rt05_device_id sengaja dibiarkan agar konsisten untuk HP ini)
+    localStorage.removeItem('rt05_chat_user');[cite: 1]
+    localStorage.removeItem('rt05_open_private_rooms');[cite: 1]
+    localStorage.removeItem('rt05_chat_last_read_key');[cite: 1]
+    localStorage.removeItem('rt05_chat_last_read_public_key');[cite: 1]
+    localStorage.removeItem('rt05_current_fcm_token');
+
+    currentUser = null;[cite: 1]
+    window.currentUser = null;[cite: 1]
+    location.reload();[cite: 1]
+  }
+};
 
   
 
@@ -1409,104 +1432,127 @@ function listenAllPrivateChats() {
 }
     
 
+// === 1. KIRIM PESAN & PICU NOTIFIKASI SEKALI TEMBAK ===
 function executeSendMessage(e) {
-      if (e) {
-        e.preventDefault();
-        e.stopPropagation();
-      }
+  if (e) {
+    e.preventDefault();
+    e.stopPropagation();
+  }
 
-      const input = document.getElementById('chat-input');
-      if (!input) return;
-      const text = input.value.trim();
+  const input = document.getElementById('chat-input');
+  if (!input) return;
+  const text = input.value.trim();
 
-      if (!text || currentUser?.status !== 'aktif') return;
+  if (!text || currentUser?.status !== 'aktif') return;
 
-      shouldForceScrollDown = true; 
-      input.value = '';
-      input.focus();
+  shouldForceScrollDown = true; 
+  input.value = '';
+  input.focus();
 
-      if (activeChatType === 'public') {
-        const newMsgRef = push(ref(db, 'chats'));
-        const newKey = newMsgRef.key;
+  const senderName = currentUser.username || currentUser.nama;
 
-        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        lastReadPublicMap[currentUser.uid] = newKey;
-        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+  if (activeChatType === 'public') {
+    const newMsgRef = push(ref(db, 'chats'));
+    const newKey = newMsgRef.key;
 
-        set(newMsgRef, {
-          uid: currentUser.uid,
-          sender: currentUser.username || currentUser.nama,
-          role: currentUser.role || 'warga',
-          text: text,
-          timestamp: Date.now()
-        }).then(() => {
-          // 🌟 PICU NOTIFIKASI GAS UNTUK CHAT PUBLIK
-          triggerGasNotification(`RT 05 Kayen - ${currentUser.username || currentUser.nama}`, text);
-        });
+    const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+    lastReadPublicMap[currentUser.uid] = newKey;
+    localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
 
-      } else if (activeChatType === 'private' && activePrivateUID) {
-        const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
-        const newMsgRef = push(ref(db, `private_chats/${roomID}`));
-        const newKey = newMsgRef.key;
+    set(newMsgRef, {
+      uid: currentUser.uid,
+      sender: senderName,
+      role: currentUser.role || 'warga',
+      text: text,
+      timestamp: Date.now()
+    }).then(() => {
+      // Selaras dengan .gs: kirim action 'notifChatGroup' dalam 1x request
+      triggerGasNotification('notifChatGroup', senderName, text, "");
+    });
 
-        const targetName = allUsersCache[activePrivateUID]?.username || allUsersCache[activePrivateUID]?.nama || "Warga";
-        openPrivateRooms[activePrivateUID] = targetName;
-        localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
-        renderPrivateTabsUI();
+  } else if (activeChatType === 'private' && activePrivateUID) {
+    const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
+    const newMsgRef = push(ref(db, `private_chats/${roomID}`));
+    const newKey = newMsgRef.key;
 
-        set(newMsgRef, {
-          uid: currentUser.uid,
-          sender: currentUser.username || currentUser.nama,
-          role: currentUser.role || 'warga',
-          text: text,
-          timestamp: Date.now()
-        }).then(() => { 
-          const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
-          lastReadKeyMap[activePrivateUID] = newKey;
-          localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
+    const targetName = allUsersCache[activePrivateUID]?.username || allUsersCache[activePrivateUID]?.nama || "Warga";
+    openPrivateRooms[activePrivateUID] = targetName;
+    localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+    renderPrivateTabsUI();
 
-          // 🌟 PICU NOTIFIKASI GAS UNTUK CHAT PRIBADI (Kirim ke targetUID)
-          triggerGasNotification(`Pesan Pribadi - ${currentUser.username || currentUser.nama}`, text, activePrivateUID);
+    set(newMsgRef, {
+      uid: currentUser.uid,
+      sender: senderName,
+      role: currentUser.role || 'warga',
+      text: text,
+      timestamp: Date.now()
+    }).then(() => { 
+      const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+      lastReadKeyMap[activePrivateUID] = newKey;
+      localStorage.setItem('rt05_chat_last_read_key', JSON.stringify(lastReadKeyMap));
+
+      // Selaras dengan .gs: kirim action 'notifChatPrivate' beserta targetUid
+      triggerGasNotification('notifChatPrivate', senderName, text, activePrivateUID);
+    });
+  }
+}
+window.sendChatMessage = executeSendMessage;
+
+// === 2. FUNGSI TEMBAK GAS YANG RINGAN & SELARAS ===
+function triggerGasNotification(actionType, senderName, bodyText, targetUid = "") {
+  const gasUrl = getGasUrl();
+  if (!gasUrl || !currentUser?.uid) return;
+
+  fetch(gasUrl, {
+    method: 'POST',
+    mode: 'no-cors',
+    keepalive: true, // Tetap terkirim walau warga langsung mengunci layar HP
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({
+      action: actionType,          // 'notifChatGroup' atau 'notifChatPrivate'
+      senderUid: currentUser.uid,  // Dipakai .gs untuk mengecualikan pengirim & membuat notifTag
+      targetUid: targetUid,        // UID penerima jika private, kosong jika grup
+      senderName: senderName,
+      messageText: bodyText,
+      unreadCount: 1
+    })
+  }).catch(err => console.log("Gagal menembak notifikasi GAS:", err));
+}
+
+// === 3. AUTO-REFRESH TOKEN FCM SETIAP KALI APP DIBUKA ===
+async function initFCMToken(userId) {
+  try {
+    if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+
+    let permission = Notification.permission;
+    if (permission === 'default') {
+      permission = await Notification.requestPermission();
+    }
+
+    if (permission === 'granted') {
+      const registration = await navigator.serviceWorker.ready;
+      const currentToken = await getToken(messaging, {
+        vapidKey: 'BIrL-XRxrSpZ65J-fzMfO3_nMm9RWUx9U55mhy3jGQURAEr1gPD7yKzHWGxAoFa5UsYoyj5_BKTSnUbKTYeVG4w',
+        serviceWorkerRegistration: registration
+      });
+
+      if (currentToken) {
+        const deviceId = getDeviceId();
+        localStorage.setItem('rt05_current_fcm_token', currentToken);
+
+        // Simpan ke daftar multi-perangkat milik UID warga ini
+        await update(ref(db, `users/${userId}`), {
+          fcmToken: currentToken,
+          [`fcmTokens/${deviceId}`]: {
+            token: currentToken,
+            updatedAt: Date.now()
+          }
         });
       }
     }
-    window.sendChatMessage = executeSendMessage;
-
-// Fungsi pendukung untuk menembak data ke Web App Google Apps Script
-function triggerGasNotification(title, bodyText, specificTargetUID = null) {
-    const gasUrl = getGasUrl();
-    if (!gasUrl) return;
-
-    get(ref(db, 'users')).then((userSnap) => {
-        if (!userSnap.exists()) return;
-
-        userSnap.forEach((child) => {
-            let targetKey = child.key; // Ini adalah UID asli di database (cth: TDHnhP...)
-            let uData = child.val();
-
-            let shouldSend = false;
-            if (specificTargetUID) {
-                if (targetKey === specificTargetUID) shouldSend = true;
-            } else {
-                if (targetKey !== currentUser.uid) shouldSend = true; // Kirim ke semua warga lain untuk chat publik
-            }
-
-            if (shouldSend && uData.fcmToken) {
-                fetch(gasUrl, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                    body: JSON.stringify({
-                        action: 'notifChatPrivate', // Harus sama persis dengan di GAS Anda
-                        targetUid: targetKey,        // UID asli penerima
-                        senderName: currentUser.username || currentUser.nama,
-                        messageText: bodyText,       // Isi pesan
-                        unreadCount: 1
-                    })
-                }).catch(err => console.log("Gagal menembak notifikasi GAS:", err));
-            }
-        });
-    });
+  } catch (err) {
+    console.log("Gagal mendapatkan FCM Token:", err);
+  }
 }
 
     
@@ -1958,38 +2004,7 @@ window.addEventListener('message', (event) => {
     });
   }
 
-
-   // 1. Minta izin & gunakan Service Worker utama untuk FCM Token perangkat warga
-    async function initFCMToken(userId) {
-      try {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-          // Pastikan Service Worker utama (sw.js) sudah aktif di browser
-          if ('serviceWorker' in navigator) {
-            const registration = await navigator.serviceWorker.ready;
-            console.log('Menggunakan Service Worker utama yang aktif untuk FCM:', registration.scope);
-
-            // Ambil token dengan menyertakan pendaftaran Service Worker utama
-            const currentToken = await getToken(messaging, {
-              vapidKey: 'BIrL-XRxrSpZ65J-fzMfO3_nMm9RWUx9U55mhy3jGQURAEr1gPD7yKzHWGxAoFa5UsYoyj5_BKTSnUbKTYeVG4w',
-              serviceWorkerRegistration: registration
-            });
-            
-            if (currentToken) {
-              // Simpan token perangkat ke database Firebase berdasarkan UID user
-              await set(ref(db, `users/${userId}/fcmToken`), currentToken);
-              console.log('FCM Token berhasil disimpan ke database.');
-            }
-          }
-        } else {
-          console.log('Izin notifikasi ditolak oleh pengguna.');
-        }
-      } catch (err) {
-        console.log("Gagal mendapatkan FCM Token:", err);
-      }
-    }
-
-// 2. Tangkap pesan FCM saat aplikasi SEDANG DIBUKA (Foreground)
+// Tangkap pesan FCM saat aplikasi SEDANG DIBUKA (Foreground)
 onMessage(messaging, (payload) => {
   console.log('Pesan FCM diterima:', payload);
   
@@ -2301,9 +2316,14 @@ function loadChatStream(onLoaded) {
         let isUnreadSection = false;
         if (!lastReadPublicMapKey) isUnreadSection = true;
 
-snapshot.forEach((childSnap) => {
+let latestPublicKey = null;
+
+        snapshot.forEach((childSnap) => {
             const msgKey = childSnap.key;
             const msgData = childSnap.val();
+            if (msgKey === 'pinned_poll') return;
+
+            latestPublicKey = msgKey;
 
             // 1. CEK BATAS KUNCI BACA TERLEBIH DAHULU
             if (msgKey === lastReadPublicMapKey) {
@@ -2311,7 +2331,8 @@ snapshot.forEach((childSnap) => {
             }
 
             let isUnreadMsg = false;
-            
+            const isViewingGroupNow = (activeChatType === 'public' && window.isUserViewingChat());
+
             // 2. BARU TENTUKAN APAKAH PESAN INI MASUK DALAM KATEGORI UNREAD
             if (isChatReady && currentUser && currentUser.uid && isUnreadSection && msgData.uid !== currentUser?.uid && msgKey !== lastReadPublicMapKey) {
                 isUnreadMsg = true;
@@ -2319,18 +2340,29 @@ snapshot.forEach((childSnap) => {
                 const notifKey = 'notified_' + msgKey;
                 if (!sessionStorage.getItem(notifKey)) {
                     sessionStorage.setItem(notifKey, 'true');
-                    try {
-                        if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-                            window.parent.picuNotifikasiMedia('grup');
+
+                    // HANYA bunyikan suara jika user TIDAK sedang melihat layar chat grup
+                    if (!isViewingGroupNow) {
+                        try {
+                            if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+                                window.parent.picuNotifikasiMedia('grup');
+                            }
+                        } catch (e) {
+                            console.log("Gagal memicu notifikasi media:", e);
                         }
-                    } catch (e) {
-                        console.log("Gagal memicu notifikasi media:", e);
                     }
                 }
             }
 
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
+
+        // 3. Jika sedang aktif di chat grup, langsung tandai pesan terakhir sudah terbaca
+        if (latestPublicKey && currentUser?.uid && activeChatType === 'public' && window.isUserViewingChat()) {
+            const updatedMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+            updatedMap[currentUser.uid] = latestPublicKey;
+            localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(updatedMap));
+        }
 
         isInitialPublicChatLoaded = true;
 
