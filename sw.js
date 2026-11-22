@@ -170,6 +170,12 @@ self.addEventListener('message', (event) => {
 // Klik pada notifikasi akan membuka/fokus kembali ke aplikasi
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
+
+  // Bersihkan angka badge pada ikon PWA saat notifikasi diklik
+  if (self.navigator && 'clearAppBadge' in self.navigator) {
+    self.navigator.clearAppBadge().catch(() => {});
+  }
+
   const targetUrl = event.notification.data?.url || './index.html';
 
   event.waitUntil(
