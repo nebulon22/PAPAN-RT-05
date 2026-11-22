@@ -2357,11 +2357,9 @@ let latestPublicKey = null;
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
         });
 
-        // 3. Jika sedang aktif di chat grup, langsung tandai pesan terakhir sudah terbaca
+        // 3. Jika sedang aktif di chat grup, gunakan markPublicGroupAsRead() yang memiliki jeda 1 detik
         if (latestPublicKey && currentUser?.uid && activeChatType === 'public' && window.isUserViewingChat()) {
-            const updatedMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-            updatedMap[currentUser.uid] = latestPublicKey;
-            localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(updatedMap));
+            markPublicGroupAsRead();
         }
 
         isInitialPublicChatLoaded = true;
@@ -2610,6 +2608,8 @@ if (chatStreamEl) {
     });
 }
         
+const activeHighlightExpiry = {};
+
 function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   // PENGAMAN: Jika teks pesan kosong, abaikan
   if (!msg.text || !msg.text.trim()) return;
@@ -2621,9 +2621,17 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
   div.className = "msg-row";
   if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
-  // 🌟 Terapkan kelas animasi transparan jika pesan belum dibaca
-// 🌟 Efek transparan halus yang dipaksa langsung secara inline
-  if (isUnread) {
+  const now = Date.now();
+  if (isUnread && msgKey && !activeHighlightExpiry[msgKey]) {
+      activeHighlightExpiry[msgKey] = now + 3000; // Kunci durasi animasi 3 detik penuh
+  }
+
+  const remainingTime = msgKey && activeHighlightExpiry[msgKey] 
+      ? activeHighlightExpiry[msgKey] - now 
+      : (isUnread ? 3000 : 0);
+
+  // 🌟 Terapkan animasi transparan sesuai sisa waktu yang tersisa
+  if (remainingTime > 0) {
       div.style.transition = "background-color 2s ease, border-color 2s ease";
       div.style.backgroundColor = "rgba(255, 255, 255, 0.25)";
       div.style.borderLeft = "3px solid #38bdf8";
@@ -2631,10 +2639,11 @@ function renderSingleMessage(msg, isUnread = false, msgKey = '') {
 
       setTimeout(() => {
           div.style.backgroundColor = "transparent";
-          div.style.borderLeftColor = "transparent"; 
-      }, 3000);
+          div.style.borderLeftColor = "transparent";
+          if (msgKey) delete activeHighlightExpiry[msgKey];
+      }, remainingTime);
   }
-
+  
   let nameClass = "role-user";
   let textClass = "msg-text";
   let customStyleName = "";
