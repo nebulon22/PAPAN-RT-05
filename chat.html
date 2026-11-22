@@ -1637,13 +1637,16 @@ function listenPublicGroupUnread() {
         if (!window.isUserViewingChat() && Notification.permission === 'granted') {
           const senderName = latestUnreadMsg.sender || "Warga";
           const title = "Grup RT 05 - " + senderName;
+          const isAppHidden = document.hidden;
           const options = {
             body: latestUnreadMsg.text || 'Mengirim pesan...',
             icon: './kentongan-slit-drum.png',
             tag: 'grup-chat-rt05',
             renotify: true,
-            silent: true
-          };
+            // Jika layar terbuka (!isAppHidden), pakai silent: true agar tidak bentrok dengan suara kustom.
+            // Jika HP idle/layar mati (isAppHidden), pakai silent: false agar suara dering HP berbunyi!
+            silent: !isAppHidden
+            };
           if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
             navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, options));
           } else {
@@ -2023,7 +2026,7 @@ onMessage(messaging, (payload) => {
         badge: '/kentongan-slit-drum.png',
         tag: 'rt05-fcm-notif', // 🌟 Menimpa notifikasi lama agar 10 pesan tidak bermunculan 10x
         renotify: true,
-        silent: true // Mencegah suara bell ganda bawaan OS
+        silent: !document.hidden
       }
     );
   }
@@ -2337,12 +2340,13 @@ let latestPublicKey = null;
             if (isChatReady && currentUser && currentUser.uid && isUnreadSection && msgData.uid !== currentUser?.uid && msgKey !== lastReadPublicMapKey) {
                 isUnreadMsg = true;
 
-                const notifKey = 'notified_' + msgKey;
+            const notifKey = 'notified_' + msgKey;
                 if (!sessionStorage.getItem(notifKey)) {
                     sessionStorage.setItem(notifKey, 'true');
 
-                    // HANYA bunyikan suara jika user TIDAK sedang melihat layar chat grup
-                    if (!isViewingGroupNow) {
+                    // Bunyikan audio kustom jika Anda TIDAK sedang di dalam chat grup, 
+                    // dan halaman masih aktif (tidak sedang di-minimize/layar mati)
+                    if (!isViewingGroupNow && !document.hidden) {
                         try {
                             if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
                                 window.parent.picuNotifikasiMedia('grup');
