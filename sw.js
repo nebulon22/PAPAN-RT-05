@@ -56,6 +56,7 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 self.addEventListener('install', (e) => {
+  self.skipWaiting(); // Mempercepat aktivasi Service Worker versi baru
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       return cache.addAll([
@@ -77,7 +78,20 @@ self.addEventListener('install', (e) => {
         './kentongan192.png',
         './kentongan-slit-drum.png',
         './kentongan-btn.webp',
-        './html5-qrcode.min.js'
+        './html5-qrcode.min.js',
+        './audio/bell2.mp3',
+        './audio/bell3.mp3',
+        './audio/bubble1.mp3',
+        './audio/bubble2.mp3',
+        './audio/bubble3.mp3',
+        './audio/bubble4.mp3',
+        './audio/cring1.mp3',
+        './audio/cring2.mp3',
+        './audio/kling1.mp3',
+        './audio/kling2.mp3',
+        './audio/kling3.mp3',
+        './audio/ping1.mp3',
+        './audio/ping2.mp3'
       ]);
     })
   );
