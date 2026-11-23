@@ -1312,6 +1312,24 @@ html.has-session-token #login-overlay {
  <!-- JAVASCRIPT LOGIC SCRIPT UTAMA -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    (function proteksiHalamanAdmin() {
+  const rawUser = localStorage.getItem('rt05_chat_user');
+  if (!rawUser) {
+    alert("⚠️ Akses dibatasi. Silakan login akun Admin melalui halaman utama terlebih dahulu.");
+    window.location.replace('index.html');
+    return;
+  }
+
+  try {
+    const user = JSON.parse(rawUser);
+    if (!user || !user.uid || (user.role !== 'admin' && user.nama !== 'Admin1')) {
+      alert("⛔ Anda bukan Admin. Halaman ini hanya untuk pengurus.");
+      window.location.replace('index.html');
+    }
+  } catch (e) {
+    window.location.replace('index.html');
+  }
+})();
     // SATU HELPER TERPUSAT UNTUK SEMUA REQUEST KE ADMIN WORKER
 async function apiAdminWorker(path, method = 'GET', data = null, opsi = {}) {
   const sessionToken = sessionStorage.getItem('rt05_session_token');
