@@ -653,7 +653,7 @@ select {
     </span>
   </div>
 
-  <a href="admin.html" class="btn-back-floating" style="position: static;">🔒 Admin</a>
+ <a href="admin.html" class="btn-back-floating" style="position: static;" onclick="bukaHalamanAdmin(event)">🔒 Admin</a>
   
   <button type="button" data-click="bukaModalChangelog" 
     style="background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; font-weight: bold; font-family: serif; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
@@ -1223,12 +1223,77 @@ window.perbaruiAplikasiSekarang = function() {
     serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
   }
 
-  // Pengaman: paksa reload setelah 1,5 detik jika controllerchange tertahan oleh iframe/tab
+  // Pengaman: paksa reload setelah 3 detik jika controllerchange tertahan oleh iframe/tab
   setTimeout(() => {
     window.location.reload();
-  }, 1500);
+  }, 3000);
 };
+  
+window.bukaHalamanAdmin = async function(event) {
+  if (event) event.preventDefault();
 
+  // 1. Cek sesi akun chat di browser
+  const rawUser = localStorage.getItem('rt05_chat_user');
+  if (!rawUser) {
+    alert("⚠️ Anda belum login akun chat.\nSilakan login menggunakan akun Admin terlebih dahulu.");
+
+    // Otomatis buka modal chat untuk login
+    const tombolChat = document.getElementById('btn-chat-floating') || document.querySelector('[onclick*="Chat"]');
+    if (typeof bukaModalChat === 'function') {
+      bukaModalChat();
+    } else if (tombolChat) {
+      tombolChat.click();
+    }
+    return;
+  }
+
+  let chatUser = null;
+  try {
+    chatUser = JSON.parse(rawUser);
+  } catch (e) {
+    localStorage.removeItem('rt05_chat_user');
+    alert("⚠️ Sesi akun tidak valid. Silakan login ulang di menu Chat.");
+    return;
+  }
+
+  if (!chatUser || !chatUser.uid) {
+    alert("⚠️ Silakan login akun chat terlebih dahulu.");
+    return;
+  }
+
+  // 2. Verifikasi status & role terbaru langsung ke Firebase RTDB
+  try {
+    if (window.db && window.firebaseRef && window.firebaseGet) {
+      if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
+        await window.signInAnonymously(window.auth);
+      }
+
+      const snap = await window.firebaseGet(window.firebaseRef(window.db, `users/${chatUser.uid}`));
+      const userData = snap.val();
+      const namaUser = userData?.username || userData?.nama || chatUser.nama || '';
+      const isAdmin = userData && userData.status === 'aktif' && (userData.role === 'admin' || namaUser === 'Admin1');
+
+      if (!isAdmin) {
+        alert(`⛔ Akses Ditolak!\nAkun "${namaUser || 'Warga'}" terdaftar sebagai warga biasa (bukan Admin).`);
+        return;
+      }
+
+      chatUser.role = 'admin';
+      localStorage.setItem('rt05_chat_user', JSON.stringify(chatUser));
+      window.location.href = 'admin.html';
+      return;
+    }
+  } catch (err) {
+    console.warn("Gagal cek role live ke server, memakai cache lokal:", err);
+  }
+
+  // Fallback saat offline / koneksi lambat
+  if (chatUser.role === 'admin' || chatUser.nama === 'Admin1') {
+    window.location.href = 'admin.html';
+  } else {
+    alert("⛔ Akses Ditolak! Anda bukan Admin.");
+  }
+};
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
