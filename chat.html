@@ -616,7 +616,7 @@ function getDeviceId() {
     // Tambahkan baris uji coba ini di baris paling atas dalam <script type="module">
 window.debuggingAktivasi = "Script modul sukses berjalan!";
 console.log("🚀 Script chat.html berhasil dimuat.");
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
@@ -631,10 +631,14 @@ console.log("🚀 Script chat.html berhasil dimuat.");
       appId: "1:1068108426437:web:429a9b35b92d8622ab94ac"
     };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app, firebaseConfig.databaseURL);
-    const messaging = getMessaging(app);
-    const auth = getAuth(app);
+    // Instans [DEFAULT] khusus untuk FCM agar sinkron dengan sw.js
+    const defaultApp = getApps().find(a => a.name === '[DEFAULT]') || initializeApp(firebaseConfig);
+    // Instans terisolasi khusus Chat agar sesi login Warga / Admin1 tidak tertimpa halaman lain
+    const chatApp = getApps().find(a => a.name === 'rt05ChatApp') || initializeApp(firebaseConfig, 'rt05ChatApp');
+
+    const db = getDatabase(chatApp, firebaseConfig.databaseURL);
+    const messaging = getMessaging(defaultApp);
+    const auth = getAuth(chatApp);
 
     // 🌟 DEKLARASI UTAMA (Variabel lokal yang aman & disinkronkan ke global agar tidak error undefined di console)
     window.currentUser = JSON.parse(localStorage.getItem('rt05_chat_user')) || null;
