@@ -1767,15 +1767,16 @@ async function cekLogin() {
     const idToken = await cred.user.getIdToken(true);
 
     // Tukar idToken Firebase dengan sessionToken dari Cloudflare Worker
-    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        action: 'login',
-        uid: uid,
-        idToken: idToken
-      })
-    });
+const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    action: 'login',
+    uid: uid,
+    idToken: idToken,
+    apiKey: RT05_CONFIG.FIREBASE_CONFIG.apiKey
+  })
+});
 
     const result = await response.json();
 
