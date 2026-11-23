@@ -56,9 +56,20 @@ messaging.onBackgroundMessage((payload) => {
 });
 
 self.addEventListener('install', (e) => {
-  self.skipWaiting(); // Mempercepat aktivasi Service Worker versi baru
+  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
+      // Unduh file audio secara latar belakang tanpa memblokir proses update utama
+      const audioFiles = [
+        './audio/bell2.mp3', './audio/bell3.mp3',
+        './audio/bubble1.mp3', './audio/bubble2.mp3', './audio/bubble3.mp3', './audio/bubble4.mp3',
+        './audio/cring1.mp3', './audio/cring2.mp3',
+        './audio/kling1.mp3', './audio/kling2.mp3', './audio/kling3.mp3',
+        './audio/ping1.mp3', './audio/ping2.mp3'
+      ];
+      cache.addAll(audioFiles).catch(() => {});
+
+      // Hanya tunggu file aplikasi inti agar update langsung siap
       return cache.addAll([
         './',
         './index.html',
@@ -78,20 +89,7 @@ self.addEventListener('install', (e) => {
         './kentongan192.png',
         './kentongan-slit-drum.png',
         './kentongan-btn.webp',
-        './html5-qrcode.min.js',
-        './audio/bell2.mp3',
-        './audio/bell3.mp3',
-        './audio/bubble1.mp3',
-        './audio/bubble2.mp3',
-        './audio/bubble3.mp3',
-        './audio/bubble4.mp3',
-        './audio/cring1.mp3',
-        './audio/cring2.mp3',
-        './audio/kling1.mp3',
-        './audio/kling2.mp3',
-        './audio/kling3.mp3',
-        './audio/ping1.mp3',
-        './audio/ping2.mp3'
+        './html5-qrcode.min.js'
       ]);
     })
   );
@@ -175,8 +173,9 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Perintah skipWaiting dari lonceng
+// 1. Wajib ada agar tombol "Ada update nih!" langsung mengaktifkan SW baru
 self.addEventListener('message', (event) => {
-  if (event.data && event.data.action === 'skipWaiting') {
+  if (event.data && (event.data.action === 'skipWaiting' || event.data.type === 'SKIP_WAITING')) {
     self.skipWaiting();
   }
 });
