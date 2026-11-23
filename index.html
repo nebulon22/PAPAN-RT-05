@@ -1581,13 +1581,19 @@ function muatDataPetaWarga() {
     return;
   }
 
-  const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
   const headers = { 'Content-Type': 'application/json' };
-  if (sessionToken) {
-    headers['Authorization'] = `Bearer ${sessionToken}`;
+  const isHalamanAdmin = window.location.pathname.toLowerCase().includes('admin');
+
+  // Token hanya dikirim jika dibuka dari halaman admin.html
+  // Jika dibuka dari index.html (meskipun akun chat berstatus admin), token tidak dikirim -> tetap tersensor
+  if (isHalamanAdmin) {
+    const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
+    if (sessionToken) {
+      headers['Authorization'] = `Bearer ${sessionToken}`;
+    }
   }
 
-  // 1. Ambil data melalui Cloudflare Worker proxy secara aman dengan Header Admin
+  // 1. Ambil data melalui Cloudflare Worker proxy
   fetch(endpointPeta, { method: 'GET', headers: headers })
     .then(response => {
       if (!response.ok) {
@@ -1595,6 +1601,7 @@ function muatDataPetaWarga() {
       }
       return response.json();
     })
+    
     .then(dataObj => {
       // Fungsi internal untuk memasang MarkerCluster & merender titik lokasi
       const pasangClusterDanRender = () => {
