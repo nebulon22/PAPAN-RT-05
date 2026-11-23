@@ -1,12 +1,16 @@
-// --- PRELOAD & UNLOCK AUDIO NOTIFIKASI ---
+const DEFAULT_SOUND_GRUP = 'audio/bell2.mp3';
+const DEFAULT_SOUND_PRIVATE = 'audio/ping1.mp3';
+
+// Cache 2 objek audio aktif agar siap bunyi tanpa jeda unduh
 const notifAudioCache = {
-  grup: new Audio(localStorage.getItem('rt05_setting_sound_grup') || 'audio/bell2.mp3'),
-  private: new Audio(localStorage.getItem('rt05_setting_sound_private') || 'audio/bell1.mp3')
+  grup: new Audio(localStorage.getItem('rt05_setting_sound_grup') || DEFAULT_SOUND_GRUP),
+  private: new Audio(localStorage.getItem('rt05_setting_sound_private') || DEFAULT_SOUND_PRIVATE)
 };
 notifAudioCache.grup.preload = 'auto';
 notifAudioCache.private.preload = 'auto';
 
 let isAudioUnlocked = false;
+let previewAudioPlayer = null;
 
 function unlockPwaAudio() {
   if (isAudioUnlocked) return;
@@ -29,13 +33,26 @@ function unlockPwaAudio() {
   window.addEventListener(evt, unlockPwaAudio, { passive: true });
 });
 
+// Fungsi tes bunyi langsung saat warga memilih nada di dropdown Setting
+function previewSuara(soundPath) {
+  if (!soundPath) return;
+  try {
+    if (previewAudioPlayer) {
+      previewAudioPlayer.pause();
+      previewAudioPlayer.currentTime = 0;
+    }
+    previewAudioPlayer = new Audio(soundPath);
+    previewAudioPlayer.play().catch(err => console.log("Preview audio gagal:", err));
+  } catch (e) {}
+}
+
 // --- FITUR PENGATURAN (SETTING) ---
 function bukaModalSetting() {
   const savedMode = localStorage.getItem('rt05_setting_mode') || 'normal';
   const savedChatActive = localStorage.getItem('rt05_setting_chat') !== 'false';
   const savedPrivateActive = localStorage.getItem('rt05_setting_private_active') !== 'false';
-  const savedSoundGrup = localStorage.getItem('rt05_setting_sound_grup') || 'audio/bell2.mp3';
-  const savedSoundPrivate = localStorage.getItem('rt05_setting_sound_private') || 'audio/bell1.mp3';
+  const savedSoundGrup = localStorage.getItem('rt05_setting_sound_grup') || DEFAULT_SOUND_GRUP;
+  const savedSoundPrivate = localStorage.getItem('rt05_setting_sound_private') || DEFAULT_SOUND_PRIVATE;
 
   document.getElementById('setting-mode-notif').value = savedMode;
   document.getElementById('setting-chat-active').checked = savedChatActive;
@@ -47,6 +64,10 @@ function bukaModalSetting() {
 }
 
 function tutupModalSetting() {
+  if (previewAudioPlayer) {
+    previewAudioPlayer.pause();
+    previewAudioPlayer.currentTime = 0;
+  }
   document.getElementById('modal-setting').style.display = 'none';
 }
 
@@ -88,8 +109,8 @@ function picuNotifikasiMedia(jenisChat = 'grup') {
     try {
       const targetAudio = jenisChat === 'grup' ? notifAudioCache.grup : notifAudioCache.private;
       const expectedSrc = jenisChat === 'grup'
-        ? (localStorage.getItem('rt05_setting_sound_grup') || 'audio/bell2.mp3')
-        : (localStorage.getItem('rt05_setting_sound_private') || 'audio/bell1.mp3');
+        ? (localStorage.getItem('rt05_setting_sound_grup') || DEFAULT_SOUND_GRUP)
+        : (localStorage.getItem('rt05_setting_sound_private') || DEFAULT_SOUND_PRIVATE);
 
       if (!targetAudio.src.endsWith(expectedSrc)) {
         targetAudio.src = expectedSrc;
