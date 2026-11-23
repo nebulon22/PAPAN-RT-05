@@ -885,25 +885,21 @@ const userData = {
 // === LOGOUT ===
 window.logoutUser = async () => {
   if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
-    if (currentUser && currentUser.uid) {
+    // Pastikan sesi Firebase Auth cocok dengan UID sebelum menghapus data di server
+    if (currentUser && currentUser.uid && auth.currentUser && auth.currentUser.uid === currentUser.uid) {
       try {
         const deviceId = localStorage.getItem('rt05_device_id');
-        const currentLocalToken = localStorage.getItem('rt05_current_fcm_token');
 
-        // 1. Hapus token khusus HP ini dari daftar multi-perangkat akun
+        // 1. Hapus token khusus perangkat ini dari daftar multi-perangkat (fcmTokens)
         if (deviceId) {
           await set(ref(db, `users/${currentUser.uid}/fcmTokens/${deviceId}`), null);
         }
 
-        // 2. Hapus fcmToken utama HANYA JIKA nilainya sama dengan token HP yang sedang logout
-        const tokenSnap = await get(ref(db, `users/${currentUser.uid}/fcmToken`));
-        if (tokenSnap.exists() && tokenSnap.val() === currentLocalToken) {
-          await set(ref(db, `users/${currentUser.uid}/fcmToken`), null);
-        }
+        // 2. Ubah status menjadi offline (di dalam try-catch agar aman jika koneksi/sesi terputus)
+        await set(ref(db, `users/${currentUser.uid}/state`), 'offline');
       } catch (err) {
-        console.log(err);
+        console.log("Lewati pembersihan database saat logout:", err);
       }
-      await set(ref(db, `users/${currentUser.uid}/state`), 'offline');
     }
     
     try {
@@ -912,7 +908,7 @@ window.logoutUser = async () => {
       console.log(e);
     }
 
-    // Bersihkan sesi lokal (rt05_device_id sengaja dibiarkan agar konsisten untuk HP ini)
+    // Bersihkan sesi lokal (rt05_device_id tetap disimpan agar ID perangkat konsisten)
     localStorage.removeItem('rt05_chat_user');
     localStorage.removeItem('rt05_open_private_rooms');
     localStorage.removeItem('rt05_chat_last_read_key');
@@ -1537,6 +1533,8 @@ function triggerGasNotification(actionType, senderName, bodyText, targetUid = ""
 // === 3. AUTO-REFRESH TOKEN FCM SETIAP KALI APP DIBUKA ===
 async function initFCMToken(userId) {
   try {
+    // 1. Pengaman: Pastikan sesi Auth pada rt05ChatApp sudah siap & cocok
+    if (!auth.currentUser || auth.currentUser.uid !== userId) return;
     if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
 
     let permission = Notification.permission;
@@ -1555,9 +1553,8 @@ async function initFCMToken(userId) {
         const deviceId = getDeviceId();
         localStorage.setItem('rt05_current_fcm_token', currentToken);
 
-        // Simpan ke daftar multi-perangkat milik UID warga ini
+        // 2. Simpan hanya ke format multi-perangkat (fcmTokens) tanpa fcmToken tunggal lama
         await update(ref(db, `users/${userId}`), {
-          fcmToken: currentToken,
           [`fcmTokens/${deviceId}`]: {
             token: currentToken,
             updatedAt: Date.now()
