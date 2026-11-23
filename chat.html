@@ -619,7 +619,7 @@ console.log("🚀 Script chat.html berhasil dimuat.");
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
-    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously, signOut } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInAnonymously, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
@@ -1116,19 +1116,6 @@ window.logoutUser = async () => {
 
     
 window.addEventListener('DOMContentLoaded', () => {
-    // 🌟 Langsung aktifkan pemantau unread di latar belakang jika sesi user sudah ada
-    const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
-    if (savedUser && savedUser.uid) {
-      currentUser = savedUser;
-      window.currentUser = currentUser;
-      
-      // Jalankan listener unread agar badge langsung akurat sejak awal
-      if (typeof listenPublicGroupUnread === 'function') listenPublicGroupUnread();
-      if (typeof listenAllPrivateChats === 'function') listenAllPrivateChats();
-    }
-
-    checkUserStatus();
-
     const regModal = document.getElementById('reg-modal');
     if (regModal) {
       ['touchstart', 'touchmove', 'wheel'].forEach(eventType => {
@@ -1146,7 +1133,31 @@ window.addEventListener('DOMContentLoaded', () => {
       }
     });
     observer.observe(document.body);
-  });
+
+    // Tunggu Firebase Auth pada instans rt05ChatApp selesai memeriksa sesi sebelum membaca/menulis DB
+    let isAuthChecked = false;
+    onAuthStateChanged(auth, (firebaseUser) => {
+      if (isAuthChecked) return;
+      isAuthChecked = true;
+
+      const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+
+      // Jika sesi Auth belum login atau masih sesi tamu, bersihkan localStorage agar diarahkan ke form login
+      if (savedUser && savedUser.uid && (!firebaseUser || firebaseUser.isAnonymous || firebaseUser.uid !== savedUser.uid)) {
+        localStorage.removeItem('rt05_chat_user');
+        currentUser = null;
+        window.currentUser = null;
+      } else if (savedUser && savedUser.uid) {
+        currentUser = savedUser;
+        window.currentUser = currentUser;
+
+        if (typeof listenPublicGroupUnread === 'function') listenPublicGroupUnread();
+        if (typeof listenAllPrivateChats === 'function') listenAllPrivateChats();
+      }
+
+      checkUserStatus();
+    });
+});
     // ======================================
 
     
