@@ -1762,21 +1762,28 @@ async function cekLogin() {
     const pseudoEmail = userVal.authEmail || `${uid.toLowerCase()}@rt05kayen.internal`;
     const passwordAuth = inputPin + "RT05Key";
 
-    // Verifikasi PIN pribadi ke Firebase Auth
+   // Verifikasi PIN pribadi ke Firebase Auth
     const cred = await window.authSignInEmail(window.auth, pseudoEmail, passwordAuth);
     const idToken = await cred.user.getIdToken(true);
 
+    const firebaseApiKey =
+      window.auth?.app?.options?.apiKey ||
+      window.RT05_CONFIG?.FIREBASE_CONFIG?.apiKey ||
+      window.RT05_CONFIG?.firebaseConfig?.apiKey ||
+      window.RT05_CONFIG?.API_KEY ||
+      '';
+
     // Tukar idToken Firebase dengan sessionToken dari Cloudflare Worker
-const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({
-    action: 'login',
-    uid: uid,
-    idToken: idToken,
-    apiKey: RT05_CONFIG.FIREBASE_CONFIG.apiKey
-  })
-});
+    const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: 'login',
+        uid: uid,
+        idToken: idToken,
+        apiKey: firebaseApiKey
+      })
+    });
 
     const result = await response.json();
 
