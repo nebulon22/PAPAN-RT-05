@@ -1,11 +1,58 @@
-// --- FITUR PENGATURAN (SETTING) ---
+const DEFAULT_SOUND_GRUP = 'audio/bell2.mp3';
+const DEFAULT_SOUND_PRIVATE = 'audio/ping1.mp3';
 
+// Cache 2 objek audio aktif agar siap bunyi tanpa jeda unduh
+const notifAudioCache = {
+  grup: new Audio(localStorage.getItem('rt05_setting_sound_grup') || DEFAULT_SOUND_GRUP),
+  private: new Audio(localStorage.getItem('rt05_setting_sound_private') || DEFAULT_SOUND_PRIVATE)
+};
+notifAudioCache.grup.preload = 'auto';
+notifAudioCache.private.preload = 'auto';
+
+let isAudioUnlocked = false;
+let previewAudioPlayer = null;
+
+function unlockPwaAudio() {
+  if (isAudioUnlocked) return;
+  Object.values(notifAudioCache).forEach(audioEl => {
+    const prevMuted = audioEl.muted;
+    audioEl.muted = true;
+    audioEl.play().then(() => {
+      audioEl.pause();
+      audioEl.currentTime = 0;
+      audioEl.muted = prevMuted;
+      isAudioUnlocked = true;
+    }).catch(() => {
+      audioEl.muted = prevMuted;
+    });
+  });
+}
+
+// Buka kunci audio pada sentuhan/klik pertama di index.html
+['touchstart', 'click', 'keydown'].forEach(evt => {
+  window.addEventListener(evt, unlockPwaAudio, { passive: true });
+});
+
+// Fungsi tes bunyi langsung saat warga memilih nada di dropdown Setting
+function previewSuara(soundPath) {
+  if (!soundPath) return;
+  try {
+    if (previewAudioPlayer) {
+      previewAudioPlayer.pause();
+      previewAudioPlayer.currentTime = 0;
+    }
+    previewAudioPlayer = new Audio(soundPath);
+    previewAudioPlayer.play().catch(err => console.log("Preview audio gagal:", err));
+  } catch (e) {}
+}
+
+// --- FITUR PENGATURAN (SETTING) ---
 function bukaModalSetting() {
   const savedMode = localStorage.getItem('rt05_setting_mode') || 'normal';
   const savedChatActive = localStorage.getItem('rt05_setting_chat') !== 'false';
   const savedPrivateActive = localStorage.getItem('rt05_setting_private_active') !== 'false';
-  const savedSoundGrup = localStorage.getItem('rt05_setting_sound_grup') || 'audio/bell2.mp3';
-  const savedSoundPrivate = localStorage.getItem('rt05_setting_sound_private') || 'audio/bell1.mp3';
+  const savedSoundGrup = localStorage.getItem('rt05_setting_sound_grup') || DEFAULT_SOUND_GRUP;
+  const savedSoundPrivate = localStorage.getItem('rt05_setting_sound_private') || DEFAULT_SOUND_PRIVATE;
 
   document.getElementById('setting-mode-notif').value = savedMode;
   document.getElementById('setting-chat-active').checked = savedChatActive;
@@ -17,6 +64,10 @@ function bukaModalSetting() {
 }
 
 function tutupModalSetting() {
+  if (previewAudioPlayer) {
+    previewAudioPlayer.pause();
+    previewAudioPlayer.currentTime = 0;
+  }
   document.getElementById('modal-setting').style.display = 'none';
 }
 
@@ -33,6 +84,14 @@ function simpanPengaturanApp() {
   localStorage.setItem('rt05_setting_sound_grup', soundGrup);
   localStorage.setItem('rt05_setting_sound_private', soundPrivate);
 
+  // Perbarui sumber audio di cache & langsung unlock saat tombol Simpan diklik
+  notifAudioCache.grup.src = soundGrup;
+  notifAudioCache.grup.load();
+  notifAudioCache.private.src = soundPrivate;
+  notifAudioCache.private.load();
+  isAudioUnlocked = false;
+  unlockPwaAudio();
+
   alert('✅ Pengaturan berhasil disimpan!');
   tutupModalSetting();
 }
@@ -42,21 +101,24 @@ function picuNotifikasiMedia(jenisChat = 'grup') {
   if (mode === 'sunyi') return;
 
   // Cek apakah jenis chat tersebut diaktifkan centangnya
-  if (jenisChat === 'grup') {
-    if (localStorage.getItem('rt05_setting_chat') === 'false') return;
-  } else if (jenisChat === 'private') {
-    if (localStorage.getItem('rt05_setting_private_active') === 'false') return;
-  }
+  if (jenisChat === 'grup' && localStorage.getItem('rt05_setting_chat') === 'false') return;
+  if (jenisChat === 'private' && localStorage.getItem('rt05_setting_private_active') === 'false') return;
 
-  // 1. Jalankan Suara Sesuai Pilihan
+  // 1. Jalankan Suara dari Audio yang Sudah Di-preload & Di-unlock
   if (mode === 'normal' || mode === 'suara') {
     try {
-      let selectedSound = jenisChat === 'grup' 
-        ? (localStorage.getItem('rt05_setting_sound_grup') || 'audio/bell2.mp3')
-        : (localStorage.getItem('rt05_setting_sound_private') || 'audio/bell1.mp3');
+      const targetAudio = jenisChat === 'grup' ? notifAudioCache.grup : notifAudioCache.private;
+      const expectedSrc = jenisChat === 'grup'
+        ? (localStorage.getItem('rt05_setting_sound_grup') || DEFAULT_SOUND_GRUP)
+        : (localStorage.getItem('rt05_setting_sound_private') || DEFAULT_SOUND_PRIVATE);
 
-      var audio = new Audio(selectedSound);
-      audio.play().catch(e => {
+      if (!targetAudio.src.endsWith(expectedSrc)) {
+        targetAudio.src = expectedSrc;
+      }
+
+      targetAudio.pause();
+      targetAudio.currentTime = 0;
+      targetAudio.play().catch(() => {
         if (typeof mainkanSuaraBeep === 'function') mainkanSuaraBeep();
       });
     } catch (err) {
@@ -64,14 +126,12 @@ function picuNotifikasiMedia(jenisChat = 'grup') {
     }
   }
 
-  // 2. Jalankan Getar
-  if (mode === 'normal' || mode === 'getar') {
+  // 2. Jalankan Getar (hanya efektif saat layar aktif/foreground)
+  if ((mode === 'normal' || mode === 'getar') && !document.hidden) {
     try {
       if ('vibrate' in navigator) {
         navigator.vibrate([150, 100, 150]);
       }
-    } catch (e) {
-      console.log("Vibrate error:", e);
-    }
+    } catch (e) {}
   }
 }

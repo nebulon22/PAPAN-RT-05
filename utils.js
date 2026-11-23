@@ -1,11 +1,13 @@
 // utils.js - Kumpulan Konfigurasi, Firebase Global, & Fungsi Pendukung RT 05
-
+const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxByNuXApR-qLbpCpLQMjbHiTjC2V6yA9df7lPQdu4GFC_gX8YKfvigOr2Gi0auUrEOJQ/exec";
+window.GAS_WEB_APP_URL = GAS_WEB_APP_URL;
 const RT05_CONFIG = {
     PETA_PROXY_URL: "https://peta.papan05.my.id", 
     UPLOADER_URL: "https://uploader.papan05.my.id",
     ADMIN_API_URL: "https://admin-worker.papan05.my.id",
     DATABASE_URL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
     FIREBASE: {
+        GAS_WEB_APP_URL: GAS_WEB_APP_URL,
         apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
         authDomain: "papan05-21a56.firebaseapp.com",
         databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
@@ -26,12 +28,22 @@ const RT05_CONFIG = {
 // ==========================================
 // INISIALISASI FIREBASE V10 + ANONYMOUS AUTH (LAZY / NON-BLOCKING)
 // ==========================================
+// ==========================================
+// INISIALISASI FIREBASE V10 (TERISOLASI PER HALAMAN)
+// ==========================================
 async function initFirebaseLazy() {
+  const path = window.location.pathname.toLowerCase();
+  const isChatPage = path.includes('chat');
+  const isAdminPage = path.includes('admin');
+
+  // 1. Jika di chat.html, biarkan chat.html mengelola instans "rt05ChatApp" sendiri
+  if (isChatPage) return;
+
   if (window.db && window.auth) return;
 
-try {
+  try {
     const [
-      { initializeApp },
+      { initializeApp, getApps },
       { getDatabase, ref, onValue, update, remove, push, set, get, limitToLast, query, goOffline, goOnline },
       {
         getAuth,
@@ -40,6 +52,7 @@ try {
         browserSessionPersistence,
         inMemoryPersistence,
         signInAnonymously,
+        signInWithEmailAndPassword,
         onAuthStateChanged
       }
     ] = await Promise.all([
@@ -48,7 +61,15 @@ try {
       import("https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js")
     ]);
 
-    const app = initializeApp(RT05_CONFIG.FIREBASE);
+    // 2. Pisahkan nama instans: Admin memakai "rt05AdminApp", Index memakai "[DEFAULT]"
+    const appName = isAdminPage ? 'rt05AdminApp' : '[DEFAULT]';
+    let app = getApps().find(a => a.name === appName);
+    if (!app) {
+      app = isAdminPage
+        ? initializeApp(RT05_CONFIG.FIREBASE, 'rt05AdminApp')
+        : initializeApp(RT05_CONFIG.FIREBASE);
+    }
+
     const db = getDatabase(app, RT05_CONFIG.FIREBASE.databaseURL);
 
     let auth;
@@ -60,7 +81,7 @@ try {
       auth = getAuth(app);
     }
 
-    // EKSPOS UTILITIES DARI MODULE KE GLOBAL WINDOW
+    // EKSPOS UTILITIES KE GLOBAL WINDOW
     window.db = db;
     window.auth = auth;
     window.firebaseRef = ref;
@@ -75,21 +96,26 @@ try {
     window.firebaseGoOffline = goOffline;
     window.firebaseGoOnline = goOnline;
     window.signInAnonymously = signInAnonymously;
+    window.signInWithEmailAndPassword = signInWithEmailAndPassword;
     window.onAuthStateChanged = onAuthStateChanged;
 
-// Autentikasi Anonim Otomatis + Kirim Sinyal Kesiapan Firebase
+    // 3. Jika halaman ADMIN: Jangan login otomatis sebelum PIN Admin dimasukkan!
+    if (isAdminPage) {
+      window.dispatchEvent(new Event('firebaseSiap'));
+      return;
+    }
+
+    // 4. Jika halaman INDEX: Login Anonim otomatis untuk baca data publik & badge
     onAuthStateChanged(auth, (user) => {
       if (!user) {
         signInAnonymously(auth).then(() => {
-          console.log("🟢 Autentikasi Anonim Berhasil Diberikan.");
+          console.log("🟢 Autentikasi Anonim Index Berhasil.");
         }).catch((err) => {
           console.error("🔴 Gagal Login Anonim:", err);
         });
       } else {
-        console.log("🟢 Sesi Firebase Auth Aktif. UID:", user.uid);
         window.isFirebaseAuthReady = true;
         window.dispatchEvent(new Event('firebaseSiapIndex'));
-        window.dispatchEvent(new Event('firebaseSiap'));
       }
     });
   } catch (err) {
