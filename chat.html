@@ -1640,12 +1640,24 @@ function listenPublicGroupUnread() {
     updatePublicTabBadge(unreadPublicCount);
     sendUnreadCountToParent(unreadPublicCount);
 
-    // Notifikasi melayang / suara hanya jika ada pesan baru masuk SETELAH app siap
+// Notifikasi melayang / suara hanya jika ada pesan baru masuk SETELAH app siap
     if (!isFirstPublicLoad && isChatReady && latestUnreadMsg && latestUnreadKey && unreadPublicCount > 0) {
       const notifId = 'notif_pub_' + latestUnreadKey;
       if (!sessionStorage.getItem(notifId)) {
         sessionStorage.setItem(notifId, 'true');
 
+        // 1. Bunyikan suara kustom PWA (selaras dengan private chat)
+        try {
+          if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+            window.parent.picuNotifikasiMedia('grup');
+          } else if (typeof playKlingSound === 'function') {
+            playKlingSound();
+          }
+        } catch (e) {
+          if (typeof playKlingSound === 'function') playKlingSound();
+        }
+
+        // 2. Tampilkan banner notifikasi OS DENGAN suara (hapus silent: true)
         if (!window.isUserViewingChat() && Notification.permission === 'granted') {
           const senderName = latestUnreadMsg.sender || "Warga";
           const title = "Grup RT 05 - " + senderName;
@@ -1654,9 +1666,8 @@ function listenPublicGroupUnread() {
             body: latestUnreadMsg.text || 'Mengirim pesan...',
             icon: './kentongan-slit-drum.png',
             tag: 'grup-chat-rt05',
-            renotify: true,
-            silent: true
-            };
+            renotify: true
+          };
           if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
             navigator.serviceWorker.ready.then((reg) => reg.showNotification(title, options));
           } else {
@@ -2036,7 +2047,6 @@ onMessage(messaging, (payload) => {
         badge: '/kentongan-slit-drum.png',
         tag: 'rt05-fcm-notif', // 🌟 Menimpa notifikasi lama agar 10 pesan tidak bermunculan 10x
         renotify: true,
-        silent: true
       }
     );
   }
@@ -2346,26 +2356,9 @@ let latestPublicKey = null;
             let isUnreadMsg = false;
             const isViewingGroupNow = (activeChatType === 'public' && window.isUserViewingChat());
 
-            // 2. BARU TENTUKAN APAKAH PESAN INI MASUK DALAM KATEGORI UNREAD
+        // 2. BARU TENTUKAN APAKAH PESAN INI MASUK DALAM KATEGORI UNREAD
             if (isChatReady && currentUser && currentUser.uid && isUnreadSection && msgData.uid !== currentUser?.uid && msgKey !== lastReadPublicMapKey) {
                 isUnreadMsg = true;
-
-            const notifKey = 'notified_' + msgKey;
-                if (!sessionStorage.getItem(notifKey)) {
-                    sessionStorage.setItem(notifKey, 'true');
-
-                    // Samakan dengan private chat: panggil picuNotifikasiMedia('grup') 
-                    // selama user tidak sedang berada di dalam ruang chat grup
-                    if (!isViewingGroupNow) {
-                        try {
-                            if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-                                window.parent.picuNotifikasiMedia('grup');
-                            }
-                        } catch (e) {
-                            console.log("Gagal memicu notifikasi media:", e);
-                        }
-                    }
-                }
             }
 
             renderSingleMessage(msgData, isUnreadMsg, msgKey);
