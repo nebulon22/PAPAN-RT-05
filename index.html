@@ -589,7 +589,7 @@ select {
   user-select: text !important;
   -webkit-touch-callout: default !important;
 }
-/* Transisi sentuhan profesional & ringan untuk SEMUA tombol di index.html */
+/* Transisi sentuhan cepat & empuk untuk SEMUA tombol di index.html */
 button:not(:disabled),
 a[class*="btn"],
 [role="button"],
@@ -601,47 +601,42 @@ a[class*="btn"],
 #btn-senter-ronda,
 .btn-qr-floating,
 .img-popup {
-  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-/* Transisi sentuhan profesional & ringan untuk SEMUA tombol di index.html */
-button:not(:disabled),
-a[class*="btn"],
-[role="button"],
-.btn-filter,
-.btn-back-floating,
-.btn-rute,
-.btn-lihat-lokasi,
-#floating-chat-btn,
-#btn-senter-ronda,
-.btn-qr-floating,
-.img-popup {
-  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease;
+  transition: transform 0.1s cubic-bezier(0.2, 0, 0, 1), opacity 0.1s ease !important;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 
 /* Efek sentuh empuk saat ditekan (GPU-accelerated, zero layout shift) */
 button:not(:disabled):active,
+button:not(:disabled).is-pressed,
 a[class*="btn"]:active,
+a[class*="btn"].is-pressed,
 [role="button"]:active,
+[role="button"].is-pressed,
 .btn-filter:active,
+.btn-filter.is-pressed,
 .btn-back-floating:active,
+.btn-back-floating.is-pressed,
 .btn-rute:active,
+.btn-rute.is-pressed,
 .btn-lihat-lokasi:active,
+.btn-lihat-lokasi.is-pressed,
 #floating-chat-btn:active,
+#floating-chat-btn.is-pressed,
 #btn-senter-ronda:active,
+#btn-senter-ronda.is-pressed,
 .img-popup:active {
-  transform: scale(0.96);
-  opacity: 0.92;
+  transform: scale(0.94);
+  opacity: 0.9;
 }
 
-/* Khusus tombol QR bawah agar posisi tengah translateX(-50%) tetap terkunci */
-.btn-qr-floating:active {
-  transform: translateX(-50%) scale(0.96);
-  opacity: 0.92;
+/* Spesifisitas lebih tinggi (button.btn-qr-floating) agar posisi tengah translateX(-50%) TIDAK pernah geser */
+button.btn-qr-floating:active,
+button.btn-qr-floating.is-pressed,
+.btn-qr-floating:active,
+.btn-qr-floating.is-pressed {
+  transform: translateX(-50%) scale(0.94) !important;
+  opacity: 0.9;
 }
 
 /* Kecualikan tombol zoom +/- bawaan Leaflet agar tidak bergeser */
@@ -4076,6 +4071,18 @@ window.simpanWargaBaru = async function() {
     }
   });
 
+  // Efek sentuh empuk instan di layar sentuh HP untuk seluruh tombol
+  document.addEventListener('touchstart', function(e) {
+    const btn = e.target.closest('button:not(:disabled), a[class*="btn"], [role="button"], .btn-filter, .btn-qr-floating, #floating-chat-btn, #btn-senter-ronda');
+    if (!btn || btn.closest('.leaflet-control-zoom')) return;
+
+    btn.classList.add('is-pressed');
+    clearTimeout(btn._pressTimer);
+    btn._pressTimer = setTimeout(() => {
+      btn.classList.remove('is-pressed');
+    }, 130);
+  }, { passive: true });
+  
   // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPetaDanData);
