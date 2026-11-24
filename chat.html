@@ -754,8 +754,12 @@ function formatWaktuPesan(timestamp) {
 }
     
 // === REGISTRASI DENGAN FIREBASE AUTH (PSEUDO EMAIL) ===
+    let isRegistering = false;
+
     window.handleRegistration = async (e) => {
       e.preventDefault();
+      if (isRegistering) return;
+
       const nama = document.getElementById('reg-nama').value.trim();
       const hunian = document.getElementById('reg-hunian').value.trim();
       const pin = document.getElementById('reg-pin').value.trim();
@@ -768,9 +772,17 @@ function formatWaktuPesan(timestamp) {
         return;
       }
 
-      if (pin.length < 4) {
-        alert("PIN minimal 4 angka!");
+      if (pin.length < 6) {
+        alert("PIN harus 6 angka!");
         return;
+      }
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn ? submitBtn.innerHTML : "";
+      isRegistering = true;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = "⏳ Mendaftarkan...";
       }
 
       try {
@@ -805,7 +817,7 @@ function formatWaktuPesan(timestamp) {
         currentUser = userData;
         window.currentUser = currentUser;
 
-// 3. Kirim notifikasi pendaftaran baru ke HP Admin via Cloudflare FCM Worker
+        // 3. Kirim notifikasi pendaftaran baru ke HP Admin via Cloudflare FCM Worker
         const workerUrl = getFcmWorkerUrl();
         if (workerUrl) {
           const regIdToken = await userCredential.user.getIdToken();
@@ -835,6 +847,12 @@ function formatWaktuPesan(timestamp) {
       } catch (error) {
         console.error("Gagal mendaftar:", error);
         alert("❌ Gagal mendaftar: " + error.message);
+      } finally {
+        isRegistering = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        }
       }
     };
 
