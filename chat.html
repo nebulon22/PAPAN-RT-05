@@ -805,23 +805,29 @@ function formatWaktuPesan(timestamp) {
         currentUser = userData;
         window.currentUser = currentUser;
 
-        // 3. Kirim notifikasi pendaftaran baru ke HP Admin via Cloudflare FCM Worker
+// 3. Kirim notifikasi pendaftaran baru ke HP Admin via Cloudflare FCM Worker
         const workerUrl = getFcmWorkerUrl();
         if (workerUrl) {
           const regIdToken = await userCredential.user.getIdToken();
-          fetch(workerUrl, {
-            method: 'POST',
-            keepalive: true,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              action: 'notifChatBaru',
-              senderUid: authUid,
-              nama: nama,
-              hunian: hunian,
-              idToken: regIdToken,
-              apiKey: firebaseConfig.apiKey
-            })
-          }).catch(err => console.log("Gagal memicu notif pendaftaran:", err));
+          try {
+            const resNotif = await fetch(workerUrl, {
+              method: 'POST',
+              keepalive: true,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'notifChatBaru',
+                senderUid: authUid,
+                nama: nama,
+                hunian: hunian,
+                idToken: regIdToken,
+                apiKey: firebaseConfig.apiKey
+              })
+            });
+            const hasilNotif = await resNotif.json();
+            console.log("Hasil notif pendaftaran ke Admin:", resNotif.status, hasilNotif);
+          } catch (err) {
+            console.error("Gagal memicu notif pendaftaran:", err);
+          }
         }
 
         e.target.reset();
