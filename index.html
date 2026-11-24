@@ -1447,6 +1447,7 @@ function initMainPageChatListener() {
 
 // Tangkap sinyal siap Firebase di halaman utama
 window.addEventListener('firebaseSiapIndex', () => {
+  muatBadgeInfoRT();
   if ('requestIdleCallback' in window) {
     requestIdleCallback(initMainPageChatListener, { timeout: 2500 });
   } else {
@@ -2078,25 +2079,84 @@ window.addEventListener('pageshow', function(event) {
   
 let isBadgeInfoListenerAktif = false;
 
-function muatBadgeInfoRT() {
+function renderTeksDanBadgeInfoRT(daftarJudul, activeKeys) {
+  const previewEl = document.getElementById('preview-judul-info');
+  if (previewEl) {
+    if (daftarJudul.length > 0) {
+      const teksGabungan = daftarJudul
+        .map((judul, idx) => `${idx === 0 ? '🔥 TERBARU: ' : '📌 '}${judul}`)
+        .join('   •   ');
+      previewEl.innerText = teksGabungan;
+
+      const durasiDetik = Math.max(12, Math.round(teksGabungan.length * 0.22));
+      previewEl.style.animation = '';
+      previewEl.style.paddingLeft = '';
+      previewEl.style.animationDuration = `${durasiDetik}s`;
+    } else {
+      previewEl.innerText = 'Belum ada pengumuman aktif saat ini';
+      previewEl.style.animation = 'none';
+      previewEl.style.paddingLeft = '0';
+    }
+  }
+
+  const readKeys = JSON.parse(localStorage.getItem('rt05_read_announcements') || '[]');
+  const unreadKeys = activeKeys.filter(k => !readKeys.includes(k));
+
+  const badge = document.getElementById('badge-count');
+  if (badge) {
+    if (unreadKeys.length > 0) {
+      badge.innerText = unreadKeys.length + ' Baru';
+      badge.style.display = 'inline-block';
+      badge.style.background = '#ef4444';
+      badge.style.color = '#ffffff';
+    } else if (activeKeys.length > 0) {
+      badge.innerText = activeKeys.length;
+      badge.style.display = 'inline-block';
+      badge.style.background = '#111827';
+      badge.style.color = '#fbbf24';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+}
+
+async function muatBadgeInfoRT() {
+  // 1. Tampilkan cache lokal seketika (0 ms) jika sudah pernah dimuat sebelumnya
+  try {
+    const cacheInfo = JSON.parse(localStorage.getItem('rt05_cache_info_rt') || 'null');
+    if (cacheInfo && Array.isArray(cacheInfo.daftarJudul)) {
+      renderTeksDanBadgeInfoRT(cacheInfo.daftarJudul, cacheInfo.activeKeys || []);
+    }
+  } catch (e) {}
+
   if (isBadgeInfoListenerAktif) return;
 
   if (typeof window.firebaseRef !== 'function' || !window.db) {
-    setTimeout(muatBadgeInfoRT, 100);
+    setTimeout(muatBadgeInfoRT, 150);
     return;
+  }
+
+  // 2. Pastikan Firebase Auth (Anonymous) sudah aktif sebelum membaca node pengumuman
+  try {
+    if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
+      await window.signInAnonymously(window.auth);
+    }
+  } catch (authErr) {
+    console.warn("Menunggu autentikasi sebelum memuat info RT:", authErr);
   }
 
   isBadgeInfoListenerAktif = true;
   const pengumumanRef = window.firebaseRef(window.db, "pengumuman");
+
   window.firebaseOnValue(pengumumanRef, (snapshot) => {
     const data = snapshot.val();
-    let activeKeys = [];
-    let daftarJudul = [];
+    const activeKeys = [];
+    const daftarJudul = [];
 
     if (data) {
       Object.keys(data).forEach(key => {
         const item = data[key];
-        var status = item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
+        const status = item && item.status ? String(item.status).trim().toUpperCase() : 'AKTIF';
         if (status === 'AKTIF') {
           activeKeys.push(key);
           if (item.judul) {
@@ -2106,46 +2166,19 @@ function muatBadgeInfoRT() {
       });
     }
 
-    // Urutkan dari event terbaru ke yang terlama
     daftarJudul.reverse();
 
-    var previewEl = document.getElementById('preview-judul-info');
-    if (previewEl) {
-      if (daftarJudul.length > 0) {
-        const teksGabungan = daftarJudul
-          .map((judul, idx) => `${idx === 0 ? '🔥 TERBARU: ' : '📌 '}${judul}`)
-          .join('   •   ');
-        previewEl.innerText = teksGabungan;
+    // Simpan ke cache agar pembukaan berikutnya instan
+    try {
+      localStorage.setItem('rt05_cache_info_rt', JSON.stringify({ daftarJudul, activeKeys }));
+    } catch (e) {}
 
-        // Sesuaikan durasi animasi secara otomatis agar kecepatan baca tetap nyaman
-        const durasiDetik = Math.max(12, Math.round(teksGabungan.length * 0.22));
-        previewEl.style.animationDuration = `${durasiDetik}s`;
-      } else {
-        previewEl.innerText = 'Belum ada pengumuman aktif saat ini';
-        previewEl.style.animation = 'none';
-        previewEl.style.paddingLeft = '0';
-      }
-    }
-
-    let readKeys = JSON.parse(localStorage.getItem('rt05_read_announcements') || '[]');
-    let unreadKeys = activeKeys.filter(k => !readKeys.includes(k));
-
-    var badge = document.getElementById('badge-count');
-    if (badge) {
-      if (unreadKeys.length > 0) {
-        badge.innerText = unreadKeys.length + ' Baru';
-        badge.style.display = 'inline-block';
-        badge.style.background = '#ef4444';
-        badge.style.color = '#ffffff';
-      } else if (activeKeys.length > 0) {
-        badge.innerText = activeKeys.length;
-        badge.style.display = 'inline-block';
-        badge.style.background = '#111827';
-        badge.style.color = '#fbbf24';
-      } else {
-        badge.style.display = 'none';
-      }
-    }
+    renderTeksDanBadgeInfoRT(daftarJudul, activeKeys);
+  }, (error) => {
+    // Jika gagal karena auth belum siap, buka kunci agar bisa dicoba ulang
+    isBadgeInfoListenerAktif = false;
+    console.warn("Gagal membaca pengumuman, mencoba ulang:", error);
+    setTimeout(muatBadgeInfoRT, 1000);
   });
 }
   
