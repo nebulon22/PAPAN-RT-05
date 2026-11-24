@@ -23,25 +23,33 @@ let audioPreviewAktif = null;
 
 window.previewSuara = function(filePath) {
   if (!filePath) return;
-
   try {
-    // Hentikan suara pratinjau sebelumnya jika warga cepat mengganti pilihan
     if (audioPreviewAktif) {
       audioPreviewAktif.pause();
       audioPreviewAktif.currentTime = 0;
     }
-
     audioPreviewAktif = new Audio(filePath);
     audioPreviewAktif.volume = 1.0;
-
     const playPromise = audioPreviewAktif.play();
     if (playPromise !== undefined) {
-      playPromise.catch(err => {
-        console.warn("Gagal memutar pratinjau suara di PWA:", err);
-      });
+      playPromise.catch(err => console.warn("Audio preview ditahan:", err));
     }
   } catch (e) {
     console.error("Error audio preview:", e);
+  }
+};
+
+window.previewModeNotif = function(mode) {
+  const bolehGetar = (mode === 'normal' || mode === 'getar');
+  const bolehSuara = (mode === 'normal' || mode === 'suara');
+
+  if (bolehGetar && 'vibrate' in navigator) {
+    try { navigator.vibrate([120, 60, 120]); } catch (e) {}
+  }
+
+  if (bolehSuara) {
+    const fileGrup = document.getElementById('setting-sound-grup')?.value || 'audio/bell2.mp3';
+    window.previewSuara(fileGrup);
   }
 };
 
@@ -88,25 +96,6 @@ function picuNotifikasiMedia(e = "grup") {
         passive: !0
     })
 });
-
-// Fungsi pratinjau langsung saat warga mengganti Mode Notifikasi
-window.previewModeNotif = function(mode) {
-  const bolehGetar = (mode === 'normal' || mode === 'getar');
-  const bolehSuara = (mode === 'normal' || mode === 'suara');
-
-  if (bolehGetar && 'vibrate' in navigator) {
-    try {
-      navigator.vibrate([120, 60, 120]);
-    } catch (e) {}
-  }
-
-  if (bolehSuara) {
-    const fileGrup = document.getElementById('setting-sound-grup')?.value || 'audio/bell2.mp3';
-    if (typeof window.previewSuara === 'function') {
-      window.previewSuara(fileGrup);
-    }
-  }
-};
 
 // Helper terpusat untuk memicu getar & suara saat pesan/info baru masuk
 window.picuSuaraDanGetarNotif = function(jenis = 'grup') {
