@@ -1160,7 +1160,42 @@ select {
     </button>
   </div>
 </div>
-  
+
+<!-- Modal Peringatan Elegan -->
+<div id="rt05-custom-alert" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(15, 23, 42, 0.72); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.12); border-radius:18px; max-width:340px; width:100%; padding:24px 20px; text-align:center; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); animation:rt05PopIn 0.2s ease-out;">
+    
+    <!-- Ikon Kunci / Peringatan -->
+    <div style="width:52px; height:52px; margin:0 auto 14px; border-radius:50%; background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); display:flex; align-items:center; justify-content:center; font-size:24px;">
+      🔐
+    </div>
+
+    <h3 id="rt05-alert-title" style="margin:0 0 8px; font-size:17px; font-weight:700; color:#ffffff;">
+      Akses Terbatas
+    </h3>
+
+    <p id="rt05-alert-msg" style="margin:0 0 20px; font-size:13.5px; line-height:1.5; color:#cbd5e1;">
+      Anda belum login akun chat. Silakan login menggunakan akun <strong>Admin</strong> terlebih dahulu untuk membuka halaman ini.
+    </p>
+
+    <div style="display:flex; gap:10px;">
+      <button type="button" onclick="tutupPeringatanElegan()" style="flex:1; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#cbd5e1; font-size:13px; font-weight:600; cursor:pointer;">
+        Tutup
+      </button>
+      <button type="button" id="rt05-alert-action" style="flex:1.4; padding:10px 12px; border-radius:10px; border:none; background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(2, 132, 199, 0.35);">
+        Login Sekarang
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes rt05PopIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+</style>
+    
 </main>
 
 <script>
@@ -1232,18 +1267,23 @@ window.perbaruiAplikasiSekarang = function() {
 window.bukaHalamanAdmin = async function(event) {
   if (event) event.preventDefault();
 
-  // 1. Cek sesi akun chat di browser
+// 1. Cek sesi akun chat di browser
   const rawUser = localStorage.getItem('rt05_chat_user');
   if (!rawUser) {
-    alert("⚠️ Anda belum login akun chat.\nSilakan login menggunakan akun Admin terlebih dahulu.");
-
-    // Otomatis buka modal chat untuk login
-    const tombolChat = document.getElementById('btn-chat-floating') || document.querySelector('[onclick*="Chat"]');
-    if (typeof bukaModalChat === 'function') {
-      bukaModalChat();
-    } else if (tombolChat) {
-      tombolChat.click();
-    }
+    tampilkanPeringatanElegan(
+      "Login Admin Diperlukan",
+      "Anda belum login akun chat.<br>Silakan login menggunakan akun <b>Admin</b> terlebih dahulu.",
+      () => {
+        // Otomatis buka modal chat untuk login
+        const tombolChat = document.getElementById('btn-chat-floating') || document.querySelector('[onclick*="Chat"]');
+        if (typeof bukaModalChat === 'function') {
+          bukaModalChat();
+        } else if (tombolChat) {
+          tombolChat.click();
+        }
+      },
+      "Login Sekarang"
+    );
     return;
   }
 
@@ -3473,6 +3513,35 @@ window.cetakLaporanJimpitan = function() {
     warnaUtama: '#10b981'
   });
 };
+
+
+  function tampilkanPeringatanElegan(judul, pesan, onActionCallback = null, teksTombol = "Login Sekarang") {
+    const modal = document.getElementById('rt05-custom-alert');
+    const titleEl = document.getElementById('rt05-alert-title');
+    const msgEl = document.getElementById('rt05-alert-msg');
+    const actionBtn = document.getElementById('rt05-alert-action');
+
+    titleEl.textContent = judul;
+    msgEl.innerHTML = pesan;
+
+    if (typeof onActionCallback === 'function') {
+      actionBtn.style.display = 'block';
+      actionBtn.textContent = teksTombol;
+      actionBtn.onclick = () => {
+        tutupPeringatanElegan();
+        onActionCallback();
+      };
+    } else {
+      actionBtn.style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
+  }
+
+  function tutupPeringatanElegan() {
+    document.getElementById('rt05-custom-alert').style.display = 'none';
+  }
+
 
     const dataChangelog = [
       {
