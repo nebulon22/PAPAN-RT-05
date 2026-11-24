@@ -1274,12 +1274,26 @@ window.bukaHalamanAdmin = async function(event) {
       "Login Admin Diperlukan",
       "Anda belum login akun chat.<br>Silakan login menggunakan akun <b>Admin</b> terlebih dahulu.",
       () => {
-        // Otomatis buka modal chat untuk login
-        const tombolChat = document.getElementById('btn-chat-floating') || document.querySelector('[onclick*="Chat"]');
+        // Cari tombol chat melayang (case-insensitive 'i' agar cocok dengan chat/Chat)
+        const tombolChat =
+          document.getElementById('btn-chat-floating') ||
+          document.getElementById('chat-fab') ||
+          document.getElementById('floating-chat-btn') ||
+          document.querySelector('[onclick*="chat" i]') ||
+          document.querySelector('[id*="chat" i][onclick], [class*="chat" i][onclick]');
+
         if (typeof bukaModalChat === 'function') {
           bukaModalChat();
+        } else if (typeof openChatModal === 'function') {
+          openChatModal();
+        } else if (typeof toggleChat === 'function') {
+          toggleChat();
         } else if (tombolChat) {
           tombolChat.click();
+        } else {
+          // Fallback jika modal chat berupa elemen tersembunyi langsung
+          const modalChat = document.querySelector('[id*="chat-modal" i], [id*="modal-chat" i], [id*="modalChat" i]');
+          if (modalChat) modalChat.style.display = 'flex';
         }
       },
       "Login Sekarang"
