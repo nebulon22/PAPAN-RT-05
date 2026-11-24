@@ -3662,39 +3662,28 @@ window.tutupPeringatanElegan = function() {
   }
   
 function bukaModalChatDanLogout() {
-    // 1. Buka modal chat terlebih dahulu
     bukaModalChatOtomatis();
 
-    // 2. Setelah modal terbuka, picu tombol logout di dalam chat (baik DOM langsung maupun iframe)
     setTimeout(() => {
-      // Cek jika chat berada di dalam iframe
       const iframeChat = document.querySelector('iframe[src*="chat"]');
       let docTarget = document;
 
       if (iframeChat) {
         try {
           docTarget = iframeChat.contentDocument || iframeChat.contentWindow.document;
-          // Jika fungsi logoutChat ada di window iframe, panggil langsung
-          if (typeof iframeChat.contentWindow.logoutChat === 'function') {
-            iframeChat.contentWindow.logoutChat();
-            return;
-          }
-          if (typeof iframeChat.contentWindow.handleLogout === 'function') {
-            iframeChat.contentWindow.handleLogout();
+          if (typeof iframeChat.contentWindow.logoutUser === 'function') {
+            iframeChat.contentWindow.logoutUser();
             return;
           }
         } catch (e) {
           console.warn("Tidak bisa mengakses isi iframe secara langsung:", e);
         }
       } else {
-        // Jika chat menyatu di DOM index.html
-        if (typeof window.logoutChat === 'function') return window.logoutChat();
-        if (typeof window.handleLogout === 'function') return window.handleLogout();
+        if (typeof window.logoutUser === 'function') return window.logoutUser();
       }
 
-      // Cari dan klik tombol logout merah di header Live Chat RT 05
       const tombolLogout = docTarget.querySelector(
-        '#btn-logout, #logout-btn, [onclick*="logout" i], [title*="keluar" i], [title*="logout" i], button[style*="ef4444"], button[style*="dc2626"], .btn-logout'
+        '[onclick*="logoutUser" i], #btn-logout, #logout-btn, [onclick*="logout" i], [title*="keluar" i]'
       );
       if (tombolLogout) {
         tombolLogout.click();
