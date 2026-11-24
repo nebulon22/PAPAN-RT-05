@@ -1530,30 +1530,46 @@ async function triggerGasNotification(actionType, senderName, bodyText, targetUi
   if (!workerUrl || !currentUser?.uid) return;
 
   try {
-    // Ambil idToken terbaru dari sesi login chat (auth pada rt05ChatApp)
-    const idToken = (auth.currentUser && !auth.currentUser.isAnonymous)
-      ? await auth.currentUser.getIdToken()
-      : "";
+    // Tunggu sebentar jika Firebase Auth belum selesai inisialisasi
+    if (typeof auth.authStateReady === 'function') {
+      await auth.authStateReady();
+    }
 
-    if (!idToken) return;
+    if (!auth.currentUser || auth.currentUser.isAnonymous) {
+      console.warn("⚠️ Notif dibatalkan: Sesi Firebase Auth belum login penuh. Silakan logout & login ulang.");
+      return;
+    }
 
-    fetch(workerUrl, {
+    // Ambil idToken terbaru
+    const idToken = await auth.currentUser.getIdToken();
+    if (!idToken) {
+      console.warn("⚠️ Notif dibatalkan: idToken kosong.");
+      return;
+    }
+
+    const res = await fetch(workerUrl, {
       method: 'POST',
-      keepalive: true, // Tetap terkirim walau warga langsung mengunci layar HP atau menutup modal
+      keepalive: true,
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        action: actionType,          // 'notifChatGroup' atau 'notifChatPrivate'
+        action: actionType,
         senderUid: currentUser.uid,
-        targetUid: targetUid,        // UID penerima jika private, kosong jika grup
+        targetUid: targetUid,
         senderName: senderName,
         messageText: bodyText,
         unreadCount: 1,
         idToken: idToken,
         apiKey: firebaseConfig.apiKey
       })
-    }).catch(err => console.log("Gagal menembak notifikasi FCM Worker:", err));
+    });
+
+    // Tampilkan alasan pasti jika Worker menolak (401 / 400 / 500)
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`❌ FCM Worker menolak (${res.status}):`, errText);
+    }
   } catch (err) {
-    console.log("Gagal menyiapkan token FCM Worker:", err);
+    console.error("❌ Gagal menembak FCM Worker:", err);
   }
 }
 
