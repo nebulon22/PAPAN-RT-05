@@ -88,3 +88,53 @@ function picuNotifikasiMedia(e = "grup") {
         passive: !0
     })
 });
+
+// Fungsi pratinjau langsung saat warga mengganti Mode Notifikasi
+window.previewModeNotif = function(mode) {
+  const bolehGetar = (mode === 'normal' || mode === 'getar');
+  const bolehSuara = (mode === 'normal' || mode === 'suara');
+
+  if (bolehGetar && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate([120, 60, 120]);
+    } catch (e) {}
+  }
+
+  if (bolehSuara) {
+    const fileGrup = document.getElementById('setting-sound-grup')?.value || 'audio/bell2.mp3';
+    if (typeof window.previewSuara === 'function') {
+      window.previewSuara(fileGrup);
+    }
+  }
+};
+
+// Helper terpusat untuk memicu getar & suara saat pesan/info baru masuk
+window.picuSuaraDanGetarNotif = function(jenis = 'grup') {
+  const mode = localStorage.getItem('rt05_mode_notif') || 'normal';
+  if (mode === 'sunyi') return;
+
+  // 1. Jalankan Getar di PWA Android
+  if ((mode === 'normal' || mode === 'getar') && 'vibrate' in navigator) {
+    try {
+      // Pola getar berbeda untuk private (2x) vs grup (1x)
+      navigator.vibrate(jenis === 'private' ? [180, 80, 180] : [200]);
+    } catch (e) {}
+  }
+
+  // 2. Jalankan Suara
+  if (mode === 'normal' || mode === 'suara') {
+    const isAktif = jenis === 'private'
+      ? (localStorage.getItem('rt05_private_active') !== 'false')
+      : (localStorage.getItem('rt05_chat_active') !== 'false');
+
+    if (!isAktif) return;
+
+    const soundFile = jenis === 'private'
+      ? (localStorage.getItem('rt05_sound_private') || 'audio/ping1.mp3')
+      : (localStorage.getItem('rt05_sound_grup') || 'audio/bell2.mp3');
+
+    if (typeof window.previewSuara === 'function') {
+      window.previewSuara(soundFile);
+    }
+  }
+};
