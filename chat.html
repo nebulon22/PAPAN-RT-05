@@ -781,7 +781,7 @@ function formatWaktuPesan(timestamp) {
         const userCredential = await createUserWithEmailAndPassword(auth, pseudoEmail, securePassword);
         const authUid = userCredential.user.uid;
 
-const userData = {
+        const userData = {
           uid: authUid,
           authEmail: pseudoEmail,
           nama: nama,
@@ -805,15 +805,25 @@ const userData = {
         currentUser = userData;
         window.currentUser = currentUser;
 
-        const gasUrl = getGasUrl();
-        if (gasUrl) {
-          fetch(gasUrl, {
+        // 3. Kirim notifikasi pendaftaran baru ke HP Admin via Cloudflare FCM Worker
+        const workerUrl = getFcmWorkerUrl();
+        if (workerUrl) {
+          const regIdToken = await userCredential.user.getIdToken();
+          fetch(workerUrl, {
             method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ 'action': 'notifChatBaru', 'nama': nama, 'hunian': hunian })
-          }).catch(err => console.log(err));
+            keepalive: true,
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'notifChatBaru',
+              senderUid: authUid,
+              nama: nama,
+              hunian: hunian,
+              idToken: regIdToken,
+              apiKey: firebaseConfig.apiKey
+            })
+          }).catch(err => console.log("Gagal memicu notif pendaftaran:", err));
         }
+
         e.target.reset();
         checkUserStatus();
       } catch (error) {
@@ -1503,37 +1513,48 @@ function executeSendMessage(e) {
 }
 window.sendChatMessage = executeSendMessage;
 
-
-// === 1. AMBIL URL WEB APP GAS SECARA AMAN ===
-function getGasUrl() {
+// === 1. AMBIL URL FCM WORKER SECARA AMAN ===
+function getFcmWorkerUrl() {
   return (
-    (typeof GAS_WEB_APP_URL !== 'undefined' && GAS_WEB_APP_URL) ||
-    window.GAS_WEB_APP_URL ||
-    (window.parent && window.parent.GAS_WEB_APP_URL) ||
-    (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.GAS_WEB_APP_URL) ||
-    ""
+    (typeof FCM_WORKER_URL !== 'undefined' && FCM_WORKER_URL) ||
+    window.FCM_WORKER_URL ||
+    (window.parent && window.parent.FCM_WORKER_URL) ||
+    (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.FCM_WORKER_URL) ||
+    "https://fcm-worker.papan05.my.id/" // Sesuaikan dengan URL/domain Worker Anda
   );
 }
 
-// === 2. FUNGSI TEMBAK GAS YANG RINGAN & SELARAS ===
-function triggerGasNotification(actionType, senderName, bodyText, targetUid = "") {
-  const gasUrl = getGasUrl();
-  if (!gasUrl || !currentUser?.uid) return;
+// === 2. FUNGSI TEMBAK CLOUDFLARE FCM WORKER (INSTAN & TERAUTENTIKASI) ===
+async function triggerGasNotification(actionType, senderName, bodyText, targetUid = "") {
+  const workerUrl = getFcmWorkerUrl();
+  if (!workerUrl || !currentUser?.uid) return;
 
-  fetch(gasUrl, {
-    method: 'POST',
-    mode: 'no-cors',
-    keepalive: true, // Tetap terkirim walau warga langsung mengunci layar HP
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      action: actionType,          // 'notifChatGroup' atau 'notifChatPrivate'
-      senderUid: currentUser.uid,  // Dipakai .gs untuk mengecualikan pengirim & membuat notifTag
-      targetUid: targetUid,        // UID penerima jika private, kosong jika grup
-      senderName: senderName,
-      messageText: bodyText,
-      unreadCount: 1
-    })
-  }).catch(err => console.log("Gagal menembak notifikasi GAS:", err));
+  try {
+    // Ambil idToken terbaru dari sesi login chat (auth pada rt05ChatApp)
+    const idToken = (auth.currentUser && !auth.currentUser.isAnonymous)
+      ? await auth.currentUser.getIdToken()
+      : "";
+
+    if (!idToken) return;
+
+    fetch(workerUrl, {
+      method: 'POST',
+      keepalive: true, // Tetap terkirim walau warga langsung mengunci layar HP atau menutup modal
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: actionType,          // 'notifChatGroup' atau 'notifChatPrivate'
+        senderUid: currentUser.uid,
+        targetUid: targetUid,        // UID penerima jika private, kosong jika grup
+        senderName: senderName,
+        messageText: bodyText,
+        unreadCount: 1,
+        idToken: idToken,
+        apiKey: firebaseConfig.apiKey
+      })
+    }).catch(err => console.log("Gagal menembak notifikasi FCM Worker:", err));
+  } catch (err) {
+    console.log("Gagal menyiapkan token FCM Worker:", err);
+  }
 }
 
 // === 3. AUTO-REFRESH TOKEN FCM SETIAP KALI APP DIBUKA ===
