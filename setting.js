@@ -38,18 +38,35 @@ window.previewSuara = function(filePath) {
     console.error("Error audio preview:", e);
   }
 };
+// Kumpulan pola haptic berkelas (dalam milidetik: [getar, jeda, getar, ...])
+const POLA_HAPTIC = {
+  // 1. Pratinjau saat ganti dropdown mode (ketukan ganda halus & presisi)
+  preview: [18, 45, 28],
 
+  // 2. Pesan Chat Grup masuk (satu denyut lembut tapi terasa)
+  grup: [22, 40, 15],
+
+  // 3. Pesan Chat Private masuk (irama "tik-tik-tuk" elegan)
+  private: [16, 38, 16, 45, 32],
+
+  // 4. Pengumuman RT / Info Penting (ketukan tegas berirama)
+  info: [25, 50, 40]
+};
 window.previewModeNotif = function(mode) {
   const bolehGetar = (mode === 'normal' || mode === 'getar');
   const bolehSuara = (mode === 'normal' || mode === 'suara');
 
   if (bolehGetar && 'vibrate' in navigator) {
-    try { navigator.vibrate([120, 60, 120]); } catch (e) {}
+    try {
+      navigator.vibrate(POLA_HAPTIC.preview);
+    } catch (e) {}
   }
 
   if (bolehSuara) {
     const fileGrup = document.getElementById('setting-sound-grup')?.value || 'audio/bell2.mp3';
-    window.previewSuara(fileGrup);
+    if (typeof window.previewSuara === 'function') {
+      window.previewSuara(fileGrup);
+    }
   }
 };
 
@@ -102,15 +119,13 @@ window.picuSuaraDanGetarNotif = function(jenis = 'grup') {
   const mode = localStorage.getItem('rt05_mode_notif') || 'normal';
   if (mode === 'sunyi') return;
 
-  // 1. Jalankan Getar di PWA Android
   if ((mode === 'normal' || mode === 'getar') && 'vibrate' in navigator) {
     try {
-      // Pola getar berbeda untuk private (2x) vs grup (1x)
-      navigator.vibrate(jenis === 'private' ? [180, 80, 180] : [200]);
+      const pola = POLA_HAPTIC[jenis] || POLA_HAPTIC.grup;
+      navigator.vibrate(pola);
     } catch (e) {}
   }
 
-  // 2. Jalankan Suara
   if (mode === 'normal' || mode === 'suara') {
     const isAktif = jenis === 'private'
       ? (localStorage.getItem('rt05_private_active') !== 'false')
