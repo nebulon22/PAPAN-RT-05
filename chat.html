@@ -599,6 +599,41 @@
     </div>
   </div>
 
+  <!-- Modal Konfirmasi Logout Elegan -->
+<div id="rt05-logout-modal" style="display:none; position:fixed; inset:0; z-index:2147483647; background:rgba(15, 23, 42, 0.78); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:18px;">
+  <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.12); border-radius:16px; max-width:310px; width:100%; padding:22px 18px; text-align:center; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.6); animation:rt05ChatPop 0.18s ease-out;">
+    
+    <!-- Ikon Keluar Merah -->
+    <div style="width:48px; height:48px; margin:0 auto 12px; border-radius:50%; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.35); display:flex; align-items:center; justify-content:center; font-size:22px;">
+      🚪
+    </div>
+
+    <h3 style="margin:0 0 6px; font-size:16px; font-weight:700; color:#ffffff;">
+      Keluar dari Akun?
+    </h3>
+
+    <p style="margin:0 0 18px; font-size:13px; line-height:1.45; color:#cbd5e1;">
+      Anda akan keluar dari sesi obrolan saat ini dan kembali ke halaman masuk.
+    </p>
+
+    <div style="display:flex; gap:10px;">
+      <button type="button" id="rt05-logout-cancel" style="flex:1; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#cbd5e1; font-size:13px; font-weight:600; cursor:pointer; touch-action:manipulation;">
+        Batal
+      </button>
+      <button type="button" id="rt05-logout-confirm" style="flex:1.2; padding:9px 12px; border-radius:10px; border:none; background:linear-gradient(135deg, #ef4444, #dc2626); color:#ffffff; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(239, 68, 68, 0.35); touch-action:manipulation;">
+        Ya, Keluar
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes rt05ChatPop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+</style>
+
     <script>
   // Helper ID unik per browser/perangkat
 function getDeviceId() {
@@ -911,8 +946,8 @@ function formatWaktuPesan(timestamp) {
     };
 
 // === LOGOUT ===
-window.logoutUser = async () => {
-  if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
+window.logoutUser = () => {
+  tampilkanKonfirmasiLogout(async () => {
     // Pastikan sesi Firebase Auth cocok dengan UID sebelum menghapus data di server
     if (currentUser && currentUser.uid && auth.currentUser && auth.currentUser.uid === currentUser.uid) {
       try {
@@ -946,8 +981,34 @@ window.logoutUser = async () => {
     currentUser = null;
     window.currentUser = null;
     location.reload();
-  }
+  });
 };
+
+    function tampilkanKonfirmasiLogout(onConfirmLogout) {
+    const modal = document.getElementById('rt05-logout-modal');
+    const btnCancel = document.getElementById('rt05-logout-cancel');
+    const btnConfirm = document.getElementById('rt05-logout-confirm');
+
+    if (!modal) {
+      if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) onConfirmLogout();
+      return;
+    }
+
+    btnCancel.onclick = () => {
+      modal.style.display = 'none';
+    };
+
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    };
+
+    btnConfirm.onclick = () => {
+      modal.style.display = 'none';
+      onConfirmLogout();
+    };
+
+    modal.style.display = 'flex';
+  }
 
   
 
