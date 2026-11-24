@@ -1349,10 +1349,7 @@ if (!isAdmin) {
           "Akses Ditolak",
           `Akun <b>"${namaUser || 'Warga'}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
           () => {
-            localStorage.removeItem('rt05_chat_user');
-            const iframeChat = document.querySelector('iframe[src*="chat"]');
-            if (iframeChat) iframeChat.src = iframeChat.src;
-            bukaModalChatOtomatis();
+            bukaModalChatDanLogout();
           },
           "Ganti Akun",
           "danger"
@@ -3663,7 +3660,47 @@ window.tutupPeringatanElegan = function() {
     // 4. Fallback terakhir: arahkan langsung ke chat.html
     window.location.href = 'chat.html';
   }
+  
+function bukaModalChatDanLogout() {
+    // 1. Buka modal chat terlebih dahulu
+    bukaModalChatOtomatis();
 
+    // 2. Setelah modal terbuka, picu tombol logout di dalam chat (baik DOM langsung maupun iframe)
+    setTimeout(() => {
+      // Cek jika chat berada di dalam iframe
+      const iframeChat = document.querySelector('iframe[src*="chat"]');
+      let docTarget = document;
+
+      if (iframeChat) {
+        try {
+          docTarget = iframeChat.contentDocument || iframeChat.contentWindow.document;
+          // Jika fungsi logoutChat ada di window iframe, panggil langsung
+          if (typeof iframeChat.contentWindow.logoutChat === 'function') {
+            iframeChat.contentWindow.logoutChat();
+            return;
+          }
+          if (typeof iframeChat.contentWindow.handleLogout === 'function') {
+            iframeChat.contentWindow.handleLogout();
+            return;
+          }
+        } catch (e) {
+          console.warn("Tidak bisa mengakses isi iframe secara langsung:", e);
+        }
+      } else {
+        // Jika chat menyatu di DOM index.html
+        if (typeof window.logoutChat === 'function') return window.logoutChat();
+        if (typeof window.handleLogout === 'function') return window.handleLogout();
+      }
+
+      // Cari dan klik tombol logout merah di header Live Chat RT 05
+      const tombolLogout = docTarget.querySelector(
+        '#btn-logout, #logout-btn, [onclick*="logout" i], [title*="keluar" i], [title*="logout" i], button[style*="ef4444"], button[style*="dc2626"], .btn-logout'
+      );
+      if (tombolLogout) {
+        tombolLogout.click();
+      }
+    }, 250);
+  }
 
     const dataChangelog = [
       {
