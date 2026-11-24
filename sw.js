@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.8.1'; // 🌟 Naikkan versi agar HP warga memperbarui SW
+const CACHE_NAME = 'rt-kayen-v1.8.3'; // 🌟 Naikkan versi agar HP warga memperbarui SW
 
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
@@ -34,7 +34,7 @@ messaging.onBackgroundMessage((payload) => {
 
   // 2. Jika payload dari server sudah membawa blok "notification", browser otomatis menampilkannya
   // Jika payload hanya membawa blok "data" (data-only), kita tampilkan manual agar tidak ganda:
-  if (!payload.notification) {
+if (!payload.notification) {
     const options = {
       body: body,
       icon: './kentongan-slit-drum.png',
@@ -44,11 +44,15 @@ messaging.onBackgroundMessage((payload) => {
       data: { url: url }
     };
 
-    if (notifMode === 'silent') {
+    if (notifMode === 'sunyi' || notifMode === 'silent') {
       options.silent = true;
-    } else {
+    } else if (notifMode === 'suara') {
       options.silent = false;
-      options.vibrate = [200, 100, 200];
+      // Tanpa options.vibrate karena warga memilih "Hanya Suara"
+    } else {
+      // Untuk mode 'normal' (Suara & Getar) maupun 'getar' (Hanya Getar)
+      options.silent = false;
+      options.vibrate = [18, 40, 18, 45, 32];
     }
 
     return self.registration.showNotification(title, options);
