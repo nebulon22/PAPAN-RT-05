@@ -1332,14 +1332,10 @@ if (!isAdmin) {
           "Akses Ditolak",
           `Akun <b>"${namaUser || 'Warga'}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
           () => {
-            const tombolChat =
-              document.getElementById('btn-chat-floating') ||
-              document.querySelector('[onclick*="chat" i]');
-            if (typeof bukaModalChat === 'function') {
-              bukaModalChat();
-            } else if (tombolChat) {
-              tombolChat.click();
-            }
+            localStorage.removeItem('rt05_chat_user');
+            const iframeChat = document.querySelector('iframe[src*="chat"]');
+            if (iframeChat) iframeChat.src = iframeChat.src;
+            bukaModalChatOtomatis();
           },
           "Ganti Akun",
           "danger"
@@ -1356,7 +1352,7 @@ if (!isAdmin) {
     console.warn("Gagal cek role live ke server, memakai cache lokal:", err);
   }
 
- // Fallback saat offline / koneksi lambat
+// Fallback saat offline / koneksi lambat
   if (chatUser.role === 'admin' || chatUser.nama === 'Admin1') {
     window.location.href = 'admin.html';
   } else {
@@ -1364,14 +1360,10 @@ if (!isAdmin) {
       "Akses Ditolak",
       `Akun <b>"${chatUser.nama || 'Warga'}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
       () => {
-        const tombolChat =
-          document.getElementById('btn-chat-floating') ||
-          document.querySelector('[onclick*="chat" i]');
-        if (typeof bukaModalChat === 'function') {
-          bukaModalChat();
-        } else if (tombolChat) {
-          tombolChat.click();
-        }
+        localStorage.removeItem('rt05_chat_user');
+        const iframeChat = document.querySelector('iframe[src*="chat"]');
+        if (iframeChat) iframeChat.src = iframeChat.src;
+        bukaModalChatOtomatis();
       },
       "Ganti Akun",
       "danger"
@@ -3597,8 +3589,46 @@ function tampilkanPeringatanElegan(judul, pesan, onActionCallback = null, teksTo
     modal.style.display = 'flex';
   }
 
-  function tutupPeringatanElegan() {
+function tutupPeringatanElegan() {
     document.getElementById('rt05-custom-alert').style.display = 'none';
+  }
+
+  function bukaModalChatOtomatis() {
+    // 1. Coba panggil fungsi global jika tersedia
+    if (typeof bukaModalChat === 'function') return bukaModalChat();
+    if (typeof openChatModal === 'function') return openChatModal();
+    if (typeof toggleChat === 'function') return toggleChat();
+
+    // 2. Cari tombol chat berdasarkan ID, class, atau atribut onclick/href
+    const kandidatTombol = document.querySelector(
+      '#btn-chat-floating, #chat-fab, #floating-chat-btn, #btn-chat, ' +
+      '[onclick*="chat" i], [id*="chat" i][onclick], [class*="chat" i][onclick], a[href*="chat.html"]'
+    );
+    if (kandidatTombol) {
+      kandidatTombol.click();
+      return;
+    }
+
+    // 3. Cari tombol bulat hijau melayang di pojok kiri bawah
+    const semuaTombol = Array.from(document.querySelectorAll('button, a, div[onclick]'));
+    const tombolPojokKiriBawah = semuaTombol.find(el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return (
+        style.position === 'fixed' &&
+        rect.bottom > window.innerHeight - 130 &&
+        rect.left < 130 &&
+        rect.width > 30 && rect.width < 100
+      );
+    });
+
+    if (tombolPojokKiriBawah) {
+      tombolPojokKiriBawah.click();
+      return;
+    }
+
+    // 4. Fallback terakhir: arahkan langsung ke chat.html
+    window.location.href = 'chat.html';
   }
 
 
