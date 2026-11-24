@@ -509,17 +509,17 @@
       <input type="text" id="reg-nama" required placeholder="Contoh: Budi Sudarsono / Nebu" class="form-control">
     </div>
     <div class="form-group">
-      <label for="reg-hunian">No. Rumah / Kost / Kontrakan (salah satu) *</label>
+      <label for="reg-hunian">No. Rumah / Nama Kost / Kontrakan (salah satu) *</label>
       <input type="text" id="reg-hunian" autocomplete="off" required placeholder="Contoh: 12 / Kost Kenanga / Kontrakan Pak Dewo" class="form-control">
     </div>
     <div class="form-group">
-      <label for="reg-pin">Buat PIN Rahasia (4-6 Angka) *</label>
+      <label for="reg-pin">Buat PIN Rahasia (6 Angka) *</label>
       <input type="password" id="reg-pin" autocomplete="new-password" required maxlength="6" pattern="[0-9]*" inputmode="numeric" placeholder="Contoh: 123456" class="form-control">
     </div>
     
    <!-- Kolom Konfirmasi PIN untuk Registrasi -->
     <div class="form-group">
-      <label for="reg-pin-confirm">Ulangi PIN Rahasia sekali lagi*</label>
+      <label for="reg-pin-confirm">Ulangi PIN Rahasia anda sekali lagi*</label>
       <input type="password" id="reg-pin-confirm" autocomplete="new-password" required maxlength="6" pattern="[0-9]*" inputmode="numeric" placeholder="Ketik ulang PIN kamu..." class="form-control">
     </div>
 
@@ -598,6 +598,41 @@
       </div>
     </div>
   </div>
+
+  <!-- Modal Konfirmasi Logout Elegan -->
+<div id="rt05-logout-modal" style="display:none; position:fixed; inset:0; z-index:2147483647; background:rgba(15, 23, 42, 0.78); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:18px;">
+  <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.12); border-radius:16px; max-width:310px; width:100%; padding:22px 18px; text-align:center; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.6); animation:rt05ChatPop 0.18s ease-out;">
+    
+    <!-- Ikon Keluar Merah -->
+    <div style="width:48px; height:48px; margin:0 auto 12px; border-radius:50%; background:rgba(239, 68, 68, 0.15); border:1px solid rgba(239, 68, 68, 0.35); display:flex; align-items:center; justify-content:center; font-size:22px;">
+      🚪
+    </div>
+
+    <h3 style="margin:0 0 6px; font-size:16px; font-weight:700; color:#ffffff;">
+      Keluar dari Akun?
+    </h3>
+
+    <p style="margin:0 0 18px; font-size:13px; line-height:1.45; color:#cbd5e1;">
+      Anda akan keluar dari sesi obrolan saat ini dan kembali ke halaman masuk.
+    </p>
+
+    <div style="display:flex; gap:10px;">
+      <button type="button" id="rt05-logout-cancel" style="flex:1; padding:9px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#cbd5e1; font-size:13px; font-weight:600; cursor:pointer; touch-action:manipulation;">
+        Batal
+      </button>
+      <button type="button" id="rt05-logout-confirm" style="flex:1.2; padding:9px 12px; border-radius:10px; border:none; background:linear-gradient(135deg, #ef4444, #dc2626); color:#ffffff; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(239, 68, 68, 0.35); touch-action:manipulation;">
+        Ya, Keluar
+      </button>
+    </div>
+  </div>
+</div>
+
+<style>
+  @keyframes rt05ChatPop {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+</style>
 
     <script>
   // Helper ID unik per browser/perangkat
@@ -754,8 +789,12 @@ function formatWaktuPesan(timestamp) {
 }
     
 // === REGISTRASI DENGAN FIREBASE AUTH (PSEUDO EMAIL) ===
+    let isRegistering = false;
+
     window.handleRegistration = async (e) => {
       e.preventDefault();
+      if (isRegistering) return;
+
       const nama = document.getElementById('reg-nama').value.trim();
       const hunian = document.getElementById('reg-hunian').value.trim();
       const pin = document.getElementById('reg-pin').value.trim();
@@ -768,9 +807,17 @@ function formatWaktuPesan(timestamp) {
         return;
       }
 
-      if (pin.length < 4) {
-        alert("PIN minimal 4 angka!");
+      if (pin.length < 6) {
+        alert("PIN harus 6 angka!");
         return;
+      }
+
+      const submitBtn = e.target.querySelector('button[type="submit"]');
+      const originalBtnText = submitBtn ? submitBtn.innerHTML : "";
+      isRegistering = true;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = "⏳ Mendaftarkan...";
       }
 
       try {
@@ -781,7 +828,7 @@ function formatWaktuPesan(timestamp) {
         const userCredential = await createUserWithEmailAndPassword(auth, pseudoEmail, securePassword);
         const authUid = userCredential.user.uid;
 
-const userData = {
+        const userData = {
           uid: authUid,
           authEmail: pseudoEmail,
           nama: nama,
@@ -805,20 +852,42 @@ const userData = {
         currentUser = userData;
         window.currentUser = currentUser;
 
-        const gasUrl = getGasUrl();
-        if (gasUrl) {
-          fetch(gasUrl, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-            body: JSON.stringify({ 'action': 'notifChatBaru', 'nama': nama, 'hunian': hunian })
-          }).catch(err => console.log(err));
+        // 3. Kirim notifikasi pendaftaran baru ke HP Admin via Cloudflare FCM Worker
+        const workerUrl = getFcmWorkerUrl();
+        if (workerUrl) {
+          const regIdToken = await userCredential.user.getIdToken();
+          try {
+            const resNotif = await fetch(workerUrl, {
+              method: 'POST',
+              keepalive: true,
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                action: 'notifChatBaru',
+                senderUid: authUid,
+                nama: nama,
+                hunian: hunian,
+                idToken: regIdToken,
+                apiKey: firebaseConfig.apiKey
+              })
+            });
+            const hasilNotif = await resNotif.json();
+            console.log("Hasil notif pendaftaran ke Admin:", resNotif.status, hasilNotif);
+          } catch (err) {
+            console.error("Gagal memicu notif pendaftaran:", err);
+          }
         }
+
         e.target.reset();
         checkUserStatus();
       } catch (error) {
         console.error("Gagal mendaftar:", error);
         alert("❌ Gagal mendaftar: " + error.message);
+      } finally {
+        isRegistering = false;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = originalBtnText;
+        }
       }
     };
 
@@ -877,8 +946,8 @@ const userData = {
     };
 
 // === LOGOUT ===
-window.logoutUser = async () => {
-  if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) {
+window.logoutUser = () => {
+  tampilkanKonfirmasiLogout(async () => {
     // Pastikan sesi Firebase Auth cocok dengan UID sebelum menghapus data di server
     if (currentUser && currentUser.uid && auth.currentUser && auth.currentUser.uid === currentUser.uid) {
       try {
@@ -912,8 +981,34 @@ window.logoutUser = async () => {
     currentUser = null;
     window.currentUser = null;
     location.reload();
-  }
+  });
 };
+
+    function tampilkanKonfirmasiLogout(onConfirmLogout) {
+    const modal = document.getElementById('rt05-logout-modal');
+    const btnCancel = document.getElementById('rt05-logout-cancel');
+    const btnConfirm = document.getElementById('rt05-logout-confirm');
+
+    if (!modal) {
+      if (confirm("Apakah kamu yakin ingin keluar dari akun ini?")) onConfirmLogout();
+      return;
+    }
+
+    btnCancel.onclick = () => {
+      modal.style.display = 'none';
+    };
+
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.style.display = 'none';
+    };
+
+    btnConfirm.onclick = () => {
+      modal.style.display = 'none';
+      onConfirmLogout();
+    };
+
+    modal.style.display = 'flex';
+  }
 
   
 
@@ -1503,37 +1598,64 @@ function executeSendMessage(e) {
 }
 window.sendChatMessage = executeSendMessage;
 
-
-// === 1. AMBIL URL WEB APP GAS SECARA AMAN ===
-function getGasUrl() {
+// === 1. AMBIL URL FCM WORKER SECARA AMAN ===
+function getFcmWorkerUrl() {
   return (
-    (typeof GAS_WEB_APP_URL !== 'undefined' && GAS_WEB_APP_URL) ||
-    window.GAS_WEB_APP_URL ||
-    (window.parent && window.parent.GAS_WEB_APP_URL) ||
-    (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.GAS_WEB_APP_URL) ||
-    ""
+    (typeof FCM_WORKER_URL !== 'undefined' && FCM_WORKER_URL) ||
+    window.FCM_WORKER_URL ||
+    (window.parent && window.parent.FCM_WORKER_URL) ||
+    (typeof RT05_CONFIG !== 'undefined' && RT05_CONFIG.FCM_WORKER_URL) ||
+    "https://fcm-worker.papan05.my.id/" // Sesuaikan dengan URL/domain Worker Anda
   );
 }
 
-// === 2. FUNGSI TEMBAK GAS YANG RINGAN & SELARAS ===
-function triggerGasNotification(actionType, senderName, bodyText, targetUid = "") {
-  const gasUrl = getGasUrl();
-  if (!gasUrl || !currentUser?.uid) return;
+// === 2. FUNGSI TEMBAK CLOUDFLARE FCM WORKER (INSTAN & TERAUTENTIKASI) ===
+async function triggerGasNotification(actionType, senderName, bodyText, targetUid = "") {
+  const workerUrl = getFcmWorkerUrl();
+  if (!workerUrl || !currentUser?.uid) return;
 
-  fetch(gasUrl, {
-    method: 'POST',
-    mode: 'no-cors',
-    keepalive: true, // Tetap terkirim walau warga langsung mengunci layar HP
-    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify({
-      action: actionType,          // 'notifChatGroup' atau 'notifChatPrivate'
-      senderUid: currentUser.uid,  // Dipakai .gs untuk mengecualikan pengirim & membuat notifTag
-      targetUid: targetUid,        // UID penerima jika private, kosong jika grup
-      senderName: senderName,
-      messageText: bodyText,
-      unreadCount: 1
-    })
-  }).catch(err => console.log("Gagal menembak notifikasi GAS:", err));
+  try {
+    // Tunggu sebentar jika Firebase Auth belum selesai inisialisasi
+    if (typeof auth.authStateReady === 'function') {
+      await auth.authStateReady();
+    }
+
+    if (!auth.currentUser || auth.currentUser.isAnonymous) {
+      console.warn("⚠️ Notif dibatalkan: Sesi Firebase Auth belum login penuh. Silakan logout & login ulang.");
+      return;
+    }
+
+    // Ambil idToken terbaru
+    const idToken = await auth.currentUser.getIdToken();
+    if (!idToken) {
+      console.warn("⚠️ Notif dibatalkan: idToken kosong.");
+      return;
+    }
+
+    const res = await fetch(workerUrl, {
+      method: 'POST',
+      keepalive: true,
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        action: actionType,
+        senderUid: currentUser.uid,
+        targetUid: targetUid,
+        senderName: senderName,
+        messageText: bodyText,
+        unreadCount: 1,
+        idToken: idToken,
+        apiKey: firebaseConfig.apiKey
+      })
+    });
+
+    // Tampilkan alasan pasti jika Worker menolak (401 / 400 / 500)
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error(`❌ FCM Worker menolak (${res.status}):`, errText);
+    }
+  } catch (err) {
+    console.error("❌ Gagal menembak FCM Worker:", err);
+  }
 }
 
 // === 3. AUTO-REFRESH TOKEN FCM SETIAP KALI APP DIBUKA ===

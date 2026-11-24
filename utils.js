@@ -1,13 +1,11 @@
 // utils.js - Kumpulan Konfigurasi, Firebase Global, & Fungsi Pendukung RT 05
-const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbxByNuXApR-qLbpCpLQMjbHiTjC2V6yA9df7lPQdu4GFC_gX8YKfvigOr2Gi0auUrEOJQ/exec";
-window.GAS_WEB_APP_URL = GAS_WEB_APP_URL;
+
 const RT05_CONFIG = {
     PETA_PROXY_URL: "https://peta.papan05.my.id", 
     UPLOADER_URL: "https://uploader.papan05.my.id",
     ADMIN_API_URL: "https://admin-worker.papan05.my.id",
     DATABASE_URL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",
     FIREBASE: {
-        GAS_WEB_APP_URL: GAS_WEB_APP_URL,
         apiKey: "AIzaSyCYbBVdgNRUw0BBiqMAoNgO0SPFhIhG2m8",
         authDomain: "papan05-21a56.firebaseapp.com",
         databaseURL: "https://papan05-21a56-default-rtdb.asia-southeast1.firebasedatabase.app",

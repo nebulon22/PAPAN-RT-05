@@ -209,15 +209,19 @@ html.has-session-token #login-overlay {
     if (sessionStorage.getItem('rt05_session_token')) {
       document.documentElement.classList.add('has-session-token');
     }
-  </script>
+</script>
+  
 <div id="login-overlay">
   <div class="login-box">
     <h2>🔒 Akses Admin</h2>
-<form onsubmit="event.preventDefault(); cekLogin();">
-  <input type="text" name="username" value="admin" autocomplete="username" readonly style="display:none;" aria-hidden="true">
-  <input type="password" id="adminPin" name="adminPin" autocomplete="current-password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••">
-  <button type="submit">Buka Kunci</button>
-</form>
+    <p id="admin-login-identity" class="subtitle" style="font-weight: bold; color: #0288d1; margin-bottom: 14px;">
+      Memuat identitas pengurus...
+    </p>
+    <form onsubmit="event.preventDefault(); cekLogin();">
+      <input type="text" id="adminUsernameHidden" name="username" autocomplete="username" readonly style="display:none;" aria-hidden="true">
+      <input type="password" id="adminPin" name="adminPin" autocomplete="current-password" inputmode="numeric" pattern="[0-9]*" maxlength="6" placeholder="••••••" required>
+      <button type="submit">Buka Kunci</button>
+    </form>
   </div>
 </div>
 
@@ -1312,6 +1316,24 @@ html.has-session-token #login-overlay {
  <!-- JAVASCRIPT LOGIC SCRIPT UTAMA -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script>
+    (function proteksiHalamanAdmin() {
+  const rawUser = localStorage.getItem('rt05_chat_user');
+  if (!rawUser) {
+    alert("⚠️ Akses dibatasi. Silakan login akun Admin melalui halaman utama terlebih dahulu.");
+    window.location.replace('index.html');
+    return;
+  }
+
+  try {
+    const user = JSON.parse(rawUser);
+    if (!user || !user.uid || (user.role !== 'admin' && user.nama !== 'Admin1')) {
+      alert("⛔ Anda bukan Admin. Halaman ini hanya untuk pengurus.");
+      window.location.replace('index.html');
+    }
+  } catch (e) {
+    window.location.replace('index.html');
+  }
+})();
     // SATU HELPER TERPUSAT UNTUK SEMUA REQUEST KE ADMIN WORKER
 async function apiAdminWorker(path, method = 'GET', data = null, opsi = {}) {
   const sessionToken = sessionStorage.getItem('rt05_session_token');
@@ -1659,57 +1681,137 @@ function bersihkanStorageAdmin() {
   document.documentElement.classList.remove('has-session-token');
 }
 
-// 2. Eksekusi Login murni melalui Worker
+
+// 2A. Proteksi awal & tampilkan nama akun admin yang sedang aktif
+let sesiChatAdmin = null;
+(function initIdentitasAdmin() {
+  const rawUser = localStorage.getItem('rt05_chat_user');
+  if (!rawUser) {
+    alert("⚠️ Akses dibatasi. Silakan login akun Admin melalui halaman utama terlebih dahulu.");
+    window.location.replace('index.html');
+    return;
+  }
+
+  try {
+    const user = JSON.parse(rawUser);
+    const nama = user?.username || user?.nama || '';
+    if (!user || !user.uid || (user.role !== 'admin' && nama !== 'Admin1')) {
+      alert("⛔ Anda bukan Admin. Halaman ini hanya untuk pengurus.");
+      window.location.replace('index.html');
+      return;
+    }
+
+    sesiChatAdmin = user;
+    const labelIdentitas = document.getElementById('admin-login-identity');
+    if (labelIdentitas) {
+      labelIdentitas.innerText = `👤 ${nama}${user.hunian ? ' (' + user.hunian + ')' : ''}`;
+    }
+    const hiddenUser = document.getElementById('adminUsernameHidden');
+    if (hiddenUser) hiddenUser.value = nama;
+  } catch (e) {
+    window.location.replace('index.html');
+  }
+})();
+
+// 2B. Verifikasi PIN pribadi masing-masing admin ke Firebase Auth + Worker
 async function cekLogin() {
   const inputPinEl = document.getElementById('adminPin');
   const btnSubmit = document.querySelector('#login-overlay button[type="submit"]');
   const inputPin = inputPinEl ? inputPinEl.value.trim() : '';
 
+  if (!sesiChatAdmin || !sesiChatAdmin.uid) {
+    alert("⚠️ Sesi akun chat tidak ditemukan. Silakan login ulang di menu Chat.");
+    window.location.replace('index.html');
+    return;
+  }
+
   if (!inputPin) {
-    alert("⚠️ Masukkan PIN terlebih dahulu.");
+    alert("⚠️ Masukkan PIN akun chat Anda.");
     return;
   }
 
   if (btnSubmit) {
     btnSubmit.disabled = true;
-    btnSubmit.innerText = '⏳ Memverifikasi...';
+    btnSubmit.innerText = '⏳ Memverifikasi PIN...';
   }
 
   try {
+    // Tunggu Firebase siap jika halaman baru saja dimuat
+    if (!window.auth || !window.db) {
+      await new Promise((resolve) => window.addEventListener('firebaseSiap', resolve, { once: true }));
+    }
+
+    const uid = sesiChatAdmin.uid;
+
+    // Login anonim sementara jika belum ada sesi auth agar bisa membaca authEmail & role
+    if (!window.auth.currentUser && typeof window.signInAnonymously === 'function') {
+      await window.signInAnonymously(window.auth);
+    }
+
+    // Ambil data akun terbaru dari RTDB (untuk mendapatkan pseudoEmail & memastikan masih admin aktif)
+    const userSnap = await window.firebaseGet(window.firebaseRef(window.db, `users/${uid}`));
+    const userVal = userSnap.val();
+    const namaAktif = userVal?.username || userVal?.nama || sesiChatAdmin.nama;
+
+    if (!userVal || userVal.status !== 'aktif' || (userVal.role !== 'admin' && namaAktif !== 'Admin1')) {
+      alert("⛔ Hak akses Admin pada akun ini sudah tidak aktif.");
+      window.location.replace('index.html');
+      return;
+    }
+
+    const pseudoEmail = userVal.authEmail || `${uid.toLowerCase()}@rt05kayen.internal`;
+    const passwordAuth = inputPin + "RT05Key";
+
+   // Verifikasi PIN pribadi ke Firebase Auth
+    const cred = await window.authSignInEmail(window.auth, pseudoEmail, passwordAuth);
+    const idToken = await cred.user.getIdToken(true);
+
+    const firebaseApiKey =
+      window.auth?.app?.options?.apiKey ||
+      window.RT05_CONFIG?.FIREBASE_CONFIG?.apiKey ||
+      window.RT05_CONFIG?.firebaseConfig?.apiKey ||
+      window.RT05_CONFIG?.API_KEY ||
+      '';
+
+    // Tukar idToken Firebase dengan sessionToken dari Cloudflare Worker
     const response = await fetch(RT05_CONFIG.ADMIN_API_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         action: 'login',
-        pin: inputPin
+        uid: uid,
+        idToken: idToken,
+        apiKey: firebaseApiKey
       })
     });
 
     const result = await response.json();
 
     if (response.ok && result.success && (result.sessionToken || result.token)) {
-      // Bersihkan sisa storage lama
       bersihkanStorageAdmin();
-      
-      // Simpan PIN di sessionStorage khusus untuk otorisasi upload ke R2
-      sessionStorage.setItem('rt05_admin_pin_aktif', inputPin);
-      if (inputPinEl) inputPinEl.value = '';
 
-      // Simpan token sesi dari Worker di sessionStorage
       const tokenAktif = result.sessionToken || result.token;
       sessionStorage.setItem('rt05_session_token', tokenAktif);
+      sessionStorage.setItem('rt05_admin_pin_aktif', tokenAktif);
+      sessionStorage.setItem('rt05_admin_uid', uid);
+      localStorage.setItem('adminUsername', namaAktif);
 
+      if (inputPinEl) inputPinEl.value = '';
       bukaAkses();
     } else {
-      alert("❌ " + (result.error || result.message || "PIN salah! Akses ditolak."));
-      if (inputPinEl) {
-        inputPinEl.value = '';
-        inputPinEl.focus();
-      }
+      alert("❌ " + (result.error || result.message || "Gagal membuat sesi admin di server."));
     }
   } catch (error) {
-    console.error("Gagal verifikasi PIN ke Worker:", error);
-    alert("❌ Gagal terhubung ke server autentikasi Worker.");
+    console.error("Gagal login admin:", error);
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      alert("❌ PIN salah! Gunakan PIN yang Anda buat saat mendaftar akun chat.");
+    } else {
+      alert("❌ Gagal memverifikasi PIN: " + (error.message || "Terjadi kesalahan."));
+    }
+    if (inputPinEl) {
+      inputPinEl.value = '';
+      inputPinEl.focus();
+    }
   } finally {
     if (btnSubmit) {
       btnSubmit.disabled = false;
@@ -5176,6 +5278,8 @@ function bukaTabAdmin(tabName) {
   </script>
 
 <script type="module">
+  import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+  window.authSignInEmail = signInWithEmailAndPassword;
   // Helper kirim perintah manajemen user via apiAdminWorker
 async function kirimAksiUserViaWorker(pathTujuan, metodeHttp, payloadData = null) {
     return await apiAdminWorker(pathTujuan, metodeHttp, payloadData);

@@ -589,49 +589,62 @@ select {
   user-select: text !important;
   -webkit-touch-callout: default !important;
 }
-/* Efek sentuh empuk khusus tombol utama (GPU-accelerated, zero layout shift) */
-#search-box button:active,
-.btn-filter:active,
-.btn-back-floating:active,
-.btn-rute:active,
-.btn-lihat-lokasi:active,
-#floating-chat-btn:active,
-#btn-senter-ronda:active,
-.img-popup:active {
-  transform: scale(0.96);
-  opacity: 0.92;
-}
-
-/* Transisi sentuhan profesional & ringan (hanya properti GPU: transform & opacity) */
-#search-box button,
+/* Transisi sentuhan profesional & ringan untuk SEMUA tombol di index.html */
+button:not(:disabled),
+a[class*="btn"],
+[role="button"],
 .btn-filter,
 .btn-back-floating,
 .btn-rute,
 .btn-lihat-lokasi,
 #floating-chat-btn,
 #btn-senter-ronda,
-.btn-qr-floating {
+.btn-qr-floating,
+.img-popup {
   transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease;
   will-change: transform;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
 }
 
-/* Efek tekan halus & presisi */
-#search-box button:active,
+/* Efek sentuh empuk saat ditekan (GPU-accelerated, zero layout shift) */
+button:not(:disabled):active,
+button:not(:disabled).is-pressed,
+a[class*="btn"]:active,
+a[class*="btn"].is-pressed,
+[role="button"]:active,
+[role="button"].is-pressed,
 .btn-filter:active,
+.btn-filter.is-pressed,
 .btn-back-floating:active,
+.btn-back-floating.is-pressed,
 .btn-rute:active,
+.btn-rute.is-pressed,
 .btn-lihat-lokasi:active,
+.btn-lihat-lokasi.is-pressed,
 #floating-chat-btn:active,
-#btn-senter-ronda:active {
-  transform: scale(0.975);
+#floating-chat-btn.is-pressed,
+#btn-senter-ronda:active,
+#btn-senter-ronda.is-pressed,
+.img-popup:active {
+  transform: scale(0.96);
   opacity: 0.92;
 }
 
 /* Khusus tombol QR bawah agar posisi tengah translateX(-50%) tetap terkunci */
-.btn-qr-floating:active {
-  transform: translateX(-50%) scale(0.96);
+button.btn-qr-floating:active,
+button.btn-qr-floating.is-pressed,
+.btn-qr-floating:active,
+.btn-qr-floating.is-pressed {
+  transform: translateX(-50%) scale(0.96) !important;
   opacity: 0.92;
 }
+
+/* Kecualikan tombol zoom +/- bawaan Leaflet agar tidak bergeser */
+.leaflet-control-zoom a:active {
+  transform: none !important;
+}
+   
 </style>
 </head>
 <body>
@@ -653,7 +666,7 @@ select {
     </span>
   </div>
 
-  <a href="admin.html" class="btn-back-floating" style="position: static;">🔒 Admin</a>
+ <a href="admin.html" class="btn-back-floating" style="position: static;" onclick="bukaHalamanAdmin(event)">🔒 Admin</a>
   
   <button type="button" data-click="bukaModalChangelog" 
     style="background: #ffffff; color: #333; border: 1px solid #ccc; border-radius: 50%; width: 28px; height: 28px; font-size: 13px; font-weight: bold; font-family: serif; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
@@ -1160,7 +1173,42 @@ select {
     </button>
   </div>
 </div>
-  
+
+<!-- Modal Peringatan Elegan -->
+<div id="rt05-custom-alert" style="display:none; position:fixed; inset:0; z-index:2147483647; background:rgba(15, 23, 42, 0.72); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.12); border-radius:18px; max-width:340px; width:100%; padding:24px 20px; text-align:center; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); animation:rt05PopIn 0.2s ease-out; position:relative; z-index:2;">
+    
+    <!-- Ikon Kunci / Peringatan -->
+    <div id="rt05-alert-icon-wrap" style="width:52px; height:52px; margin:0 auto 14px; border-radius:50%; background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); display:flex; align-items:center; justify-content:center; font-size:24px;">
+      <span id="rt05-alert-icon">🔐</span>
+    </div>
+
+    <h3 id="rt05-alert-title" style="margin:0 0 8px; font-size:17px; font-weight:700; color:#ffffff;">
+      Akses Terbatas
+    </h3>
+
+    <p id="rt05-alert-msg" style="margin:0 0 20px; font-size:13.5px; line-height:1.5; color:#cbd5e1;">
+      Anda belum login akun chat. Silakan login menggunakan akun <strong>Admin</strong> terlebih dahulu.
+    </p>
+
+    <div style="display:flex; gap:10px;">
+      <button type="button" id="rt05-alert-close" style="flex:1; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#cbd5e1; font-size:13px; font-weight:600; cursor:pointer; touch-action:manipulation;">
+        Tutup
+      </button>
+      <button type="button" id="rt05-alert-action" style="flex:1.4; padding:10px 12px; border-radius:10px; border:none; background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(2, 132, 199, 0.35); touch-action:manipulation;">
+        Login Sekarang
+      </button>
+    </div>
+  </div>
+</div>
+    
+<style>
+  @keyframes rt05PopIn {
+    from { opacity: 0; transform: scale(0.92); }
+    to { opacity: 1; transform: scale(1); }
+  }
+</style>
+    
 </main>
 
 <script>
@@ -1223,12 +1271,115 @@ window.perbaruiAplikasiSekarang = function() {
     serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
   }
 
-  // Pengaman: paksa reload setelah 1,5 detik jika controllerchange tertahan oleh iframe/tab
+  // Pengaman: paksa reload setelah 3 detik jika controllerchange tertahan oleh iframe/tab
   setTimeout(() => {
     window.location.reload();
-  }, 1500);
+  }, 3000);
 };
+  
+window.bukaHalamanAdmin = async function(event) {
+  if (event) event.preventDefault();
 
+// 1. Cek sesi akun chat di browser
+  const rawUser = localStorage.getItem('rt05_chat_user');
+  if (!rawUser) {
+    tampilkanPeringatanElegan(
+      "Login Admin Diperlukan",
+      "Anda belum login akun chat.<br>Silakan login menggunakan akun <b>Admin</b> terlebih dahulu.",
+      () => {
+        // Cari tombol chat melayang (case-insensitive 'i' agar cocok dengan chat/Chat)
+        const tombolChat =
+          document.getElementById('btn-chat-floating') ||
+          document.getElementById('chat-fab') ||
+          document.getElementById('floating-chat-btn') ||
+          document.querySelector('[onclick*="chat" i]') ||
+          document.querySelector('[id*="chat" i][onclick], [class*="chat" i][onclick]');
+
+        if (typeof bukaModalChat === 'function') {
+          bukaModalChat();
+        } else if (typeof openChatModal === 'function') {
+          openChatModal();
+        } else if (typeof toggleChat === 'function') {
+          toggleChat();
+        } else if (tombolChat) {
+          tombolChat.click();
+        } else {
+          // Fallback jika modal chat berupa elemen tersembunyi langsung
+          const modalChat = document.querySelector('[id*="chat-modal" i], [id*="modal-chat" i], [id*="modalChat" i]');
+          if (modalChat) modalChat.style.display = 'flex';
+        }
+      },
+      "Login Sekarang"
+    );
+    return;
+  }
+
+  let chatUser = null;
+  try {
+    chatUser = JSON.parse(rawUser);
+  } catch (e) {
+    localStorage.removeItem('rt05_chat_user');
+    alert("⚠️ Sesi akun tidak valid. Silakan login ulang di menu Chat.");
+    return;
+  }
+
+  if (!chatUser || !chatUser.uid) {
+    alert("⚠️ Silakan login akun chat terlebih dahulu.");
+    return;
+  }
+
+  // 2. Verifikasi status & role terbaru langsung ke Firebase RTDB
+  try {
+    if (window.db && window.firebaseRef && window.firebaseGet) {
+      if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
+        await window.signInAnonymously(window.auth);
+      }
+
+      const snap = await window.firebaseGet(window.firebaseRef(window.db, `users/${chatUser.uid}`));
+      const userData = snap.val();
+      const namaUser = userData?.username || userData?.nama || chatUser.nama || '';
+      const isAdmin = userData && userData.status === 'aktif' && (userData.role === 'admin' || namaUser === 'Admin1');
+
+if (!isAdmin) {
+        tampilkanPeringatanElegan(
+          "Akses Ditolak",
+          `Akun <b>"${namaUser || 'Warga'}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
+          () => {
+            bukaModalChatDanLogout();
+          },
+          "Ganti Akun",
+          "danger"
+        );
+        return;
+      }
+
+      chatUser.role = 'admin';
+      localStorage.setItem('rt05_chat_user', JSON.stringify(chatUser));
+      window.location.href = 'admin.html';
+      return;
+    }
+  } catch (err) {
+    console.warn("Gagal cek role live ke server, memakai cache lokal:", err);
+  }
+
+// Fallback saat offline / koneksi lambat
+  if (chatUser.role === 'admin' || chatUser.nama === 'Admin1') {
+    window.location.href = 'admin.html';
+  } else {
+    tampilkanPeringatanElegan(
+      "Akses Ditolak",
+      `Akun <b>"${chatUser.nama || 'Warga'}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
+      () => {
+        localStorage.removeItem('rt05_chat_user');
+        const iframeChat = document.querySelector('iframe[src*="chat"]');
+        if (iframeChat) iframeChat.src = iframeChat.src;
+        bukaModalChatOtomatis();
+      },
+      "Ganti Akun",
+      "danger"
+    );
+  }
+};
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
@@ -1516,13 +1667,19 @@ function muatDataPetaWarga() {
     return;
   }
 
-  const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
   const headers = { 'Content-Type': 'application/json' };
-  if (sessionToken) {
-    headers['Authorization'] = `Bearer ${sessionToken}`;
+  const isHalamanAdmin = window.location.pathname.toLowerCase().includes('admin');
+
+  // Token hanya dikirim jika dibuka dari halaman admin.html
+  // Jika dibuka dari index.html (meskipun akun chat berstatus admin), token tidak dikirim -> tetap tersensor
+  if (isHalamanAdmin) {
+    const sessionToken = sessionStorage.getItem('rt05_session_token') || '';
+    if (sessionToken) {
+      headers['Authorization'] = `Bearer ${sessionToken}`;
+    }
   }
 
-  // 1. Ambil data melalui Cloudflare Worker proxy secara aman dengan Header Admin
+  // 1. Ambil data melalui Cloudflare Worker proxy
   fetch(endpointPeta, { method: 'GET', headers: headers })
     .then(response => {
       if (!response.ok) {
@@ -1530,6 +1687,7 @@ function muatDataPetaWarga() {
       }
       return response.json();
     })
+    
     .then(dataObj => {
       // Fungsi internal untuk memasang MarkerCluster & merender titik lokasi
       const pasangClusterDanRender = () => {
@@ -3402,6 +3560,133 @@ window.cetakLaporanJimpitan = function() {
   });
 };
 
+
+window.tampilkanPeringatanElegan = function(judul, pesan, onActionCallback = null, teksTombol = "Login Sekarang", tipe = "warning") {
+    const modal = document.getElementById('rt05-custom-alert');
+    const titleEl = document.getElementById('rt05-alert-title');
+    const msgEl = document.getElementById('rt05-alert-msg');
+    const closeBtn = document.getElementById('rt05-alert-close');
+    const actionBtn = document.getElementById('rt05-alert-action');
+    const iconWrap = document.getElementById('rt05-alert-icon-wrap');
+    const iconEl = document.getElementById('rt05-alert-icon');
+
+    titleEl.textContent = judul;
+    msgEl.innerHTML = pesan;
+
+    // Hubungkan tombol Tutup & klik area luar secara langsung (anti gagal scope)
+    if (closeBtn) {
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        window.tutupPeringatanElegan();
+      };
+    }
+    if (modal) {
+      modal.onclick = (e) => {
+        if (e.target === modal) window.tutupPeringatanElegan();
+      };
+    }
+
+    // Sesuaikan warna & ikon berdasarkan jenis peringatan
+    if (iconWrap && iconEl) {
+      if (tipe === "danger") {
+        iconWrap.style.background = "rgba(239, 68, 68, 0.15)";
+        iconWrap.style.borderColor = "rgba(239, 68, 68, 0.35)";
+        iconEl.textContent = "⛔";
+      } else {
+        iconWrap.style.background = "rgba(245, 158, 11, 0.15)";
+        iconWrap.style.borderColor = "rgba(245, 158, 11, 0.35)";
+        iconEl.textContent = "🔐";
+      }
+    }
+
+    if (typeof onActionCallback === 'function') {
+      actionBtn.style.display = 'block';
+      actionBtn.textContent = teksTombol;
+      actionBtn.onclick = (e) => {
+        e.stopPropagation();
+        window.tutupPeringatanElegan();
+        onActionCallback();
+      };
+    } else {
+      actionBtn.style.display = 'none';
+    }
+
+    modal.style.display = 'flex';
+  };
+
+window.tutupPeringatanElegan = function() {
+    const modal = document.getElementById('rt05-custom-alert');
+    if (modal) modal.style.display = 'none';
+  };
+
+  function bukaModalChatOtomatis() {
+    // 1. Coba panggil fungsi global jika tersedia
+    if (typeof bukaModalChat === 'function') return bukaModalChat();
+    if (typeof openChatModal === 'function') return openChatModal();
+    if (typeof toggleChat === 'function') return toggleChat();
+
+    // 2. Cari tombol chat berdasarkan ID, class, atau atribut onclick/href
+    const kandidatTombol = document.querySelector(
+      '#btn-chat-floating, #chat-fab, #floating-chat-btn, #btn-chat, ' +
+      '[onclick*="chat" i], [id*="chat" i][onclick], [class*="chat" i][onclick], a[href*="chat.html"]'
+    );
+    if (kandidatTombol) {
+      kandidatTombol.click();
+      return;
+    }
+
+    // 3. Cari tombol bulat hijau melayang di pojok kiri bawah
+    const semuaTombol = Array.from(document.querySelectorAll('button, a, div[onclick]'));
+    const tombolPojokKiriBawah = semuaTombol.find(el => {
+      const style = window.getComputedStyle(el);
+      const rect = el.getBoundingClientRect();
+      return (
+        style.position === 'fixed' &&
+        rect.bottom > window.innerHeight - 130 &&
+        rect.left < 130 &&
+        rect.width > 30 && rect.width < 100
+      );
+    });
+
+    if (tombolPojokKiriBawah) {
+      tombolPojokKiriBawah.click();
+      return;
+    }
+
+    // 4. Fallback terakhir: arahkan langsung ke chat.html
+    window.location.href = 'chat.html';
+  }
+  
+function bukaModalChatDanLogout() {
+    bukaModalChatOtomatis();
+
+    setTimeout(() => {
+      const iframeChat = document.querySelector('iframe[src*="chat"]');
+      let docTarget = document;
+
+      if (iframeChat) {
+        try {
+          docTarget = iframeChat.contentDocument || iframeChat.contentWindow.document;
+          if (typeof iframeChat.contentWindow.logoutUser === 'function') {
+            iframeChat.contentWindow.logoutUser();
+            return;
+          }
+        } catch (e) {
+          console.warn("Tidak bisa mengakses isi iframe secara langsung:", e);
+        }
+      } else {
+        if (typeof window.logoutUser === 'function') return window.logoutUser();
+      }
+
+      const tombolLogout = docTarget.querySelector(
+        '[onclick*="logoutUser" i], #btn-logout, #logout-btn, [onclick*="logout" i], [title*="keluar" i]'
+      );
+      if (tombolLogout) {
+        tombolLogout.click();
+      }
+    }, 250);
+  }
+
     const dataChangelog = [
       {
         versi: "v1.8.1",
@@ -3787,6 +4072,18 @@ window.simpanWargaBaru = async function() {
     }
   });
 
+  // Efek sentuh empuk instan di layar sentuh HP untuk seluruh tombol
+  document.addEventListener('touchstart', function(e) {
+    const btn = e.target.closest('button:not(:disabled), a[class*="btn"], [role="button"], .btn-filter, .btn-qr-floating, #floating-chat-btn, #btn-senter-ronda');
+    if (!btn || btn.closest('.leaflet-control-zoom')) return;
+
+    btn.classList.add('is-pressed');
+    clearTimeout(btn._pressTimer);
+    btn._pressTimer = setTimeout(() => {
+      btn.classList.remove('is-pressed');
+    }, 130);
+  }, { passive: true });
+  
   // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPetaDanData);
