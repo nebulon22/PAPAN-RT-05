@@ -1166,8 +1166,8 @@ select {
   <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.12); border-radius:18px; max-width:340px; width:100%; padding:24px 20px; text-align:center; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); animation:rt05PopIn 0.2s ease-out;">
     
     <!-- Ikon Kunci / Peringatan -->
-    <div style="width:52px; height:52px; margin:0 auto 14px; border-radius:50%; background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); display:flex; align-items:center; justify-content:center; font-size:24px;">
-      🔐
+    <div id="rt05-alert-icon-wrap" style="width:52px; height:52px; margin:0 auto 14px; border-radius:50%; background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); display:flex; align-items:center; justify-content:center; font-size:24px;">
+      <span id="rt05-alert-icon">🔐</span>
     </div>
 
     <h3 id="rt05-alert-title" style="margin:0 0 8px; font-size:17px; font-weight:700; color:#ffffff;">
@@ -1188,7 +1188,7 @@ select {
     </div>
   </div>
 </div>
-
+    
 <style>
   @keyframes rt05PopIn {
     from { opacity: 0; transform: scale(0.92); }
@@ -1327,8 +1327,23 @@ window.bukaHalamanAdmin = async function(event) {
       const namaUser = userData?.username || userData?.nama || chatUser.nama || '';
       const isAdmin = userData && userData.status === 'aktif' && (userData.role === 'admin' || namaUser === 'Admin1');
 
-      if (!isAdmin) {
-        alert(`⛔ Akses Ditolak!\nAkun "${namaUser || 'Warga'}" terdaftar sebagai warga biasa (bukan Admin).`);
+if (!isAdmin) {
+        tampilkanPeringatanElegan(
+          "Akses Ditolak",
+          `Akun <b>"${namaUser || 'Warga'}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
+          () => {
+            const tombolChat =
+              document.getElementById('btn-chat-floating') ||
+              document.querySelector('[onclick*="chat" i]');
+            if (typeof bukaModalChat === 'function') {
+              bukaModalChat();
+            } else if (tombolChat) {
+              tombolChat.click();
+            }
+          },
+          "Ganti Akun",
+          "danger"
+        );
         return;
       }
 
@@ -1341,11 +1356,26 @@ window.bukaHalamanAdmin = async function(event) {
     console.warn("Gagal cek role live ke server, memakai cache lokal:", err);
   }
 
-  // Fallback saat offline / koneksi lambat
+ // Fallback saat offline / koneksi lambat
   if (chatUser.role === 'admin' || chatUser.nama === 'Admin1') {
     window.location.href = 'admin.html';
   } else {
-    alert("⛔ Akses Ditolak! Anda bukan Admin.");
+    tampilkanPeringatanElegan(
+      "Akses Ditolak",
+      `Akun <b>"${chatUser.nama || 'Warga'}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
+      () => {
+        const tombolChat =
+          document.getElementById('btn-chat-floating') ||
+          document.querySelector('[onclick*="chat" i]');
+        if (typeof bukaModalChat === 'function') {
+          bukaModalChat();
+        } else if (tombolChat) {
+          tombolChat.click();
+        }
+      },
+      "Ganti Akun",
+      "danger"
+    );
   }
 };
 // ==========================================
@@ -3529,14 +3559,29 @@ window.cetakLaporanJimpitan = function() {
 };
 
 
-  function tampilkanPeringatanElegan(judul, pesan, onActionCallback = null, teksTombol = "Login Sekarang") {
+function tampilkanPeringatanElegan(judul, pesan, onActionCallback = null, teksTombol = "Login Sekarang", tipe = "warning") {
     const modal = document.getElementById('rt05-custom-alert');
     const titleEl = document.getElementById('rt05-alert-title');
     const msgEl = document.getElementById('rt05-alert-msg');
     const actionBtn = document.getElementById('rt05-alert-action');
+    const iconWrap = document.getElementById('rt05-alert-icon-wrap');
+    const iconEl = document.getElementById('rt05-alert-icon');
 
     titleEl.textContent = judul;
     msgEl.innerHTML = pesan;
+
+    // Sesuaikan warna & ikon berdasarkan jenis peringatan
+    if (iconWrap && iconEl) {
+      if (tipe === "danger") {
+        iconWrap.style.background = "rgba(239, 68, 68, 0.15)";
+        iconWrap.style.borderColor = "rgba(239, 68, 68, 0.35)";
+        iconEl.textContent = "⛔";
+      } else {
+        iconWrap.style.background = "rgba(245, 158, 11, 0.15)";
+        iconWrap.style.borderColor = "rgba(245, 158, 11, 0.35)";
+        iconEl.textContent = "🔐";
+      }
+    }
 
     if (typeof onActionCallback === 'function') {
       actionBtn.style.display = 'block';
