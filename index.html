@@ -1162,8 +1162,8 @@ select {
 </div>
 
 <!-- Modal Peringatan Elegan -->
-<div id="rt05-custom-alert" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(15, 23, 42, 0.72); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;">
-  <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.12); border-radius:18px; max-width:340px; width:100%; padding:24px 20px; text-align:center; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); animation:rt05PopIn 0.2s ease-out;">
+<div id="rt05-custom-alert" style="display:none; position:fixed; inset:0; z-index:2147483647; background:rgba(15, 23, 42, 0.72); backdrop-filter:blur(4px); align-items:center; justify-content:center; padding:20px;">
+  <div style="background:#1e293b; border:1px solid rgba(255,255,255,0.12); border-radius:18px; max-width:340px; width:100%; padding:24px 20px; text-align:center; color:#f8fafc; box-shadow:0 20px 25px -5px rgba(0,0,0,0.5); animation:rt05PopIn 0.2s ease-out; position:relative; z-index:2;">
     
     <!-- Ikon Kunci / Peringatan -->
     <div id="rt05-alert-icon-wrap" style="width:52px; height:52px; margin:0 auto 14px; border-radius:50%; background:rgba(245, 158, 11, 0.15); border:1px solid rgba(245, 158, 11, 0.35); display:flex; align-items:center; justify-content:center; font-size:24px;">
@@ -1175,14 +1175,14 @@ select {
     </h3>
 
     <p id="rt05-alert-msg" style="margin:0 0 20px; font-size:13.5px; line-height:1.5; color:#cbd5e1;">
-      Anda belum login akun chat. Silakan login menggunakan akun <strong>Admin</strong> terlebih dahulu untuk membuka halaman ini.
+      Anda belum login akun chat. Silakan login menggunakan akun <strong>Admin</strong> terlebih dahulu.
     </p>
 
     <div style="display:flex; gap:10px;">
-      <button type="button" onclick="tutupPeringatanElegan()" style="flex:1; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#cbd5e1; font-size:13px; font-weight:600; cursor:pointer;">
+      <button type="button" id="rt05-alert-close" style="flex:1; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,0.15); background:transparent; color:#cbd5e1; font-size:13px; font-weight:600; cursor:pointer; touch-action:manipulation;">
         Tutup
       </button>
-      <button type="button" id="rt05-alert-action" style="flex:1.4; padding:10px 12px; border-radius:10px; border:none; background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(2, 132, 199, 0.35);">
+      <button type="button" id="rt05-alert-action" style="flex:1.4; padding:10px 12px; border-radius:10px; border:none; background:linear-gradient(135deg, #0284c7, #0369a1); color:#ffffff; font-size:13px; font-weight:600; cursor:pointer; box-shadow:0 4px 12px rgba(2, 132, 199, 0.35); touch-action:manipulation;">
         Login Sekarang
       </button>
     </div>
@@ -3551,16 +3551,30 @@ window.cetakLaporanJimpitan = function() {
 };
 
 
-function tampilkanPeringatanElegan(judul, pesan, onActionCallback = null, teksTombol = "Login Sekarang", tipe = "warning") {
+window.tampilkanPeringatanElegan = function(judul, pesan, onActionCallback = null, teksTombol = "Login Sekarang", tipe = "warning") {
     const modal = document.getElementById('rt05-custom-alert');
     const titleEl = document.getElementById('rt05-alert-title');
     const msgEl = document.getElementById('rt05-alert-msg');
+    const closeBtn = document.getElementById('rt05-alert-close');
     const actionBtn = document.getElementById('rt05-alert-action');
     const iconWrap = document.getElementById('rt05-alert-icon-wrap');
     const iconEl = document.getElementById('rt05-alert-icon');
 
     titleEl.textContent = judul;
     msgEl.innerHTML = pesan;
+
+    // Hubungkan tombol Tutup & klik area luar secara langsung (anti gagal scope)
+    if (closeBtn) {
+      closeBtn.onclick = (e) => {
+        e.stopPropagation();
+        window.tutupPeringatanElegan();
+      };
+    }
+    if (modal) {
+      modal.onclick = (e) => {
+        if (e.target === modal) window.tutupPeringatanElegan();
+      };
+    }
 
     // Sesuaikan warna & ikon berdasarkan jenis peringatan
     if (iconWrap && iconEl) {
@@ -3578,8 +3592,9 @@ function tampilkanPeringatanElegan(judul, pesan, onActionCallback = null, teksTo
     if (typeof onActionCallback === 'function') {
       actionBtn.style.display = 'block';
       actionBtn.textContent = teksTombol;
-      actionBtn.onclick = () => {
-        tutupPeringatanElegan();
+      actionBtn.onclick = (e) => {
+        e.stopPropagation();
+        window.tutupPeringatanElegan();
         onActionCallback();
       };
     } else {
@@ -3587,11 +3602,12 @@ function tampilkanPeringatanElegan(judul, pesan, onActionCallback = null, teksTo
     }
 
     modal.style.display = 'flex';
-  }
+  };
 
-function tutupPeringatanElegan() {
-    document.getElementById('rt05-custom-alert').style.display = 'none';
-  }
+window.tutupPeringatanElegan = function() {
+    const modal = document.getElementById('rt05-custom-alert');
+    if (modal) modal.style.display = 'none';
+  };
 
   function bukaModalChatOtomatis() {
     // 1. Coba panggil fungsi global jika tersedia
