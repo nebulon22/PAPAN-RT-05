@@ -52,7 +52,7 @@ if (!payload.notification) {
     } else {
       // Untuk mode 'normal' (Suara & Getar) maupun 'getar' (Hanya Getar)
       options.silent = false;
-      options.vibrate = [200, 100, 200];
+      options.vibrate = [18, 40, 18, 45, 32];
     }
 
     return self.registration.showNotification(title, options);
