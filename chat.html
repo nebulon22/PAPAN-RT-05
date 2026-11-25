@@ -431,7 +431,7 @@
   </div>
   
   <!-- PANEL KONTROL KHUSUS ADMIN (Hanya muncul jika user adalah admin) -->
-  <div id="admin-poll-controls" style="display: none; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 6px; display: flex; gap: 6px; justify-content: flex-end;">
+  <div id="admin-poll-controls" style="display: none; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 6px; gap: 6px; justify-content: flex-end;">
     <button onclick="tutupDanSimpulkanPolling()" class="btn" style="font-size: 10px; padding: 3px 8px; background: #f59e0b; color: #020617; border: none; font-weight: bold;">
       <i class="fa-solid fa-flag-checkered"></i> Selesaikan
     </button>
@@ -1446,7 +1446,7 @@ function listenAllPrivateChats() {
     if (!targetUID || privateRoomListeners[targetUID]) return; // Cegah listener ganda
 
     const roomID = [activeUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
-    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(30));
+    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(5));
     let isFirstLoad = true;
 
     privateRoomListeners[targetUID] = onValue(roomRef, (roomSnap) => {
@@ -1932,16 +1932,6 @@ window.markPublicGroupAsRead = () => {
           set(userStateRef, stateValue);
         }
       };
-
-      // Cek apakah Modal Chat sedang terbuka di layar
-      const isChatModalOpen = () => {
-        const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : document.getElementById('chat-overlay-modal');
-        if (modal) {
-          return modal.style.display !== 'none' && modal.style.display !== '';
-        }
-        return true; 
-      };
-
       // Eksekusi perubahan status
       const executeStatusChange = () => {
         // Jika Tab disembunyikan ATAU Modal Chat ditutup -> Set IDLE (Kuning)
@@ -1950,17 +1940,14 @@ window.markPublicGroupAsRead = () => {
           setMyState('idle');
           return;
         }
-
         // Jika Tab Aktif & Modal Chat Terbuka -> Set ONLINE (Hijau)
         setMyState('online');
-
         // Reset timer idle (3 menit tanpa gerakan di chat -> IDLE)
         clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
           setMyState('idle');
         }, 3 * 60 * 1000);
       };
-
       // Evaluasi status dengan parameter instan / delay
       const evaluateStatus = (instant = false) => {
         if (antiKedipTimer) clearTimeout(antiKedipTimer);
@@ -2259,9 +2246,12 @@ function checkUserStatus() {
     }
   }
 
-  // 🌟 3. VERIFIKASI KE DATABASE FIREBASE DI LATAR BELAKANG (SILENT SYNC)
-  const userRef = ref(db, `users/${currentUser.uid}`);
-  onValue(userRef, (snapshot) => {
+// 🌟 3. VERIFIKASI KE DATABASE FIREBASE DI LATAR BELAKANG (SILENT SYNC)
+if (window.hasUserStatusListener) return;
+window.hasUserStatusListener = true;
+
+const userRef = ref(db, `users/${currentUser.uid}`);
+onValue(userRef, (snapshot) => {
     const val = snapshot.val();
     if (!val) {
       localStorage.removeItem('rt05_chat_user');
