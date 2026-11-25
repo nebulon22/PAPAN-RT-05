@@ -767,94 +767,86 @@ function bagikanInfoWarga(index) {
     }
     
 function renderPengumumanUI() {
-  const imgPriorityAttr = index === 0
-  ? 'fetchpriority="high" decoding="async"'
-  : (index >= 2 ? 'loading="lazy" decoding="async"' : 'decoding="async"');
+  var container = document.getElementById('list-pengumuman');
+  if (!container) return;
 
-htmlFoto = `<img src="${safeUrl}" data-url="${safeUrl}" ${imgPriorityAttr} class="img-popup" alt="Flyer" onclick="bukaFotoBesar(this.dataset.url)" onerror="this.style.display='none'">`;
-  
-      var container = document.getElementById('list-pengumuman');
-      if (!container) return;
+  const badgeInfo = document.getElementById('badge-count-info');
+  if (badgeInfo) badgeInfo.innerText = daftarPengumuman ? daftarPengumuman.length : 0;
 
-      const badgeInfo = document.getElementById('badge-count-info');
-      if (badgeInfo) badgeInfo.innerText = daftarPengumuman ? daftarPengumuman.length : 0;
+  if (!daftarPengumuman || daftarPengumuman.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px; margin-top:30px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
+    return;
+  }
 
-      if (!daftarPengumuman || daftarPengumuman.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px; margin-top:30px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
-        return;
+  let htmlKolektif = '';
+  daftarPengumuman.forEach(function(info, index) {
+    var htmlFoto = '';
+    if (info.foto) {
+      var safeUrl = escapeHTML(info.foto);
+      var urlLower = info.foto.toLowerCase();
+
+      if (urlLower.includes('.webm') || urlLower.includes('.mp4')) {
+        htmlFoto = `
+          <div data-url="${safeUrl}" onclick="bukaModalVideo(this.dataset.url)" style="position: relative; width: 100%; aspect-ratio: 16 / 10; max-height: 215px; border-radius: 8px; overflow: hidden; margin-top: 8px; background: linear-gradient(135deg, #1e293b, #0f172a); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
+            <div style="background: rgba(239, 68, 68, 0.92); color: #fff; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">▶</div>
+            <span style="color: #e2e8f0; font-size: 11.5px; font-weight: 700;">Ketuk untuk memutar video</span>
+          </div>`;
+      } else {
+        const imgPriorityAttr = index === 0
+          ? 'fetchpriority="high" decoding="async"'
+          : (index >= 2 ? 'loading="lazy" decoding="async"' : 'decoding="async"');
+        htmlFoto = `<img src="${safeUrl}" data-url="${safeUrl}" ${imgPriorityAttr} class="img-popup" alt="Flyer" onclick="bukaFotoBesar(this.dataset.url)" onerror="this.style.display='none'">`;
+      }
+    }
+
+    let htmlLokasi = '';
+    if (info.lokasi) {
+      const rawLokasi = info.lokasi.trim();
+      let labelLokasi = rawLokasi;
+      let hrefLokasi = '';
+
+      if (rawLokasi.includes('|')) {
+        const parts = rawLokasi.split('|');
+        labelLokasi = parts[0].trim();
+        hrefLokasi = parts[1].trim();
+      } else if (/^https?:\/\//i.test(rawLokasi)) {
+        labelLokasi = 'Buka Lokasi di Google Maps';
+        hrefLokasi = rawLokasi;
+      } else if (info.lat && info.lng) {
+        labelLokasi = rawLokasi;
+        hrefLokasi = `https://www.google.com/maps?q=${encodeURIComponent(info.lat)},${encodeURIComponent(info.lng)}`;
+      } else {
+        labelLokasi = rawLokasi;
+        hrefLokasi = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawLokasi)}`;
       }
 
-      let htmlKolektif = '';
-      daftarPengumuman.forEach(function(info, index) {
-        var htmlFoto = '';
-        if (info.foto) {
-          var safeUrl = escapeHTML(info.foto);
-          var urlLower = info.foto.toLowerCase();
-
-          if (urlLower.includes('.webm') || urlLower.includes('.mp4')) {
-            htmlFoto = `
-  <div data-url="${safeUrl}" onclick="bukaModalVideo(this.dataset.url)" style="position: relative; width: 100%; aspect-ratio: 16 / 10; max-height: 215px; border-radius: 8px; overflow: hidden; margin-top: 8px; background: linear-gradient(135deg, #1e293b, #0f172a); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px;">
-    <div style="background: rgba(239, 68, 68, 0.92); color: #fff; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">▶</div>
-    <span style="color: #e2e8f0; font-size: 11.5px; font-weight: 700;">Ketuk untuk memutar video</span>
-  </div>`;
-          } else {
-            const lazyAttr = index >= 2 ? 'loading="lazy"' : 'decoding="async"';
-            htmlFoto = `<img src="${safeUrl}" data-url="${safeUrl}" ${lazyAttr} class="img-popup" alt="Flyer" onclick="bukaFotoBesar(this.dataset.url)" onerror="this.style.display='none'">`;
-          }
-        }
-
-let htmlLokasi = '';
-        if (info.lokasi) {
-          const rawLokasi = info.lokasi.trim();
-          let labelLokasi = rawLokasi;
-          let hrefLokasi = '';
-
-          if (rawLokasi.includes('|')) {
-            // 1. Format "Nama Tempat | https://maps.app.goo.gl/..."
-            const parts = rawLokasi.split('|');
-            labelLokasi = parts[0].trim();
-            hrefLokasi = parts[1].trim();
-          } else if (/^https?:\/\//i.test(rawLokasi)) {
-            // 2. Format langsung link Google Maps
-            labelLokasi = 'Buka Lokasi di Google Maps';
-            hrefLokasi = rawLokasi;
-          } else if (info.lat && info.lng) {
-            // 3. Format autocomplete warga (punya koordinat lat & lng)
-            labelLokasi = rawLokasi;
-            hrefLokasi = `https://www.google.com/maps?q=${encodeURIComponent(info.lat)},${encodeURIComponent(info.lng)}`;
-          } else {
-            // 4. Ketik nama tempat manual tanpa koordinat
-            labelLokasi = rawLokasi;
-            hrefLokasi = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawLokasi)}`;
-          }
-
-          htmlLokasi = `<a href="${escapeHTML(hrefLokasi)}" target="_blank" rel="noopener" class="chip-lokasi" style="text-decoration: none; cursor: pointer;">📍 ${escapeHTML(labelLokasi)} ↗</a>`;
-        }
-
-        const kategori = deteksiKategoriInfo(info.judul, info.detail);
-        const isBaru = cekInfoBaru(info.tanggal);
-
-        htmlKolektif += `
-          <div class="card-info ${kategori.css}">
-            <div class="card-meta-top">
-              <div>
-                ${info.tanggal ? `<span class="tgl">📅 ${escapeHTML(info.tanggal)}</span>` : ''}
-                ${isBaru ? `<span class="badge-baru">BARU</span>` : ''}
-              </div>
-              <span class="badge-kategori">${kategori.label}</span>
-            </div>
-            <div class="judul">${escapeHTML(info.judul)}</div>
-            ${htmlLokasi}
-            <div class="detail">${escapeHTML(info.detail)}</div>
-            ${htmlFoto}
-            <div class="card-footer-wa">
-              <button type="button" class="btn-share-wa" onclick="bagikanInfoWarga(${index})">💬 Kirim ke WA</button>
-            </div>
-          </div>
-        `;
-      });
-      container.innerHTML = htmlKolektif;
+      htmlLokasi = `<a href="${escapeHTML(hrefLokasi)}" target="_blank" rel="noopener" class="chip-lokasi" style="text-decoration: none; cursor: pointer;">📍 ${escapeHTML(labelLokasi)} ↗</a>`;
     }
+
+    const kategori = deteksiKategoriInfo(info.judul, info.detail);
+    const isBaru = cekInfoBaru(info.tanggal);
+
+    htmlKolektif += `
+      <div class="card-info ${kategori.css}">
+        <div class="card-meta-top">
+          <div>
+            ${info.tanggal ? `<span class="tgl">📅 ${escapeHTML(info.tanggal)}</span>` : ''}
+            ${isBaru ? `<span class="badge-baru">BARU</span>` : ''}
+          </div>
+          <span class="badge-kategori">${kategori.label}</span>
+        </div>
+        <div class="judul">${escapeHTML(info.judul)}</div>
+        ${htmlLokasi}
+        <div class="detail">${escapeHTML(info.detail)}</div>
+        ${htmlFoto}
+        <div class="card-footer-wa">
+          <button type="button" class="btn-share-wa" onclick="bagikanInfoWarga(${index})">💬 Kirim ke WA</button>
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = htmlKolektif;
+}
 
     var dataProgkerCache = [];
     var filterProgkerAktif = 'semua';
@@ -1126,6 +1118,8 @@ function bukaModalVideo(videoUrl) {
       document.body.style.overflow = ''; // Kembalikan scroll halaman normal
     }
 
+let isMediaModalOpen = false;
+
 function bukaFotoBesar(urlFoto) {
   const modalFoto = document.getElementById('modal-foto');
   const imgPreview = document.getElementById('foto-preview');
@@ -1133,16 +1127,34 @@ function bukaFotoBesar(urlFoto) {
     imgPreview.src = urlFoto;
     modalFoto.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    if (!isMediaModalOpen) {
+      history.pushState({ mediaModal: true }, '');
+      isMediaModalOpen = true;
+    }
   }
 }
 
-function tutupFotoBesar() {
+function tutupFotoBesar(fromPopstate = false) {
   const modalFoto = document.getElementById('modal-foto');
-  if (modalFoto) {
+  const imgPreview = document.getElementById('foto-preview');
+  if (modalFoto && modalFoto.style.display !== 'none') {
     modalFoto.style.display = 'none';
+    if (imgPreview) imgPreview.src = ''; // Cegah kilasan foto lama saat buka foto berikutnya
     document.body.style.overflow = '';
+    if (!fromPopstate && isMediaModalOpen) {
+      isMediaModalOpen = false;
+      history.back();
+    }
   }
 }
+
+window.addEventListener('popstate', () => {
+  if (isMediaModalOpen) {
+    isMediaModalOpen = false;
+    tutupFotoBesar(true);
+    tutupModalVideo(true);
+  }
+});
   </script>
 
   </body>
