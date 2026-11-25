@@ -24,10 +24,7 @@ const RT05_CONFIG = {
 };
 
 // ==========================================
-// INISIALISASI FIREBASE V10 + ANONYMOUS AUTH (LAZY / NON-BLOCKING)
-// ==========================================
-// ==========================================
-// INISIALISASI FIREBASE V10 (TERISOLASI PER HALAMAN)
+// INISIALISASI FIREBASE V10 + ANONYMOUS AUTH (LAZY / NON-BLOCKING)(TERISOLASI PER HALAMAN)
 // ==========================================
 async function initFirebaseLazy() {
   const path = window.location.pathname.toLowerCase();
