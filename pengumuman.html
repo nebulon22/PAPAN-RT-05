@@ -727,7 +727,14 @@ localStorage.setItem('rt05_read_announcements', JSON.stringify(activeKeys));
       });
     }
     // 🌟 PANGGIL OTOMATIS SAAT HALAMAN SELESAI DILOAD
-document.addEventListener('DOMContentLoaded', muatPengumumanFirebase);
+document.addEventListener('DOMContentLoaded', () => {
+  muatPengumumanFirebase();
+  try {
+    const cachedRab = JSON.parse(localStorage.getItem('rt05_cached_progker') || '[]');
+    const badgeRab = document.getElementById('badge-count-rab');
+    if (badgeRab && cachedRab.length > 0) badgeRab.innerText = cachedRab.length;
+  } catch (e) {}
+});
 
 function deteksiKategoriInfo(judul, detail) {
       const teks = `${judul} ${detail}`.toLowerCase();
