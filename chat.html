@@ -1210,6 +1210,23 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // 🌟 1. TAMPILKAN CACHE PROFIL & CHAT SECARA INSTAN (0ms, tanpa tunggu Firebase Auth)
+    const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+    const cachedPublic = localStorage.getItem('rt05_public_chat_cache');
+    const chatStream = document.getElementById('chat-stream');
+
+    if (savedUser && savedUser.status === 'aktif') {
+      const userInfo = document.getElementById('user-info-text');
+      if (userInfo) userInfo.innerText = `${savedUser.username || savedUser.nama} • ${savedUser.hunian || ''}`;
+
+      const labelUserKetik = document.getElementById('chat-current-user-label');
+      if (labelUserKetik) labelUserKetik.innerText = `${savedUser.username || savedUser.nama}:`;
+
+      if (chatStream && cachedPublic) {
+        renderCachedPublicMessages(cachedPublic, chatStream, true);
+      }
+    }
+
     // Deteksi jika modal disembunyikan menggunakan CSS/Iframe
     const observer = new IntersectionObserver((entries) => {
       isChatVisible = entries[0].isIntersecting && !document.hidden;
@@ -1221,15 +1238,12 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     observer.observe(document.body);
 
-    // Tunggu Firebase Auth pada instans rt05ChatApp selesai memeriksa sesi sebelum membaca/menulis DB
+    // 🌟 2. VERIFIKASI SESI AUTH & KONEKSI REAL-TIME DI LATAR BELAKANG
     let isAuthChecked = false;
     onAuthStateChanged(auth, (firebaseUser) => {
       if (isAuthChecked) return;
       isAuthChecked = true;
 
-      const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
-
-      // Jika sesi Auth belum login atau masih sesi tamu, bersihkan localStorage agar diarahkan ke form login
       if (savedUser && savedUser.uid && (!firebaseUser || firebaseUser.isAnonymous || firebaseUser.uid !== savedUser.uid)) {
         localStorage.removeItem('rt05_chat_user');
         currentUser = null;
@@ -2514,15 +2528,18 @@ function loadChatStream(onLoaded) {
     window.currentChatUnsubscribe = currentChatUnsubscribe;
 }
 
-function renderCachedPublicMessages(cachedJson, chatStream, forceScroll) {
+function renderCachedPublicMessages(cachedJson, chatStream, forceScroll, isOffline = false) {
     try {
         const dataObj = JSON.parse(cachedJson);
         const fragment = document.createDocumentFragment();
 
-        const banner = document.createElement('div');
-        banner.style.cssText = 'background: rgba(245, 158, 11, 0.1); color: #fcd34d; font-size: 10px; text-align: center; padding: 4px; margin-bottom: 4px; border-radius: 4px;';
-        banner.textContent = '⚠️ Mode Offline (Menampilkan riwayat tersimpan)';
-        fragment.appendChild(banner);
+        // Tampilkan banner peringatan HANYA jika benar-benar sedang offline
+        if (isOffline) {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'background: rgba(245, 158, 11, 0.1); color: #fcd34d; font-size: 10px; text-align: center; padding: 4px; margin-bottom: 4px; border-radius: 4px;';
+            banner.textContent = '⚠️ Mode Offline (Menampilkan riwayat tersimpan)';
+            fragment.appendChild(banner);
+        }
         
         Object.entries(dataObj).forEach(([msgKey, msgData]) => {
             if (msgKey === 'pinned_poll') return;
