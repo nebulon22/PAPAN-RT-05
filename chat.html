@@ -2447,12 +2447,12 @@ function loadChatStream(onLoaded) {
     const chatStream = document.getElementById('chat-stream');
     if (!chatStream) return;
 
-    const cachedPublic = localStorage.getItem('rt05_public_chat_cache');
-    if (chatStream.children.length === 0 && !cachedPublic) {
-        chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
-    } else if (chatStream.children.length === 0 && cachedPublic) {
-        renderCachedPublicMessages(cachedPublic, chatStream, false);
-    }
+const cachedPublic = localStorage.getItem('rt05_public_chat_cache');
+if (!chatStream.querySelector('.msg-row') && cachedPublic) {
+    renderCachedPublicMessages(cachedPublic, chatStream, true, !navigator.onLine);
+} else if (chatStream.children.length === 0) {
+    chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
+}
   
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
 
@@ -2474,26 +2474,26 @@ function loadChatStream(onLoaded) {
         let isUnreadSection = !lastReadPublicMapKey;
         let latestPublicKey = null;
 
-        snapshot.forEach((childSnap) => {
-            const msgKey = childSnap.key;
-            const msgData = childSnap.val();
-            cacheData[msgKey] = msgData;
+    snapshot.forEach((childSnap) => {
+    const msgKey = childSnap.key;
+    const msgData = childSnap.val();
+    cacheData[msgKey] = msgData;
 
-            if (msgKey === 'pinned_poll') return;
-            latestPublicKey = msgKey;
+    if (msgKey === 'pinned_poll') return;
+    latestPublicKey = msgKey;
 
-            if (msgKey === lastReadPublicMapKey) {
-                isUnreadSection = true;
-            }
+    if (msgKey === lastReadPublicMapKey) {
+        isUnreadSection = true;
+    }
 
-            let isUnreadMsg = false;
-            if (isChatReady && currentUser?.uid && isUnreadSection && msgData.uid !== currentUser.uid && msgKey !== lastReadPublicMapKey) {
-                isUnreadMsg = true;
-            }
+    let isUnreadMsg = false;
+    if ((lastReadPublicMapKey || isChatReady) && currentUser?.uid && isUnreadSection && msgData.uid !== currentUser.uid && msgKey !== lastReadPublicMapKey) {
+        isUnreadMsg = true;
+    }
 
-            const msgEl = createMessageElement(msgData, isUnreadMsg, msgKey);
-            if (msgEl) fragment.appendChild(msgEl);
-        });
+    const msgEl = createMessageElement(msgData, isUnreadMsg, msgKey);
+    if (msgEl) fragment.appendChild(msgEl);
+    });
 
         localStorage.setItem('rt05_public_chat_cache', JSON.stringify(cacheData));
 
