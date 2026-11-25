@@ -2,11 +2,9 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Informasi & RAB RT 05 Kayen</title>
 
-    <!-- FontAwesome Lokal -->
-  <link rel="stylesheet" href="all.min.css">
    <!-- Konfigurasi Khusus iOS PWA -->
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -27,7 +25,9 @@ html, body {
   color: #333;
   overflow-x: hidden;
 }
-
+button, a, .img-popup {
+  touch-action: manipulation;
+}
 /* Aktifkan transisi antar-halaman tanpa layar putih di Chrome/Android */
 @view-transition {
   navigation: auto;
@@ -431,6 +431,108 @@ html, body {
       transform: scale(0.97);
       opacity: 0.9;
     }
+    /* Statistik & Progress RAB */
+.rab-stat-label {
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  display: block;
+}
+.rab-stat-card.plan .rab-stat-label { color: #1d4ed8; }
+.rab-stat-card.real .rab-stat-label { color: #047857; }
+
+.rab-stat-value {
+  font-size: 15px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+.rab-stat-card.plan .rab-stat-value { color: #1e3a8a; }
+.rab-stat-card.real .rab-stat-value { color: #064e3b; }
+
+.rab-progress-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: #334155;
+}
+
+.empty-state-msg {
+  text-align: center;
+  padding: 16px;
+  color: #94a3b8;
+  font-size: 12.5px;
+}
+
+/* Modal Foto & Video Fullscreen */
+.modal-media {
+  display: none;
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100dvh;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+.modal-media.foto {
+  z-index: 99999;
+  background: rgba(0, 0, 0, 0.92);
+  padding: 16px;
+}
+.modal-media.video {
+  z-index: 999999;
+  background: #000000;
+  flex-direction: column;
+  padding: 12px;
+}
+
+.btn-modal-close {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  background: #ef4444;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  border-radius: 50%;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  z-index: 1000000;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.6);
+}
+
+.btn-modal-rotate {
+  display: none;
+  position: fixed;
+  top: 14px;
+  right: 56px;
+  z-index: 1000000;
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 20px;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.modal-media-content {
+  max-width: 100%;
+  max-height: 84dvh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: auto;
+}
   </style>
 </head>
 <body>
@@ -471,18 +573,18 @@ html, body {
     <div id="panel-tab-rab" style="display: none;">
       <div class="rab-summary-grid">
         <div class="rab-stat-card plan">
-          <span style="font-size: 10px; color: #1d4ed8; font-weight: 800; text-transform: uppercase; display: block;">Total Estimasi RAB</span>
-          <div id="warga-total-rab" style="font-size: 15px; font-weight: 800; color: #1e3a8a; margin-top: 2px;">Rp 0</div>
+          <span class="rab-stat-label">Total Estimasi RAB</span>
+          <div id="warga-total-rab" class="rab-stat-value">Rp 0</div>
         </div>
 
         <div class="rab-stat-card real">
-          <span style="font-size: 10px; color: #047857; font-weight: 800; text-transform: uppercase; display: block;">Realisasi Selesai</span>
-          <div id="warga-total-realisasi" style="font-size: 15px; font-weight: 800; color: #064e3b; margin-top: 2px;">Rp 0</div>
+          <span class="rab-stat-label">Realisasi Selesai</span>
+          <div id="warga-total-realisasi" class="rab-stat-value">Rp 0</div>
         </div>
       </div>
 
       <div class="rab-progress-box">
-        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11.5px; font-weight: 800; color: #334155;">
+        <div class="rab-progress-header">
           <span>📊 Serapan Realisasi Selesai</span>
           <span id="warga-persen-realisasi" style="color: #059669;">0%</span>
         </div>
@@ -502,23 +604,23 @@ html, body {
 
       <!-- Daftar Kartu Progker -->
       <div id="list-progker-warga">
-        <p style="text-align:center; padding:16px; color:#94a3b8; font-size:12.5px;">Memuat data RAB...</p>
+        <p class="empty-state-msg">Memuat data RAB...</p>
       </div>
     </div>
 
   </div>
 
 <!-- Modal Pratinjau Foto Besar -->
-<div id="modal-foto" onclick="if(event.target === this) tutupFotoBesar()" style="display: none; position: fixed; inset: 0; width: 100%; height: 100dvh; z-index: 99999; background: rgba(0, 0, 0, 0.92); align-items: center; justify-content: center; padding: 16px; box-sizing: border-box;">
-  <button type="button" onclick="tutupFotoBesar()" title="Tutup" style="position: fixed; top: 14px; right: 14px; background: #ef4444; color: #ffffff; border: 2px solid #ffffff; border-radius: 50%; width: 34px; height: 34px; display: flex; align-items: center; justify-content: center; font-size: 16px; font-weight: bold; cursor: pointer; z-index: 100001; box-shadow: 0 4px 10px rgba(0,0,0,0.6);">✕</button>
-  <img id="foto-preview" src="" alt="Pratinjau Foto" style="max-width: 100%; max-height: 84dvh; width: auto; height: auto; object-fit: contain; border-radius: 8px; display: block; margin: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.8);">
+<div id="modal-foto" class="modal-media foto" onclick="if(event.target === this) tutupFotoBesar()">
+  <button type="button" class="btn-modal-close" onclick="tutupFotoBesar()" title="Tutup">✕</button>
+  <img id="foto-preview" class="modal-media-content" src="" alt="Pratinjau Foto" style="border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,0.8);">
 </div>
 
 <!-- Modal Pratinjau Video Popup -->
-<div id="modal-video-popup" style="display: none; position: fixed; inset: 0; width: 100%; height: 100dvh; background: #000000; z-index: 999999; flex-direction: column; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box;">
-  <button id="btn-rotate-video" type="button" onclick="toggleRotasiVideo()" title="Putar Layar" style="display: none; position: fixed; top: 14px; right: 56px; z-index: 1000000; background: rgba(255, 255, 255, 0.25); color: #ffffff; border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 20px; padding: 6px 12px; font-size: 12px; font-weight: bold; cursor: pointer;">🔄 Putar Layar</button>
-  <button type="button" onclick="tutupModalVideo()" title="Tutup Video" style="position: fixed; top: 14px; right: 14px; z-index: 1000000; background: #ef4444; color: #ffffff; border: 2px solid #ffffff; border-radius: 50%; width: 34px; height: 34px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center;">✖</button>
-  <video id="player-video-modal" controls playsinline webkit-playsinline style="max-width: 100%; max-height: 82dvh; width: auto; height: auto; object-fit: contain; background: #000000; margin: auto; display: block;"></video>
+<div id="modal-video-popup" class="modal-media video">
+  <button id="btn-rotate-video" class="btn-modal-rotate" type="button" onclick="toggleRotasiVideo()" title="Putar Layar">🔄 Putar Layar</button>
+  <button type="button" class="btn-modal-close" onclick="tutupModalVideo()" title="Tutup Video">✖</button>
+  <video id="player-video-modal" class="modal-media-content" controls playsinline webkit-playsinline style="max-height: 82dvh; background: #000000;"></video>
 </div>
 
   <!-- Skrip JavaScript Pendukung -->
@@ -604,9 +706,7 @@ function muatPengumumanFirebase() {
           });
         }
 
-        if (activeKeys.length > 0) {
-          localStorage.setItem('rt05_read_announcements', JSON.stringify(activeKeys));
-        }
+localStorage.setItem('rt05_read_announcements', JSON.stringify(activeKeys));
 
         daftarPengumuman.sort((a, b) => {
           var partsA = a.tanggal.split('/');
@@ -627,7 +727,14 @@ function muatPengumumanFirebase() {
       });
     }
     // 🌟 PANGGIL OTOMATIS SAAT HALAMAN SELESAI DILOAD
-document.addEventListener('DOMContentLoaded', muatPengumumanFirebase);
+document.addEventListener('DOMContentLoaded', () => {
+  muatPengumumanFirebase();
+  try {
+    const cachedRab = JSON.parse(localStorage.getItem('rt05_cached_progker') || '[]');
+    const badgeRab = document.getElementById('badge-count-rab');
+    if (badgeRab && cachedRab.length > 0) badgeRab.innerText = cachedRab.length;
+  } catch (e) {}
+});
 
 function deteksiKategoriInfo(judul, detail) {
       const teks = `${judul} ${detail}`.toLowerCase();
@@ -667,88 +774,86 @@ function bagikanInfoWarga(index) {
     }
     
 function renderPengumumanUI() {
-      var container = document.getElementById('list-pengumuman');
-      if (!container) return;
+  var container = document.getElementById('list-pengumuman');
+  if (!container) return;
 
-      const badgeInfo = document.getElementById('badge-count-info');
-      if (badgeInfo) badgeInfo.innerText = daftarPengumuman ? daftarPengumuman.length : 0;
+  const badgeInfo = document.getElementById('badge-count-info');
+  if (badgeInfo) badgeInfo.innerText = daftarPengumuman ? daftarPengumuman.length : 0;
 
-      if (!daftarPengumuman || daftarPengumuman.length === 0) {
-        container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px; margin-top:30px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
-        return;
+  if (!daftarPengumuman || daftarPengumuman.length === 0) {
+    container.innerHTML = '<p style="text-align:center; color:#777; font-size:13px; margin-top:30px;">Belum ada pengumuman kegiatan terbaru saat ini.</p>';
+    return;
+  }
+
+  let htmlKolektif = '';
+  daftarPengumuman.forEach(function(info, index) {
+    var htmlFoto = '';
+    if (info.foto) {
+      var safeUrl = escapeHTML(info.foto);
+      var urlLower = info.foto.toLowerCase();
+
+if (urlLower.includes('.webm') || urlLower.includes('.mp4')) {
+  htmlFoto = `
+    <div data-url="${safeUrl}" onclick="bukaModalVideo(this.dataset.url)" style="position: relative; width: 100%; aspect-ratio: 16 / 10; max-height: 215px; border-radius: 8px; overflow: hidden; margin-top: 8px; background: #0f172a; cursor: pointer; display: flex; align-items: center; justify-content: center;">
+      <video src="${safeUrl}#t=0.5" preload="metadata" muted playsinline webkit-playsinline style="width: 100%; height: 100%; object-fit: cover; opacity: 0.85; pointer-events: none;"></video>
+      <div style="position: absolute; background: rgba(239, 68, 68, 0.92); color: #fff; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">▶</div>
+    </div>`;
+} else {
+        const imgPriorityAttr = index === 0
+          ? 'fetchpriority="high" decoding="async"'
+          : (index >= 2 ? 'loading="lazy" decoding="async"' : 'decoding="async"');
+        htmlFoto = `<img src="${safeUrl}" data-url="${safeUrl}" ${imgPriorityAttr} class="img-popup" alt="Flyer" onclick="bukaFotoBesar(this.dataset.url)" onerror="this.style.display='none'">`;
+      }
+    }
+
+    let htmlLokasi = '';
+    if (info.lokasi) {
+      const rawLokasi = info.lokasi.trim();
+      let labelLokasi = rawLokasi;
+      let hrefLokasi = '';
+
+      if (rawLokasi.includes('|')) {
+        const parts = rawLokasi.split('|');
+        labelLokasi = parts[0].trim();
+        hrefLokasi = parts[1].trim();
+      } else if (/^https?:\/\//i.test(rawLokasi)) {
+        labelLokasi = 'Buka Lokasi di Google Maps';
+        hrefLokasi = rawLokasi;
+      } else if (info.lat && info.lng) {
+        labelLokasi = rawLokasi;
+        hrefLokasi = `https://www.google.com/maps?q=${encodeURIComponent(info.lat)},${encodeURIComponent(info.lng)}`;
+      } else {
+        labelLokasi = rawLokasi;
+        hrefLokasi = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawLokasi)}`;
       }
 
-      let htmlKolektif = '';
-      daftarPengumuman.forEach(function(info, index) {
-        var htmlFoto = '';
-        if (info.foto) {
-          var safeUrl = escapeHTML(info.foto);
-          var urlLower = info.foto.toLowerCase();
-
-          if (urlLower.includes('.webm') || urlLower.includes('.mp4')) {
-            htmlFoto = `
-              <div data-url="${safeUrl}" onclick="bukaModalVideo(this.dataset.url)" style="position: relative; width: 100%; max-height: 215px; border-radius: 8px; overflow: hidden; margin-top: 8px; background: #000; cursor: pointer; display: flex; align-items: center; justify-content: center;">
-                <video src="${safeUrl}" preload="metadata" playsinline style="width: 100%; max-height: 215px; object-fit: cover; opacity: 0.82; pointer-events: none;"></video>
-                <div style="position: absolute; background: rgba(239, 68, 68, 0.9); color: #fff; border-radius: 50%; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center; font-size: 22px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);">▶</div>
-              </div>`;
-          } else {
-            const lazyAttr = index >= 2 ? 'loading="lazy"' : 'decoding="async"';
-            htmlFoto = `<img src="${safeUrl}" data-url="${safeUrl}" ${lazyAttr} class="img-popup" alt="Flyer" onclick="bukaFotoBesar(this.dataset.url)" onerror="this.style.display='none'">`;
-          }
-        }
-
-let htmlLokasi = '';
-        if (info.lokasi) {
-          const rawLokasi = info.lokasi.trim();
-          let labelLokasi = rawLokasi;
-          let hrefLokasi = '';
-
-          if (rawLokasi.includes('|')) {
-            // 1. Format "Nama Tempat | https://maps.app.goo.gl/..."
-            const parts = rawLokasi.split('|');
-            labelLokasi = parts[0].trim();
-            hrefLokasi = parts[1].trim();
-          } else if (/^https?:\/\//i.test(rawLokasi)) {
-            // 2. Format langsung link Google Maps
-            labelLokasi = 'Buka Lokasi di Google Maps';
-            hrefLokasi = rawLokasi;
-          } else if (info.lat && info.lng) {
-            // 3. Format autocomplete warga (punya koordinat lat & lng)
-            labelLokasi = rawLokasi;
-            hrefLokasi = `https://www.google.com/maps?q=${encodeURIComponent(info.lat)},${encodeURIComponent(info.lng)}`;
-          } else {
-            // 4. Ketik nama tempat manual tanpa koordinat
-            labelLokasi = rawLokasi;
-            hrefLokasi = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(rawLokasi)}`;
-          }
-
-          htmlLokasi = `<a href="${escapeHTML(hrefLokasi)}" target="_blank" rel="noopener" class="chip-lokasi" style="text-decoration: none; cursor: pointer;">📍 ${escapeHTML(labelLokasi)} ↗</a>`;
-        }
-
-        const kategori = deteksiKategoriInfo(info.judul, info.detail);
-        const isBaru = cekInfoBaru(info.tanggal);
-
-        htmlKolektif += `
-          <div class="card-info ${kategori.css}">
-            <div class="card-meta-top">
-              <div>
-                ${info.tanggal ? `<span class="tgl">📅 ${escapeHTML(info.tanggal)}</span>` : ''}
-                ${isBaru ? `<span class="badge-baru">BARU</span>` : ''}
-              </div>
-              <span class="badge-kategori">${kategori.label}</span>
-            </div>
-            <div class="judul">${escapeHTML(info.judul)}</div>
-            ${htmlLokasi}
-            <div class="detail">${escapeHTML(info.detail)}</div>
-            ${htmlFoto}
-            <div class="card-footer-wa">
-              <button type="button" class="btn-share-wa" onclick="bagikanInfoWarga(${index})">💬 Kirim ke WA</button>
-            </div>
-          </div>
-        `;
-      });
-      container.innerHTML = htmlKolektif;
+      htmlLokasi = `<a href="${escapeHTML(hrefLokasi)}" target="_blank" rel="noopener" class="chip-lokasi" style="text-decoration: none; cursor: pointer;">📍 ${escapeHTML(labelLokasi)} ↗</a>`;
     }
+
+    const kategori = deteksiKategoriInfo(info.judul, info.detail);
+    const isBaru = cekInfoBaru(info.tanggal);
+
+    htmlKolektif += `
+      <div class="card-info ${kategori.css}">
+        <div class="card-meta-top">
+          <div>
+            ${info.tanggal ? `<span class="tgl">📅 ${escapeHTML(info.tanggal)}</span>` : ''}
+            ${isBaru ? `<span class="badge-baru">BARU</span>` : ''}
+          </div>
+          <span class="badge-kategori">${kategori.label}</span>
+        </div>
+        <div class="judul">${escapeHTML(info.judul)}</div>
+        ${htmlLokasi}
+        <div class="detail">${escapeHTML(info.detail)}</div>
+        ${htmlFoto}
+        <div class="card-footer-wa">
+          <button type="button" class="btn-share-wa" onclick="bagikanInfoWarga(${index})">💬 Kirim ke WA</button>
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = htmlKolektif;
+}
 
     var dataProgkerCache = [];
     var filterProgkerAktif = 'semua';
@@ -907,38 +1012,63 @@ function renderProgkerWargaUI() {
       container.innerHTML = html;
     }
 
-    function muatProgkerWarga() {
-      const container = document.getElementById('list-progker-warga');
-      if (!container || isProgkerLoaded) return;
+let isProgkerCacheChecked = false;
 
-      if (typeof window.firebaseRef !== 'function' || !window.db) {
-        setTimeout(muatProgkerWarga, 100);
-        return;
-      }
+function muatProgkerWarga() {
+  const container = document.getElementById('list-progker-warga');
+  if (!container) return;
 
-      isProgkerLoaded = true;
-      const progkerRef = window.firebaseRef(window.db, "progker_rab");
-
-      window.firebaseOnValue(progkerRef, (snapshot) => {
-        const dataObj = snapshot.val();
-        let dataArray = [];
-
-        if (dataObj) {
-          Object.keys(dataObj).forEach(key => {
-            if (dataObj[key] && typeof dataObj[key] === 'object') {
-              dataArray.push(dataObj[key]);
-            }
-          });
-          dataArray.sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
-        }
-
-        dataProgkerCache = dataArray;
+  // 1. Baca cache lokal cukup 1x saja agar tidak berulang saat menunggu window.db
+  if (!isProgkerCacheChecked) {
+    isProgkerCacheChecked = true;
+    const cachedProgker = localStorage.getItem('rt05_cached_progker');
+    if (cachedProgker) {
+      try {
+        dataProgkerCache = JSON.parse(cachedProgker);
         renderProgkerWargaUI();
-      }, (error) => {
-        console.error("Gagal memuat data RAB:", error);
-        container.innerHTML = '<p style="text-align:center; padding:12px; color:#dc2626; font-size:12px;">Gagal memuat data RAB.</p>';
-      });
+      } catch (e) {}
     }
+  }
+
+  if (isProgkerLoaded) return;
+
+  if (typeof window.firebaseRef !== 'function' || !window.db) {
+    setTimeout(muatProgkerWarga, 100);
+    return;
+  }
+
+  isProgkerLoaded = true;
+  const progkerRef = window.firebaseRef(window.db, "progker_rab");
+
+  window.firebaseOnValue(progkerRef, (snapshot) => {
+    const dataObj = snapshot.val();
+    let dataArray = [];
+
+    if (dataObj) {
+      Object.keys(dataObj).forEach(key => {
+        if (dataObj[key] && typeof dataObj[key] === 'object') {
+          dataArray.push(dataObj[key]);
+        }
+      });
+      dataArray.sort((a, b) => Number(b.updatedAt || 0) - Number(a.updatedAt || 0));
+    }
+
+    // 2. Render ulang DOM hanya jika data dari Firebase benar-benar berubah
+    const jsonBaru = JSON.stringify(dataArray);
+    const jsonLama = localStorage.getItem('rt05_cached_progker');
+
+    if (jsonBaru !== jsonLama) {
+      localStorage.setItem('rt05_cached_progker', jsonBaru);
+      dataProgkerCache = dataArray;
+      renderProgkerWargaUI();
+    }
+  }, (error) => {
+    console.error("Gagal memuat data RAB:", error);
+    if (dataProgkerCache.length === 0) {
+      container.innerHTML = '<p style="text-align:center; padding:12px; color:#dc2626; font-size:12px;">Gagal memuat data RAB.</p>';
+    }
+  });
+}
 
     // Fungsi Pengelolaan Video & Foto Besar
     function toggleRotasiVideo() {
@@ -999,6 +1129,8 @@ function bukaModalVideo(videoUrl) {
       document.body.style.overflow = ''; // Kembalikan scroll halaman normal
     }
 
+let isMediaModalOpen = false;
+
 function bukaFotoBesar(urlFoto) {
   const modalFoto = document.getElementById('modal-foto');
   const imgPreview = document.getElementById('foto-preview');
@@ -1006,16 +1138,34 @@ function bukaFotoBesar(urlFoto) {
     imgPreview.src = urlFoto;
     modalFoto.style.display = 'flex';
     document.body.style.overflow = 'hidden';
+    if (!isMediaModalOpen) {
+      history.pushState({ mediaModal: true }, '');
+      isMediaModalOpen = true;
+    }
   }
 }
 
-function tutupFotoBesar() {
+function tutupFotoBesar(fromPopstate = false) {
   const modalFoto = document.getElementById('modal-foto');
-  if (modalFoto) {
+  const imgPreview = document.getElementById('foto-preview');
+  if (modalFoto && modalFoto.style.display !== 'none') {
     modalFoto.style.display = 'none';
+    if (imgPreview) imgPreview.src = ''; // Cegah kilasan foto lama saat buka foto berikutnya
     document.body.style.overflow = '';
+    if (!fromPopstate && isMediaModalOpen) {
+      isMediaModalOpen = false;
+      history.back();
+    }
   }
 }
+
+window.addEventListener('popstate', () => {
+  if (isMediaModalOpen) {
+    isMediaModalOpen = false;
+    tutupFotoBesar(true);
+    tutupModalVideo(true);
+  }
+});
   </script>
 
   </body>

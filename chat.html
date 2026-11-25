@@ -2,11 +2,13 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, interactive-widget=resizes-content">
   
   <title>Obrolan Warga - RT 05 Kayen</title>
   <!-- Import Google Font VT323 (Retro Pixel Chat) -->
-<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   
   <!-- IMPORTANT: Panggil utils.js terlebih dahulu agar RT05_CONFIG terdefinisi -->
  <script type="module" src="utils.js"></script>
@@ -429,7 +431,7 @@
   </div>
   
   <!-- PANEL KONTROL KHUSUS ADMIN (Hanya muncul jika user adalah admin) -->
-  <div id="admin-poll-controls" style="display: none; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 6px; display: flex; gap: 6px; justify-content: flex-end;">
+  <div id="admin-poll-controls" style="display: none; border-top: 1px dashed rgba(255,255,255,0.2); padding-top: 6px; gap: 6px; justify-content: flex-end;">
     <button onclick="tutupDanSimpulkanPolling()" class="btn" style="font-size: 10px; padding: 3px 8px; background: #f59e0b; color: #020617; border: none; font-weight: bold;">
       <i class="fa-solid fa-flag-checkered"></i> Selesaikan
     </button>
@@ -1208,6 +1210,23 @@ window.addEventListener('DOMContentLoaded', () => {
       });
     }
 
+    // 🌟 1. TAMPILKAN CACHE PROFIL & CHAT SECARA INSTAN (0ms, tanpa tunggu Firebase Auth)
+    const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+    const cachedPublic = localStorage.getItem('rt05_public_chat_cache');
+    const chatStream = document.getElementById('chat-stream');
+
+    if (savedUser && savedUser.status === 'aktif') {
+      const userInfo = document.getElementById('user-info-text');
+      if (userInfo) userInfo.innerText = `${savedUser.username || savedUser.nama} • ${savedUser.hunian || ''}`;
+
+      const labelUserKetik = document.getElementById('chat-current-user-label');
+      if (labelUserKetik) labelUserKetik.innerText = `${savedUser.username || savedUser.nama}:`;
+
+      if (chatStream && cachedPublic) {
+        renderCachedPublicMessages(cachedPublic, chatStream, true);
+      }
+    }
+
     // Deteksi jika modal disembunyikan menggunakan CSS/Iframe
     const observer = new IntersectionObserver((entries) => {
       isChatVisible = entries[0].isIntersecting && !document.hidden;
@@ -1219,15 +1238,12 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     observer.observe(document.body);
 
-    // Tunggu Firebase Auth pada instans rt05ChatApp selesai memeriksa sesi sebelum membaca/menulis DB
+    // 🌟 2. VERIFIKASI SESI AUTH & KONEKSI REAL-TIME DI LATAR BELAKANG
     let isAuthChecked = false;
     onAuthStateChanged(auth, (firebaseUser) => {
       if (isAuthChecked) return;
       isAuthChecked = true;
 
-      const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
-
-      // Jika sesi Auth belum login atau masih sesi tamu, bersihkan localStorage agar diarahkan ke form login
       if (savedUser && savedUser.uid && (!firebaseUser || firebaseUser.isAnonymous || firebaseUser.uid !== savedUser.uid)) {
         localStorage.removeItem('rt05_chat_user');
         currentUser = null;
@@ -1430,7 +1446,7 @@ function listenAllPrivateChats() {
     if (!targetUID || privateRoomListeners[targetUID]) return; // Cegah listener ganda
 
     const roomID = [activeUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
-    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(30));
+    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(5));
     let isFirstLoad = true;
 
     privateRoomListeners[targetUID] = onValue(roomRef, (roomSnap) => {
@@ -1916,16 +1932,6 @@ window.markPublicGroupAsRead = () => {
           set(userStateRef, stateValue);
         }
       };
-
-      // Cek apakah Modal Chat sedang terbuka di layar
-      const isChatModalOpen = () => {
-        const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : document.getElementById('chat-overlay-modal');
-        if (modal) {
-          return modal.style.display !== 'none' && modal.style.display !== '';
-        }
-        return true; 
-      };
-
       // Eksekusi perubahan status
       const executeStatusChange = () => {
         // Jika Tab disembunyikan ATAU Modal Chat ditutup -> Set IDLE (Kuning)
@@ -1934,17 +1940,14 @@ window.markPublicGroupAsRead = () => {
           setMyState('idle');
           return;
         }
-
         // Jika Tab Aktif & Modal Chat Terbuka -> Set ONLINE (Hijau)
         setMyState('online');
-
         // Reset timer idle (3 menit tanpa gerakan di chat -> IDLE)
         clearTimeout(idleTimer);
         idleTimer = setTimeout(() => {
           setMyState('idle');
         }, 3 * 60 * 1000);
       };
-
       // Evaluasi status dengan parameter instan / delay
       const evaluateStatus = (instant = false) => {
         if (antiKedipTimer) clearTimeout(antiKedipTimer);
@@ -2243,9 +2246,12 @@ function checkUserStatus() {
     }
   }
 
-  // 🌟 3. VERIFIKASI KE DATABASE FIREBASE DI LATAR BELAKANG (SILENT SYNC)
-  const userRef = ref(db, `users/${currentUser.uid}`);
-  onValue(userRef, (snapshot) => {
+// 🌟 3. VERIFIKASI KE DATABASE FIREBASE DI LATAR BELAKANG (SILENT SYNC)
+if (window.hasUserStatusListener) return;
+window.hasUserStatusListener = true;
+
+const userRef = ref(db, `users/${currentUser.uid}`);
+onValue(userRef, (snapshot) => {
     const val = snapshot.val();
     if (!val) {
       localStorage.removeItem('rt05_chat_user');
@@ -2422,84 +2428,75 @@ let isLoadingMore = false;
 let shouldForceScrollDown = false;
 
 function loadChatStream(onLoaded) {
+    if (currentChatUnsubscribe) {
+        currentChatUnsubscribe();
+        currentChatUnsubscribe = null;
+        window.currentChatUnsubscribe = null;
+    }
+
     const chatStream = document.getElementById('chat-stream');
     if (!chatStream) return;
 
-    // 🌟 JANGAN tampilkan teks "Menghubungkan..." jika di LocalStorage sudah ada cache chat sebelumnya
-    const cachedPublic = localStorage.getItem('rt05_public_chat_cache');
-    if (chatStream.children.length === 0 && !cachedPublic) {
-        chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
-    } else if (chatStream.children.length === 0 && cachedPublic) {
-        // Langsung muat dari cache lokal secara instan tanpa teks loading!
-        renderCachedPublicMessages(cachedPublic, chatStream, false);
-    }
+const cachedPublic = localStorage.getItem('rt05_public_chat_cache');
+if (!chatStream.querySelector('.msg-row') && cachedPublic) {
+    renderCachedPublicMessages(cachedPublic, chatStream, true, !navigator.onLine);
+} else if (chatStream.children.length === 0) {
+    chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
+}
   
     const chatRef = query(ref(db, 'chats'), limitToLast(currentPublicLimit));
 
     currentChatUnsubscribe = onValue(chatRef, (snapshot) => {
-        if (activeChatType !== 'public') return;
-        if (!chatStream) return;
+        if (activeChatType !== 'public' || !chatStream) return;
 
-        // 🌟 1. SIMPAN POSISI SCROLL SEBELUM DOM DI-RESET
         const oldScrollTop = chatStream.scrollTop;
         const oldScrollHeight = chatStream.scrollHeight;
         const isAtBottom = (oldScrollHeight - oldScrollTop - chatStream.clientHeight) <= 30;
 
-        // 🌟 CACHE OFFLINE
-        if (snapshot.exists()) {
-            let cacheData = {};
-            snapshot.forEach(child => {
-                cacheData[child.key] = child.val();
-            });
-            localStorage.setItem('rt05_public_chat_cache', JSON.stringify(cacheData));
-        }
+        if (!snapshot.exists()) return;
 
-        if (!snapshot.exists()) {
-            return;
-        }
-
-        // 🌟 KOSONGKAN DOM SEBELUM RENDER ULANG
-        chatStream.innerHTML = '';
+        let cacheData = {};
+        const fragment = document.createDocumentFragment();
 
         const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
         const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
 
-        let isUnreadSection = false;
-        if (!lastReadPublicMapKey) isUnreadSection = true;
+        let isUnreadSection = !lastReadPublicMapKey;
+        let latestPublicKey = null;
 
-let latestPublicKey = null;
+    snapshot.forEach((childSnap) => {
+    const msgKey = childSnap.key;
+    const msgData = childSnap.val();
+    cacheData[msgKey] = msgData;
 
-        snapshot.forEach((childSnap) => {
-            const msgKey = childSnap.key;
-            const msgData = childSnap.val();
-            if (msgKey === 'pinned_poll') return;
+    if (msgKey === 'pinned_poll') return;
+    latestPublicKey = msgKey;
 
-            latestPublicKey = msgKey;
+    if (msgKey === lastReadPublicMapKey) {
+        isUnreadSection = true;
+    }
 
-            // 1. CEK BATAS KUNCI BACA TERLEBIH DAHULU
-            if (msgKey === lastReadPublicMapKey) {
-                isUnreadSection = true;
-            }
+    let isUnreadMsg = false;
+    if ((lastReadPublicMapKey || isChatReady) && currentUser?.uid && isUnreadSection && msgData.uid !== currentUser.uid && msgKey !== lastReadPublicMapKey) {
+        isUnreadMsg = true;
+    }
 
-            let isUnreadMsg = false;
-            const isViewingGroupNow = (activeChatType === 'public' && window.isUserViewingChat());
+    const msgEl = createMessageElement(msgData, isUnreadMsg, msgKey);
+    if (msgEl) fragment.appendChild(msgEl);
+    });
 
-        // 2. BARU TENTUKAN APAKAH PESAN INI MASUK DALAM KATEGORI UNREAD
-            if (isChatReady && currentUser && currentUser.uid && isUnreadSection && msgData.uid !== currentUser?.uid && msgKey !== lastReadPublicMapKey) {
-                isUnreadMsg = true;
-            }
+        localStorage.setItem('rt05_public_chat_cache', JSON.stringify(cacheData));
 
-            renderSingleMessage(msgData, isUnreadMsg, msgKey);
-        });
+        // 1x operasi DOM untuk merender semua pesan
+        chatStream.innerHTML = '';
+        chatStream.appendChild(fragment);
 
-        // 3. Jika sedang aktif di chat grup, gunakan markPublicGroupAsRead() yang memiliki jeda 1 detik
         if (latestPublicKey && currentUser?.uid && activeChatType === 'public' && window.isUserViewingChat()) {
             markPublicGroupAsRead();
         }
 
         isInitialPublicChatLoaded = true;
 
-        // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS
         if (shouldForceScrollDown) {
             scrollToBottom(false);
             shouldForceScrollDown = false;
@@ -2513,28 +2510,35 @@ let latestPublicKey = null;
         const distanceFromBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight;
         const btnScrollBottom = document.getElementById('btn-scroll-bottom');
         if (btnScrollBottom) {
-            if (distanceFromBottom > 150) {
-                btnScrollBottom.style.display = 'flex';
-            } else {
-                btnScrollBottom.style.display = 'none';
-            }
+            btnScrollBottom.style.display = distanceFromBottom > 150 ? 'flex' : 'none';
         }
 
-        if (typeof onLoaded === 'function') {
-            onLoaded();
-        }
+        if (typeof onLoaded === 'function') onLoaded();
     });
+    window.currentChatUnsubscribe = currentChatUnsubscribe;
 }
-    
-// Fungsi pembantu untuk merender pesan dari cache lokal
-function renderCachedPublicMessages(cachedJson, chatStream, forceScroll) {
+
+function renderCachedPublicMessages(cachedJson, chatStream, forceScroll, isOffline = false) {
     try {
         const dataObj = JSON.parse(cachedJson);
-        chatStream.innerHTML = '<div style="background: rgba(245, 158, 11, 0.1); color: #fcd34d; font-size: 10px; text-align: center; padding: 4px; margin-bottom: 4px; border-radius: 4px;">⚠️ Mode Offline (Menampilkan riwayat tersimpan)</div>';
+        const fragment = document.createDocumentFragment();
+
+        // Tampilkan banner peringatan HANYA jika benar-benar sedang offline
+        if (isOffline) {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'background: rgba(245, 158, 11, 0.1); color: #fcd34d; font-size: 10px; text-align: center; padding: 4px; margin-bottom: 4px; border-radius: 4px;';
+            banner.textContent = '⚠️ Mode Offline (Menampilkan riwayat tersimpan)';
+            fragment.appendChild(banner);
+        }
         
         Object.entries(dataObj).forEach(([msgKey, msgData]) => {
-            renderSingleMessage(msgData, false, msgKey);
+            if (msgKey === 'pinned_poll') return;
+            const msgEl = createMessageElement(msgData, false, msgKey);
+            if (msgEl) fragment.appendChild(msgEl);
         });
+
+        chatStream.innerHTML = '';
+        chatStream.appendChild(fragment);
 
         if (forceScroll) {
             chatStream.scrollTop = chatStream.scrollHeight;
@@ -2547,23 +2551,23 @@ function renderCachedPublicMessages(cachedJson, chatStream, forceScroll) {
     
 // === 2. PEMUAT CHAT PRIVAT DENGAN SCROLL FIX & CALLBACK ===
 function loadPrivateChatStream(targetUID, onLoaded) {
-    // 🌟 Diperbaiki menggunakan localeCompare agar urutan UID konsisten mutlak
+    if (currentChatUnsubscribe) {
+        currentChatUnsubscribe();
+        currentChatUnsubscribe = null;
+        window.currentChatUnsubscribe = null;
+    }
+
     const roomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
-    
     const currentLimit = currentPrivateLimit[roomID] || 50; 
     const privateRef = query(ref(db, `private_chats/${roomID}`), limitToLast(currentLimit));
     const chatStream = document.getElementById('chat-stream');
 
     currentChatUnsubscribe = onValue(privateRef, (snapshot) => {
-        if (!chatStream) return;
-        if (activeChatType !== 'private' || activePrivateUID !== targetUID) return;
+        if (!chatStream || activeChatType !== 'private' || activePrivateUID !== targetUID) return;
 
-        // 🌟 1. SIMPAN POSISI SCROLL SEBELUM DOM DI-RESET (Toleransi 0/ketat)
         const oldScrollTop = chatStream.scrollTop;
         const oldScrollHeight = chatStream.scrollHeight;
-        const isAtBottom = (oldScrollHeight - oldScrollTop - chatStream.clientHeight) <= 30; // atau 0 jika ingin murni manual
-
-        chatStream.innerHTML = '';
+        const isAtBottom = (oldScrollHeight - oldScrollTop - chatStream.clientHeight) <= 30;
 
         if (!snapshot.exists()) {
             chatStream.innerHTML = `<div style="text-align: center; color: #64748b; font-size: 11px; padding: 12px;">Belum ada pesan pribadi dengan ${escapeHTML(openPrivateRooms[targetUID] || 'Warga')}. Mulai percakapan!</div>`;
@@ -2575,8 +2579,8 @@ function loadPrivateChatStream(targetUID, onLoaded) {
         const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
         const lastReadKey = lastReadKeyMap[targetUID];
 
-        let isUnreadSection = false;
-        if (!lastReadKey) isUnreadSection = true;
+        let isUnreadSection = !lastReadKey;
+        const fragment = document.createDocumentFragment();
 
         snapshot.forEach((childSnap) => {
             const msgKey = childSnap.key;
@@ -2591,43 +2595,37 @@ function loadPrivateChatStream(targetUID, onLoaded) {
                 isUnreadSection = true;
             }
 
-            renderSingleMessage(msgData, isUnreadMsg, msgKey);
+            const msgEl = createMessageElement(msgData, isUnreadMsg, msgKey);
+            if (msgEl) fragment.appendChild(msgEl);
         });
 
+        chatStream.innerHTML = '';
+        chatStream.appendChild(fragment);
         isInitialPrivateChatLoaded[targetUID] = true;
         
-        // 🌟 2. ATUR POSISI SCROLL DENGAN CERDAS (Mencegah lari ke atas)
         if (shouldForceScrollDown) {
             chatStream.scrollTop = chatStream.scrollHeight;
             shouldForceScrollDown = false;
         } else if (isAtBottom) {
             chatStream.scrollTop = chatStream.scrollHeight;
         } else {
-            // Jika sedang di atas membaca riwayat, pertahankan posisi semula
             const newScrollHeight = chatStream.scrollHeight;
             chatStream.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
         }
 
-        // Tampilkan/sembunyikan tombol panah bawah berdasarkan jarak dari bawah
         const distanceFromBottom = chatStream.scrollHeight - chatStream.scrollTop - chatStream.clientHeight;
         const btnScrollBottom = document.getElementById('btn-scroll-bottom');
         if (btnScrollBottom) {
-            if (distanceFromBottom > 150) {
-                btnScrollBottom.style.display = 'flex';
-            } else {
-                btnScrollBottom.style.display = 'none';
-            }
+            btnScrollBottom.style.display = distanceFromBottom > 150 ? 'flex' : 'none';
         }
 
         if (isChatVisible) {
             markRoomAsRead(targetUID);
         }
 
-        // 🌟 3. JALANKAN CALLBACK
-        if (typeof onLoaded === 'function') {
-            onLoaded();
-        }
+        if (typeof onLoaded === 'function') onLoaded();
     });
+    window.currentChatUnsubscribe = currentChatUnsubscribe;
 }
     
 // === 3. FUNGSI TRIGGER LOAD MORE PUBLIK (ANTI-BOUNCE KE ATAS) ===
@@ -2707,129 +2705,120 @@ function triggerLoadMorePrivate(roomID, targetUID) {
 // === 5. EVENT LISTENER SCROLL UTAMA (Anti-Bouncing & Presisi) ===
 // (Variabel chatStreamEl dan isLoadingMore sudah didefinisikan di atas, jadi langsung gunakan)
 
+let isScrollTicking = false;
+
 if (chatStreamEl) {
     chatStreamEl.addEventListener('scroll', () => {
-        // Hitung jarak dari posisi bawah untuk tombol floating scroll-to-bottom
-        const distanceFromBottom = chatStreamEl.scrollHeight - chatStreamEl.scrollTop - chatStreamEl.clientHeight;
-        const btnScrollBottom = document.getElementById('btn-scroll-bottom');
-        
-        if (btnScrollBottom) {
-            if (distanceFromBottom > 150) {
-                btnScrollBottom.style.display = 'flex';
-            } else {
-                btnScrollBottom.style.display = 'none';
-            }
-        }
+        if (isScrollTicking) return;
+        isScrollTicking = true;
 
-        // Hanya trigger load more jika posisi scroll benar-benar di paling atas (<= 5)
-        if (isLoadingMore || chatStreamEl.scrollTop > 5) return;
-
-        // A. Chat Publik
-        if (activeChatType === 'public') {
-            if (currentPublicLimit < MAX_SCROLL_LIMIT) {
-                triggerLoadMorePublic();
+        requestAnimationFrame(() => {
+            const distanceFromBottom = chatStreamEl.scrollHeight - chatStreamEl.scrollTop - chatStreamEl.clientHeight;
+            if (btnScrollBottom) {
+                btnScrollBottom.style.display = distanceFromBottom > 150 ? 'flex' : 'none';
             }
-        }
-     // B. Chat Pribadi
-        else if (activeChatType === 'private' && activePrivateUID) {
-            // 🌟 Diperbaiki menggunakan localeCompare agar konsisten mutlak
-            const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
-            const currentLimit = currentPrivateLimit[roomID] || 50;
 
-            if (currentLimit < MAX_PRIVATE_LIMIT) {
-                triggerLoadMorePrivate(roomID, activePrivateUID);
+            if (!isLoadingMore && chatStreamEl.scrollTop <= 5) {
+                if (activeChatType === 'public' && currentPublicLimit < MAX_SCROLL_LIMIT) {
+                    triggerLoadMorePublic();
+                } else if (activeChatType === 'private' && activePrivateUID) {
+                    const roomID = [currentUser.uid, activePrivateUID].sort((a, b) => a.localeCompare(b)).join('_');
+                    if ((currentPrivateLimit[roomID] || 50) < MAX_PRIVATE_LIMIT) {
+                        triggerLoadMorePrivate(roomID, activePrivateUID);
+                    }
+                }
             }
-        }
-    });
+            isScrollTicking = false;
+        });
+    }, { passive: true });
 }
         
 const activeHighlightExpiry = {};
 
-function renderSingleMessage(msg, isUnread = false, msgKey = '') {
+function createMessageElement(msg, isUnread = false, msgKey = '') {
   // PENGAMAN: Jika teks pesan kosong, abaikan
-  if (!msg.text || !msg.text.trim()) return;
+  if (!msg || !msg.text || !msg.text.trim()) return null;
 
-  const chatStream = document.getElementById('chat-stream');
-  if (!chatStream) return;
-  
   const div = document.createElement('div');
   div.className = "msg-row";
   if (msgKey) div.setAttribute('data-msg-id', msgKey);
 
   const now = Date.now();
   if (isUnread && msgKey && !activeHighlightExpiry[msgKey]) {
-      activeHighlightExpiry[msgKey] = now + 3000; // Kunci durasi animasi 3 detik penuh
+    activeHighlightExpiry[msgKey] = now + 3000; // Kunci durasi animasi 3 detik penuh
   }
 
   const remainingTime = msgKey && activeHighlightExpiry[msgKey] 
-      ? activeHighlightExpiry[msgKey] - now 
-      : (isUnread ? 3000 : 0);
+    ? activeHighlightExpiry[msgKey] - now 
+    : (isUnread ? 3000 : 0);
 
-  // 🌟 Terapkan animasi transparan sesuai sisa waktu yang tersisa
+  // Terapkan animasi highlight sesuai sisa waktu yang tersisa
   if (remainingTime > 0) {
-      div.style.transition = "background-color 2s ease, border-color 2s ease";
-      div.style.backgroundColor = "rgba(255, 255, 255, 0.25)";
-      div.style.borderLeft = "3px solid #38bdf8";
-      div.style.paddingLeft = "8px";
+    div.style.transition = "background-color 2s ease, border-color 2s ease";
+    div.style.backgroundColor = "rgba(255, 255, 255, 0.25)";
+    div.style.borderLeft = "3px solid #38bdf8";
+    div.style.paddingLeft = "8px";
 
-      setTimeout(() => {
-          div.style.backgroundColor = "transparent";
-          div.style.borderLeftColor = "transparent";
-          if (msgKey) delete activeHighlightExpiry[msgKey];
-      }, remainingTime);
+    setTimeout(() => {
+      div.style.backgroundColor = "transparent";
+      div.style.borderLeftColor = "transparent";
+      if (msgKey) delete activeHighlightExpiry[msgKey];
+    }, remainingTime);
   }
   
   let nameClass = "role-user";
   let textClass = "msg-text";
-  let customStyleName = "";
-  let customStyleText = "";
+  let customColor = "";
 
   if (msg.role === 'admin' || msg.sender === 'Admin1') {
-      nameClass = "role-admin";
-      textClass = "msg-text msg-text-admin";
-  }
-  else if (activeChatType === 'private') {
-      if (msg.uid === currentUser?.uid) {
-          nameClass = "role-self";
-          textClass = "msg-text msg-text-self";
-      } else {
-          nameClass = "role-text-other";
-          textClass = "msg-text msg-text-other";
-      }
-  } 
-  else if (msg.uid === currentUser?.uid) {
+    nameClass = "role-admin";
+    textClass = "msg-text msg-text-admin";
+  } else if (activeChatType === 'private') {
+    if (msg.uid === currentUser?.uid) {
       nameClass = "role-self";
+      textClass = "msg-text msg-text-self";
+    } else {
+      nameClass = "role-text-other";
+      textClass = "msg-text msg-text-other";
+    }
+  } else if (msg.uid === currentUser?.uid) {
+    nameClass = "role-self";
   } else {
-      const uniqueColor = getUniqueColorFromName(msg.sender);
-      customStyleName = `style="color: ${uniqueColor}; font-weight: bold;"`;
+    customColor = getUniqueColorFromName(msg.sender);
   }
 
-  const clickHandler = (msg.uid !== currentUser?.uid) 
-      ? `onclick="openPrivateTab('${msg.uid}', '${escapeHTML(msg.sender)}')" style="cursor:pointer;" title="Kirim Pesan Pribadi"` 
-      : '';
-
-  let displayMsgText = msg.sender === "SYSTEM / PENGURUS RT" 
-  ? msg.text 
-  : escapeHTML(msg.text).replace(/\n/g, '<br>');
-
-  let waktuFormatted = "";
-  if (msg.timestamp) {
-      waktuFormatted = formatWaktuPesan(msg.timestamp);
-  } else {
-      waktuFormatted = "Baru saja";
+  // Elemen nama pengirim (aman dari karakter tanda petik saat diklik)
+  const nameSpan = document.createElement('span');
+  nameSpan.className = nameClass;
+  nameSpan.textContent = `${msg.sender || 'Warga'}:`;
+  if (customColor) {
+    nameSpan.style.color = customColor;
+    nameSpan.style.fontWeight = 'bold';
+  }
+  if (msg.uid && msg.uid !== currentUser?.uid) {
+    nameSpan.style.cursor = 'pointer';
+    nameSpan.title = 'Kirim Pesan Pribadi';
+    nameSpan.onclick = () => openPrivateTab(msg.uid, msg.sender);
   }
 
-  const timeHTML = waktuFormatted 
-      ? `<span style="font-size: 10px; color: rgba(251, 191, 36, 0.55); margin-left: 6px; font-weight: normal; text-shadow: none;">[${waktuFormatted}]</span>` 
-      : '';
+  // Elemen isi pesan
+  const textSpan = document.createElement('span');
+  textSpan.className = textClass;
+  textSpan.innerHTML = msg.sender === "SYSTEM / PENGURUS RT"
+    ? msg.text
+    : escapeHTML(msg.text).replace(/\n/g, '<br>');
 
-  div.innerHTML = `
-      <span class="${nameClass}" ${customStyleName} ${clickHandler}>${escapeHTML(msg.sender)}:</span>
-      <span class="${textClass}" ${customStyleText}>${displayMsgText}</span>
-      ${timeHTML}
-  `;
+  // Elemen waktu
+  const timeSpan = document.createElement('span');
+  timeSpan.style.cssText = "font-size: 10px; color: rgba(251, 191, 36, 0.55); margin-left: 6px; font-weight: normal; text-shadow: none;";
+  timeSpan.textContent = `[${msg.timestamp ? formatWaktuPesan(msg.timestamp) : 'Baru saja'}]`;
 
-  chatStream.appendChild(div);
+  div.appendChild(nameSpan);
+  div.appendChild(document.createTextNode(' '));
+  div.appendChild(textSpan);
+  div.appendChild(timeSpan);
+
+  return div;
 }
       
 
