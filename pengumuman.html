@@ -1012,17 +1012,22 @@ function renderProgkerWargaUI() {
       container.innerHTML = html;
     }
 
+let isProgkerCacheChecked = false;
+
 function muatProgkerWarga() {
   const container = document.getElementById('list-progker-warga');
   if (!container) return;
 
-  // 1. Tampilkan cache lokal secara instan sebelum koneksi Firebase siap
-  const cachedProgker = localStorage.getItem('rt05_cached_progker');
-  if (cachedProgker && dataProgkerCache.length === 0) {
-    try {
-      dataProgkerCache = JSON.parse(cachedProgker);
-      renderProgkerWargaUI();
-    } catch (e) {}
+  // 1. Baca cache lokal cukup 1x saja agar tidak berulang saat menunggu window.db
+  if (!isProgkerCacheChecked) {
+    isProgkerCacheChecked = true;
+    const cachedProgker = localStorage.getItem('rt05_cached_progker');
+    if (cachedProgker) {
+      try {
+        dataProgkerCache = JSON.parse(cachedProgker);
+        renderProgkerWargaUI();
+      } catch (e) {}
+    }
   }
 
   if (isProgkerLoaded) return;
@@ -1059,7 +1064,6 @@ function muatProgkerWarga() {
     }
   }, (error) => {
     console.error("Gagal memuat data RAB:", error);
-    // Tampilkan pesan error hanya jika tidak ada data cache yang sedang tampil
     if (dataProgkerCache.length === 0) {
       container.innerHTML = '<p style="text-align:center; padding:12px; color:#dc2626; font-size:12px;">Gagal memuat data RAB.</p>';
     }
