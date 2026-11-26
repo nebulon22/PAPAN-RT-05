@@ -1442,6 +1442,116 @@ function muatIframeChatLatarBelakang() {
       updatePublicTabBadge(publicCount, privateCount);
     }
   });
+
+  function initMainPageChatListener() {
+    if (isMainChatListenerAktif) return;
+    if (typeof window.firebaseRef !== 'function' || !window.db) return;
+
+    const currentUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
+    if (!currentUser || !currentUser.uid) return;
+
+    isMainChatListenerAktif = true;
+
+    const chatsRef = window.firebaseQuery(
+      window.firebaseRef(window.db, 'chats'),
+      window.firebaseLimitToLast(30)
+    );
+
+    window.firebaseOnValue(chatsRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        updatePublicTabBadge(0, jumlahPrivateTerakhir);
+        return;
+      }
+
+      const lastReadPublicKey = localStorage.getItem('rt05_public_last_read_key');
+      let count = 0;
+
+      snapshot.forEach((msgSnap) => {
+        const msgKey = msgSnap.key;
+        const msgData = msgSnap.val();
+        if (!msgData || typeof msgData !== 'object') return;
+
+        if (msgData.uid !== currentUser.uid) {
+          if (!lastReadPublicKey || msgKey > lastReadPublicKey) {
+            count++;
+          }
+        }
+      });
+
+      updatePublicTabBadge(count, jumlahPrivateTerakhir);
+    }, () => {
+      isMainChatListenerAktif = false;
+    });
+  }
+
+  let isMainPrivateListenerAktif = false;
+  let privateRoomSubs = {};
+  let unreadPrivatePerRoom = {};
+
+  function initMainPagePrivateListener() {
+    if (isMainPrivateListenerAktif) return;
+    if (typeof window.firebaseRef !== 'function' || !window.db) return;
+
+    const currentUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
+    if (!currentUser || !currentUser.uid) return;
+
+    isMainPrivateListenerAktif = true;
+
+    const usersRef = window.firebaseRef(window.db, 'users');
+    window.firebaseOnValue(usersRef, (usersSnap) => {
+      if (!usersSnap.exists()) return;
+      const usersVal = usersSnap.val();
+
+      Object.keys(usersVal).forEach((targetUID) => {
+        if (targetUID === currentUser.uid) return;
+        if (usersVal[targetUID]?.status !== 'aktif') return;
+        if (privateRoomSubs[targetUID]) return;
+
+        const roomID = [currentUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
+        const roomRef = window.firebaseQuery(
+          window.firebaseRef(window.db, `private_chats/${roomID}`),
+          window.firebaseLimitToLast(20)
+        );
+
+        privateRoomSubs[targetUID] = window.firebaseOnValue(roomRef, (roomSnap) => {
+          if (!roomSnap.exists()) {
+            unreadPrivatePerRoom[targetUID] = 0;
+            hitungTotalPrivateIndex();
+            return;
+          }
+
+          const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key') || '{}');
+          const lastReadKey = lastReadKeyMap[targetUID];
+
+          let count = 0;
+          roomSnap.forEach((msgSnap) => {
+            const msgKey = msgSnap.key;
+            const msgData = msgSnap.val();
+            if (!msgData || typeof msgData !== 'object') return;
+
+            if (msgData.uid !== currentUser.uid) {
+              if (!lastReadKey || msgKey > lastReadKey) {
+                count++;
+              }
+            }
+          });
+
+          unreadPrivatePerRoom[targetUID] = count;
+          hitungTotalPrivateIndex();
+        });
+      });
+    }, () => {
+      isMainPrivateListenerAktif = false;
+    });
+  }
+
+  function hitungTotalPrivateIndex() {
+    let total = 0;
+    Object.values(unreadPrivatePerRoom).forEach((jml) => {
+      total += (jml || 0);
+    });
+    updatePublicTabBadge(jumlahPublicTerakhir, total);
+  }
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
@@ -4035,6 +4145,19 @@ window.simpanWargaBaru = async function() {
   }, { passive: true });
   
   // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
+async function jalankanListenerChatIndex() {
+    if (!window.db || typeof window.firebaseRef !== 'function') return;
+    try {
+      if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
+        await window.signInAnonymously(window.auth);
+      }
+    } catch (e) {}
+
+    initMainPageChatListener();
+    initMainPagePrivateListener();
+    muatBadgeInfoRT();
+  }
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', initPetaDanData);
   } else {
@@ -4042,14 +4165,13 @@ window.simpanWargaBaru = async function() {
   }
 
   window.addEventListener('utilsSiap', initPetaDanData);
+  window.addEventListener('firebaseSiapIndex', jalankanListenerChatIndex);
 
-  // Jaring pengaman jika utilsSiap atau firebaseSiapIndex sudah terlanjur lewat sebelum listener terpasang
   if (window.RT05_CONFIG) {
     initPetaDanData();
   }
   if (window.db && typeof window.firebaseRef === 'function') {
-    initMainPageChatListener();
-    muatBadgeInfoRT();
+    jalankanListenerChatIndex();
   }
 
 })();
