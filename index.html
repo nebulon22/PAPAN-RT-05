@@ -1287,54 +1287,54 @@
   let iframeChatSudahDimuat = false;
 
 function renderBadgeChatUtama() {
-    const badge = document.getElementById('badge-chat-main');
-    const chatBtn = document.getElementById('floating-chat-btn');
-    const modal = document.getElementById('chat-overlay-modal');
-    const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
+  const badge = document.getElementById('badge-chat-main');
+  const chatBtn = document.getElementById('floating-chat-btn');
+  const modal = document.getElementById('chat-overlay-modal');
+  const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
 
-    // Ambil nilai terbesar antara memori aktif & cadangan localStorage
-    const storedPrivate = Number(localStorage.getItem('rt05_unread_private_total') || 0);
-    const privateAktif = Math.max(jumlahPrivateTerakhir, storedPrivate);
+  const storedPrivate = Number(localStorage.getItem('rt05_unread_private_total') || 0);
+  const privateAktif = jumlahPrivateTerakhir > 0 ? jumlahPrivateTerakhir : storedPrivate;
 
-    const effPublic = isModalOpen ? 0 : jumlahPublicTerakhir;
-    const effPrivate = isModalOpen ? 0 : privateAktif;
-    const totalCount = effPublic + effPrivate;
+  const effPublic = isModalOpen ? 0 : jumlahPublicTerakhir;
+  const effPrivate = isModalOpen ? 0 : privateAktif;
+  const totalCount = effPublic + effPrivate;
 
-    if (badge && chatBtn) {
-      if (totalCount > 0) {
-        badge.style.display = 'inline-block';
-        badge.innerText = totalCount > 99 ? '99+' : totalCount;
+  if (badge && chatBtn) {
+    if (totalCount > 0) {
+      badge.style.display = 'inline-block';
+      badge.innerText = totalCount > 99 ? '99+' : totalCount;
 
       if (effPrivate > 0) {
-          badge.style.backgroundColor = '#eab308';
-          badge.style.color = '#0f172a';
-          badge.style.boxShadow = '0 0 0 2px #fef08a, 0 2px 6px rgba(234, 179, 8, 0.55)';
-        } else {
-          badge.style.backgroundColor = '#ef4444';
-          badge.style.color = '#ffffff';
-          badge.style.boxShadow = '0 2px 6px rgba(0,0,0,0.4)';
-        }
-
-        chatBtn.classList.add('chat-btn-animated');
+        badge.style.backgroundColor = '#eab308';
+        badge.style.color = '#0f172a';
+        badge.style.boxShadow = '0 0 0 2px #fef08a, 0 2px 6px rgba(234, 179, 8, 0.55)';
       } else {
-        badge.style.display = 'none';
-        badge.innerText = '0';
         badge.style.backgroundColor = '#ef4444';
+        badge.style.color = '#ffffff';
         badge.style.boxShadow = '0 2px 6px rgba(0,0,0,0.4)';
-        chatBtn.classList.remove('chat-btn-animated');
       }
-    }
 
-    if ('setAppBadge' in navigator) {
-      try {
-        if (totalCount > 0) {
-          navigator.setAppBadge(totalCount).catch(() => {});
-        } else {
-          navigator.clearAppBadge().catch(() => {});
-        }
-      } catch (e) {}
+      chatBtn.classList.add('chat-btn-animated');
+    } else {
+      badge.style.display = 'none';
+      badge.innerText = '0';
+      badge.style.backgroundColor = '#ef4444';
+      badge.style.color = '#ffffff';
+      badge.style.boxShadow = '0 2px 6px rgba(0,0,0,0.4)';
+      chatBtn.classList.remove('chat-btn-animated');
     }
   }
+
+  if ('setAppBadge' in navigator) {
+    try {
+      if (totalCount > 0) {
+        navigator.setAppBadge(totalCount).catch(() => {});
+      } else {
+        navigator.clearAppBadge().catch(() => {});
+      }
+    } catch (e) {}
+  }
+}
 
 function updatePublicTabBadge(publicCount, privateCount = jumlahPrivateTerakhir) {
     console.log('[BADGE DEBUG]', {
