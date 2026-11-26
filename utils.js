@@ -329,13 +329,17 @@ window.toggleSenterRonda = async function() {
     }
   }
 };
-let isInventarisListenerAktif = false;
+let unsubscribeInventaris = null;
+let unsubscribePeminjaman = null;
 
 function bukaModalInventaris() {
   const modal = document.getElementById('modal-inventaris');
   if (modal) modal.style.display = 'flex';
 
-  if (!isInventarisListenerAktif) {
+  const inputCari = document.getElementById('cariPerkakasInput');
+  if (inputCari) inputCari.value = '';
+
+  if (!unsubscribeInventaris || !unsubscribePeminjaman) {
     muatDataInventarisModal();
   }
 }
@@ -344,12 +348,11 @@ function muatDataInventarisModal() {
   const container = document.getElementById('daftar-inventaris-modal');
   if (!container) return;
 
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
+  if (typeof window.firebaseRef !== 'function' || typeof window.firebaseOnValue !== 'function' || !window.db) {
     setTimeout(muatDataInventarisModal, 100);
     return;
   }
 
-  isInventarisListenerAktif = true;
   let dataPerkakas = [];
   let dataPinjaman = [];
 
@@ -370,6 +373,8 @@ function muatDataInventarisModal() {
       }
     });
 
+    const keyword = (document.getElementById('cariPerkakasInput')?.value || '').toLowerCase().trim();
+
     container.innerHTML = dataPerkakas.map(item => {
       const namaItem = escapeHTML(item.namaBarang || item.nama || item.name || 'Perkakas RT');
       const namaKey = String(item.namaBarang || item.nama || item.name || 'Perkakas RT').trim();
@@ -378,47 +383,41 @@ function muatDataInventarisModal() {
       const totalAwal = parseInt(item.totalStok !== undefined ? item.totalStok : (item.stok !== undefined ? item.stok : item.jumlah), 10) || 0;
       const sisaStok = Math.max(0, totalAwal - terpakai);
 
+      const cocokFilter = !keyword || namaKey.toLowerCase().includes(keyword);
+      const displayStyle = cocokFilter ? 'flex' : 'none';
+
       const statusBadge = sisaStok > 0
-        ? `<span style="background: #d1fae5; color: #065f46; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Tersedia</span>`
-        : `<span style="background: #fef2f2; color: #991b1b; font-size: 11px; padding: 2px 8px; border-radius: 12px; font-weight: bold;">Habis Dipinjam</span>`;
+        ? `<span style="background: #dcfce7; color: #15803d; font-size: 11.5px; padding: 4px 10px; border-radius: 999px; font-weight: 800; white-space: nowrap;">Sisa: ${sisaStok}</span>`
+        : `<span style="background: #fee2e2; color: #b91c1c; font-size: 11px; padding: 4px 10px; border-radius: 999px; font-weight: 800; white-space: nowrap;">Habis</span>`;
 
       const htmlFoto = fotoItem
-        ? `<img src="${escapeHTML(fotoItem)}" data-click="bukaFotoBesar" data-arg="${escapeHTML(fotoItem)}" style="width:100%; height:150px; object-fit:cover; border-radius:6px; margin-bottom:10px; cursor:pointer;" loading="lazy" onError="this.style.display='none'">`
+        ? `<img src="${escapeHTML(fotoItem)}" data-click="bukaFotoBesar" data-arg="${escapeHTML(fotoItem)}" alt="${namaItem}" style="width: 44px; height: 44px; object-fit: cover; border-radius: 8px; border: 1px solid #e2e8f0; flex-shrink: 0; cursor: pointer;" loading="lazy" onError="this.style.display='none'">`
         : '';
 
       return `
-        <div style="border: 1px solid #e5e7eb; padding: 14px; border-radius: 8px; margin-bottom: 12px; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-          ${htmlFoto}
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-            <h3 style="margin: 0; font-size: 15px; color: #111827;">${namaItem}</h3>
-            ${statusBadge}
-          </div>
-          <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; background: #f9fafb; padding: 8px; border-radius: 6px; font-size: 12px; text-align: center; border: 1px solid #f3f4f6;">
-            <div>
-              <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Total Stok</span>
-              <strong style="color: #374151; font-size: 13px;">${totalAwal}</strong>
-            </div>
-            <div>
-              <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Dipinjam</span>
-              <strong style="color: #dc2626; font-size: 13px;">${terpakai}</strong>
-            </div>
-            <div>
-              <span style="color: #6b7280; display: block; font-size: 10px; font-weight: bold;">Sisa Stok</span>
-              <strong style="color: #059669; font-size: 13px;">${sisaStok}</strong>
+        <div style="display: ${displayStyle}; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid #e2e8f0; padding: 9px 12px; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
+            ${htmlFoto}
+            <div style="min-width: 0; flex: 1;">
+              <div style="font-size: 13.5px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${namaItem}</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
+                Total: <strong style="color: #334155;">${totalAwal}</strong> &bull; Dipinjam: <strong style="color: #dc2626;">${terpakai}</strong>
+              </div>
             </div>
           </div>
+          ${statusBadge}
         </div>
       `;
     }).join('');
   };
 
-  window.firebaseOnValue(window.firebaseRef(window.db, 'inventaris'), (snap) => {
+  unsubscribeInventaris = window.firebaseOnValue(window.firebaseRef(window.db, 'inventaris'), (snap) => {
     dataPerkakas = [];
     if (snap.exists()) snap.forEach(child => { dataPerkakas.push(child.val()); });
     renderKartu();
   });
 
-  window.firebaseOnValue(window.firebaseRef(window.db, 'peminjaman'), (snap) => {
+  unsubscribePeminjaman = window.firebaseOnValue(window.firebaseRef(window.db, 'peminjaman'), (snap) => {
     dataPinjaman = [];
     if (snap.exists()) snap.forEach(child => { dataPinjaman.push(child.val()); });
     renderKartu();
@@ -426,8 +425,17 @@ function muatDataInventarisModal() {
 }
 
 function tutupModalInventaris() {
-    const modal = document.getElementById('modal-inventaris');
-    if (modal) modal.style.display = 'none';
+  const modal = document.getElementById('modal-inventaris');
+  if (modal) modal.style.display = 'none';
+
+  if (typeof unsubscribeInventaris === 'function') {
+    unsubscribeInventaris();
+    unsubscribeInventaris = null;
+  }
+  if (typeof unsubscribePeminjaman === 'function') {
+    unsubscribePeminjaman();
+    unsubscribePeminjaman = null;
+  }
 }
 // Event Delegation & Listener DOM (CSP-Compliant)
 document.addEventListener('click', function(e) {
