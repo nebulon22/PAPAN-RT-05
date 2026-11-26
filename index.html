@@ -1445,7 +1445,31 @@ function muatIframeChatLatarBelakang() {
       updatePublicTabBadge(publicCount, privateCount);
     }
   });
+// Sinkronisasi ulang badge begitu iframe chat selesai dimuat atau PWA kembali ke layar
+  function paksaSinkronBadgeDariIframe() {
+    const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
+    if (!iframe || !iframe.contentWindow) return;
 
+    try {
+      const cw = iframe.contentWindow;
+      // 1. Jika fungsi pengirim total sudah siap di dalam chat.html, panggil langsung
+      if (typeof cw.sendTotalUnreadToParent === 'function') {
+        cw.sendTotalUnreadToParent();
+      }
+      // 2. Kirim sinyal postMessage sebagai cadangan
+      const isOpen = Boolean(modal && modal.dataset.open === 'true');
+      cw.postMessage({ type: 'CHAT_MODAL_STATUS', isOpen: isOpen }, '*');
+      cw.postMessage({ type: 'REQUEST_UNREAD_SYNC' }, '*');
+    } catch (e) {}
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) paksaSinkronBadgeDariIframe();
+  });
+  window.addEventListener('focus', paksaSinkronBadgeDariIframe);
+  setTimeout(paksaSinkronBadgeDariIframe, 2500);
+  setTimeout(paksaSinkronBadgeDariIframe, 5000);
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
