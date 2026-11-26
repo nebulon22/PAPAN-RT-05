@@ -1869,41 +1869,48 @@ window.markPublicGroupAsRead = () => {
 };
     
 // Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
-   let lastPublicUnreadCount = 0;
+let lastPublicUnreadCount = 0;
 
-   function sendTotalUnreadToParent() {
-      // 1. Hitung total unread dari semua room private chat yang aktif
-      let totalPrivateUnread = 0;
-      Object.keys(unreadCounts).forEach(uid => {
-        totalPrivateUnread += (unreadCounts[uid] || 0);
-      });
+function sendTotalUnreadToParent() {
+  // 1. Hitung total unread dari semua room private chat yang aktif
+  let totalPrivateUnread = 0;
+  Object.keys(unreadCounts).forEach(uid => {
+    totalPrivateUnread += (unreadCounts[uid] || 0);
+  });
 
-      // 2. Gabungkan unread grup publik + total unread private chat
-      let grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
+  // 2. Gabungkan unread grup publik + total unread private chat
+  let grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
 
-      // 3. Update langsung App Badge dari chat.html jika didukung browser
-      if ('setAppBadge' in navigator) {
-        try {
-          const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
-          const isModalOpen = (modal && modal.style.display === 'flex');
+  // 3. Update langsung App Badge dari chat.html jika didukung browser
+  if ('setAppBadge' in navigator) {
+    try {
+      const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
+      const isModalOpen = (modal && modal.style.display === 'flex');
 
-          if (grandTotalUnread > 0 && !isModalOpen) {
-            navigator.setAppBadge(grandTotalUnread).catch(() => {});
-          } else {
-            navigator.clearAppBadge().catch(() => {});
-          }
-        } catch (e) {}
+      if (grandTotalUnread > 0 && !isModalOpen) {
+        navigator.setAppBadge(grandTotalUnread).catch(() => {});
+      } else {
+        navigator.clearAppBadge().catch(() => {});
       }
+    } catch (e) {}
+  }
 
-      // 4. Kirim terpisah ke index.html agar warna badge & nada notif bisa dibedakan
-      if (window.parent && window.parent.postMessage) {
-        window.parent.postMessage({
-          type: 'RT05_CHAT_UNREAD_UPDATE',
-          unreadPublicCount: lastPublicUnreadCount,
-          unreadPrivateCount: totalPrivateUnread
-        }, '*');
-      }
+  // 4. Panggil langsung fungsi di index.html
+  try {
+    if (window.parent && typeof window.parent.updatePublicTabBadge === 'function') {
+      window.parent.updatePublicTabBadge(lastPublicUnreadCount, totalPrivateUnread);
     }
+  } catch (e) {}
+
+  // 5. Tetap kirim postMessage sebagai cadangan
+  if (window.parent && window.parent.postMessage) {
+    window.parent.postMessage({
+      type: 'RT05_CHAT_UNREAD_UPDATE',
+      unreadPublicCount: lastPublicUnreadCount,
+      unreadPrivateCount: totalPrivateUnread
+    }, '*');
+  }
+}
 
     
     // Perbarui juga fungsi penampung unread publik agar otomatis mentrigger pengiriman total
