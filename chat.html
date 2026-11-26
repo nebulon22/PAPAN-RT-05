@@ -688,11 +688,14 @@ window.isChatModalOpen = function() {
       ? window.parent.document.getElementById('chat-overlay-modal') 
       : document.getElementById('chat-overlay-modal');
     if (modal) {
-      const display = window.getComputedStyle(modal).display;
-      return display !== 'none' && display !== '';
+      if (modal.dataset.open !== undefined) {
+        return modal.dataset.open === 'true';
+      }
+      const style = window.getComputedStyle(modal);
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
     }
   } catch (e) {}
-  return true; 
+  return false;
 };
 
 // 🌟 Cek apakah user sedang aktif melihat obrolan di layar
