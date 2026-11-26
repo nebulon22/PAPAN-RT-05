@@ -169,7 +169,7 @@ window.picuNotifikasiMedia = function(jenis = 'grup') {
   if (jenis === 'grup' && localStorage.getItem('rt05_setting_chat') === 'false') return;
   if (jenis === 'private' && localStorage.getItem('rt05_setting_private_active') === 'false') return;
 
-  // 1. Putar Suara
+// 1. Putar Suara
   if (mode === 'normal' || mode === 'suara') {
     try {
       const isPrivate = (jenis === 'private');
@@ -178,14 +178,21 @@ window.picuNotifikasiMedia = function(jenis = 'grup') {
         ? (localStorage.getItem('rt05_setting_sound_private') || DEFAULT_SOUND_PRIVATE)
         : (localStorage.getItem('rt05_setting_sound_grup') || DEFAULT_SOUND_GRUP);
 
-      if (!player.src.endsWith(savedSrc)) {
+      // Normalisasi perbandingan URL agar tidak me-reset src yang sudah ter-unlock
+      const resolvedUrl = new URL(savedSrc, window.location.href).href;
+      if (player && player.src !== resolvedUrl) {
         player.src = savedSrc;
       }
-      player.pause();
-      player.currentTime = 0;
-      player.play().catch(() => {
-        if (typeof mainkanSuaraBeep === 'function') mainkanSuaraBeep();
-      });
+
+      if (player) {
+        player.pause();
+        player.currentTime = 0;
+        player.muted = false;
+        player.play().catch((err) => {
+          console.warn('Gagal putar MP3 ' + jenis + ':', err);
+          if (typeof mainkanSuaraBeep === 'function') mainkanSuaraBeep();
+        });
+      }
     } catch (e) {
       if (typeof mainkanSuaraBeep === 'function') mainkanSuaraBeep();
     }
