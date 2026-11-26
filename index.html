@@ -14,9 +14,9 @@
   <link rel="dns-prefetch" href="https://mt2.google.com">
   <link rel="dns-prefetch" href="https://mt3.google.com">
 
-  <!-- Preload Aset Kritis (Harus di atas tag script/stylesheet) -->
+ <!-- Preload Aset Kritis (Harus di atas tag script/stylesheet) -->
   <link rel="preload" href="leaflet.js" as="script">
-  <link rel="preload" href="setting.js?v=1.8.4" as="script">
+  <link rel="preload" href="setting.js" as="script">
 
   <!-- 1. CSS LOKAL (Leaflet, MarkerCluster & FontAwesome) -->
   <link rel="stylesheet" href="leaflet.css" media="print" onload="this.media='all'">
@@ -42,8 +42,8 @@
   
   <!-- 2. JAVASCRIPT LOKAL (leaflet.markercluster.js dimuat dinamis di muatDataPetaWarga) -->
   <script src="leaflet.js" defer></script>
-  <script type="module" src="utils.js?v=1.8.4"></script>
-  <script src="setting.js?v=1.8.4" defer></script>
+  <script type="module" src="utils.js"></script>
+  <script src="setting.js" defer></script>
   
 
  <style>
@@ -1188,10 +1188,17 @@ window.perbaruiAplikasiSekarang = function() {
     serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
   }
 
-  // Pengaman: paksa reload setelah 3 detik jika controllerchange tertahan oleh iframe/tab
-  setTimeout(() => {
-    window.location.reload();
-  }, 3000);
+  // Pengaman: jika dalam 2.5 detik belum otomatis reload, bersihkan cache lama lalu muat ulang paksa
+  setTimeout(async () => {
+    try {
+      if ('caches' in window) {
+        const names = await caches.keys();
+        await Promise.all(names.map(name => caches.delete(name)));
+      }
+    } finally {
+      window.location.reload();
+    }
+  }, 2500);
 };
   
 window.bukaHalamanAdmin = async function(event) {
