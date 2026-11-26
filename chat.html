@@ -1231,12 +1231,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // Deteksi jika modal disembunyikan menggunakan CSS/Iframe
-    const observer = new IntersectionObserver((entries) => {
-      isChatVisible = entries[0].isIntersecting && !document.hidden;
+      const observer = new IntersectionObserver((entries) => {
+      isChatVisible = entries[0].isIntersecting && !document.hidden && window.isChatModalOpen();
       if (isChatVisible && activeChatType === 'private' && activePrivateUID) {
         unreadCounts[activePrivateUID] = 0;
         markRoomAsRead(activePrivateUID);
         renderPrivateTabsUI();
+        sendTotalUnreadToParent();
       }
     });
     observer.observe(document.body);
@@ -1881,14 +1882,16 @@ function sendTotalUnreadToParent() {
     totalPrivateUnread += (unreadCounts[uid] || 0);
   });
 
+  // Simpan ke localStorage agar index.html selalu sinkron
+  localStorage.setItem('rt05_unread_private_total', String(totalPrivateUnread));
+
   // 2. Gabungkan unread grup publik + total unread private chat
   let grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
 
   // 3. Update langsung App Badge dari chat.html jika didukung browser
   if ('setAppBadge' in navigator) {
     try {
-      const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
-      const isModalOpen = (modal && modal.style.display === 'flex');
+      const isModalOpen = typeof window.isChatModalOpen === 'function' ? window.isChatModalOpen() : false;
 
       if (grandTotalUnread > 0 && !isModalOpen) {
         navigator.setAppBadge(grandTotalUnread).catch(() => {});
