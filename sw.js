@@ -73,8 +73,8 @@ self.addEventListener('install', (e) => {
       ];
       cache.addAll(audioFiles).catch(() => {});
 
-      // Hanya tunggu file aplikasi inti agar update langsung siap
-      return cache.addAll([
+      // Daftar file inti aplikasi
+      const coreFiles = [
         './',
         './index.html',
         './admin.html',
@@ -94,7 +94,12 @@ self.addEventListener('install', (e) => {
         './kentongan-slit-drum.png',
         './kentongan-btn.webp',
         './html5-qrcode.min.js'
-      ]);
+      ];
+
+      // Paksa browser melewati disk cache agar selalu menarik file terbaru dari server
+      return Promise.all(
+        coreFiles.map((url) => cache.add(new Request(url, { cache: 'reload' })))
+      );
     })
   );
 });
