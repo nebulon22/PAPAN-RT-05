@@ -1867,7 +1867,7 @@ window.markPublicGroupAsRead = () => {
     sendUnreadCountToParent(0);
 };
     
-   // Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
+// Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
    let lastPublicUnreadCount = 0;
 
    function sendTotalUnreadToParent() {
@@ -1880,27 +1880,26 @@ window.markPublicGroupAsRead = () => {
       // 2. Gabungkan unread grup publik + total unread private chat
       let grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
 
-      // 3. 🛠️ TAMBAHAN: Update langsung App Badge dari chat.html jika didukung browser
+      // 3. Update langsung App Badge dari chat.html jika didukung browser
       if ('setAppBadge' in navigator) {
         try {
           const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
           const isModalOpen = (modal && modal.style.display === 'flex');
 
           if (grandTotalUnread > 0 && !isModalOpen) {
-            navigator.setAppBadge(grandTotalUnread).catch(err => console.log(err));
+            navigator.setAppBadge(grandTotalUnread).catch(() => {});
           } else {
-            navigator.clearAppBadge().catch(err => console.log(err));
+            navigator.clearAppBadge().catch(() => {});
           }
-        } catch (e) {
-          // Abaikan jika browser tidak mendukung
-        }
+        } catch (e) {}
       }
 
-      // 4. Kirim total gabungan ini ke index.html agar badge tombol ikut akurat
+      // 4. Kirim terpisah ke index.html agar warna badge & nada notif bisa dibedakan
       if (window.parent && window.parent.postMessage) {
         window.parent.postMessage({
           type: 'RT05_CHAT_UNREAD_UPDATE',
-          unreadPublicCount: grandTotalUnread 
+          unreadPublicCount: lastPublicUnreadCount,
+          unreadPrivateCount: totalPrivateUnread
         }, '*');
       }
     }
