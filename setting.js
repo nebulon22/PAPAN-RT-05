@@ -191,8 +191,9 @@ window.picuNotifikasiMedia = function(jenis = 'grup') {
     }
   }
 
-  // 2. Getar Haptic (Hanya saat layar aktif)
-  if ((mode === 'normal' || mode === 'getar') && !document.hidden && 'vibrate' in navigator) {
+// 2. Getar Haptic (Hanya saat layar aktif & sudah pernah disentuh warga)
+  const sudahInteraksi = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
+  if ((mode === 'normal' || mode === 'getar') && !document.hidden && sudahInteraksi && 'vibrate' in navigator) {
     try {
       const pola = POLA_HAPTIC[jenis] || POLA_HAPTIC.grup;
       navigator.vibrate(pola);
