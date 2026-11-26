@@ -150,9 +150,10 @@ if (
   ) {
     return;
   }
-  // 4. Longgarkan tangkapan untuk API, Firebase, Cloudflare R2 Storage, dan Media Eksternal
+// 4. Longgarkan tangkapan untuk navigasi halaman, Clean URLs, API, Firebase, dan Media
   if (
     event.request.mode === 'navigate' ||
+    url.origin === self.location.origin && !url.pathname.includes('.') ||
     url.origin.includes('firebase') ||
     url.origin.includes('gstatic') ||
     url.origin.includes('firebasestorage') ||
@@ -162,9 +163,16 @@ if (
     url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif|webp)$/i)
   ) {
     event.respondWith(
-      fetch(event.request).catch((err) => {
+      fetch(event.request).catch(() => {
         return caches.match(event.request).then((cached) => {
-          return cached || new Response(null, { status: 404, statusText: 'Not Found' });
+          if (cached) return cached;
+          // Jika /chat gagal, coba ambil cadangan ./chat.html dari cache
+          if (!url.pathname.includes('.')) {
+            return caches.match(url.pathname + '.html').then((htmlCached) => {
+              return htmlCached || new Response(null, { status: 404, statusText: 'Not Found' });
+            });
+          }
+          return new Response(null, { status: 404, statusText: 'Not Found' });
         });
       })
     );
