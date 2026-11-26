@@ -976,7 +976,7 @@
   <span id="badge-chat-main">0</span>
 </button>
 
-<div id="chat-overlay-modal" style="display: none; position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1000; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
+<div id="chat-overlay-modal" data-open="false" style="display: flex; visibility: hidden; opacity: 0; pointer-events: none; position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1000; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
   
   <div style="background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -1286,14 +1286,18 @@
   let jumlahPrivateTerakhir = 0;
   let iframeChatSudahDimuat = false;
 
-  function renderBadgeChatUtama() {
+function renderBadgeChatUtama() {
     const badge = document.getElementById('badge-chat-main');
     const chatBtn = document.getElementById('floating-chat-btn');
     const modal = document.getElementById('chat-overlay-modal');
-    const isModalOpen = Boolean(modal && modal.style.display === 'flex');
+    const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
+
+    // Ambil nilai terbesar antara memori aktif & cadangan localStorage
+    const storedPrivate = Number(localStorage.getItem('rt05_unread_private_total') || 0);
+    const privateAktif = Math.max(jumlahPrivateTerakhir, storedPrivate);
 
     const effPublic = isModalOpen ? 0 : jumlahPublicTerakhir;
-    const effPrivate = isModalOpen ? 0 : jumlahPrivateTerakhir;
+    const effPrivate = isModalOpen ? 0 : privateAktif;
     const totalCount = effPublic + effPrivate;
 
     if (badge && chatBtn) {
@@ -1301,7 +1305,6 @@
         badge.style.display = 'inline-block';
         badge.innerText = totalCount > 99 ? '99+' : totalCount;
 
-        // Oranye kemerahan jika ada pesan private; merah standar jika hanya grup
         if (effPrivate > 0) {
           badge.style.backgroundColor = '#ea580c';
           badge.style.boxShadow = '0 0 0 2px #ffedd5, 0 2px 6px rgba(234, 88, 12, 0.55)';
@@ -1337,9 +1340,8 @@
     const isIframeLoaded = Boolean(
       iframe && iframe.src && iframe.src !== 'about:blank' && iframe.src !== window.location.href
     );
-    const isModalOpen = Boolean(modal && modal.style.display === 'flex');
+    const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
 
-    // Picu suara & getar dari setting.js HANYA jika iframe chat.html belum aktif
     if (!isIframeLoaded && !isModalOpen && typeof window.picuNotifikasiMedia === 'function') {
       if (jumlahPrivateSebelumnya !== null && privateCount > jumlahPrivateSebelumnya) {
         window.picuNotifikasiMedia('private');
@@ -1352,72 +1354,17 @@
     jumlahPrivateSebelumnya = privateCount;
     jumlahPublicTerakhir = publicCount;
     jumlahPrivateTerakhir = privateCount;
+    localStorage.setItem('rt05_unread_private_total', String(privateCount));
 
     renderBadgeChatUtama();
   }
   window.updatePublicTabBadge = updatePublicTabBadge;
 
-  function initMainPageChatListener() {
-    if (isMainChatListenerAktif) return;
-    if (typeof window.firebaseRef !== 'function' || !window.db) return;
-
-    isMainChatListenerAktif = true;
-    const chatsRef = window.firebaseQuery(window.firebaseRef(window.db, 'chats'), window.firebaseLimitToLast(100));
-
-    window.firebaseOnValue(chatsRef, (snapshot) => {
-      if (!snapshot.exists()) {
-        updatePublicTabBadge(0);
-        return;
-      }
-
-      const currentUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
-      if (!currentUser || !currentUser.uid) {
-        updatePublicTabBadge(0, 0);
-        return;
-      }
-
-      const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key') || '{}');
-      let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
-
-      if (!lastReadPublicMapKey) {
-        let latestKey = null;
-        snapshot.forEach((msgSnap) => {
-          if (msgSnap.key !== 'pinned_poll') latestKey = msgSnap.key;
-        });
-        if (latestKey) {
-          lastReadPublicMap[currentUser.uid] = latestKey;
-          localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
-          lastReadPublicMapKey = latestKey;
-        }
-      }
-
-      let unreadPublicCount = 0;
-      snapshot.forEach((msgSnap) => {
-        const msgKey = msgSnap.key;
-        const msgData = msgSnap.val();
-        if (msgKey === 'pinned_poll' || !msgData || typeof msgData !== 'object') return;
-
-        if (msgData.uid !== currentUser.uid && lastReadPublicMapKey && msgKey > lastReadPublicMapKey) {
-          unreadPublicCount++;
-        }
-      });
-
-      updatePublicTabBadge(unreadPublicCount);
-    });
-  }
-
-  window.addEventListener('firebaseSiapIndex', () => {
-    muatBadgeInfoRT();
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(() => {
-        initMainPageChatListener();
-        muatIframeChatLatarBelakang();
-      }, { timeout: 2500 });
-    } else {
-      setTimeout(() => {
-        initMainPageChatListener();
-        muatIframeChatLatarBelakang();
-      }, 1500);
+  // Tangkap perubahan unread private dari localStorage secara instan
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'rt05_unread_private_total') {
+      jumlahPrivateTerakhir = Number(e.newValue || 0);
+      renderBadgeChatUtama();
     }
   });
 
@@ -1426,7 +1373,7 @@
     const iframe = modal ? modal.querySelector('iframe') : null;
     if (!modal) return;
 
-    const isOpening = (modal.style.display === 'none' || modal.style.display === '');
+    const isOpening = modal.dataset.open !== 'true';
 
     if (isOpening) {
       if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
@@ -1437,15 +1384,20 @@
         }
       }
 
-      modal.style.display = 'flex';
+      modal.dataset.open = 'true';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+      modal.style.pointerEvents = 'auto';
       renderBadgeChatUtama();
 
       if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
         iframe.contentWindow.switchChatRoom('public');
       }
     } else {
-      modal.style.display = 'none';
-      // Hitung ulang & tampilkan kembali badge jika masih ada pesan private/grup yang belum dibaca
+      modal.dataset.open = 'false';
+      modal.style.visibility = 'hidden';
+      modal.style.opacity = '0';
+      modal.style.pointerEvents = 'none';
       renderBadgeChatUtama();
     }
 
