@@ -1393,10 +1393,33 @@ window.toggleChatModal = function() {
     }
   };
 
-let jumlahPublicSebelumnya = null;
+  let jumlahPublicSebelumnya = null;
   let jumlahPrivateSebelumnya = null;
   let jumlahPublicTerakhir = 0;
   let jumlahPrivateTerakhir = 0;
+  let iframeChatSudahDimuat = false;
+
+  function muatIframeChatLatarBelakang() {
+    if (iframeChatSudahDimuat) return;
+    const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
+    if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
+      const dataSrc = iframe.getAttribute('data-src');
+      if (dataSrc) {
+        iframe.src = dataSrc;
+        iframeChatSudahDimuat = true;
+      }
+    }
+    ['touchstart', 'pointerdown', 'click', 'keydown'].forEach(evt => {
+      window.removeEventListener(evt, muatIframeChatLatarBelakang);
+    });
+  }
+
+  // Muat hanya setelah sentuhan pertama warga ATAU setelah 8 detik (aman dari audit Lighthouse)
+  ['touchstart', 'pointerdown', 'click', 'keydown'].forEach(evt => {
+    window.addEventListener(evt, muatIframeChatLatarBelakang, { passive: true, once: true });
+  });
+  setTimeout(muatIframeChatLatarBelakang, 8000);
 
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
@@ -1475,32 +1498,6 @@ let jumlahPublicSebelumnya = null;
       chatBtn.classList.remove('chat-btn-animated');
     }
   }
-
-let jumlahPublicTerakhir = 0;
-  let jumlahPrivateTerakhir = 0;
-  let iframeChatSudahDimuat = false;
-
-  function muatIframeChatLatarBelakang() {
-    if (iframeChatSudahDimuat) return;
-    const modal = document.getElementById('chat-overlay-modal');
-    const iframe = modal ? modal.querySelector('iframe') : null;
-    if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
-      const dataSrc = iframe.getAttribute('data-src');
-      if (dataSrc) {
-        iframe.src = dataSrc;
-        iframeChatSudahDimuat = true;
-      }
-    }
-    ['touchstart', 'pointerdown', 'click', 'keydown'].forEach(evt => {
-      window.removeEventListener(evt, muatIframeChatLatarBelakang);
-    });
-  }
-
-  // Muat hanya setelah sentuhan pertama warga ATAU setelah 8 detik (aman dari audit Lighthouse)
-  ['touchstart', 'pointerdown', 'click', 'keydown'].forEach(evt => {
-    window.addEventListener(evt, muatIframeChatLatarBelakang, { passive: true, once: true });
-  });
-  setTimeout(muatIframeChatLatarBelakang, 8000);
 
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
