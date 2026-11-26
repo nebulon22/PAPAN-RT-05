@@ -984,7 +984,7 @@
       <span style="font-weight: bold; font-size: 13px; color: #ffffff;">Live Chat RT 05</span>
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
-      <<button type="button" data-click="toggleChatModal" aria-label="Tutup" style="background: transparent; border: none; color: #f87171; font-size: 16px; cursor: pointer; font-weight: bold;">✕</button>
+      <button type="button" data-click="toggleChatModal" aria-label="Tutup" style="background: transparent; border: none; color: #f87171; font-size: 16px; cursor: pointer; font-weight: bold;">✕</button>
     </div>
   </div>
 
@@ -1279,88 +1279,155 @@
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
-// ==========================================
-// PEMANTAU UNREAD CHAT PUBLIK DI HALAMAN UTAMA
-// ==========================================
-let isMainChatListenerAktif = false;
+  let isMainChatListenerAktif = false;
+  let jumlahPublicSebelumnya = null;
+  let jumlahPrivateSebelumnya = null;
+  let jumlahPublicTerakhir = 0;
+  let jumlahPrivateTerakhir = 0;
+  let iframeChatSudahDimuat = false;
 
-function initMainPageChatListener() {
-  if (isMainChatListenerAktif) return;
-  if (typeof window.firebaseRef !== 'function' || !window.db) return;
+  function renderBadgeChatUtama() {
+    const badge = document.getElementById('badge-chat-main');
+    const chatBtn = document.getElementById('floating-chat-btn');
+    const modal = document.getElementById('chat-overlay-modal');
+    const isModalOpen = Boolean(modal && modal.style.display === 'flex');
 
-  isMainChatListenerAktif = true;
-  const chatsRef = window.firebaseQuery(window.firebaseRef(window.db, 'chats'), window.firebaseLimitToLast(100));
+    const effPublic = isModalOpen ? 0 : jumlahPublicTerakhir;
+    const effPrivate = isModalOpen ? 0 : jumlahPrivateTerakhir;
+    const totalCount = effPublic + effPrivate;
 
-  window.firebaseOnValue(chatsRef, (snapshot) => {
-    if (!snapshot.exists()) {
-      updatePublicTabBadge(0);
-      return;
-    }
+    if (badge && chatBtn) {
+      if (totalCount > 0) {
+        badge.style.display = 'inline-block';
+        badge.innerText = totalCount > 99 ? '99+' : totalCount;
 
-    // Ambil data user yang sedang login dari localStorage (disimpan oleh chat.html)
-    const currentUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
-    if (!currentUser || !currentUser.uid) {
-      updatePublicTabBadge(0);
-      return;
-    }
-
-    const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-    let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
-
-    // Jika belum ada key baca, set ke pesan terakhir agar tidak menumpuk
-    if (!lastReadPublicMapKey) {
-      let latestKey = null;
-      snapshot.forEach((msgSnap) => {
-        if (msgSnap.key !== 'pinned_poll') latestKey = msgSnap.key;
-      });
-      if (latestKey) {
-        lastReadPublicMap[currentUser.uid] = latestKey;
-        localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
-        lastReadPublicMapKey = latestKey;
-      }
-    }
-
-    let unreadPublicCount = 0;
-    snapshot.forEach((msgSnap) => {
-      const msgKey = msgSnap.key;
-      const msgData = msgSnap.val();
-
-      if (msgKey === 'pinned_poll') return;
-      if (!msgData || typeof msgData !== 'object') return;
-
-      // Hitung pesan dari orang lain yang lebih baru dari terakhir dibaca
-      if (msgData.uid !== currentUser.uid) {
-        if (lastReadPublicMapKey && msgKey > lastReadPublicMapKey) {
-          unreadPublicCount++;
+        // Oranye kemerahan jika ada pesan private; merah standar jika hanya grup
+        if (effPrivate > 0) {
+          badge.style.backgroundColor = '#ea580c';
+          badge.style.boxShadow = '0 0 0 2px #ffedd5, 0 2px 6px rgba(234, 88, 12, 0.55)';
+        } else {
+          badge.style.backgroundColor = '#ef4444';
+          badge.style.boxShadow = '0 2px 6px rgba(0,0,0,0.4)';
         }
+
+        chatBtn.classList.add('chat-btn-animated');
+      } else {
+        badge.style.display = 'none';
+        badge.innerText = '0';
+        badge.style.backgroundColor = '#ef4444';
+        badge.style.boxShadow = '0 2px 6px rgba(0,0,0,0.4)';
+        chatBtn.classList.remove('chat-btn-animated');
       }
-    });
+    }
 
-    // Perbarui badge di ikon chat utama index.html
-    updatePublicTabBadge(unreadPublicCount);
-  });
-}
-
-// Tangkap sinyal siap Firebase di halaman utama
-window.addEventListener('firebaseSiapIndex', () => {
-  muatBadgeInfoRT();
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(initMainPageChatListener, { timeout: 2500 });
-  } else {
-    setTimeout(initMainPageChatListener, 1500);
+    if ('setAppBadge' in navigator) {
+      try {
+        if (totalCount > 0) {
+          navigator.setAppBadge(totalCount).catch(() => {});
+        } else {
+          navigator.clearAppBadge().catch(() => {});
+        }
+      } catch (e) {}
+    }
   }
-});
-  
-window.toggleChatModal = function() {
+
+  function updatePublicTabBadge(publicCount, privateCount = jumlahPrivateTerakhir) {
     const modal = document.getElementById('chat-overlay-modal');
     const iframe = modal ? modal.querySelector('iframe') : null;
+    const isIframeLoaded = Boolean(
+      iframe && iframe.src && iframe.src !== 'about:blank' && iframe.src !== window.location.href
+    );
+    const isModalOpen = Boolean(modal && modal.style.display === 'flex');
 
+    // Picu suara & getar dari setting.js HANYA jika iframe chat.html belum aktif
+    if (!isIframeLoaded && !isModalOpen && typeof window.picuNotifikasiMedia === 'function') {
+      if (jumlahPrivateSebelumnya !== null && privateCount > jumlahPrivateSebelumnya) {
+        window.picuNotifikasiMedia('private');
+      } else if (jumlahPublicSebelumnya !== null && publicCount > jumlahPublicSebelumnya) {
+        window.picuNotifikasiMedia('grup');
+      }
+    }
+
+    jumlahPublicSebelumnya = publicCount;
+    jumlahPrivateSebelumnya = privateCount;
+    jumlahPublicTerakhir = publicCount;
+    jumlahPrivateTerakhir = privateCount;
+
+    renderBadgeChatUtama();
+  }
+
+  function initMainPageChatListener() {
+    if (isMainChatListenerAktif) return;
+    if (typeof window.firebaseRef !== 'function' || !window.db) return;
+
+    isMainChatListenerAktif = true;
+    const chatsRef = window.firebaseQuery(window.firebaseRef(window.db, 'chats'), window.firebaseLimitToLast(100));
+
+    window.firebaseOnValue(chatsRef, (snapshot) => {
+      if (!snapshot.exists()) {
+        updatePublicTabBadge(0);
+        return;
+      }
+
+      const currentUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
+      if (!currentUser || !currentUser.uid) {
+        updatePublicTabBadge(0, 0);
+        return;
+      }
+
+      const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key') || '{}');
+      let lastReadPublicMapKey = lastReadPublicMap[currentUser.uid];
+
+      if (!lastReadPublicMapKey) {
+        let latestKey = null;
+        snapshot.forEach((msgSnap) => {
+          if (msgSnap.key !== 'pinned_poll') latestKey = msgSnap.key;
+        });
+        if (latestKey) {
+          lastReadPublicMap[currentUser.uid] = latestKey;
+          localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(lastReadPublicMap));
+          lastReadPublicMapKey = latestKey;
+        }
+      }
+
+      let unreadPublicCount = 0;
+      snapshot.forEach((msgSnap) => {
+        const msgKey = msgSnap.key;
+        const msgData = msgSnap.val();
+        if (msgKey === 'pinned_poll' || !msgData || typeof msgData !== 'object') return;
+
+        if (msgData.uid !== currentUser.uid && lastReadPublicMapKey && msgKey > lastReadPublicMapKey) {
+          unreadPublicCount++;
+        }
+      });
+
+      updatePublicTabBadge(unreadPublicCount);
+    });
+  }
+
+  window.addEventListener('firebaseSiapIndex', () => {
+    muatBadgeInfoRT();
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(() => {
+        initMainPageChatListener();
+        muatIframeChatLatarBelakang();
+      }, { timeout: 2500 });
+    } else {
+      setTimeout(() => {
+        initMainPageChatListener();
+        muatIframeChatLatarBelakang();
+      }, 1500);
+    }
+  });
+
+  window.toggleChatModal = function() {
+    const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
     if (!modal) return;
 
     const isOpening = (modal.style.display === 'none' || modal.style.display === '');
 
     if (isOpening) {
-      // 🌟 Lazy Load: Isi src dari data-src hanya saat modal pertama kali dibuka warga
       if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
         const dataSrc = iframe.getAttribute('data-src');
         if (dataSrc) {
@@ -1370,21 +1437,17 @@ window.toggleChatModal = function() {
       }
 
       modal.style.display = 'flex';
-      
-      const badge = document.getElementById('badge-chat-main');
-      if (badge) badge.style.display = 'none';
-
-      const chatBtn = document.getElementById('floating-chat-btn');
-      if (chatBtn) chatBtn.classList.remove('chat-btn-animated');
+      renderBadgeChatUtama();
 
       if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
         iframe.contentWindow.switchChatRoom('public');
       }
     } else {
       modal.style.display = 'none';
+      // Hitung ulang & tampilkan kembali badge jika masih ada pesan private/grup yang belum dibaca
+      renderBadgeChatUtama();
     }
 
-    // 🌟 BERITAHU IFRAME CHAT STATUS TERBUKA/TERTUTUP MODAL
     if (iframe && iframe.contentWindow) {
       iframe.contentWindow.postMessage({
         type: 'CHAT_MODAL_STATUS',
@@ -1392,12 +1455,6 @@ window.toggleChatModal = function() {
       }, '*');
     }
   };
-
-  let jumlahPublicSebelumnya = null;
-  let jumlahPrivateSebelumnya = null;
-  let jumlahPublicTerakhir = 0;
-  let jumlahPrivateTerakhir = 0;
-  let iframeChatSudahDimuat = false;
 
   function muatIframeChatLatarBelakang() {
     if (iframeChatSudahDimuat) return;
@@ -1415,147 +1472,18 @@ window.toggleChatModal = function() {
     });
   }
 
-  // Muat hanya setelah sentuhan pertama warga ATAU setelah 8 detik (aman dari audit Lighthouse)
   ['touchstart', 'pointerdown', 'click', 'keydown'].forEach(evt => {
     window.addEventListener(evt, muatIframeChatLatarBelakang, { passive: true, once: true });
   });
-  setTimeout(muatIframeChatLatarBelakang, 8000);
+  setTimeout(muatIframeChatLatarBelakang, 4000);
 
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
-      const publicCount = event.data.unreadPublicCount || 0;
-      const privateCount = event.data.unreadPrivateCount || 0;
-      const modal = document.getElementById('chat-overlay-modal');
-      const isModalOpen = (modal && modal.style.display === 'flex');
-
-      const effPublic = isModalOpen ? 0 : publicCount;
-      const effPrivate = isModalOpen ? 0 : privateCount;
-
-      updatePublicTabBadge(effPublic, effPrivate);
-
-      const totalEffective = effPublic + effPrivate;
-      if ('setAppBadge' in navigator) {
-        try {
-          if (totalEffective > 0) {
-            navigator.setAppBadge(totalEffective).catch(() => {});
-          } else {
-            navigator.clearAppBadge().catch(() => {});
-          }
-        } catch (e) {}
-      }
+      const publicCount = Number(event.data.unreadPublicCount || 0);
+      const privateCount = Number(event.data.unreadPrivateCount || 0);
+      updatePublicTabBadge(publicCount, privateCount);
     }
   });
-
-  function updatePublicTabBadge(publicCount, privateCount = jumlahPrivateTerakhir) {
-    jumlahPublicTerakhir = publicCount;
-    jumlahPrivateTerakhir = privateCount;
-
-    const badge = document.getElementById('badge-chat-main');
-    const chatBtn = document.getElementById('floating-chat-btn');
-    const modal = document.getElementById('chat-overlay-modal');
-    const iframe = modal ? modal.querySelector('iframe') : null;
-
-    const isIframeLoaded = Boolean(
-      iframe && iframe.src && iframe.src !== 'about:blank' && iframe.src !== window.location.href
-    );
-    const isModalOpen = Boolean(modal && modal.style.display === 'flex');
-
-    // Picu suara & getar dari setting.js HANYA jika chat.html belum aktif
-    if (!isIframeLoaded && !isModalOpen && typeof window.picuNotifikasiMedia === 'function') {
-      if (jumlahPrivateSebelumnya !== null && privateCount > jumlahPrivateSebelumnya) {
-        window.picuNotifikasiMedia('private');
-      } else if (jumlahPublicSebelumnya !== null && publicCount > jumlahPublicSebelumnya) {
-        window.picuNotifikasiMedia('grup');
-      }
-    }
-
-    jumlahPublicSebelumnya = publicCount;
-    jumlahPrivateSebelumnya = privateCount;
-
-    if (!badge || !chatBtn) return;
-
-    const totalCount = publicCount + privateCount;
-
-    if (totalCount > 0) {
-      badge.style.display = 'inline-block';
-      badge.innerText = totalCount > 99 ? '99+' : totalCount;
-
-      // Oranye kemerahan jika ada pesan private; merah standar jika hanya grup
-      if (privateCount > 0) {
-        badge.style.backgroundColor = '#ea580c';
-        badge.style.boxShadow = '0 0 0 2px #ffedd5, 0 2px 6px rgba(234, 88, 12, 0.55)';
-      } else {
-        badge.style.backgroundColor = '#ef4444';
-        badge.style.boxShadow = 'none';
-      }
-
-      chatBtn.classList.add('chat-btn-animated');
-    } else {
-      badge.style.display = 'none';
-      badge.innerText = '0';
-      badge.style.backgroundColor = '#ef4444';
-      badge.style.boxShadow = 'none';
-      chatBtn.classList.remove('chat-btn-animated');
-    }
-  }
-
-  window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
-      const publicCount = event.data.unreadPublicCount || 0;
-      const privateCount = event.data.unreadPrivateCount || 0;
-      const modal = document.getElementById('chat-overlay-modal');
-      const isModalOpen = (modal && modal.style.display === 'flex');
-
-      const effPublic = isModalOpen ? 0 : publicCount;
-      const effPrivate = isModalOpen ? 0 : privateCount;
-
-      updatePublicTabBadge(effPublic, effPrivate);
-
-      const totalEffective = effPublic + effPrivate;
-      if ('setAppBadge' in navigator) {
-        try {
-          if (totalEffective > 0) {
-            navigator.setAppBadge(totalEffective).catch(() => {});
-          } else {
-            navigator.clearAppBadge().catch(() => {});
-          }
-        } catch (e) {}
-      }
-    }
-  });
-
-  function updatePublicTabBadge(publicCount, privateCount = jumlahPrivateTerakhir) {
-    jumlahPublicTerakhir = publicCount;
-    jumlahPrivateTerakhir = privateCount;
-
-    const badge = document.getElementById('badge-chat-main');
-    const chatBtn = document.getElementById('floating-chat-btn');
-    if (!badge || !chatBtn) return;
-
-    const totalCount = publicCount + privateCount;
-
-    if (totalCount > 0) {
-      badge.style.display = 'inline-block';
-      badge.innerText = totalCount > 99 ? '99+' : totalCount;
-
-      // Oranye kemerahan jika ada pesan private; merah standar jika hanya grup
-      if (privateCount > 0) {
-        badge.style.backgroundColor = '#ea580c';
-        badge.style.boxShadow = '0 0 0 2px #ffedd5, 0 2px 6px rgba(234, 88, 12, 0.55)';
-      } else {
-        badge.style.backgroundColor = '#ef4444';
-        badge.style.boxShadow = 'none';
-      }
-
-      chatBtn.classList.add('chat-btn-animated');
-    } else {
-      badge.style.display = 'none';
-      badge.innerText = '0';
-      badge.style.backgroundColor = '#ef4444';
-      badge.style.boxShadow = 'none';
-      chatBtn.classList.remove('chat-btn-animated');
-    }
-  }
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
