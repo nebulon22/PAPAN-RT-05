@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.8.8'; // 🌟 Naikkan versi agar HP warga memperbarui SW
+const CACHE_NAME = 'rt-kayen-v1.8.9'; // 🌟 Naikkan versi agar HP warga memperbarui SW
 
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
@@ -74,13 +74,17 @@ self.addEventListener('install', (e) => {
       cache.addAll(audioFiles).catch(() => {});
 
       // Daftar file inti aplikasi
-      const coreFiles = [
+const coreFiles = [
         './',
         './index.html',
         './admin.html',
+        './admin',
         './chat.html',
+        './chat',
         './pengumuman.html',
+        './pengumuman',
         './cetak-qr.html',
+        './cetak-qr',
         './utils.js',
         './setting.js',
         './manifest.json',
