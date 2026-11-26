@@ -15,7 +15,6 @@
   <link rel="dns-prefetch" href="https://mt3.google.com">
 
   <!-- Preload Aset Kritis (Harus di atas tag script/stylesheet) -->
-  <link rel="preload" href="leaflet.css" as="style">
   <link rel="preload" href="leaflet.js" as="script">
   <link rel="preload" href="setting.js?v=1.8.3" as="script">
 
@@ -55,18 +54,17 @@
     font-family: sans-serif; 
     overflow: hidden; 
   }
-   @view-transition {
-  navigation: auto;
-}
+
+  @view-transition {
+    navigation: auto;
+  }
   
-/* 🌟 Efek halus saat peta pertama kali muncul */
-#map {
+  /* Peta Utama */
+  #map {
     width: 100%;
     height: 100vh;
     background-color: #cbd5e1;
   }
-
-  /* Kelas transisi terpisah agar aman */
   #map.fade-map {
     opacity: 0;
     transition: opacity 0.3s ease-in-out;
@@ -75,6 +73,156 @@
     opacity: 1;
   }
 
+  /* Panel Utama Atas */
+  #top-panel {
+    position: absolute;
+    top: 64px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: calc(100% - 24px);
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .filter-container {
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+  }
+
+  .filter-row {
+    display: flex;
+    gap: 6px;
+    width: 100%;
+  }
+
+  .btn-filter {
+    flex: 1;
+    justify-content: center;
+    padding: 6px 12px;
+    background: white;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-filter.active {
+    background: #00c853;
+    color: white;
+    border-color: #00c853;
+  }
+
+  /* Grid 2x2 Seragam Putih Bersih Native */
+  .menu-grid-native {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 7px;
+  }
+
+  .btn-menu-native {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.96) !important;
+    color: #1e293b !important;
+    border: 1px solid rgba(15, 23, 42, 0.08) !important;
+    border-radius: 11px !important;
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08) !important;
+    cursor: pointer;
+  }
+
+  /* Tombol Item di dalam Popup Filter Denah */
+  .btn-denah-item {
+    background: #f8fafc !important;
+    color: #334155 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+  }
+  .btn-denah-item.active {
+    background: #059669 !important;
+    color: #ffffff !important;
+    border-color: #059669 !important;
+  }
+
+.btn-tint-blue {
+  background: rgba(239, 246, 255, 0.96) !important;
+  color: #1d4ed8 !important;
+  border-color: #bfdbfe !important;
+}
+.btn-tint-amber {
+  background: rgba(255, 251, 235, 0.96) !important;
+  color: #b45309 !important;
+  border-color: #fde68a !important;
+}
+.btn-tint-violet {
+  background: rgba(245, 243, 255, 0.96) !important;
+  color: #6d28d9 !important;
+  border-color: #ddd6fe !important;
+}
+.btn-tint-teal {
+  background: rgba(240, 253, 250, 0.96) !important;
+  color: #0f766e !important;
+  border-color: #99f6e4 !important;
+}
+   
+  /* Banner Ticker Info & Pengumuman RT */
+  .ticker-wrap {
+    width: 100%;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+    -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+  }
+
+  .ticker-move {
+    display: inline-block;
+    white-space: nowrap;
+    padding-left: 100%;
+    color: #ffffff;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+    animation: tickerBerjalan 16s linear infinite;
+  }
+
+  .btn-info-rt {
+    background: linear-gradient(135deg, #9a3412, #7c2d12);
+    color: #fef08a;
+    border-color: #fb923c;
+    touch-action: manipulation;
+  }
+
+  @keyframes tickerBerjalan {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-100%, 0, 0); }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ticker-move {
+      animation: none;
+      padding-left: 0;
+      white-space: normal;
+    }
+  }
+
+  /* Tombol Navigasi & Popup Peta */
   .btn-back-floating {
     position: absolute;
     top: 12px;
@@ -106,7 +254,7 @@
     text-align: center;
   }
 
-   .form-input-rt {
+  .form-input-rt {
     width: 100%; 
     padding: 8px; 
     border: 1px solid #ccc; 
@@ -126,183 +274,64 @@
     margin-top: 6px;
     border: 1px solid #ddd;
     cursor: pointer;
-    transition: transform 0.2s ease;
   }
   .img-popup:hover { opacity: 0.9; }
 
-  #top-panel {
-    position: absolute;
-    top: 70px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 1000;
-    width: 86%;
-    max-width: 340px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  #search-box {
-    background: white;
-    padding: 8px 10px;
-    border-radius: 8px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-    display: flex;
-    gap: 6px;
-  }
-  #searchInput {
-    flex: 1;
-    padding: 8px;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    font-size: 13px;
-    outline: none;
-  }
-  #search-box button {
-    padding: 8px 12px;
-    background: #111;
+  /* Floating Chat & Badge */
+  #floating-chat-btn {
+    position: fixed;
+    bottom: 20px;
+    left: 16px;
+    z-index: 999;
+    background: #22c55e;
     color: white;
     border: none;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: bold;
-    font-size: 13px;
-  }
-
-  .filter-container {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    width: 100%;
-  }
-  .filter-row {
-    display: flex;
-    gap: 6px;
-    width: 100%;
-  }
-
-  .btn-filter {
-    flex: 1;
-    justify-content: center;
-    padding: 6px 12px;
-    background: white;
-    color: #333;
-    border: 1px solid #ccc;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: bold;
-    cursor: pointer;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-    white-space: nowrap;
-    transition: all 0.2s ease;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
     display: flex;
     align-items: center;
-    gap: 4px;
-  }
-  .btn-filter.active {
-    background: #00c853;
-    color: white;
-    border-color: #00c853;
+    justify-content: center;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    cursor: pointer;
   }
 
-.ticker-wrap {
-  width: 100%;
-  overflow: hidden;
-  white-space: nowrap;
-  position: relative;
-  mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-  -webkit-mask-image: linear-gradient(to right, transparent, black 5%, black 95%, transparent);
-}
-
-.ticker-move {
-  display: inline-block;
-  white-space: nowrap;
-  padding-left: 100%;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
-  animation: tickerBerjalan 16s linear infinite;
-}
-
-.btn-info-rt {
-  background: linear-gradient(135deg, #9a3412, #7c2d12);
-  color: #fef08a;
-  border-color: #fb923c;
-  touch-action: manipulation;
-}
-
-@keyframes tickerBerjalan {
-  0% {
-    transform: translate3d(0, 0, 0);
+  #badge-chat-main {
+    display: none;
+    position: absolute;
+    top: -3px;
+    right: -3px;
+    background: #ef4444;
+    color: #ffffff;
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 6px;
+    border-radius: 12px;
+    border: 2px solid #ffffff;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+    min-width: 18px;
+    text-align: center;
+    line-height: 1;
   }
-  100% {
-    transform: translate3d(-100%, 0, 0);
-  }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .ticker-move {
-    animation: none;
-    padding-left: 0;
-    white-space: normal;
+  @keyframes softPulse {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(34, 197, 94, 0.4);
+    }
+    70% {
+      transform: scale(1.1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 0 12px rgba(34, 197, 94, 0);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(34, 197, 94, 0);
+    }
   }
-}
-   
-   /* Styling Tombol Floating Chat & Badge */
-#floating-chat-btn {
-  position: fixed;
-  bottom: 20px;
-  left: 16px;
-  z-index: 999;
-  background: #22c55e;
-  color: white;
-  border: none;
-  border-radius: 50%;
-  width: 48px;
-  height: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.3);
-  cursor: pointer;
-}
 
-#badge-chat-main {
-  display: none;
-  position: absolute;
-  top: -3px;
-  right: -3px;
-  background: #ef4444;
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 800;
-  padding: 2px 6px;
-  border-radius: 12px;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-  min-width: 18px;
-  text-align: center;
-  line-height: 1;
-}
-
-@keyframes softPulse {
-  0% {
-    transform: scale(1);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(34, 197, 94, 0.4);
+  .chat-btn-animated {
+    animation: softPulse 2s infinite ease-in-out !important;
   }
-  70% {
-    transform: scale(1.1);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 0 12px rgba(34, 197, 94, 0);
-  }
-  100% {
-    transform: scale(1);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.3), 0 0 0 0 rgba(34, 197, 94, 0);
-  }
-}
-
-.chat-btn-animated {
-  animation: softPulse 2s infinite ease-in-out !important;
-}
    
   .badge-count {
     background: #d32f2f;
@@ -313,6 +342,7 @@
     font-weight: bold;
   }
 
+  /* Modal Dialog */
   .modal-bg {
     display: none;
     position: fixed;
@@ -385,168 +415,72 @@
     font-weight: bold;
   }
 
-  .modal-foto-bg {
-    display: none;
+  /* Tombol QR Ronda & Scanner */
+  .btn-qr-floating {
     position: fixed;
-    top: 0; left: 0; 
-    width: 100%; height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 3000;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1500;
+    width: 64px;
+    height: 64px;
+    background-color: rgba(2, 136, 209, 0.7); 
+    backdrop-filter: blur(2px); 
+    border: 1px solid rgba(1, 87, 155, 0.3);
+    color: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 10px;
+    padding: 4px;
+  }
+
+  .btn-qr-floating .corner {
+    position: absolute;
+    width: 10px; 
+    height: 10px;
+    border-color: white;
+    border-style: solid;
+    border-width: 0;
+    pointer-events: none;
+  }
+  .btn-qr-floating .top-left { top: 5px; left: 5px; border-top-width: 2.5px; border-left-width: 2.5px; border-top-left-radius: 6px; }
+  .btn-qr-floating .top-right { top: 5px; right: 5px; border-top-width: 2.5px; border-right-width: 2.5px; border-top-right-radius: 6px; }
+  .btn-qr-floating .bottom-left { bottom: 5px; left: 5px; border-bottom-width: 2.5px; border-left-width: 2.5px; border-bottom-left-radius: 6px; }
+  .btn-qr-floating .bottom-right { bottom: 5px; right: 5px; border-bottom-width: 2.5px; border-right-width: 2.5px; border-bottom-right-radius: 6px; }
+
+  .qr-scanner-wrapper {
+    position: relative;
+    width: 100%;
+    background: #000;
+  }
+
+  .qr-corner-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
     box-sizing: border-box;
-    touch-action: manipulation;
-  }
-  .modal-foto-img {
-    max-width: 95%;
-    max-height: 85vh;
-    border-radius: 8px;
-    object-fit: contain;
-    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.2);
+    padding: 30px;
   }
 
-.btn-qr-floating {
-  position: fixed;
-  bottom: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1500;
-  width: 64px;
-  height: 64px;
-  background-color: rgba(2, 136, 209, 0.7); 
-  backdrop-filter: blur(2px); 
-  border: 1px solid rgba(1, 87, 155, 0.3);
-  color: white;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  transition: all 0.3s ease;
-}
-
-.btn-qr-floating .corner {
-  position: absolute;
-  width: 10px; 
-  height: 10px;
-  border-color: white;
-  border-style: solid;
-  border-width: 0;
-  pointer-events: none;
-}
-
-.btn-qr-floating .top-left {
-  top: 5px; 
-  left: 5px;
-  border-top-width: 2.5px; 
-  border-left-width: 2.5px;
-  border-top-left-radius: 6px;
-}
-
-.btn-qr-floating .top-right {
-  top: 5px; 
-  right: 5px;
-  border-top-width: 2.5px; 
-  border-right-width: 2.5px;
-  border-top-right-radius: 6px;
-}
-
-.btn-qr-floating .bottom-left {
-  bottom: 5px; 
-  left: 5px;
-  border-bottom-width: 2.5px; 
-  border-left-width: 2.5px;
-  border-bottom-left-radius: 6px;
-}
-
-.btn-qr-floating .bottom-right {
-  bottom: 5px; 
-  right: 5px;
-  border-bottom-width: 2.5px; 
-  border-right-width: 2.5px;
-  border-bottom-right-radius: 6px;
-}
-
-.qr-scanner-wrapper {
-  position: relative;
-  width: 100%;
-  background: #000;
-}
-
-.qr-corner-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  box-sizing: border-box;
-  padding: 30px;
-}
-
-.qr-corner-overlay .corner {
-  position: absolute;
-  width: 35px;
-  height: 35px;
-  border-color: #ffffff;
-  border-style: solid;
-  border-width: 0;
-}
-
-.qr-corner-overlay .top-left {
-  top: 20px; left: 20px;
-  border-top-width: 4px; border-left-width: 4px;
-  border-top-left-radius: 12px;
-}
-
-.qr-corner-overlay .top-right {
-  top: 20px; right: 20px;
-  border-top-width: 4px; border-right-width: 4px;
-  border-top-right-radius: 12px;
-}
-
-.qr-corner-overlay .bottom-left {
-  bottom: 20px; left: 20px;
-  border-bottom-width: 4px; border-left-width: 4px;
-  border-bottom-left-radius: 12px;
-}
-
-.qr-corner-overlay .bottom-right {
-  bottom: 20px; right: 20px;
-  border-bottom-width: 4px; border-right-width: 4px;
-  border-bottom-right-radius: 12px;
-}
-  
-  @keyframes pulse {
-    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-    70% { transform: scale(1.1); box-shadow: 0 0 0 8px rgba(239, 68, 68, 0); }
-    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+  .qr-corner-overlay .corner {
+    position: absolute;
+    width: 35px;
+    height: 35px;
+    border-color: #ffffff;
+    border-style: solid;
+    border-width: 0;
   }
-
-  @keyframes pulseText {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.05); }
-    100% { transform: scale(1); }
-  }
-  
-  @keyframes floatPulse {
-    0% {
-      transform: scale(1);
-      filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0.7));
-    }
-    50% {
-      transform: scale(1.08);
-      filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.8));
-    }
-    100% {
-      transform: scale(1);
-      filter: drop-shadow(0 0 0 rgba(239, 68, 68, 0));
-    }
-  }
+  .qr-corner-overlay .top-left { top: 20px; left: 20px; border-top-width: 4px; border-left-width: 4px; border-top-left-radius: 12px; }
+  .qr-corner-overlay .top-right { top: 20px; right: 20px; border-top-width: 4px; border-right-width: 4px; border-top-right-radius: 12px; }
+  .qr-corner-overlay .bottom-left { bottom: 20px; left: 20px; border-bottom-width: 4px; border-left-width: 4px; border-bottom-left-radius: 12px; }
+  .qr-corner-overlay .bottom-right { bottom: 20px; right: 20px; border-bottom-width: 4px; border-right-width: 4px; border-bottom-right-radius: 12px; }
 
   .video-rotated {
     transform: rotate(90deg) !important;
@@ -557,94 +491,59 @@
     object-fit: contain !important;
     transition: transform 0.3s ease !important;
   }
-   /* Matikan seleksi teks & menu tahan lama pada seluruh tombol, link UI, dan ikon */
-button,
-a.btn-back-floating,
-.btn-filter,
-.btn-qr-floating,
-#floating-chat-btn,
-#btn-senter-ronda,
-#top-panel,
-#top-panel * {
-  -webkit-tap-highlight-color: transparent;
-  -webkit-user-select: none;
-  user-select: none;
-  -webkit-touch-callout: none;
-}
 
-/* Mencegah gambar/ikon di dalam tombol memicu menu "Salin Gambar / URL" */
-button img,
-.btn-qr-floating img,
-button i,
-a i {
-  pointer-events: none;
-  -webkit-user-drag: none;
-}
+  /* Proteksi Seleksi Teks & Interaksi Sentuh Native */
+  button,
+  a.btn-back-floating,
+  #top-panel,
+  #top-panel * {
+    -webkit-tap-highlight-color: transparent;
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
 
-/* Tetap izinkan seleksi teks di kolom pencarian & form input */
-input,
-textarea,
-select {
-  -webkit-user-select: text !important;
-  user-select: text !important;
-  -webkit-touch-callout: default !important;
-}
-/* Transisi sentuhan profesional & ringan untuk SEMUA tombol di index.html */
-button:not(:disabled),
-a[class*="btn"],
-[role="button"],
-.btn-filter,
-.btn-back-floating,
-.btn-rute,
-.btn-lihat-lokasi,
-#floating-chat-btn,
-#btn-senter-ronda,
-.btn-qr-floating,
-.img-popup {
-  transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease;
-  will-change: transform;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
+  button img,
+  button i,
+  a i {
+    pointer-events: none;
+    -webkit-user-drag: none;
+  }
 
-/* Efek sentuh empuk saat ditekan (GPU-accelerated, zero layout shift) */
-button:not(:disabled):active,
-button:not(:disabled).is-pressed,
-a[class*="btn"]:active,
-a[class*="btn"].is-pressed,
-[role="button"]:active,
-[role="button"].is-pressed,
-.btn-filter:active,
-.btn-filter.is-pressed,
-.btn-back-floating:active,
-.btn-back-floating.is-pressed,
-.btn-rute:active,
-.btn-rute.is-pressed,
-.btn-lihat-lokasi:active,
-.btn-lihat-lokasi.is-pressed,
-#floating-chat-btn:active,
-#floating-chat-btn.is-pressed,
-#btn-senter-ronda:active,
-#btn-senter-ronda.is-pressed,
-.img-popup:active {
-  transform: scale(0.96);
-  opacity: 0.92;
-}
+  input,
+  textarea,
+  select {
+    -webkit-user-select: text !important;
+    user-select: text !important;
+    -webkit-touch-callout: default !important;
+  }
 
-/* Khusus tombol QR bawah agar posisi tengah translateX(-50%) tetap terkunci */
-button.btn-qr-floating:active,
-button.btn-qr-floating.is-pressed,
-.btn-qr-floating:active,
-.btn-qr-floating.is-pressed {
-  transform: translateX(-50%) scale(0.96) !important;
-  opacity: 0.92;
-}
+  button:not(:disabled),
+  a[class*="btn"],
+  [role="button"],
+  .img-popup {
+    transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease;
+    will-change: transform;
+    touch-action: manipulation;
+  }
 
-/* Kecualikan tombol zoom +/- bawaan Leaflet agar tidak bergeser */
-.leaflet-control-zoom a:active {
-  transform: none !important;
-}
-   
+  button:not(:disabled):active,
+  button:not(:disabled).is-pressed,
+  a[class*="btn"]:active,
+  a[class*="btn"].is-pressed,
+  [role="button"]:active,
+  [role="button"].is-pressed,
+  .img-popup:active {
+    transform: scale(0.96);
+    opacity: 0.92;
+  }
+
+  button.btn-qr-floating:active,
+  button.btn-qr-floating.is-pressed {
+    transform: translateX(-50%) scale(0.96) !important;
+    opacity: 0.92;
+  }
+
 </style>
 </head>
 <body>
@@ -678,91 +577,95 @@ button.btn-qr-floating.is-pressed,
   <!-- Peta Utama -->
   <div id="map"></div>
   
+<!-- Kiri Atas: Pengaturan & Status Sinkronisasi -->
 <div style="position: fixed; top: 12px; left: 12px; z-index: 1000; display: flex; align-items: center; gap: 6px;">
-  
-  <button type="button" data-click="bukaModalSetting" 
-    style="background: #ffffff; color: #333; border: 1px solid #cbd5e1; border-radius: 50%; width: 32px; height: 32px; font-size: 15px; cursor: pointer; box-shadow: 0 2px 5px rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
+  <button type="button" data-click="bukaModalSetting" aria-label="Pengaturan Notifikasi & Suara"
+    style="background: rgba(255, 255, 255, 0.96); color: #1e293b; border: 1px solid rgba(15, 23, 42, 0.08); border-radius: 50%; width: 32px; height: 32px; font-size: 15px; cursor: pointer; box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12); display: flex; align-items: center; justify-content: center; padding: 0; outline: none;" 
     title="Pengaturan Notifikasi & Suara">
     ⚙️
   </button>
   
-  <div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; text-align: center; background-color: rgba(209, 250, 229, 0.9); color: #065f46; backdrop-filter: blur(4px); box-shadow: 0 2px 8px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 6px;">
-    <span style="width: 8px; height: 8px; background: #34a853; border-radius: 50%; display: inline-block;"></span>
+  <div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-align: center; background-color: rgba(209, 250, 229, 0.95); color: #065f46; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(16, 185, 129, 0.25); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08); display: flex; align-items: center; gap: 6px;">
+    <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block;"></span>
     <span id="teks-sinkron">Online</span>
   </div>
-
 </div>
 
-  <div id="top-panel">
-    <div id="search-box">
- <input type="text" id="searchInput" placeholder="Cari nama atau No Rumah...">
-  <button data-click="jalankanPencarianPeta">Cari</button>
-    </div>
-    
-<div class="filter-container">
-<!-- BARIS 1: KARTU LIVE INFO RT (FULL WIDTH) -->
-<button type="button" id="btnInfoRT" class="btn-info-rt"
-   style="width: 100%; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 9px 12px; border-radius: 12px; text-align: left; cursor: pointer; box-shadow: 0 6px 14px rgba(0, 0, 0, 0.32); border-width: 1px; border-style: solid; transition: transform 0.1s ease; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
-  <div style="display: flex; align-items: center; gap: 9px; overflow: hidden; min-width: 0; flex: 1;">
-    <span style="font-size: 17px; flex-shrink: 0;">📢</span>
-    <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1; gap: 2px;">
-      <span style="font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;">
-        INFO & PENGUMUMAN RT
-      </span>
-      <div class="ticker-wrap">
-        <span id="preview-judul-info" class="ticker-move" style="font-size: 12.5px; font-weight: 700;">
-          Memuat info & program kerja RT...
-        </span>
-      </div>
-    </div>
-  </div>
-  <span id="badge-count" class="badge-count" style="display:none; background: #facc15; color: #0f172a; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 12px; flex-shrink: 0; margin-left: 8px;">0</span>
-</button>
-
-  <!-- BARIS 2: KEUANGAN & JIMPITAN -->
-  <div class="filter-row">
-    <button class="btn-filter" style="background: #0288d1; color: white; border-color: #0288d1;" data-click="bukaModalKeuangan">
-      💰 Keuangan
-    </button>
-    <button class="btn-filter" style="background: #111827; color: white; border-color: #111827;" onclick="bukaModalRiwayatJimpitan()">
-      🪙 Rekap Jimpitan
-    </button>
-  </div>
-
-  <!-- BARIS 3: INVENTARIS & WARGA BARU -->
-  <div class="filter-row">
-    <button type="button" data-click="bukaModalInventaris" onclick="if(!window.bukaModalInventaris){document.getElementById('modal-inventaris').style.display='flex';}" class="btn-filter" style="background: #8b5cf6; color: white; border-color: #7c3aed; font-size: 11px; padding: 6px 4px; cursor: pointer;">
-      📦 Pinjam Perkakas
-    </button>
-    <button type="button" data-click="bukaModalWargaBaru" class="btn-filter" style="background: #0000FF; color: white; border-color: #512da8; font-size: 11px; padding: 6px 4px; cursor: pointer;">
-      📝 Lapor Warga Baru
-    </button>
-  </div>
-
-  <!-- BARIS 4: FILTER DENAH -->
-  <div class="filter-row">
-    <div style="flex: 1; position: relative;">
-      <button type="button" id="btn-toggle-denah" data-click="toggleDenahMenu" class="btn-filter" style="background: #10b981; color: white; border-color: #059669; width: 100%; justify-content: center; font-weight: bold;">
-        🗺️ Filter Denah RT 05
+<!-- Panel Utama Atas -->
+<div id="top-panel">
+  <!-- BARIS 1: PENCARIAN + FILTER DENAH MENYATU -->
+  <div style="position: relative; width: 100%;">
+    <div id="search-box" role="search" style="display: flex; align-items: center; gap: 5px; background: rgba(255, 255, 255, 0.97); padding: 5px 6px; border-radius: 14px; border: 1px solid rgba(15, 23, 42, 0.08); box-shadow: 0 4px 14px rgba(15, 23, 42, 0.1);">
+      <input 
+        type="search" 
+        id="searchInput" 
+        placeholder="Cari nama atau No Rumah..." 
+        aria-label="Cari nama warga atau nomor rumah"
+        autocomplete="off"
+        enterkeyhint="search"
+        style="flex: 1; min-width: 0; border: none; background: transparent; padding: 6px 8px; font-size: 13px; color: #0f172a; outline: none;"
+      >
+      <button type="button" data-click="jalankanPencarianPeta" style="background: #0f172a; color: #ffffff; border: none; border-radius: 10px; padding: 7px 12px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap;">
+        Cari
       </button>
+      <button type="button" id="btn-toggle-denah" data-click="toggleDenahMenu" aria-label="Filter Denah RT 05" style="display: inline-flex; align-items: center; gap: 4px; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0; border-radius: 10px; padding: 7px 10px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap;">
+        🗺️ Filter
+      </button>
+    </div>
 
-      <div id="denah-filter-popup" style="display: none; position: fixed; top: 220px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 380px; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(4px); padding: 14px; border-radius: 16px; box-shadow: 0 15px 35px rgba(0,0,0,0.5); border: 1px solid rgba(255, 255, 255, 0.2); z-index: 9999; box-sizing: border-box;">
-        <button class="btn-filter active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua Lokasi</button>
-        <button class="btn-filter" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%; justify-content: center;">🏪 Minimarket</button>
-        <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%; justify-content: center;">🛏️ Kost</button>
-        <button class="btn-filter" data-click="pilihFilterDenah" data-arg="fasum" style="width: 100%; justify-content: center;">🏛️ Fasum</button>
-        <button class="btn-filter" data-click="pilihFilterDenah" data-arg="kuliner" style="width: 100%; justify-content: center;">🍽️ Kuliner</button>
-      </div>
+    <!-- POPUP FILTER DENAH (Menempel rapi tepat di bawah Search Box) -->
+    <div id="denah-filter-popup" style="display: none; position: absolute; top: calc(100% + 6px); left: 0; width: 100%; grid-template-columns: 1fr 1fr; gap: 7px; background: rgba(255, 255, 255, 0.97); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); padding: 10px; border-radius: 14px; box-shadow: 0 12px 28px rgba(15, 23, 42, 0.18); border: 1px solid rgba(15, 23, 42, 0.08); z-index: 9999; box-sizing: border-box;">
+      <button type="button" class="btn-filter btn-denah-item active" data-click="pilihFilterDenah" data-arg="semua" style="grid-column: span 2; width: 100%; justify-content: center;">🌍 Semua Lokasi</button>
+      <button type="button" class="btn-filter btn-denah-item" data-click="pilihFilterDenah" data-arg="minimarket" style="width: 100%; justify-content: center;">🏪 Minimarket</button>
+      <button type="button" class="btn-filter btn-denah-item" data-click="pilihFilterDenah" data-arg="kost" style="width: 100%; justify-content: center;">🛏️ Kost</button>
+      <button type="button" class="btn-filter btn-denah-item" data-click="pilihFilterDenah" data-arg="fasum" style="width: 100%; justify-content: center;">🏛️ Fasum</button>
+      <button type="button" class="btn-filter btn-denah-item" data-click="pilihFilterDenah" data-arg="kuliner" style="width: 100%; justify-content: center;">🍽️ Kuliner</button>
     </div>
   </div>
+    
+  <div class="filter-container" style="display: flex; flex-direction: column; gap: 7px;">
+    <!-- BARIS 2: KARTU LIVE INFO RT (FULL WIDTH) -->
+    <button type="button" id="btnInfoRT" class="btn-info-rt"
+       style="width: 100%; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 8px 12px; border-radius: 12px; text-align: left; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22); border-width: 1px; border-style: solid; transition: transform 0.1s ease; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
+      <div style="display: flex; align-items: center; gap: 9px; overflow: hidden; min-width: 0; flex: 1;">
+        <span style="font-size: 16px; flex-shrink: 0;">📢</span>
+        <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1; gap: 1px;">
+          <span style="font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;">
+            INFO & PENGUMUMAN RT
+          </span>
+          <div class="ticker-wrap">
+            <span id="preview-judul-info" class="ticker-move" style="font-size: 12px; font-weight: 700;">
+              Memuat info & program kerja RT...
+            </span>
+          </div>
+        </div>
+      </div>
+      <span id="badge-count" class="badge-count" style="display:none; background: #facc15; color: #0f172a; font-weight: 800; font-size: 11px; padding: 3px 8px; border-radius: 12px; flex-shrink: 0; margin-left: 8px;">0</span>
+    </button>
+
+    <!-- BARIS 3: GRID 2x2 MENU UTAMA WARGA (SERAGAM & NATIVE) -->
+<div class="menu-grid-native">
+  <button type="button" class="btn-filter btn-menu-native btn-tint-blue" data-click="bukaModalKeuangan">
+    💰 Keuangan
+  </button>
+  <button type="button" class="btn-filter btn-menu-native btn-tint-violet" data-click="bukaModalInventaris">
+    📦 Pinjam Perkakas
+  </button>
+  <button type="button" class="btn-filter btn-menu-native btn-tint-amber" onclick="bukaModalRiwayatJimpitan()">
+    🪙 Rekap Jimpitan
+  </button>
+  <button type="button" class="btn-filter btn-menu-native btn-tint-teal" data-click="bukaModalWargaBaru">
+    📝 Lapor Warga Baru
+  </button>
 </div>
   </div>
+</div>
 
 <div id="modal-keuangan" class="modal-bg" data-click="tutupModalKeuanganLuar">
     <div class="modal-content" style="max-width: 650px; max-height: 85vh; overflow-y: auto; box-sizing: border-box;">
       <div class="modal-header">
         <h3>📜 Rekening Koran Divisi</h3>
-        <button class="close-btn" data-click="tutupModalKeuangan">&times;</button>
+        <button type="button" class="close-btn" data-click="tutupModalKeuangan" aria-label="Tutup">&times;</button>
       </div>
       
      <div style="margin-bottom: 12px;">
@@ -832,7 +735,7 @@ button.btn-qr-floating.is-pressed,
     <!-- HEADER MODAL -->
     <div class="modal-header" style="padding: 12px 16px; margin: 0; background: #fff; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
       <h3 style="margin: 0; font-size: 16px;">📦 Inventaris Perkakas</h3>
-      <button class="close-btn" data-click="tutupModalInventaris">&times;</button>
+      <button type="button" class="close-btn" data-click="tutupModalInventaris" aria-label="Tutup">&times;</button>
     </div>
     
 <!-- 🌟 AREA STICKY DI ATAS: Tombol WhatsApp & Aturan Pinjam -->
@@ -871,7 +774,7 @@ button.btn-qr-floating.is-pressed,
     <div class="modal-content" style="max-width: 800px; width: 95%;">
       <div class="modal-header">
         <h3>🪙 Rekap Hasil Jimpitan Ronda</h3>
-        <button class="close-btn" data-click="tutupModalRiwayatJimpitan">&times;</button>
+        <button type="button" class="close-btn" data-click="tutupModalRiwayatJimpitan" aria-label="Tutup">&times;</button>
       </div>
       
      <!-- 🌟 PERBAIKAN: Gunakan flex-direction: column atau flex-wrap agar aman di HP -->
@@ -907,7 +810,7 @@ button.btn-qr-floating.is-pressed,
   <div style="background:#fff; width:90%; max-width:400px; border-radius:8px; padding:16px; max-height:80vh; overflow-y:auto; box-shadow:0 4px 6px rgba(0,0,0,0.1);">
     <div style="display:flex; justify-content:space-between; align-items:center; border-bottom:2px solid #f59e0b; padding-bottom:8px; margin-bottom:12px;">
       <h3 style="margin:0; font-size:14px; color:#b45309; font-weight:bold;">📋 Catatan Khusus Malam Minggu</h3>
-      <button data-click="tutupModalCatatanRonda" style="background:none; border:none; font-size:16px; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
+      <button type="button" data-click="tutupModalCatatanRonda" aria-label="Tutup" style="background:none; border:none; font-size:16px; cursor:pointer; color:#64748b; font-weight:bold;">✕</button>
     </div>
     <!-- Tempat daftar data catatan ronda dirender -->
     <div id="grid-catatan-ronda">
@@ -920,7 +823,7 @@ button.btn-qr-floating.is-pressed,
   <div class="modal-content" style="max-width: 320px; text-align: center;">
     <div class="modal-header">
       <h3>📷 Scan QR Rumah Warga</h3>
-      <button class="close-btn" data-click="stopScanQR">&times;</button>
+      <button type="button" class="close-btn" data-click="stopScanQR" aria-label="Tutup">&times;</button>
     </div>
     
     <div class="qr-scanner-wrapper" style="position: relative; width: 100%; border-radius: 8px; overflow: hidden;">
@@ -971,7 +874,7 @@ button.btn-qr-floating.is-pressed,
     <div class="modal-content">
       <div class="modal-header">
         <h3>🪙 Catat Jimpitan Ronda</h3>
-       <button class="close-btn" data-click="tutupModalJimpitan">&times;</button>
+       <button type="button" class="close-btn" data-click="tutupModalJimpitan" aria-label="Tutup">&times;</button>
       </div>
       
       <form id="formJimpitan">
@@ -1001,7 +904,7 @@ button.btn-qr-floating.is-pressed,
     <div class="modal-content" style="max-width: 400px; width: 90%;">
       <div class="modal-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
         <h3 style="margin: 0; font-size: 15px; color: #111;">📝 Pendataan Warga Baru dan Lapor Tamu lebih dari 3x24 jam</h3>
-        <button class="close-btn" data-click="tutupModalWargaBaru" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
+        <button type="button" class="close-btn" data-click="tutupModalWargaBaru" aria-label="Tutup" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #888;">&times;</button>
       </div>
 
       <form id="formWargaBaru">
@@ -1047,7 +950,7 @@ button.btn-qr-floating.is-pressed,
     
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px; flex-shrink: 0;">
       <h3 style="margin: 0; font-size: 16px; color: #333;">ℹ️ Informasi & Catatan Perubahan</h3>
-      <span data-click="tutupModalChangelog" style="cursor: pointer; font-weight: bold; font-size: 20px; color: #888;">&times;</span>
+      <button type="button" data-click="tutupModalChangelog" aria-label="Tutup" style="background: none; border: none; cursor: pointer; font-weight: bold; font-size: 20px; color: #888; padding: 0;">&times;</button>
     </div>
 
     <div id="konten-changelog" style="font-size: 13px; color: #444; line-height: 1.5; overflow-y: auto; flex: 1; padding-right: 4px;"></div>
@@ -1077,7 +980,7 @@ button.btn-qr-floating.is-pressed,
       <span style="font-weight: bold; font-size: 13px; color: #ffffff;">Live Chat RT 05</span>
     </div>
     <div style="display: flex; align-items: center; gap: 8px;">
-      <button data-click="toggleChatModal" style="background: transparent; border: none; color: #f87171; font-size: 16px; cursor: pointer; font-weight: bold;">✕</button>
+      <<button type="button" data-click="toggleChatModal" aria-label="Tutup" style="background: transparent; border: none; color: #f87171; font-size: 16px; cursor: pointer; font-weight: bold;">✕</button>
     </div>
   </div>
 
@@ -1092,7 +995,7 @@ button.btn-qr-floating.is-pressed,
     <!-- Header Modal -->
     <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 12px;">
       <h3 style="margin: 0; font-size: 16px; color: #333;">⚙️ Pengaturan Notifikasi</h3>
-      <button type="button" onclick="window.tutupModalSetting()" style="background: none; border: none; cursor: pointer; font-weight: bold; font-size: 20px; color: #888; padding: 0;">&times;</button>
+      <button type="button" onclick="window.tutupModalSetting()" aria-label="Tutup" style="background: none; border: none; cursor: pointer; font-weight: bold; font-size: 20px; color: #888; padding: 0;">&times;</button>
     </div>
 
 <!-- Konten Modal (Bisa Di-scroll) -->
@@ -1290,100 +1193,59 @@ window.perbaruiAplikasiSekarang = function() {
 window.bukaHalamanAdmin = async function(event) {
   if (event) event.preventDefault();
 
-// 1. Cek sesi akun chat di browser
-  const rawUser = localStorage.getItem('rt05_chat_user');
-  if (!rawUser) {
+  // 1. Cek sesi akun chat di localStorage
+  let chatUser = null;
+  try {
+    chatUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
+  } catch (e) {
+    localStorage.removeItem('rt05_chat_user');
+  }
+
+  if (!chatUser || !chatUser.uid) {
     tampilkanPeringatanElegan(
       "Login Admin Diperlukan",
       "Anda belum login akun chat.<br>Silakan login menggunakan akun <b>Admin</b> terlebih dahulu.",
-      () => {
-        // Cari tombol chat melayang (case-insensitive 'i' agar cocok dengan chat/Chat)
-        const tombolChat =
-          document.getElementById('btn-chat-floating') ||
-          document.getElementById('chat-fab') ||
-          document.getElementById('floating-chat-btn') ||
-          document.querySelector('[onclick*="chat" i]') ||
-          document.querySelector('[id*="chat" i][onclick], [class*="chat" i][onclick]');
-
-        if (typeof bukaModalChat === 'function') {
-          bukaModalChat();
-        } else if (typeof openChatModal === 'function') {
-          openChatModal();
-        } else if (typeof toggleChat === 'function') {
-          toggleChat();
-        } else if (tombolChat) {
-          tombolChat.click();
-        } else {
-          // Fallback jika modal chat berupa elemen tersembunyi langsung
-          const modalChat = document.querySelector('[id*="chat-modal" i], [id*="modal-chat" i], [id*="modalChat" i]');
-          if (modalChat) modalChat.style.display = 'flex';
-        }
-      },
+      () => window.toggleChatModal(),
       "Login Sekarang"
     );
     return;
   }
 
-  let chatUser = null;
-  try {
-    chatUser = JSON.parse(rawUser);
-  } catch (e) {
-    localStorage.removeItem('rt05_chat_user');
-    alert("⚠️ Sesi akun tidak valid. Silakan login ulang di menu Chat.");
-    return;
-  }
+  // 2. Verifikasi role terbaru ke Firebase (jika online), fallback ke cache lokal jika offline
+  let isAdmin = (chatUser.role === 'admin' || chatUser.nama === 'Admin1');
+  let namaUser = chatUser.nama || 'Warga';
 
-  if (!chatUser || !chatUser.uid) {
-    alert("⚠️ Silakan login akun chat terlebih dahulu.");
-    return;
-  }
-
-  // 2. Verifikasi status & role terbaru langsung ke Firebase RTDB
   try {
-    if (window.db && window.firebaseRef && window.firebaseGet) {
+    if (navigator.onLine && window.db && window.firebaseRef && window.firebaseGet) {
       if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
         await window.signInAnonymously(window.auth);
       }
 
       const snap = await window.firebaseGet(window.firebaseRef(window.db, `users/${chatUser.uid}`));
       const userData = snap.val();
-      const namaUser = userData?.username || userData?.nama || chatUser.nama || '';
-      const isAdmin = userData && userData.status === 'aktif' && (userData.role === 'admin' || namaUser === 'Admin1');
-
-if (!isAdmin) {
-        tampilkanPeringatanElegan(
-          "Akses Ditolak",
-          `Akun <b>"${namaUser || 'Warga'}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
-          () => {
-            bukaModalChatDanLogout();
-          },
-          "Ganti Akun",
-          "danger"
-        );
-        return;
-      }
-
-      chatUser.role = 'admin';
-      localStorage.setItem('rt05_chat_user', JSON.stringify(chatUser));
-      window.location.href = 'admin.html';
-      return;
+      namaUser = userData?.username || userData?.nama || namaUser;
+      isAdmin = Boolean(userData && userData.status === 'aktif' && (userData.role === 'admin' || namaUser === 'Admin1'));
     }
   } catch (err) {
     console.warn("Gagal cek role live ke server, memakai cache lokal:", err);
   }
 
-// Fallback saat offline / koneksi lambat
-  if (chatUser.role === 'admin' || chatUser.nama === 'Admin1') {
+  // 3. Arahkan jika Admin, atau tampilkan peringatan Ganti Akun
+  if (isAdmin) {
+    chatUser.role = 'admin';
+    localStorage.setItem('rt05_chat_user', JSON.stringify(chatUser));
     window.location.href = 'admin.html';
   } else {
     tampilkanPeringatanElegan(
       "Akses Ditolak",
-      `Akun <b>"${chatUser.nama || 'Warga'}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
+      `Akun <b>"${escapeHTML(namaUser)}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
       () => {
         localStorage.removeItem('rt05_chat_user');
-        const iframeChat = document.querySelector('iframe[src*="chat"]');
-        if (iframeChat) iframeChat.src = iframeChat.src;
-        bukaModalChatOtomatis();
+        const iframeChat = document.querySelector('#chat-overlay-modal iframe');
+        if (iframeChat && iframeChat.src) {
+          iframeChat.src = iframeChat.getAttribute('data-src') || 'chat.html';
+        }
+        window.toggleChatModal();
       },
       "Ganti Akun",
       "danger"
@@ -1403,7 +1265,7 @@ function initMainPageChatListener() {
   if (typeof window.firebaseRef !== 'function' || !window.db) return;
 
   isMainChatListenerAktif = true;
-  const chatsRef = window.firebaseQuery(window.firebaseRef(window.db, 'chats'), window.firebaseLimitToLast(30));
+  const chatsRef = window.firebaseQuery(window.firebaseRef(window.db, 'chats'), window.firebaseLimitToLast(100));
 
   window.firebaseOnValue(chatsRef, (snapshot) => {
     if (!snapshot.exists()) {
@@ -1578,7 +1440,7 @@ function initPetaDanData() {
     let container = L.DomUtil.get('map');
     if (container && container._leaflet_id) container._leaflet_id = null;
 
-    map = L.map('map').setView([-7.7423, 110.3842], 17);
+    map = L.map('map', { zoomControl: false }).setView([-7.7423, 110.3842], 17);
     
     var tileLayerUtama = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
       maxZoom: 20,
@@ -2322,26 +2184,30 @@ function filterKategori(kat, btnElement) {
   });
 }
 
-let isKeuanganListenerAktif = false;
+let isKeuanganLoaded = false;
+let isKeuanganFetching = false;
 
-window.muatDataKeuangan = function() {
-  if (isKeuanganListenerAktif) {
+window.muatDataKeuangan = async function(paksaRefresh = false) {
+  if (isKeuanganLoaded && !paksaRefresh) {
     if (typeof tampilkanRekeningKoran === 'function') tampilkanRekeningKoran();
     return;
   }
 
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
-    setTimeout(window.muatDataKeuangan, 50);
+  if (isKeuanganFetching) return;
+
+  if (typeof window.firebaseRef !== 'function' || typeof window.firebaseGet !== 'function' || !window.db) {
+    setTimeout(() => window.muatDataKeuangan(paksaRefresh), 50);
     return;
   }
 
-  isKeuanganListenerAktif = true;
-  const keuanganRef = window.firebaseRef(window.db, "keuangan");
+  isKeuanganFetching = true;
 
-  window.firebaseOnValue(keuanganRef, (snapshot) => {
+  try {
+    const keuanganRef = window.firebaseRef(window.db, "keuangan");
+    const snapshot = await window.firebaseGet(keuanganRef);
     const dataObj = snapshot.val();
-    dataKeuangan = [];
     
+    dataKeuangan = [];
     var divisiMap = new Map();
 
     if (dataObj) {
@@ -2359,7 +2225,6 @@ window.muatDataKeuangan = function() {
             ? nominalRaw 
             : (parseInt(String(nominalRaw || '0').replace(/[^0-9]/g, '')) || 0);
 
-          // 🌟 Ambil URL foto bukti dari database Firebase (mendukung berbagai variasi penulisan key)
           var fotoUrl = item.foto || item.Foto || '';
 
           var tgl = String(tglRaw);
@@ -2377,38 +2242,42 @@ window.muatDataKeuangan = function() {
             }
           }
 
-          // 🌟 Sertakan properti foto ke dalam objek array dataKeuangan
           dataKeuangan.push({ tgl, divisi, ket, tipe, nominal, foto: fotoUrl });
         }
       });
     }
 
     var selectDivisi = document.getElementById('filterDivisi');
-    if (!selectDivisi) return;
+    if (selectDivisi) {
+      var divisiSebelumnya = selectDivisi.value;
+      selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
+      
+      Array.from(divisiMap.values()).sort().forEach(div => {
+        var divFormatRapi = div.replace(/\w\S*/g, function(teks) {
+          return teks.charAt(0).toUpperCase() + teks.substr(1).toLowerCase();
+        });
 
-    var divisiSebelumnya = selectDivisi.value;
-    selectDivisi.innerHTML = '<option value="semua">-- Semua Divisi (Total Kas RT) --</option>';
-    
-    Array.from(divisiMap.values()).sort().forEach(div => {
-      var divFormatRapi = div.replace(/\w\S*/g, function(teks) {
-        return teks.charAt(0).toUpperCase() + teks.substr(1).toLowerCase();
+        selectDivisi.innerHTML += `<option value="${escapeHTML(div)}">${escapeHTML(divFormatRapi)}</option>`;
       });
-
-      selectDivisi.innerHTML += `<option value="${escapeHTML(div)}">${escapeHTML(divFormatRapi)}</option>`;
-    });
-    
-    if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
-      selectDivisi.value = divisiSebelumnya;
-    } else {
-      selectDivisi.value = 'semua';
+      
+      if (divisiSebelumnya && selectDivisi.querySelector(`option[value="${divisiSebelumnya}"]`)) {
+        selectDivisi.value = divisiSebelumnya;
+      } else {
+        selectDivisi.value = 'semua';
+      }
     }
+
+    isKeuanganLoaded = true;
 
     if (typeof tampilkanRekeningKoran === 'function') {
       tampilkanRekeningKoran();
     }
-  }, (error) => {
+  } catch (error) {
+    isKeuanganLoaded = false;
     console.error("Gagal memuat data keuangan dari Firebase:", error);
-  });
+  } finally {
+    isKeuanganFetching = false;
+  }
 };
 
 
@@ -3080,6 +2949,11 @@ window.addEventListener('offline', () => {
 window.tutupModalJimpitan = function() {
   const modal = document.getElementById('modal-jimpitan');
   if (modal) modal.style.display = 'none';
+
+  const elNama = document.getElementById('jimpitanNamaWarga');
+  const elNominal = document.getElementById('jimpitanNominal');
+  if (elNama) elNama.value = '';
+  if (elNominal) elNominal.value = '';
 };
 
 window.bukaModalCatatanRonda = function() {
@@ -3231,19 +3105,20 @@ const teksAman = (str) => typeof window.escapeHTML === 'function'
   return teks;
 }
 
+let unsubscribeJimpitan = null;
+
 window.muatDataJimpitan = function() {
-  if (isJimpitanLoaded) {
+  // Jika listener sudah aktif (modal sedang terbuka), cukup render ulang tampilan
+  if (unsubscribeJimpitan) {
     setupToggleJimpitan();
     renderDropdownTanggal();
     return;
   }
 
-  if (typeof window.firebaseRef !== 'function' || !window.db) {
+  if (typeof window.firebaseRef !== 'function' || typeof window.firebaseOnValue !== 'function' || !window.db) {
     setTimeout(window.muatDataJimpitan, 50);
     return;
   }
-
-  isJimpitanLoaded = true;
 
   var gridContainer = document.getElementById('grid-jimpitan');
   if (gridContainer) {
@@ -3251,8 +3126,9 @@ window.muatDataJimpitan = function() {
   }
 
   const jimpitanRef = window.firebaseRef(window.db, 'jimpitan');
-  
-  window.firebaseOnValue(jimpitanRef, (snapshot) => {
+
+  // Pasang listener live & simpan fungsi pemutusnya
+  unsubscribeJimpitan = window.firebaseOnValue(jimpitanRef, (snapshot) => {
     const dataObj = snapshot.val();
     
     cacheDataHarian = {};
@@ -3260,11 +3136,12 @@ window.muatDataJimpitan = function() {
     arrayTanggal = [];
     arrayBulan = [];
 
+    const strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
     if (dataObj) {
       Object.keys(dataObj).forEach(key => {
         var kolom = dataObj[key];
         if (kolom) {
-          // 🌟 Menggabungkan semua variasi nama properti (Format Lama & Baru)
           var tglStr = String(kolom.tanggal_waktu || kolom.tanggal || kolom.tgl || ''); 
           var malamManual = String(kolom.kelompok_malam || kolom.kelompokMalam || '');
           var warga = bersihkanNamaRumahJimpitan(kolom.nama_warga || kolom.warga || kolom.nama || '-');
@@ -3281,7 +3158,6 @@ window.muatDataJimpitan = function() {
 
             var dateObj = new Date(thn, bln, tgl, jam, menit);
             var shiftDate = new Date(dateObj.getTime() - (6 * 60 * 60 * 1000));
-            var strBulan = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
             
             var namaMalam = malamManual && malamManual !== '-' ? malamManual : (typeof getInfoMalamRonda === 'function' ? getInfoMalamRonda(shiftDate).kelompokMalam : 'Malam Ronda');
 
@@ -3330,19 +3206,13 @@ window.muatDataJimpitan = function() {
       cacheDataHarian[key].items.reverse();
     });
 
-    arrayTanggal.sort((a, b) => {
-      var dateA = cacheDataHarian[a].isoDate;
-      var dateB = cacheDataHarian[b].isoDate;
-      return dateB.localeCompare(dateA);
-    });
+    arrayTanggal.sort((a, b) => cacheDataHarian[b].isoDate.localeCompare(cacheDataHarian[a].isoDate));
     arrayBulan.sort((a, b) => b.localeCompare(a));
-    
-    isJimpitanLoaded = true; 
     
     setupToggleJimpitan();
     renderDropdownTanggal();
   }, (error) => {
-    isJimpitanLoaded = false;
+    unsubscribeJimpitan = null;
     console.error("Gagal memuat rekap jimpitan dari Firebase:", error);
     if (gridContainer) {
       gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data dari Firebase.</div>';
@@ -3517,11 +3387,10 @@ window.bukaModalRiwayatJimpitan = function() {
 window.tutupModalRiwayatJimpitan = function() {
   const modal = document.getElementById('modal-riwayat-jimpitan');
   if (modal) modal.style.display = 'none';
-};
 
-window.tutupModalRiwayatJimpitanLuar = function(e) {
-  if (e && e.target && e.target.id === 'modal-riwayat-jimpitan') {
-    window.tutupModalRiwayatJimpitan();
+  if (typeof unsubscribeJimpitan === 'function') {
+    unsubscribeJimpitan();
+    unsubscribeJimpitan = null;
   }
 };
   
