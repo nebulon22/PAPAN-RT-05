@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.8.7'; // 🌟 Naikkan versi agar HP warga memperbarui SW
+const CACHE_NAME = 'rt-kayen-v1.8.8'; // 🌟 Naikkan versi agar HP warga memperbarui SW
 
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
@@ -137,15 +137,15 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 3. BYPASS TOTAL UNTUK CLOUDFLARE WORKERS & SUBDOMAIN API (Custom Domain & workers.dev)
-  if (
+if (
     url.hostname.includes('workers.dev') ||
     url.hostname === 'peta.papan05.my.id' ||
     url.hostname === 'uploader.papan05.my.id' ||
-    url.hostname === 'admin-worker.papan05.my.id'
+    url.hostname === 'admin-worker.papan05.my.id' ||
+    url.hostname === 'fcm-worker.papan05.my.id'
   ) {
-    return; // Biarkan browser menanganinya langsung tanpa campur tangan SW
+    return;
   }
-
   // 4. Longgarkan tangkapan untuk API, Firebase, Cloudflare R2 Storage, dan Media Eksternal
   if (
     event.request.mode === 'navigate' ||
