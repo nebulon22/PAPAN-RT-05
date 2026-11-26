@@ -1351,14 +1351,15 @@ function markRoomAsRead(targetUID) {
 }
 
  // 3. Pindah Tab (Public <-> Private) dengan Perbedaan Warna Latar
-  window.switchChatRoom = (type, targetUID = null) => {
+window.switchChatRoom = (type, targetUID = null) => {
     activeChatType = type;
     window.activeChatType = activeChatType;
 
     activePrivateUID = targetUID;
     window.activePrivateUID = activePrivateUID;
 
-    isChatVisible = true; // <-- AGAR KLIK TAB LANGSUNG DIANGGAP AKTIF/TERBUKA
+    const modalTerbuka = typeof window.isChatModalOpen === 'function' ? window.isChatModalOpen() : false;
+    isChatVisible = modalTerbuka;
 
     // 🎨 EFEK PERBEDAAN WARNA BACKGROUND:
     const chatContainer = document.getElementById('chat-container');
@@ -1372,13 +1373,15 @@ function markRoomAsRead(targetUID) {
       }
     }
 
-    if (type === 'public') {
-      updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
-      markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
-    } else if (type === 'private' && targetUID) {
-      unreadCounts[targetUID] = 0; 
-      markRoomAsRead(targetUID);
-      sendTotalUnreadToParent();
+    if (modalTerbuka) {
+      if (type === 'public') {
+        updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
+        markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
+      } else if (type === 'private' && targetUID) {
+        unreadCounts[targetUID] = 0; 
+        markRoomAsRead(targetUID);
+        sendTotalUnreadToParent();
+      }
     }
 
     if (currentChatUnsubscribe) {
@@ -1392,7 +1395,6 @@ function markRoomAsRead(targetUID) {
       btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
       btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
       
-      // 👇 TAMBAHKAN BARIS INI UNTUK MENGATUR BORDER & EFEK GLOW DINAMIS 👇
       btnPublic.style.border = (type === 'public') ? '1px solid #38bdf8' : '1px solid #334155';
       btnPublic.style.boxShadow = (type === 'public') ? '0 0 6px rgba(56, 189, 248, 0.4)' : 'none';
     }
@@ -1401,12 +1403,11 @@ function markRoomAsRead(targetUID) {
 
     const chatStream = document.getElementById('chat-stream');
     if (chatStream) {
-      // Indikator memuat percakapan
       chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
     }
 
     if (type === 'public') {
-     loadChatStream();
+      loadChatStream();
     } else if (type === 'private' && targetUID) {
       loadPrivateChatStream(targetUID);
     }
@@ -1779,8 +1780,8 @@ function listenPublicGroupUnread() {
       }
     });
 
-    // Jika user sedang aktif melihat chat publik di layar, langsung bersihkan unread
-    if (activeChatType === 'public' && isChatVisible) {
+// Jika user sedang aktif melihat chat publik di layar, langsung bersihkan unread
+    if (activeChatType === 'public' && window.isUserViewingChat()) {
       unreadPublicCount = 0;
       markPublicGroupAsRead();
     }
