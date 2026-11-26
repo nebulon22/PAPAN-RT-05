@@ -1131,6 +1131,9 @@
 <script>
 (function() {
   "use strict";
+(function() {
+  "use strict";
+
   // ==========================================
   // 1. SCRIPT SERVICE WORKER & MANAJEMEN PWA
   // ==========================================
@@ -1196,75 +1199,88 @@
       serviceWorkerMenunggu.postMessage({ action: 'skipWaiting' });
     }
 
-    // Pengaman: jika dalam 2 detik belum otomatis reload, muat ulang paksa
-    setTimeout(() => {
-      window.location.reload();
+    // Pengaman: jika dalam 2 detik belum otomatis reload, bersihkan cache lama lalu muat ulang paksa
+    setTimeout(async () => {
+      try {
+        if ('caches' in window) {
+          const names = await caches.keys();
+          await Promise.all(names.map(name => caches.delete(name)));
+        }
+      } finally {
+        window.location.reload();
+      }
     }, 2000);
   };
-})();
-  
-window.bukaHalamanAdmin = async function(event) {
-  if (event) event.preventDefault();
 
-  // 1. Cek sesi akun chat di localStorage
-  let chatUser = null;
-  try {
-    chatUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
-  } catch (e) {
-    localStorage.removeItem('rt05_chat_user');
-  }
+  // ==========================================
+  // 2. VERIFIKASI AKSES HALAMAN ADMIN
+  // ==========================================
+  window.bukaHalamanAdmin = async function(event) {
+    if (event) event.preventDefault();
 
-  if (!chatUser || !chatUser.uid) {
-    tampilkanPeringatanElegan(
-      "Login Admin Diperlukan",
-      "Anda belum login akun chat.<br>Silakan login menggunakan akun <b>Admin</b> terlebih dahulu.",
-      () => window.toggleChatModal(),
-      "Login Sekarang"
-    );
-    return;
-  }
-
-  // 2. Verifikasi role terbaru ke Firebase (jika online), fallback ke cache lokal jika offline
-  let isAdmin = (chatUser.role === 'admin' || chatUser.nama === 'Admin1');
-  let namaUser = chatUser.nama || 'Warga';
-
-  try {
-    if (navigator.onLine && window.db && window.firebaseRef && window.firebaseGet) {
-      if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
-        await window.signInAnonymously(window.auth);
-      }
-
-      const snap = await window.firebaseGet(window.firebaseRef(window.db, `users/${chatUser.uid}`));
-      const userData = snap.val();
-      namaUser = userData?.username || userData?.nama || namaUser;
-      isAdmin = Boolean(userData && userData.status === 'aktif' && (userData.role === 'admin' || namaUser === 'Admin1'));
+    // 1. Cek sesi akun chat di localStorage
+    let chatUser = null;
+    try {
+      chatUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
+    } catch (e) {
+      localStorage.removeItem('rt05_chat_user');
     }
-  } catch (err) {
-    console.warn("Gagal cek role live ke server, memakai cache lokal:", err);
-  }
 
-  // 3. Arahkan jika Admin, atau tampilkan peringatan Ganti Akun
-  if (isAdmin) {
-    chatUser.role = 'admin';
-    localStorage.setItem('rt05_chat_user', JSON.stringify(chatUser));
-    window.location.href = 'admin.html';
-  } else {
-    tampilkanPeringatanElegan(
-      "Akses Ditolak",
-      `Akun <b>"${escapeHTML(namaUser)}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
-      () => {
-        localStorage.removeItem('rt05_chat_user');
-        const iframeChat = document.querySelector('#chat-overlay-modal iframe');
-        if (iframeChat && iframeChat.src) {
-          iframeChat.src = iframeChat.getAttribute('data-src') || 'chat.html';
+    if (!chatUser || !chatUser.uid) {
+      tampilkanPeringatanElegan(
+        "Login Admin Diperlukan",
+        "Anda belum login akun chat.<br>Silakan login menggunakan akun <b>Admin</b> terlebih dahulu.",
+        () => window.toggleChatModal(),
+        "Login Sekarang"
+      );
+      return;
+    }
+
+    // 2. Verifikasi role terbaru ke Firebase (jika online), fallback ke cache lokal jika offline
+    let isAdmin = (chatUser.role === 'admin' || chatUser.nama === 'Admin1');
+    let namaUser = userDataNamaFallback(chatUser);
+
+    try {
+      if (navigator.onLine && window.db && window.firebaseRef && window.firebaseGet) {
+        if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
+          await window.signInAnonymously(window.auth);
         }
-        window.toggleChatModal();
-      },
-      "Ganti Akun",
-      "danger"
-    );
+
+        const snap = await window.firebaseGet(window.firebaseRef(window.db, `users/${chatUser.uid}`));
+        const userData = snap.val();
+        namaUser = userData?.username || userData?.nama || namaUser;
+        isAdmin = Boolean(userData && userData.status === 'aktif' && (userData.role === 'admin' || namaUser === 'Admin1'));
+      }
+    } catch (err) {
+      console.warn("Gagal cek role live ke server, memakai cache lokal:", err);
+    }
+
+    // 3. Arahkan jika Admin, atau tampilkan peringatan Ganti Akun
+    if (isAdmin) {
+      chatUser.role = 'admin';
+      localStorage.setItem('rt05_chat_user', JSON.stringify(chatUser));
+      window.location.href = 'admin.html';
+    } else {
+      tampilkanPeringatanElegan(
+        "Akses Ditolak",
+        `Akun <b>"${escapeHTML(namaUser)}"</b> terdaftar sebagai warga biasa (bukan Admin).`,
+        () => {
+          localStorage.removeItem('rt05_chat_user');
+          const iframeChat = document.querySelector('#chat-overlay-modal iframe');
+          if (iframeChat && iframeChat.src) {
+            iframeChat.src = iframeChat.getAttribute('data-src') || 'chat.html';
+          }
+          window.toggleChatModal();
+        },
+        "Ganti Akun",
+        "danger"
+      );
+    }
+  };
+
+  function userDataNamaFallback(chatUser) {
+    return chatUser.nama || 'Warga';
   }
-};
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
