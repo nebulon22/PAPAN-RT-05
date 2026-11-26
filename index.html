@@ -3187,32 +3187,30 @@ const teksAman = (str) => typeof window.escapeHTML === 'function'
   return teks;
 }
 
-let isJimpitanFetching = false;
+let unsubscribeJimpitan = null;
 
-window.muatDataJimpitan = async function(paksaRefresh = false) {
-  if (isJimpitanLoaded && !paksaRefresh) {
+window.muatDataJimpitan = function() {
+  // Jika listener sudah aktif (modal sedang terbuka), cukup render ulang tampilan
+  if (unsubscribeJimpitan) {
     setupToggleJimpitan();
     renderDropdownTanggal();
     return;
   }
 
-  if (isJimpitanFetching) return;
-
-  if (typeof window.firebaseRef !== 'function' || typeof window.firebaseGet !== 'function' || !window.db) {
-    setTimeout(() => window.muatDataJimpitan(paksaRefresh), 50);
+  if (typeof window.firebaseRef !== 'function' || typeof window.firebaseOnValue !== 'function' || !window.db) {
+    setTimeout(window.muatDataJimpitan, 50);
     return;
   }
-
-  isJimpitanFetching = true;
 
   var gridContainer = document.getElementById('grid-jimpitan');
   if (gridContainer) {
     gridContainer.innerHTML = '<div style="text-align:center; font-size:11px; padding:16px; color:#64748b;"><i class="fa-solid fa-circle-notch fa-spin"></i> Mengambil data jimpitan terbaru...</div>';
   }
 
-  try {
-    const jimpitanRef = window.firebaseRef(window.db, 'jimpitan');
-    const snapshot = await window.firebaseGet(jimpitanRef);
+  const jimpitanRef = window.firebaseRef(window.db, 'jimpitan');
+
+  // Pasang listener live & simpan fungsi pemutusnya
+  unsubscribeJimpitan = window.firebaseOnValue(jimpitanRef, (snapshot) => {
     const dataObj = snapshot.val();
     
     cacheDataHarian = {};
@@ -3293,18 +3291,15 @@ window.muatDataJimpitan = async function(paksaRefresh = false) {
     arrayTanggal.sort((a, b) => cacheDataHarian[b].isoDate.localeCompare(cacheDataHarian[a].isoDate));
     arrayBulan.sort((a, b) => b.localeCompare(a));
     
-    isJimpitanLoaded = true; 
     setupToggleJimpitan();
     renderDropdownTanggal();
-  } catch (error) {
-    isJimpitanLoaded = false;
+  }, (error) => {
+    unsubscribeJimpitan = null;
     console.error("Gagal memuat rekap jimpitan dari Firebase:", error);
     if (gridContainer) {
       gridContainer.innerHTML = '<div style="color:#ef4444; font-size:11px; text-align:center; padding:10px;">Gagal memuat data dari Firebase.</div>';
     }
-  } finally {
-    isJimpitanFetching = false;
-  }
+  });
 };
       
 function setupToggleJimpitan() {
@@ -3474,11 +3469,10 @@ window.bukaModalRiwayatJimpitan = function() {
 window.tutupModalRiwayatJimpitan = function() {
   const modal = document.getElementById('modal-riwayat-jimpitan');
   if (modal) modal.style.display = 'none';
-};
 
-window.tutupModalRiwayatJimpitanLuar = function(e) {
-  if (e && e.target && e.target.id === 'modal-riwayat-jimpitan') {
-    window.tutupModalRiwayatJimpitan();
+  if (typeof unsubscribeJimpitan === 'function') {
+    unsubscribeJimpitan();
+    unsubscribeJimpitan = null;
   }
 };
   
