@@ -387,7 +387,7 @@ function muatDataInventarisModal() {
       const displayStyle = cocokFilter ? 'flex' : 'none';
 
       const statusBadge = sisaStok > 0
-        ? `<span style="background: #dcfce7; color: #15803d; font-size: 11.5px; padding: 4px 10px; border-radius: 999px; font-weight: 800; white-space: nowrap;">Sisa: ${sisaStok}</span>`
+        ? `<span style="background: #dcfce7; color: #15803d; font-size: 11.5px; padding: 4px 10px; border-radius: 999px; font-weight: 800; white-space: nowrap;">Tersedia: ${sisaStok}</span>`
         : `<span style="background: #fee2e2; color: #b91c1c; font-size: 11px; padding: 4px 10px; border-radius: 999px; font-weight: 800; white-space: nowrap;">Habis</span>`;
 
       const htmlFoto = fotoItem
@@ -401,7 +401,7 @@ function muatDataInventarisModal() {
       <div style="min-width: 0; flex: 1;">
         <div style="font-size: 13px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${namaItem}</div>
         <div style="font-size: 11px; color: #64748b; line-height: 1.2; margin-top: 2px;">
-          Total: <strong style="color: #334155;">${totalAwal}</strong> &bull; Dipinjam: <strong style="color: #dc2626;">${terpakai}</strong>
+          Stok: <strong style="color: #334155;">${totalAwal}</strong> &bull; Dipinjam: <strong style="color: #dc2626;">${terpakai}</strong>
         </div>
       </div>
     </div>
