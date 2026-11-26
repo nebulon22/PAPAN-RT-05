@@ -502,7 +502,7 @@ window.bukaFotoBesar = function(urlFoto, eventOrKeterangan = null) {
     modalFoto.style.cssText = 'display:none; position:fixed; inset:0; width:100vw; height:100vh; background:rgba(2,6,23,0.88); backdrop-filter:blur(4px); z-index:999999; justify-content:center; align-items:center; padding:20px; box-sizing:border-box;';
     modalFoto.innerHTML = `
       <div style="position:relative; max-width:92vw; max-height:88vh; display:flex; flex-direction:column; align-items:center;">
-        <button type="button" id="btn-tutup-foto-besar" style="position:absolute; top:-14px; right:-10px; background:#ef4444; color:#fff; border:2px solid #fff; border-radius:50%; width:32px; height:32px; font-size:15px; cursor:pointer; font-weight:bold; z-index:1000000; box-shadow:0 4px 10px rgba(0,0,0,0.4);">✕</button>
+        <button type="button" id="btn-tutup-foto-besar" aria-label="Tutup" style="position:absolute; top:-14px; right:-10px; background:#ef4444; color:#fff; border:2px solid #fff; border-radius:50%; width:32px; height:32px; font-size:15px; cursor:pointer; font-weight:bold; z-index:1000000; box-shadow:0 4px 10px rgba(0,0,0,0.4);">✕</button>
         <img id="img-tampil-besar" src="" alt="Pratinjau Foto" style="max-width:100%; max-height:78vh; border-radius:8px; border:2px solid #334155; object-fit:contain; background:#0f172a; display:block;" />
         <div id="caption-tampil-besar" style="display:none; color:#f8fafc; font-size:12px; margin-top:10px; text-align:center; font-weight:600; max-width:85vw; word-break:break-word;"></div>
       </div>
