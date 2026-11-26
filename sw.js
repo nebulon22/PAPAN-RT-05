@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.8.3'; // 🌟 Naikkan versi agar HP warga memperbarui SW
+const CACHE_NAME = 'rt-kayen-v1.8.5'; // 🌟 Naikkan versi agar HP warga memperbarui SW
 
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
@@ -73,8 +73,8 @@ self.addEventListener('install', (e) => {
       ];
       cache.addAll(audioFiles).catch(() => {});
 
-      // Hanya tunggu file aplikasi inti agar update langsung siap
-      return cache.addAll([
+      // Daftar file inti aplikasi
+      const coreFiles = [
         './',
         './index.html',
         './admin.html',
@@ -94,7 +94,12 @@ self.addEventListener('install', (e) => {
         './kentongan-slit-drum.png',
         './kentongan-btn.webp',
         './html5-qrcode.min.js'
-      ]);
+      ];
+
+      // Paksa browser melewati disk cache agar selalu menarik file terbaru dari server
+      return Promise.all(
+        coreFiles.map((url) => cache.add(new Request(url, { cache: 'reload' })))
+      );
     })
   );
 });
