@@ -48,18 +48,17 @@ function unlockPwaAudio() {
       audio.pause();
       audio.currentTime = 0;
       audio.muted = prevMuted;
-      isAudioUnlocked = true;
+
+      if (!isAudioUnlocked) {
+        isAudioUnlocked = true;
+        ['touchstart', 'click', 'keydown'].forEach(evt => {
+          window.removeEventListener(evt, unlockPwaAudio);
+        });
+      }
     }).catch(() => {
       audio.muted = prevMuted;
     });
   });
-
-  // Lepas event listener jika kunci audio sudah terbuka
-  if (isAudioUnlocked) {
-    ['touchstart', 'click', 'keydown'].forEach(evt => {
-      window.removeEventListener(evt, unlockPwaAudio);
-    });
-  }
 }
 
 ['touchstart', 'click', 'keydown'].forEach(evt => {
