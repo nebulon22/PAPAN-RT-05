@@ -1412,9 +1412,27 @@ window.addEventListener('firebaseSiapIndex', () => {
     }
   });
 
+let jumlahUnreadSebelumnya = null;
+
   function updatePublicTabBadge(count) {
     const badge = document.getElementById('badge-chat-main');
     const chatBtn = document.getElementById('floating-chat-btn');
+    const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
+
+    // Cek apakah iframe chat.html sudah pernah dibuka/dimuat
+    const isIframeLoaded = Boolean(
+      iframe && iframe.src && iframe.src !== 'about:blank' && iframe.src !== window.location.href
+    );
+    const isModalOpen = Boolean(modal && modal.style.display === 'flex');
+
+    // Picu suara & getar dari setting.js HANYA jika ada pesan baru & chat.html belum aktif
+    if (jumlahUnreadSebelumnya !== null && count > jumlahUnreadSebelumnya && !isIframeLoaded && !isModalOpen) {
+      if (typeof window.picuNotifikasiMedia === 'function') {
+        window.picuNotifikasiMedia('grup');
+      }
+    }
+    jumlahUnreadSebelumnya = count;
 
     if (!badge || !chatBtn) return;
 
