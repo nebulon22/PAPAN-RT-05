@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.8.5'; // 🌟 Naikkan versi agar HP warga memperbarui SW
+const CACHE_NAME = 'rt-kayen-v1.8.6'; // 🌟 Naikkan versi agar HP warga memperbarui SW
 
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
