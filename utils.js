@@ -395,19 +395,19 @@ function muatDataInventarisModal() {
         : '';
 
       return `
-        <div style="display: ${displayStyle}; justify-content: space-between; align-items: center; gap: 10px; border: 1px solid #e2e8f0; padding: 9px 12px; border-radius: 10px; background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,0.03);">
-          <div style="display: flex; align-items: center; gap: 10px; min-width: 0; flex: 1;">
-            ${htmlFoto}
-            <div style="min-width: 0; flex: 1;">
-              <div style="font-size: 13.5px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${namaItem}</div>
-              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">
-                Total: <strong style="color: #334155;">${totalAwal}</strong> &bull; Dipinjam: <strong style="color: #dc2626;">${terpakai}</strong>
-              </div>
-            </div>
-          </div>
-          ${statusBadge}
+  <div style="display: ${displayStyle}; justify-content: space-between; align-items: center; gap: 8px; border: 1px solid #e2e8f0; padding: 7px 10px; border-radius: 9px; background: #fff;">
+    <div style="display: flex; align-items: center; gap: 8px; min-width: 0; flex: 1;">
+      ${htmlFoto}
+      <div style="min-width: 0; flex: 1;">
+        <div style="font-size: 13px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${namaItem}</div>
+        <div style="font-size: 11px; color: #64748b; line-height: 1.2; margin-top: 2px;">
+          Total: <strong style="color: #334155;">${totalAwal}</strong> &bull; Dipinjam: <strong style="color: #dc2626;">${terpakai}</strong>
         </div>
-      `;
+      </div>
+    </div>
+    ${statusBadge}
+  </div>
+`;
     }).join('');
   };
 
