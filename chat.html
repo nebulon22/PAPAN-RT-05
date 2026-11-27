@@ -1445,23 +1445,32 @@ window.switchChatRoom = (type, targetUID = null) => {
   };
 
     // 4. Tutup Tab Private
-    window.closePrivateTab = (e, targetUID) => {
-      if (e) e.stopPropagation(); 
+window.closePrivateTab = (e, targetUID) => {
+  if (e) e.stopPropagation();
 
-      // Tandai pesan terakhir sebagai sudah dibaca
-      markRoomAsRead(targetUID);
+  // Jika saat menutup tab ini kebetulan sedang aktif dilihat, tandai sudah dibaca
+  const sedangDilihat = (activeChatType === 'private' && activePrivateUID === targetUID && window.isUserViewingChat());
+  if (sedangDilihat) {
+    unreadCounts[targetUID] = 0;
+    markRoomAsRead(targetUID);
+  }
 
-      // Bersihkan badge & tab
-      unreadCounts[targetUID] = 0;
-      delete openPrivateRooms[targetUID];
-      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+  // Hapus hanya dari daftar tab yang terbuka di bar atas, TANPA menghapus unreadCounts yang belum dibaca
+  delete openPrivateRooms[targetUID];
+  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
-      if (activeChatType === 'private' && activePrivateUID === targetUID) {
-        switchChatRoom('public');
-      } else {
-        renderPrivateTabsUI();
-      }
-    };
+  if (activeChatType === 'private' && activePrivateUID === targetUID) {
+    switchChatRoom('public');
+  } else {
+    renderPrivateTabsUI();
+    if (typeof window.renderWargaSidebar === 'function') {
+      window.renderWargaSidebar();
+    }
+    if (typeof sendTotalUnreadToParent === 'function') {
+      sendTotalUnreadToParent();
+    }
+  }
+};
 
 
 
