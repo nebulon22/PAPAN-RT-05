@@ -1271,11 +1271,11 @@
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
-let jumlahPublicSebelumnya = null;
-  let jumlahPrivateSebelumnya = null;
+  let jumlahPublicSebelumnya = null;
+  let jumlahPrivateSebelumnya = Number(localStorage.getItem('rt05_unread_private_total') || 0);
   let jumlahPublicTerakhir = 0;
-  let jumlahPrivateTerakhir = 0;
-  let lastUnreadType = null;
+  let jumlahPrivateTerakhir = jumlahPrivateSebelumnya;
+  let lastUnreadType = jumlahPrivateTerakhir > 0 ? 'private' : null;
   let iframeChatSudahDimuat = false;
 
   function renderBadgeChatUtama() {
@@ -1441,15 +1441,19 @@ function muatIframeChatLatarBelakang() {
       iframeChatSudahDimuat = true;
     }
   }
-  ['touchstart', 'pointerdown', 'click', 'keydown'].forEach(evt => {
-    window.removeEventListener(evt, muatIframeChatLatarBelakang);
-  });
 }
 
-  ['touchstart', 'pointerdown', 'click', 'keydown'].forEach(evt => {
-    window.addEventListener(evt, muatIframeChatLatarBelakang, { passive: true, once: true });
-  });
-  setTimeout(muatIframeChatLatarBelakang, 4000);
+renderBadgeChatUtama();
+
+window.addEventListener('load', () => {
+  setTimeout(() => {
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(muatIframeChatLatarBelakang, { timeout: 2000 });
+    } else {
+      muatIframeChatLatarBelakang();
+    }
+  }, 5000);
+});
 
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
