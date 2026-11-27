@@ -1559,57 +1559,65 @@ function listenAllPrivateChats() {
         });
       }
 
-      const isCurrentlyViewingThisChat = (activeChatType === 'private' && activePrivateUID === targetUID && window.isUserViewingChat());
+const isCurrentlyViewingThisChat =
+  activeChatType === 'private' &&
+  activePrivateUID === targetUID &&
+  typeof window.isUserViewingChat === 'function' &&
+  window.isUserViewingChat();
 
-      if (isCurrentlyViewingThisChat) {
-        unreadTotalCount = 0;
-        markRoomAsRead(targetUID);
+if (isCurrentlyViewingThisChat) {
+  unreadTotalCount = 0;
+  markRoomAsRead(targetUID);
+}
+
+// 1. Jika ada pesan unread baru, otomatis munculkan tab lawan chat
+if (unreadTotalCount > 0 && lastMsg && !openPrivateRooms[targetUID]) {
+  const senderName =
+    (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) ||
+    lastMsg.sender ||
+    'Warga';
+  openPrivateRooms[targetUID] = senderName;
+  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+}
+
+// 2. Simpan unread count untuk room ini
+unreadCounts[targetUID] = unreadTotalCount;
+
+// 3. Notifikasi Suara (dari repo via parent) & Melayang OS
+if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid && isChatReady && unreadTotalCount > 0) {
+  if (lastNotifiedMsgKeys[targetUID] !== lastMsgKey && !isCurrentlyViewingThisChat) {
+    lastNotifiedMsgKeys[targetUID] = lastMsgKey;
+
+    try {
+      if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+        window.parent.picuNotifikasiMedia('private');
       }
+    } catch (e) {}
 
-      // 1. Jika ada pesan unread baru, otomatis munculkan tab lawan chat
-      if (unreadTotalCount > 0 && lastMsg && !openPrivateRooms[targetUID]) {
-        const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
-        openPrivateRooms[targetUID] = senderName;
-        localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
-      }
+    if (Notification.permission === 'granted' && !window.isUserViewingChat()) {
+      const senderName =
+        (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) ||
+        lastMsg.sender ||
+        'Warga';
+      new Notification(`Pesan Private dari ${senderName}`, {
+        body: lastMsg.text || 'Mengirim pesan...',
+        icon: './kentongan-slit-drum.png',
+        tag: `private-${targetUID}`,
+        renotify: true
+      });
+    }
+  }
+}
 
-      // 2. Simpan unread count untuk room ini
-      unreadCounts[targetUID] = unreadTotalCount;
-
-      // 3. Notifikasi Suara & Melayang OS
-      if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid && isChatReady && unreadTotalCount > 0) {
-        if (lastNotifiedMsgKeys[targetUID] !== lastMsgKey && !isCurrentlyViewingThisChat) {
-          lastNotifiedMsgKeys[targetUID] = lastMsgKey;
-
-          try {
-            if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-              window.parent.picuNotifikasiMedia('private');
-            } else if (typeof playKlingSound === 'function') {
-              playKlingSound();
-            }
-          } catch (e) {
-            if (typeof playKlingSound === 'function') playKlingSound();
-          }
-
-          if (Notification.permission === 'granted' && !window.isUserViewingChat()) {
-            const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
-            new Notification(`Pesan Private dari ${senderName}`, {
-              body: lastMsg.text || 'Mengirim pesan...',
-              icon: './kentongan-slit-drum.png',
-              tag: `private-${targetUID}`,
-              renotify: true
-            });
-          }
-        }
-      }
-    if (lastMsg && (openPrivateRooms[targetUID] || unreadTotalCount > 0)) {
+if (lastMsg && (openPrivateRooms[targetUID] || unreadTotalCount > 0)) {
   catatAktivitasPrivate(targetUID, lastMsg.timestamp || Date.now());
 }
-    if (typeof window.renderWargaSidebar === 'function') renderWargaSidebar();
-      renderPrivateTabsUI();
-      sendTotalUnreadToParent();
-    if (typeof updateSidebarArrowAlert === 'function') updateSidebarArrowAlert();
-      isFirstLoad = false;
+
+if (typeof window.renderWargaSidebar === 'function') renderWargaSidebar();
+renderPrivateTabsUI();
+sendTotalUnreadToParent();
+if (typeof updateSidebarArrowAlert === 'function') updateSidebarArrowAlert();
+isFirstLoad = false;
     });
   });
 }
