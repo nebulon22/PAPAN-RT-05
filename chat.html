@@ -215,40 +215,54 @@
       border: 1px solid rgba(56, 189, 248, 0.4);
     }
     
-    /* Toggle Button Center Right */
+/* Tombol Panah Toggle Sidebar */
     #btn-toggle-center {
       position: absolute;
       right: 10px;
       top: 50%;
       transform: translateY(-50%);
-      z-index: 30;
-      background: rgba(30, 41, 59, 0.9);
+      z-index: 35;
+      background: rgba(30, 41, 59, 0.92);
       color: #38bdf8;
       border: 1px solid #334155;
       border-radius: 50%;
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      transition: all 0.3s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+      transition: right 0.25s ease, transform 0.2s ease, background 0.2s ease;
     }
 
-    /* Sidebar Warga */
+    /* Sidebar Warga Menumpuk (Overlay) Tanpa Mempersempit Chat */
     aside#sidebar-warga {
-      width: 110px;
-      background: rgba(15, 23, 42, 0.8);
-      backdrop-filter: blur(4px);
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 150px;
+      max-width: 65%;
+      z-index: 30;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-left: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: -8px 0 24px rgba(2, 6, 23, 0.55);
       display: flex;
       flex-direction: column;
-      flex-shrink: 0;
-      transition: all 0.3s;
+      transform: translateX(0);
+      transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
     }
-    aside#sidebar-warga.hidden { display: none; }
-    @media (min-width: 640px) { aside#sidebar-warga { width: 150px; } }
+    aside#sidebar-warga.hidden {
+      display: flex !important;
+      transform: translateX(100%);
+      pointer-events: none;
+    }
+    @media (min-width: 640px) {
+      aside#sidebar-warga { width: 175px; }
+    }
 
     .tab-header { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 10px; font-weight: 600; background: rgba(15, 23, 42, 0.2); }
     .tab-btn { flex: 1; padding: 6px 0; background: none; border: none; color: #94a3b8; cursor: pointer; text-align: center; border-bottom: 2px solid transparent; }
@@ -1265,61 +1279,79 @@ window.addEventListener('DOMContentLoaded', () => {
     // ======================================
 
     
-    // 1. Buka Tab Private Chat
-    window.openPrivateTab = (targetUID, targetName) => {
-      if (targetUID === currentUser?.uid) return;
+const privateLastActivityMap = JSON.parse(localStorage.getItem('rt05_private_last_activity') || '{}');
 
-      openPrivateRooms[targetUID] = targetName;
-      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+function catatAktivitasPrivate(targetUID, ts = Date.now()) {
+  if (!targetUID) return;
+  const waktu = Number(ts) || Date.now();
+  const prev = Number(privateLastActivityMap[targetUID] || 0);
+  if (waktu >= prev) {
+    privateLastActivityMap[targetUID] = waktu;
+    localStorage.setItem('rt05_private_last_activity', JSON.stringify(privateLastActivityMap));
+  }
+}
 
-      renderPrivateTabsUI();
-      listenAllPrivateChats();
-      switchChatRoom('private', targetUID);
-    };
+// 1. Buka Tab Private Chat
+window.openPrivateTab = (targetUID, targetName) => {
+  if (targetUID === currentUser?.uid) return;
 
-   // 2. Render UI Tab-tab Private (Diperbarui dengan DOM Aman)
-    function renderPrivateTabsUI() {
-      const container = document.getElementById('dynamic-private-tabs');
-      if (!container) return;
-      container.innerHTML = '';
+  openPrivateRooms[targetUID] = targetName;
+  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+  catatAktivitasPrivate(targetUID, Date.now());
 
-      Object.keys(openPrivateRooms).forEach(uid => {
-        const name = openPrivateRooms[uid];
-        const isActive = (activeChatType === 'private' && activePrivateUID === uid);
-        const count = unreadCounts[uid] || 0;
+  renderPrivateTabsUI();
+  listenAllPrivateChats();
+  switchChatRoom('private', targetUID);
+};
 
-       const badgeHTML = (count > 0 && !isActive) 
-          ? `<span style="background: #eab308; color: #0f172a; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(234, 179, 8, 0.8);">${count}</span>` 
-          : '';
+// 2. Render UI Tab-tab Private (Private terbaru di sebelah kanan Grup RT 05)
+function renderPrivateTabsUI() {
+  const container = document.getElementById('dynamic-private-tabs');
+  if (!container) return;
+  container.innerHTML = '';
 
-        const btn = document.createElement('div');
-        btn.style.cssText = `
-          display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 6px;
-          font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
-          background: ${isActive ? '#10b981' : '#1e293b'}; color: ${isActive ? '#fff' : '#94a3b8'};
-          border: 1px solid ${isActive ? '#34d399' : '#334155'};
-          box-shadow: ${isActive ? '0 0 6px rgba(52, 211, 153, 0.4)' : 'none'};
-          flex-shrink: 0;
-        `;
+  const sortedUIDs = Object.keys(openPrivateRooms).sort((a, b) => {
+    const timeA = Number(privateLastActivityMap[a] || 0);
+    const timeB = Number(privateLastActivityMap[b] || 0);
+    if (timeB !== timeA) return timeB - timeA;
+    return String(openPrivateRooms[a] || '').localeCompare(String(openPrivateRooms[b] || ''));
+  });
 
-        // Buat elemen teks nama & badge secara aman
-        const nameSpan = document.createElement('span');
-        nameSpan.style.cssText = "display: flex; align-items: center; gap: 5px; flex: 1;";
-        nameSpan.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}`;
-        nameSpan.onclick = () => switchChatRoom('private', uid);
+  sortedUIDs.forEach(uid => {
+    const name = openPrivateRooms[uid];
+    const isActive = (activeChatType === 'private' && activePrivateUID === uid);
+    const count = unreadCounts[uid] || 0;
 
-        // Buat elemen tombol tutup (X) secara aman
-        const closeBtn = document.createElement('i');
-        closeBtn.className = "fa-solid fa-xmark";
-        closeBtn.style.cssText = "font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px; cursor: pointer;";
-        closeBtn.title = "Tutup Tab";
-        closeBtn.onclick = (e) => closePrivateTab(e, uid);
+    const badgeHTML = (count > 0 && !isActive)
+      ? `<span style="background: #eab308; color: #0f172a; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(234, 179, 8, 0.8);">${count}</span>`
+      : '';
 
-        btn.appendChild(nameSpan);
-        btn.appendChild(closeBtn);
-        container.appendChild(btn);
-      });
-    }
+    const btn = document.createElement('div');
+    btn.style.cssText = `
+      display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+      background: ${isActive ? '#10b981' : '#1e293b'}; color: ${isActive ? '#fff' : '#94a3b8'};
+      border: 1px solid ${isActive ? '#34d399' : '#334155'};
+      box-shadow: ${isActive ? '0 0 6px rgba(52, 211, 153, 0.4)' : 'none'};
+      flex-shrink: 0;
+    `;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = "display: flex; align-items: center; gap: 5px; flex: 1;";
+    nameSpan.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}`;
+    nameSpan.onclick = () => switchChatRoom('private', uid);
+
+    const closeBtn = document.createElement('i');
+    closeBtn.className = "fa-solid fa-xmark";
+    closeBtn.style.cssText = "font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px; cursor: pointer;";
+    closeBtn.title = "Tutup Tab";
+    closeBtn.onclick = (e) => closePrivateTab(e, uid);
+
+    btn.appendChild(nameSpan);
+    btn.appendChild(closeBtn);
+    container.appendChild(btn);
+  });
+}
 
     
 // Helper: Tandai Pesan Terakhir di Room ini Sudah Dibaca
@@ -1451,7 +1483,7 @@ function listenAllPrivateChats() {
     if (!targetUID || privateRoomListeners[targetUID]) return; // Cegah listener ganda
 
     const roomID = [activeUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
-    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(5));
+    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(30));
     let isFirstLoad = true;
 
     privateRoomListeners[targetUID] = onValue(roomRef, (roomSnap) => {
@@ -1544,7 +1576,9 @@ function listenAllPrivateChats() {
           }
         }
       }
-
+    if (lastMsg && (openPrivateRooms[targetUID] || unreadTotalCount > 0)) {
+  catatAktivitasPrivate(targetUID, lastMsg.timestamp || Date.now());
+}
       renderPrivateTabsUI();
       sendTotalUnreadToParent();
       isFirstLoad = false;
