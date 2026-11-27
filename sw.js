@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.9.2'; // 🌟 Naikkan versi agar HP warga memperbarui SW
+const CACHE_NAME = 'rt-kayen-v1.9.3'; // 🌟 Naikkan versi agar HP warga memperbarui SW
 
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
@@ -60,7 +60,6 @@ if (!payload.notification) {
 });
 
 self.addEventListener('install', (e) => {
-  self.skipWaiting();
   e.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
       // Unduh file audio secara latar belakang tanpa memblokir proses update utama
@@ -126,7 +125,6 @@ self.addEventListener('activate', (e) => {
   );
 });
 
-// Handling Fetch Event
 // Handling Fetch Event
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
@@ -195,9 +193,9 @@ if (
     );
     return;
   }
-  // 5. Cache First untuk aset statis UI PWA
+// 5. Cache First untuk aset statis UI PWA
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
+    caches.match(event.request, { ignoreSearch: true }).then((cachedResponse) => {
       if (cachedResponse) {
         return cachedResponse;
       }
