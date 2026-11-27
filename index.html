@@ -1515,19 +1515,16 @@ async function jalankanPemantauPrivateDiIndex() {
     });
   });
 }
-
 jalankanPemantauPrivateDiIndex();
 document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) jalankanPemantauPrivateDiIndex();
+  if (!document.hidden) {
+    if (typeof paksaSinkronBadgeDariIframe === 'function') {
+      paksaSinkronBadgeDariIframe();
+    }
+    jalankanPemantauPrivateDiIndex();
+  }
 });
 window.addEventListener('utilsSiap', jalankanPemantauPrivateDiIndex, { once: true });
-
-// Jalankan segera saat halaman siap & saat PWA kembali dibuka
-jalankanPemantauUnreadDiIndex();
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden) jalankanPemantauUnreadDiIndex();
-});
-window.addEventListener('utilsSiap', jalankanPemantauUnreadDiIndex, { once: true });
   
   function muatIframeChatLatarBelakang() {
     if (iframeChatSudahDimuat) return;
@@ -1590,16 +1587,16 @@ window.addEventListener('message', function(event) {
   }
 
   // Pemantau langsung private_chats di index.html agar tidak tertahan oleh iframe di PWA HP
-  let listenerUnreadLangsungAktif = false;
+  let listenerPrivateLangsungAktif = false;
 
-  async function jalankanPemantauUnreadDiIndex() {
-    if (listenerUnreadLangsungAktif) return;
+  async function jalankanPemantauPrivateDiIndex() {
+    if (listenerPrivateLangsungAktif) return;
 
     const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
     if (!savedUser || !savedUser.uid || savedUser.status !== 'aktif') return;
 
     if (!window.db || typeof window.firebaseRef !== 'function' || typeof window.firebaseOnValue !== 'function') {
-      setTimeout(jalankanPemantauUnreadDiIndex, 300);
+      setTimeout(jalankanPemantauPrivateDiIndex, 300);
       return;
     }
 
@@ -1609,7 +1606,7 @@ window.addEventListener('message', function(event) {
       }
     } catch (e) {}
 
-    listenerUnreadLangsungAktif = true;
+    listenerPrivateLangsungAktif = true;
     const myUid = savedUser.uid;
     const unreadMap = JSON.parse(localStorage.getItem('rt05_private_unread_map') || '{}');
     const roomTerpantau = new Set();
@@ -1664,23 +1661,24 @@ window.addEventListener('message', function(event) {
           localStorage.setItem('rt05_private_unread_map', JSON.stringify(unreadMap));
           localStorage.setItem('rt05_unread_private_total', String(totalPrivate));
 
+          // Pertahankan jumlahPublicTerakhir apa adanya agar grup chat tidak terganggu
           updatePublicTabBadge(jumlahPublicTerakhir, totalPrivate);
         });
       });
     });
   }
 
-  jalankanPemantauUnreadDiIndex();
+  jalankanPemantauPrivateDiIndex();
 
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden) {
       paksaSinkronBadgeDariIframe();
-      jalankanPemantauUnreadDiIndex();
+      jalankanPemantauPrivateDiIndex();
     }
   });
   window.addEventListener('pageshow', paksaSinkronBadgeDariIframe);
   window.addEventListener('focus', paksaSinkronBadgeDariIframe);
-  window.addEventListener('utilsSiap', jalankanPemantauUnreadDiIndex, { once: true });
+  window.addEventListener('utilsSiap', jalankanPemantauPrivateDiIndex, { once: true });
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
