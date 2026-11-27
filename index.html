@@ -968,7 +968,7 @@
   <span id="badge-chat-main">0</span>
 </button>
 
-<div id="chat-overlay-modal" data-open="false" style="display: flex; visibility: hidden; opacity: 0; pointer-events: none; position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1000; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
+<div id="chat-overlay-modal" data-open="false" style="display: flex; visibility: hidden; opacity: 0; pointer-events: none; position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1600; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
   
   <div style="background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -1431,11 +1431,8 @@ function muatIframeChatLatarBelakang() {
     const dataSrc = iframe.getAttribute('data-src');
     if (dataSrc) {
       iframe.onload = () => {
-        if (iframe.contentWindow) {
-          const isOpen = Boolean(modal && modal.dataset.open === 'true');
-          iframe.contentWindow.postMessage({ type: 'CHAT_MODAL_STATUS', isOpen: isOpen }, '*');
-          iframe.contentWindow.postMessage({ type: 'REQUEST_UNREAD_SYNC' }, '*');
-        }
+        paksaSinkronBadgeDariIframe();
+        setTimeout(paksaSinkronBadgeDariIframe, 1200);
       };
       iframe.src = dataSrc;
       iframeChatSudahDimuat = true;
@@ -1445,48 +1442,50 @@ function muatIframeChatLatarBelakang() {
 
 renderBadgeChatUtama();
 
+// Jika warga sudah login chat, muat iframe lebih cepat (800ms setelah load) tanpa menunggu requestIdleCallback
 window.addEventListener('load', () => {
-  setTimeout(() => {
-    if ('requestIdleCallback' in window) {
-      requestIdleCallback(muatIframeChatLatarBelakang, { timeout: 2000 });
-    } else {
-      muatIframeChatLatarBelakang();
-    }
-  }, 5000);
+  const sudahLoginChat = Boolean(localStorage.getItem('rt05_chat_user'));
+  setTimeout(muatIframeChatLatarBelakang, sudahLoginChat ? 800 : 3000);
 });
 
-  window.addEventListener('message', function(event) {
-    if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
-      const publicCount = Number(event.data.unreadPublicCount || 0);
-      const privateCount = Number(event.data.unreadPrivateCount || 0);
-      updatePublicTabBadge(publicCount, privateCount);
-    }
-  });
-// Sinkronisasi ulang badge begitu iframe chat selesai dimuat atau PWA kembali ke layar
-  function paksaSinkronBadgeDariIframe() {
-    const modal = document.getElementById('chat-overlay-modal');
-    const iframe = modal ? modal.querySelector('iframe') : null;
-    if (!iframe || !iframe.contentWindow) return;
+window.addEventListener('message', function(event) {
+  if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
+    const publicCount = Number(event.data.unreadPublicCount || 0);
+    const privateCount = Number(event.data.unreadPrivateCount || 0);
+    updatePublicTabBadge(publicCount, privateCount);
+  }
+});
 
-    try {
-      const cw = iframe.contentWindow;
-      // 1. Jika fungsi pengirim total sudah siap di dalam chat.html, panggil langsung
-      if (typeof cw.sendTotalUnreadToParent === 'function') {
-        cw.sendTotalUnreadToParent();
-      }
-      // 2. Kirim sinyal postMessage sebagai cadangan
-      const isOpen = Boolean(modal && modal.dataset.open === 'true');
-      cw.postMessage({ type: 'CHAT_MODAL_STATUS', isOpen: isOpen }, '*');
-      cw.postMessage({ type: 'REQUEST_UNREAD_SYNC' }, '*');
-    } catch (e) {}
+// Sinkronisasi ulang badge & listener private chat saat PWA dibuka kembali di HP
+function paksaSinkronBadgeDariIframe() {
+  if (!iframeChatSudahDimuat) {
+    muatIframeChatLatarBelakang();
+    return;
   }
 
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) paksaSinkronBadgeDariIframe();
-  });
-  window.addEventListener('focus', paksaSinkronBadgeDariIframe);
-  setTimeout(paksaSinkronBadgeDariIframe, 2500);
-  setTimeout(paksaSinkronBadgeDariIframe, 5000);
+  const modal = document.getElementById('chat-overlay-modal');
+  const iframe = modal ? modal.querySelector('iframe') : null;
+  if (!iframe || !iframe.contentWindow) return;
+
+  try {
+    const cw = iframe.contentWindow;
+    if (typeof cw.listenAllPrivateChats === 'function') {
+      cw.listenAllPrivateChats();
+    }
+    if (typeof cw.sendTotalUnreadToParent === 'function') {
+      cw.sendTotalUnreadToParent();
+    }
+    const isOpen = Boolean(modal && modal.dataset.open === 'true');
+    cw.postMessage({ type: 'CHAT_MODAL_STATUS', isOpen: isOpen }, '*');
+    cw.postMessage({ type: 'REQUEST_UNREAD_SYNC' }, '*');
+  } catch (e) {}
+}
+
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) paksaSinkronBadgeDariIframe();
+});
+window.addEventListener('pageshow', paksaSinkronBadgeDariIframe);
+window.addEventListener('focus', paksaSinkronBadgeDariIframe);
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
