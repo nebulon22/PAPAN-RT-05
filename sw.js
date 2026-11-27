@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.8.5'; // 🌟 Naikkan versi agar HP warga memperbarui SW
+const CACHE_NAME = 'rt-kayen-v1.8.9'; // 🌟 Naikkan versi agar HP warga memperbarui SW
 
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
@@ -74,13 +74,17 @@ self.addEventListener('install', (e) => {
       cache.addAll(audioFiles).catch(() => {});
 
       // Daftar file inti aplikasi
-      const coreFiles = [
+const coreFiles = [
         './',
         './index.html',
         './admin.html',
+        './admin',
         './chat.html',
+        './chat',
         './pengumuman.html',
+        './pengumuman',
         './cetak-qr.html',
+        './cetak-qr',
         './utils.js',
         './setting.js',
         './manifest.json',
@@ -137,18 +141,19 @@ self.addEventListener('fetch', (event) => {
   }
 
   // 3. BYPASS TOTAL UNTUK CLOUDFLARE WORKERS & SUBDOMAIN API (Custom Domain & workers.dev)
-  if (
+if (
     url.hostname.includes('workers.dev') ||
     url.hostname === 'peta.papan05.my.id' ||
     url.hostname === 'uploader.papan05.my.id' ||
-    url.hostname === 'admin-worker.papan05.my.id'
+    url.hostname === 'admin-worker.papan05.my.id' ||
+    url.hostname === 'fcm-worker.papan05.my.id'
   ) {
-    return; // Biarkan browser menanganinya langsung tanpa campur tangan SW
+    return;
   }
-
-  // 4. Longgarkan tangkapan untuk API, Firebase, Cloudflare R2 Storage, dan Media Eksternal
+// 4. Longgarkan tangkapan untuk navigasi halaman, Clean URLs, API, Firebase, dan Media
   if (
     event.request.mode === 'navigate' ||
+    url.origin === self.location.origin && !url.pathname.includes('.') ||
     url.origin.includes('firebase') ||
     url.origin.includes('gstatic') ||
     url.origin.includes('firebasestorage') ||
@@ -158,9 +163,16 @@ self.addEventListener('fetch', (event) => {
     url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif|webp)$/i)
   ) {
     event.respondWith(
-      fetch(event.request).catch((err) => {
+      fetch(event.request).catch(() => {
         return caches.match(event.request).then((cached) => {
-          return cached || new Response(null, { status: 404, statusText: 'Not Found' });
+          if (cached) return cached;
+          // Jika /chat gagal, coba ambil cadangan ./chat.html dari cache
+          if (!url.pathname.includes('.')) {
+            return caches.match(url.pathname + '.html').then((htmlCached) => {
+              return htmlCached || new Response(null, { status: 404, statusText: 'Not Found' });
+            });
+          }
+          return new Response(null, { status: 404, statusText: 'Not Found' });
         });
       })
     );

@@ -8,7 +8,7 @@
   <!-- Import Google Font VT323 (Retro Pixel Chat) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
   
   <!-- IMPORTANT: Panggil utils.js terlebih dahulu agar RT05_CONFIG terdefinisi -->
  <script type="module" src="utils.js"></script>
@@ -81,18 +81,18 @@
       position: relative;
       background: rgba(2, 6, 23, 0.3);
     }
-   #chat-stream {
+#chat-stream {
       flex: 1;
       display: flex;
       flex-direction: column;
       padding: 8px;
       overflow-y: auto !important;
-      gap: 4px;
-      /* 🛠️ GANTI FONT-FAMILY DENGAN VT323 & SESUAIKAN UKURAN FONT HARUS AGAK BESAR (16px) HARUS JELAS */
-      font-family: 'VT323', 'Courier New', monospace;
-      font-size: 16px; 
-      line-height: 1.2;
-      letter-spacing: 0.5px;
+      gap: 6px;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      line-height: 1.4;
+      letter-spacing: 0;
       overscroll-behavior: contain !important;
       -webkit-overflow-scrolling: touch;
       touch-action: pan-y !important;
@@ -215,41 +215,73 @@
       border: 1px solid rgba(56, 189, 248, 0.4);
     }
     
-    /* Toggle Button Center Right */
-    #btn-toggle-center {
+/* Tombol Panah Toggle Sidebar */
+#btn-toggle-center {
       position: absolute;
       right: 10px;
       top: 50%;
       transform: translateY(-50%);
-      z-index: 30;
-      background: rgba(30, 41, 59, 0.9);
+      z-index: 35;
+      background: rgba(30, 41, 59, 0.92);
       color: #38bdf8;
       border: 1px solid #334155;
       border-radius: 50%;
-      width: 24px;
-      height: 24px;
+      width: 26px;
+      height: 26px;
       display: flex;
       align-items: center;
       justify-content: center;
       cursor: pointer;
-      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
-      transition: all 0.3s;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.35);
+      transition: right 0.25s ease, transform 0.2s ease, background 0.2s ease;
     }
 
-    /* Sidebar Warga */
+    @keyframes arrowUnreadPulse {
+      0%, 100% {
+        transform: translateY(-50%) scale(1);
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.75), 0 4px 10px rgba(0, 0, 0, 0.35);
+      }
+      50% {
+        transform: translateY(-50%) translateX(-2px) scale(1.08);
+        box-shadow: 0 0 0 6px rgba(245, 158, 11, 0), 0 4px 12px rgba(245, 158, 11, 0.55);
+      }
+    }
+
+    #btn-toggle-center.has-unread-alert {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+      color: #0f172a !important;
+      border-color: #fef08a !important;
+      animation: arrowUnreadPulse 1.5s infinite ease-in-out;
+    }
+
+    /* Sidebar Warga Menumpuk (Overlay) Tanpa Mempersempit Chat */
     aside#sidebar-warga {
-      width: 110px;
-      background: rgba(15, 23, 42, 0.8);
-      backdrop-filter: blur(4px);
-      border-left: 1px solid rgba(255, 255, 255, 0.1);
+      position: absolute;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: 150px;
+      max-width: 65%;
+      z-index: 30;
+      background: rgba(15, 23, 42, 0.95);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      border-left: 1px solid rgba(255, 255, 255, 0.14);
+      box-shadow: -8px 0 24px rgba(2, 6, 23, 0.55);
       display: flex;
       flex-direction: column;
-      flex-shrink: 0;
-      transition: all 0.3s;
+      transform: translateX(0);
+      transition: transform 0.25s cubic-bezier(0.2, 0, 0, 1);
     }
-    aside#sidebar-warga.hidden { display: none; }
-    @media (min-width: 640px) { aside#sidebar-warga { width: 150px; } }
-
+    aside#sidebar-warga.hidden {
+      display: flex !important;
+      transform: translateX(100%);
+      pointer-events: none;
+    }
+    @media (min-width: 640px) {
+      aside#sidebar-warga { width: 175px; }
+    }
+    
     .tab-header { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 10px; font-weight: 600; background: rgba(15, 23, 42, 0.2); }
     .tab-btn { flex: 1; padding: 6px 0; background: none; border: none; color: #94a3b8; cursor: pointer; text-align: center; border-bottom: 2px solid transparent; }
     .tab-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; }
@@ -442,7 +474,7 @@
 </div>
       
       <!-- Area Stream Pesan -->
-      <div id="chat-stream" style="flex: 1; display: flex; flex-direction: column; padding: 8px; overflow-y: auto !important; gap: 4px; font-family: monospace; font-size: 12px; line-height: 1.4;">
+      <div id="chat-stream">
         <div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;" id="loading-chat">
           <i class="fa-solid fa-circle-notch fa-spin"></i> Menghubungkan ke ruang chat...
         </div>
@@ -650,9 +682,8 @@ function getDeviceId() {
 <!-- Firebase SDK Modular & Logika Aplikasi -->
   <script type="module">
 
-    // Tambahkan baris uji coba ini di baris paling atas dalam <script type="module">
 window.debuggingAktivasi = "Script modul sukses berjalan!";
-console.log("🚀 Script chat.html berhasil dimuat.");
+//console.log("🚀 Script chat.html berhasil dimuat.");
     import { initializeApp, getApps } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getDatabase, ref, push, set, onValue, onDisconnect, serverTimestamp, query, limitToLast, get, update } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-database.js";
     import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging.js";
@@ -688,11 +719,14 @@ window.isChatModalOpen = function() {
       ? window.parent.document.getElementById('chat-overlay-modal') 
       : document.getElementById('chat-overlay-modal');
     if (modal) {
-      const display = window.getComputedStyle(modal).display;
-      return display !== 'none' && display !== '';
+      if (modal.dataset.open !== undefined) {
+        return modal.dataset.open === 'true';
+      }
+      const style = window.getComputedStyle(modal);
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
     }
   } catch (e) {}
-  return true; 
+  return false;
 };
 
 // 🌟 Cek apakah user sedang aktif melihat obrolan di layar
@@ -727,7 +761,7 @@ window.isUserViewingChat = function() {
 
     let isPresenceSetup = false;
     let lastSetState = '';
-    let isChatVisible = true;
+    let isChatVisible = false;
     
     // 🌟 Jembatan Global khusus untuk diakses dari Console (F12)
     window.getDebugUser = () => currentUser;
@@ -1228,12 +1262,13 @@ window.addEventListener('DOMContentLoaded', () => {
     }
 
     // Deteksi jika modal disembunyikan menggunakan CSS/Iframe
-    const observer = new IntersectionObserver((entries) => {
-      isChatVisible = entries[0].isIntersecting && !document.hidden;
+      const observer = new IntersectionObserver((entries) => {
+      isChatVisible = entries[0].isIntersecting && !document.hidden && window.isChatModalOpen();
       if (isChatVisible && activeChatType === 'private' && activePrivateUID) {
         unreadCounts[activePrivateUID] = 0;
         markRoomAsRead(activePrivateUID);
         renderPrivateTabsUI();
+        sendTotalUnreadToParent();
       }
     });
     observer.observe(document.body);
@@ -1262,61 +1297,79 @@ window.addEventListener('DOMContentLoaded', () => {
     // ======================================
 
     
-    // 1. Buka Tab Private Chat
-    window.openPrivateTab = (targetUID, targetName) => {
-      if (targetUID === currentUser?.uid) return;
+const privateLastActivityMap = JSON.parse(localStorage.getItem('rt05_private_last_activity') || '{}');
 
-      openPrivateRooms[targetUID] = targetName;
-      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+function catatAktivitasPrivate(targetUID, ts = Date.now()) {
+  if (!targetUID) return;
+  const waktu = Number(ts) || Date.now();
+  const prev = Number(privateLastActivityMap[targetUID] || 0);
+  if (waktu >= prev) {
+    privateLastActivityMap[targetUID] = waktu;
+    localStorage.setItem('rt05_private_last_activity', JSON.stringify(privateLastActivityMap));
+  }
+}
 
-      renderPrivateTabsUI();
-      listenAllPrivateChats();
-      switchChatRoom('private', targetUID);
-    };
+// 1. Buka Tab Private Chat
+window.openPrivateTab = (targetUID, targetName) => {
+  if (targetUID === currentUser?.uid) return;
 
-   // 2. Render UI Tab-tab Private (Diperbarui dengan DOM Aman)
-    function renderPrivateTabsUI() {
-      const container = document.getElementById('dynamic-private-tabs');
-      if (!container) return;
-      container.innerHTML = '';
+  openPrivateRooms[targetUID] = targetName;
+  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+  catatAktivitasPrivate(targetUID, Date.now());
 
-      Object.keys(openPrivateRooms).forEach(uid => {
-        const name = openPrivateRooms[uid];
-        const isActive = (activeChatType === 'private' && activePrivateUID === uid);
-        const count = unreadCounts[uid] || 0;
+  renderPrivateTabsUI();
+  listenAllPrivateChats();
+  switchChatRoom('private', targetUID);
+};
 
-        const badgeHTML = (count > 0 && !isActive) 
-          ? `<span style="background: #ef4444; color: #ffffff; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(239, 68, 68, 0.8);">${count}</span>` 
-          : '';
+// 2. Render UI Tab-tab Private (Private terbaru di sebelah kanan Grup RT 05)
+function renderPrivateTabsUI() {
+  const container = document.getElementById('dynamic-private-tabs');
+  if (!container) return;
+  container.innerHTML = '';
 
-        const btn = document.createElement('div');
-        btn.style.cssText = `
-          display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 6px;
-          font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
-          background: ${isActive ? '#10b981' : '#1e293b'}; color: ${isActive ? '#fff' : '#94a3b8'};
-          border: 1px solid ${isActive ? '#34d399' : '#334155'};
-          box-shadow: ${isActive ? '0 0 6px rgba(52, 211, 153, 0.4)' : 'none'};
-          flex-shrink: 0;
-        `;
+  const sortedUIDs = Object.keys(openPrivateRooms).sort((a, b) => {
+    const timeA = Number(privateLastActivityMap[a] || 0);
+    const timeB = Number(privateLastActivityMap[b] || 0);
+    if (timeB !== timeA) return timeB - timeA;
+    return String(openPrivateRooms[a] || '').localeCompare(String(openPrivateRooms[b] || ''));
+  });
 
-        // Buat elemen teks nama & badge secara aman
-        const nameSpan = document.createElement('span');
-        nameSpan.style.cssText = "display: flex; align-items: center; gap: 5px; flex: 1;";
-        nameSpan.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}`;
-        nameSpan.onclick = () => switchChatRoom('private', uid);
+  sortedUIDs.forEach(uid => {
+    const name = openPrivateRooms[uid];
+    const isActive = (activeChatType === 'private' && activePrivateUID === uid);
+    const count = unreadCounts[uid] || 0;
 
-        // Buat elemen tombol tutup (X) secara aman
-        const closeBtn = document.createElement('i');
-        closeBtn.className = "fa-solid fa-xmark";
-        closeBtn.style.cssText = "font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px; cursor: pointer;";
-        closeBtn.title = "Tutup Tab";
-        closeBtn.onclick = (e) => closePrivateTab(e, uid);
+    const badgeHTML = (count > 0 && !isActive)
+      ? `<span style="background: #eab308; color: #0f172a; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; line-height: 1; box-shadow: 0 0 4px rgba(234, 179, 8, 0.8);">${count}</span>`
+      : '';
 
-        btn.appendChild(nameSpan);
-        btn.appendChild(closeBtn);
-        container.appendChild(btn);
-      });
-    }
+    const btn = document.createElement('div');
+    btn.style.cssText = `
+      display: flex; align-items: center; gap: 6px; padding: 5px 9px; border-radius: 6px;
+      font-size: 11px; font-weight: 600; cursor: pointer; white-space: nowrap; transition: all 0.2s;
+      background: ${isActive ? '#10b981' : '#1e293b'}; color: ${isActive ? '#fff' : '#94a3b8'};
+      border: 1px solid ${isActive ? '#34d399' : '#334155'};
+      box-shadow: ${isActive ? '0 0 6px rgba(52, 211, 153, 0.4)' : 'none'};
+      flex-shrink: 0;
+    `;
+
+    const nameSpan = document.createElement('span');
+    nameSpan.style.cssText = "display: flex; align-items: center; gap: 5px; flex: 1;";
+    nameSpan.innerHTML = `<i class="fa-solid fa-user"></i> ${escapeHTML(name)} ${badgeHTML}`;
+    nameSpan.onclick = () => switchChatRoom('private', uid);
+
+    const closeBtn = document.createElement('i');
+    closeBtn.className = "fa-solid fa-xmark";
+    closeBtn.style.cssText = "font-size: 11px; color: #f87171; padding: 2px; margin-left: 2px; cursor: pointer;";
+    closeBtn.title = "Tutup Tab";
+    closeBtn.onclick = (e) => closePrivateTab(e, uid);
+
+    btn.appendChild(nameSpan);
+    btn.appendChild(closeBtn);
+    container.appendChild(btn);
+  });
+}
 
     
 // Helper: Tandai Pesan Terakhir di Room ini Sudah Dibaca
@@ -1347,14 +1400,15 @@ function markRoomAsRead(targetUID) {
 }
 
  // 3. Pindah Tab (Public <-> Private) dengan Perbedaan Warna Latar
-  window.switchChatRoom = (type, targetUID = null) => {
+window.switchChatRoom = (type, targetUID = null) => {
     activeChatType = type;
     window.activeChatType = activeChatType;
 
     activePrivateUID = targetUID;
     window.activePrivateUID = activePrivateUID;
 
-    isChatVisible = true; // <-- AGAR KLIK TAB LANGSUNG DIANGGAP AKTIF/TERBUKA
+    const modalTerbuka = typeof window.isChatModalOpen === 'function' ? window.isChatModalOpen() : false;
+    isChatVisible = modalTerbuka;
 
     // 🎨 EFEK PERBEDAAN WARNA BACKGROUND:
     const chatContainer = document.getElementById('chat-container');
@@ -1368,12 +1422,15 @@ function markRoomAsRead(targetUID) {
       }
     }
 
-    if (type === 'public') {
-      updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
-      markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
-    } else if (type === 'private' && targetUID) {
-      unreadCounts[targetUID] = 0; 
-      markRoomAsRead(targetUID);   
+    if (modalTerbuka) {
+      if (type === 'public') {
+        updatePublicTabBadge(0);     // Bersihkan badge merah di tab Grup RT 05
+        markPublicGroupAsRead();     // Tandai ID pesan grup publik sebagai terbaca
+      } else if (type === 'private' && targetUID) {
+        unreadCounts[targetUID] = 0; 
+        markRoomAsRead(targetUID);
+        sendTotalUnreadToParent();
+      }
     }
 
     if (currentChatUnsubscribe) {
@@ -1387,7 +1444,6 @@ function markRoomAsRead(targetUID) {
       btnPublic.style.background = (type === 'public') ? '#0288d1' : '#1e293b';
       btnPublic.style.color = (type === 'public') ? '#fff' : '#94a3b8';
       
-      // 👇 TAMBAHKAN BARIS INI UNTUK MENGATUR BORDER & EFEK GLOW DINAMIS 👇
       btnPublic.style.border = (type === 'public') ? '1px solid #38bdf8' : '1px solid #334155';
       btnPublic.style.boxShadow = (type === 'public') ? '0 0 6px rgba(56, 189, 248, 0.4)' : 'none';
     }
@@ -1396,35 +1452,46 @@ function markRoomAsRead(targetUID) {
 
     const chatStream = document.getElementById('chat-stream');
     if (chatStream) {
-      // Indikator memuat percakapan
       chatStream.innerHTML = '<div style="text-align: center; padding: 16px; font-size: 11px; color: #64748b; font-style: italic;"><i class="fa-solid fa-circle-notch fa-spin"></i> Memuat percakapan...</div>';
     }
 
     if (type === 'public') {
-     loadChatStream();
+      loadChatStream();
     } else if (type === 'private' && targetUID) {
       loadPrivateChatStream(targetUID);
     }
   };
 
     // 4. Tutup Tab Private
-    window.closePrivateTab = (e, targetUID) => {
-      if (e) e.stopPropagation(); 
+window.closePrivateTab = (e, targetUID) => {
+  if (e) e.stopPropagation();
 
-      // Tandai pesan terakhir sebagai sudah dibaca
-      markRoomAsRead(targetUID);
+  // Jika saat menutup tab ini kebetulan sedang aktif dilihat, tandai sudah dibaca
+  const sedangDilihat = (activeChatType === 'private' && activePrivateUID === targetUID && window.isUserViewingChat());
+  if (sedangDilihat) {
+    unreadCounts[targetUID] = 0;
+    markRoomAsRead(targetUID);
+  }
 
-      // Bersihkan badge & tab
-      unreadCounts[targetUID] = 0;
-      delete openPrivateRooms[targetUID];
-      localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+  // Hapus hanya dari daftar tab yang terbuka di bar atas, TANPA menghapus unreadCounts yang belum dibaca
+  delete openPrivateRooms[targetUID];
+  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
 
-      if (activeChatType === 'private' && activePrivateUID === targetUID) {
-        switchChatRoom('public');
-      } else {
-        renderPrivateTabsUI();
-      }
-    };
+  if (activeChatType === 'private' && activePrivateUID === targetUID) {
+    switchChatRoom('public');
+  } else {
+    renderPrivateTabsUI();
+    if (typeof window.renderWargaSidebar === 'function') {
+      window.renderWargaSidebar();
+    }
+    if (typeof sendTotalUnreadToParent === 'function') {
+      sendTotalUnreadToParent();
+    }
+  }
+  if (typeof updateSidebarArrowAlert === 'function') {
+    updateSidebarArrowAlert();
+  }
+};
 
 
 
@@ -1446,7 +1513,7 @@ function listenAllPrivateChats() {
     if (!targetUID || privateRoomListeners[targetUID]) return; // Cegah listener ganda
 
     const roomID = [activeUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
-    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(5));
+    const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(30));
     let isFirstLoad = true;
 
     privateRoomListeners[targetUID] = onValue(roomRef, (roomSnap) => {
@@ -1532,22 +1599,25 @@ function listenAllPrivateChats() {
             const senderName = (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) || lastMsg.sender || "Warga";
             new Notification(`Pesan Private dari ${senderName}`, {
               body: lastMsg.text || 'Mengirim pesan...',
-              icon: '/kentongan-slit-drum.png',
+              icon: './kentongan-slit-drum.png',
               tag: `private-${targetUID}`,
               renotify: true
             });
           }
         }
       }
-
+    if (lastMsg && (openPrivateRooms[targetUID] || unreadTotalCount > 0)) {
+  catatAktivitasPrivate(targetUID, lastMsg.timestamp || Date.now());
+}
+    if (typeof window.renderWargaSidebar === 'function') renderWargaSidebar();
       renderPrivateTabsUI();
       sendTotalUnreadToParent();
+    if (typeof updateSidebarArrowAlert === 'function') updateSidebarArrowAlert();
       isFirstLoad = false;
     });
   });
 }
     
-
 // ===  KIRIM PESAN & PICU NOTIFIKASI SEKALI TEMBAK ===
 function executeSendMessage(e) {
   if (e) {
@@ -1774,8 +1844,8 @@ function listenPublicGroupUnread() {
       }
     });
 
-    // Jika user sedang aktif melihat chat publik di layar, langsung bersihkan unread
-    if (activeChatType === 'public' && isChatVisible) {
+// Jika user sedang aktif melihat chat publik di layar, langsung bersihkan unread
+    if (activeChatType === 'public' && window.isUserViewingChat()) {
       unreadPublicCount = 0;
       markPublicGroupAsRead();
     }
@@ -1820,7 +1890,7 @@ function listenPublicGroupUnread() {
         }
       }
     }
-
+    if (typeof updateSidebarArrowAlert === 'function') updateSidebarArrowAlert();
     isFirstPublicLoad = false;
   });
 }
@@ -1867,43 +1937,51 @@ window.markPublicGroupAsRead = () => {
     sendUnreadCountToParent(0);
 };
     
-   // Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
-   let lastPublicUnreadCount = 0;
+// Helper Akumulasi Total Unread (Kunci hanya untuk Grup)
+let lastPublicUnreadCount = 0;
 
-   function sendTotalUnreadToParent() {
-      // 1. Hitung total unread dari semua room private chat yang aktif
-      let totalPrivateUnread = 0;
-      Object.keys(unreadCounts).forEach(uid => {
-        totalPrivateUnread += (unreadCounts[uid] || 0);
-      });
+function sendTotalUnreadToParent() {
+  // 1. Hitung total unread dari semua room private chat yang aktif
+  let totalPrivateUnread = 0;
+  Object.keys(unreadCounts).forEach(uid => {
+    totalPrivateUnread += (unreadCounts[uid] || 0);
+  });
 
-      // 2. Gabungkan unread grup publik + total unread private chat
-      let grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
+  // Simpan ke localStorage agar index.html selalu sinkron
+  localStorage.setItem('rt05_unread_private_total', String(totalPrivateUnread));
 
-      // 3. 🛠️ TAMBAHAN: Update langsung App Badge dari chat.html jika didukung browser
-      if ('setAppBadge' in navigator) {
-        try {
-          const modal = window.parent ? window.parent.document.getElementById('chat-overlay-modal') : null;
-          const isModalOpen = (modal && modal.style.display === 'flex');
+  // 2. Gabungkan unread grup publik + total unread private chat
+  let grandTotalUnread = lastPublicUnreadCount + totalPrivateUnread;
 
-          if (grandTotalUnread > 0 && !isModalOpen) {
-            navigator.setAppBadge(grandTotalUnread).catch(err => console.log(err));
-          } else {
-            navigator.clearAppBadge().catch(err => console.log(err));
-          }
-        } catch (e) {
-          // Abaikan jika browser tidak mendukung
-        }
+  // 3. Update langsung App Badge dari chat.html jika didukung browser
+  if ('setAppBadge' in navigator) {
+    try {
+      const isModalOpen = typeof window.isChatModalOpen === 'function' ? window.isChatModalOpen() : false;
+
+      if (grandTotalUnread > 0 && !isModalOpen) {
+        navigator.setAppBadge(grandTotalUnread).catch(() => {});
+      } else {
+        navigator.clearAppBadge().catch(() => {});
       }
+    } catch (e) {}
+  }
 
-      // 4. Kirim total gabungan ini ke index.html agar badge tombol ikut akurat
-      if (window.parent && window.parent.postMessage) {
-        window.parent.postMessage({
-          type: 'RT05_CHAT_UNREAD_UPDATE',
-          unreadPublicCount: grandTotalUnread 
-        }, '*');
-      }
+  // 4. Panggil langsung fungsi di index.html
+  try {
+    if (window.parent && typeof window.parent.updatePublicTabBadge === 'function') {
+      window.parent.updatePublicTabBadge(lastPublicUnreadCount, totalPrivateUnread);
     }
+  } catch (e) {}
+
+  // 5. Tetap kirim postMessage sebagai cadangan
+  if (window.parent && window.parent.postMessage) {
+    window.parent.postMessage({
+      type: 'RT05_CHAT_UNREAD_UPDATE',
+      unreadPublicCount: lastPublicUnreadCount,
+      unreadPrivateCount: totalPrivateUnread
+    }, '*');
+  }
+}
 
     
     // Perbarui juga fungsi penampung unread publik agar otomatis mentrigger pengiriman total
@@ -2016,23 +2094,38 @@ window.markPublicGroupAsRead = () => {
 
     // 🌟 Tangkap sinyal buka/tutup modal dari halaman induk (index.html)
 window.addEventListener('message', (event) => {
-  if (event.data && event.data.type === 'CHAT_MODAL_STATUS') {
+  if (!event.data) return;
+
+  if (event.data.type === 'REQUEST_UNREAD_SYNC') {
+    if (typeof sendTotalUnreadToParent === 'function') {
+      sendTotalUnreadToParent();
+    }
+    return;
+  }
+
+  if (event.data.type === 'CHAT_MODAL_STATUS') {
     isChatVisible = Boolean(event.data.isOpen);
 
-    // 1. Langsung perbarui status presence (Online <-> Idle) tanpa jeda
     if (typeof window.updatePresenceOnChatToggle === 'function') {
       window.updatePresenceOnChatToggle();
     }
 
-    // 2. Jika modal dibuka, tandai pesan di tab aktif sebagai terbaca
     if (isChatVisible) {
       if (activeChatType === 'private' && activePrivateUID) {
         unreadCounts[activePrivateUID] = 0;
         markRoomAsRead(activePrivateUID);
         renderPrivateTabsUI();
+        sendTotalUnreadToParent();
       } else if (activeChatType === 'public') {
         updatePublicTabBadge(0);
         markPublicGroupAsRead();
+      }
+    } else {
+      // Saat modal ditutup, kembalikan ke tab grup agar pesan private berikutnya tidak auto-read
+      if (typeof switchChatRoom === 'function') {
+        switchChatRoom('public');
+      } else {
+        activeChatType = 'public';
       }
     }
   }
@@ -2161,7 +2254,7 @@ window.addEventListener('message', (event) => {
 
 // Tangkap pesan FCM saat aplikasi SEDANG DIBUKA (Foreground)
 onMessage(messaging, (payload) => {
-  console.log('Pesan FCM diterima:', payload);
+  //console.log('Pesan FCM diterima:', payload);
   
   // 🛡️ PENGAMAN UTAMA: Jika modal chat sedang terbuka & layar fokus, BATALKAN notifikasi melayang!
   if (window.isUserViewingChat()) {
@@ -2174,8 +2267,8 @@ onMessage(messaging, (payload) => {
       payload.notification?.title || "Pesan Baru RT 05", 
       {
         body: payload.notification?.body || "Anda menerima pesan baru.",
-        icon: '/kentongan-slit-drum.png',
-        badge: '/kentongan-slit-drum.png',
+        icon: './kentongan-slit-drum.png',
+        badge: './kentongan-slit-drum.png',
         tag: 'rt05-fcm-notif', // 🌟 Menimpa notifikasi lama agar 10 pesan tidak bermunculan 10x
         renotify: true,
       }
@@ -2476,8 +2569,8 @@ if (!chatStream.querySelector('.msg-row') && cachedPublic) {
         isUnreadSection = true;
     }
 
-    let isUnreadMsg = false;
-    if ((lastReadPublicMapKey || isChatReady) && currentUser?.uid && isUnreadSection && msgData.uid !== currentUser.uid && msgKey !== lastReadPublicMapKey) {
+   let isUnreadMsg = false;
+    if (lastReadPublicMapKey && currentUser?.uid && isUnreadSection && msgData.uid !== currentUser.uid && msgKey !== lastReadPublicMapKey) {
         isUnreadMsg = true;
     }
 
@@ -2808,9 +2901,9 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
     ? msg.text
     : escapeHTML(msg.text).replace(/\n/g, '<br>');
 
-  // Elemen waktu
+// Elemen waktu
   const timeSpan = document.createElement('span');
-  timeSpan.style.cssText = "font-size: 10px; color: rgba(251, 191, 36, 0.55); margin-left: 6px; font-weight: normal; text-shadow: none;";
+  timeSpan.style.cssText = "font-size: 10px; color: rgba(254, 240, 138, 0.75); margin-left: 6px; font-weight: normal; text-shadow: none;";
   timeSpan.textContent = `[${msg.timestamp ? formatWaktuPesan(msg.timestamp) : 'Baru saja'}]`;
 
   div.appendChild(nameSpan);
@@ -2846,7 +2939,7 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
     return `hsl(${hue}, 80%, 65%)`;
   }
     
-  window.renderWargaSidebar = () => {
+window.renderWargaSidebar = () => {
     const listContainer = document.getElementById('warga-list');
     if (!listContainer) return;
     listContainer.innerHTML = '';
@@ -2879,10 +2972,15 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
       let roleBadge = '';
       if (u.role === 'admin') roleBadge = '<span class="badge-admin">ADMIN</span>';
 
+      const msgUnread = (u.uid !== currentUser?.uid) ? (unreadCounts[u.uid] || 0) : 0;
+      const unreadBadgeHTML = msgUnread > 0
+        ? `<span style="background: #f59e0b; color: #0f172a; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; min-width: 16px; height: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 4px rgba(245, 158, 11, 0.7);">${msgUnread > 99 ? '99+' : msgUnread}</span>`
+        : '';
+
       const item = document.createElement('div');
       item.className = "warga-item";
       item.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; flex: 1;">
           <span class="status-dot ${dotClass}"></span>
           <div style="overflow: hidden;">
             <div style="color: #e2e8f0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -2893,6 +2991,7 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
             </div>
           </div>
         </div>
+        ${unreadBadgeHTML}
       `;
       item.onclick = () => {
         if (u.uid !== currentUser.uid) {
@@ -2911,6 +3010,24 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
     if (countSemua) countSemua.innerText = totalCount;
     if (countBadge) countBadge.innerText = activeCount;
   };
+
+    function updateSidebarArrowAlert() {
+  const btnToggle = document.getElementById('btn-toggle-center');
+  const sidebar = document.getElementById('sidebar-warga');
+  if (!btnToggle) return;
+
+  const isSidebarOpen = sidebar && !sidebar.classList.contains('hidden');
+  const totalPrivateUnread = Object.values(unreadCounts || {}).reduce(
+    (sum, val) => sum + (Number(val) || 0),
+    0
+  );
+  const hasAnyUnread = !isSidebarOpen && (totalPrivateUnread > 0 || (lastPublicUnreadCount || 0) > 0);
+
+  btnToggle.classList.toggle('has-unread-alert', hasAnyUnread);
+  btnToggle.title = hasAnyUnread
+    ? `Ada ${totalPrivateUnread + (lastPublicUnreadCount || 0)} pesan belum dibaca — buka daftar warga`
+    : 'Sembunyikan/Tampilkan Daftar Warga';
+}
 
   window.switchTab = (tab) => {
     activeTab = tab;
@@ -2975,23 +3092,55 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
     }
   };
 
-  window.toggleSidebar = () => {
+window.toggleSidebar = (forceState) => {
+  const sidebar = document.getElementById('sidebar-warga');
+  const btnToggle = document.getElementById('btn-toggle-center');
+  const arrowIcon = document.getElementById('sidebar-arrow-icon');
+
+  if (!sidebar || !btnToggle) return;
+
+  const sedangTerbuka = !sidebar.classList.contains('hidden');
+  const targetBuka = typeof forceState === 'boolean' ? forceState : !sedangTerbuka;
+
+  if (targetBuka) {
+    sidebar.classList.remove('hidden');
+    btnToggle.style.right = window.innerWidth < 640 ? '150px' : '175px';
+    if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-right';
+
+    activeTab = 'semua';
+    window.activeTab = 'semua';
+
+    const tabAktif = document.getElementById('tab-aktif-btn');
+    const tabSemua = document.getElementById('tab-semua-btn');
+    const searchBox = document.getElementById('search-box-container');
+
+    if (tabSemua) tabSemua.classList.add('active');
+    if (tabAktif) tabAktif.classList.remove('active');
+    if (searchBox) searchBox.style.display = 'block';
+
+    renderWargaSidebar();
+  } else {
+    sidebar.classList.add('hidden');
+    btnToggle.style.right = '10px';
+    if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-left';
+  }
+  if (typeof updateSidebarArrowAlert === 'function') {
+    updateSidebarArrowAlert();
+  }
+};
+    const chatContainerOutsideEl = document.getElementById('chat-container');
+if (chatContainerOutsideEl) {
+  chatContainerOutsideEl.addEventListener('click', (e) => {
     const sidebar = document.getElementById('sidebar-warga');
-    const btnToggle = document.getElementById('btn-toggle-center');
-    const arrowIcon = document.getElementById('sidebar-arrow-icon');
+    if (!sidebar || sidebar.classList.contains('hidden')) return;
 
-    if (!sidebar || !btnToggle) return;
-
-    if (sidebar.classList.contains('hidden')) {
-      sidebar.classList.remove('hidden');
-      btnToggle.style.right = window.innerWidth < 640 ? '110px' : '150px';
-      if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-right';
-    } else {
-      sidebar.classList.add('hidden');
-      btnToggle.style.right = '10px';
-      if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-left';
+    if (e.target.closest('#sidebar-warga') || e.target.closest('#btn-toggle-center')) {
+      return;
     }
-  };
+
+    window.toggleSidebar(false);
+  });
+}
 
   function escapeHTML(str) {
     return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
@@ -3003,6 +3152,8 @@ window.listenAllPrivateChats = listenAllPrivateChats;
 window.markPublicGroupAsRead = markPublicGroupAsRead;
 window.switchChatRoom = switchChatRoom;
 window.scrollToBottom = scrollToBottom;
+window.sendTotalUnreadToParent = sendTotalUnreadToParent;
+    
   </script>
 </body>
 </html>
