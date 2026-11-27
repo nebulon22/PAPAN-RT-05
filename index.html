@@ -963,7 +963,7 @@
   </div>
 </div>
 
-<button id="floating-chat-btn" data-click="toggleChatModal" title="Buka Live Chat RT">
+<button id="floating-chat-btn" type="button" data-click="toggleChatModal" onclick="if(window.toggleChatModal) window.toggleChatModal()" title="Buka Live Chat RT">
   <i class="fa-solid fa-comments" style="font-size: 20px;"></i>
   <span id="badge-chat-main">0</span>
 </button>
@@ -1381,14 +1381,14 @@ window.updatePublicTabBadge = updatePublicTabBadge;
     }
   });
 
-  window.toggleChatModal = function() {
+window.toggleChatModal = function() {
     const modal = document.getElementById('chat-overlay-modal');
     const iframe = modal ? modal.querySelector('iframe') : null;
     if (!modal) return;
 
     const isOpening = modal.dataset.open !== 'true';
 
-if (isOpening) {
+    if (isOpening) {
       if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
         const dataSrc = iframe.getAttribute('data-src');
         if (dataSrc) {
@@ -1399,6 +1399,9 @@ if (isOpening) {
 
       modal.dataset.open = 'true';
       modal.style.display = 'flex';
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+      modal.style.pointerEvents = 'auto';
       renderBadgeChatUtama();
 
       if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
@@ -1406,7 +1409,9 @@ if (isOpening) {
       }
     } else {
       modal.dataset.open = 'false';
-      modal.style.display = 'none';
+      modal.style.visibility = 'hidden';
+      modal.style.opacity = '0';
+      modal.style.pointerEvents = 'none';
       renderBadgeChatUtama();
     }
 
