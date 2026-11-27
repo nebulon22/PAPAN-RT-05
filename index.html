@@ -302,27 +302,29 @@
     -webkit-backdrop-filter: blur(8px);
   }
 
-  #badge-chat-main {
+#badge-chat-main {
     display: none;
     position: absolute;
-    top: -4px;
-    right: -4px;
+    top: -3px;
+    right: -3px;
     background: #ff3b30;
     color: #ffffff;
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: -0.01em;
-    padding: 0 5.5px;
-    height: 19px;
-    min-width: 19px;
+    letter-spacing: -0.02em;
+    padding: 0 5px;
+    height: 20px;
+    min-width: 20px;
+    width: auto;
     border-radius: 999px;
-    border: 2px solid #ffffff;
-    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.28);
+    border: none;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
     text-align: center;
-    line-height: 15px;
+    line-height: 20px;
     box-sizing: border-box;
     font-variant-numeric: tabular-nums;
+    white-space: nowrap;
   }
 
 @keyframes softPulse {
@@ -1330,28 +1332,30 @@ function renderBadgeChatUtama() {
 
   if (badge && chatBtn) {
     if (totalCount > 0) {
-      badge.style.display = 'inline-block';
-      badge.innerText = totalCount > 99 ? '99+' : totalCount;
+        badge.style.display = 'inline-block';
+        badge.innerText = totalCount > 99 ? '99+' : totalCount;
 
-      if (effPrivate > 0) {
-        badge.style.backgroundColor = '#f59e0b';
-        badge.style.color = '#0f172a';
-        badge.style.boxShadow = '0 3px 8px rgba(245, 158, 11, 0.45)';
+        if (effPrivate > 0) {
+          // Badge Private: Kuning keemasan tanpa garis tepi
+          badge.style.backgroundColor = '#f59e0b';
+          badge.style.color = '#0f172a';
+          badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
+        } else {
+          // Badge Grup: Merah iOS solid tanpa garis tepi
+          badge.style.backgroundColor = '#ff3b30';
+          badge.style.color = '#ffffff';
+          badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
+        }
+
+        chatBtn.classList.add('chat-btn-animated');
       } else {
+        badge.style.display = 'none';
+        badge.innerText = '0';
         badge.style.backgroundColor = '#ff3b30';
         badge.style.color = '#ffffff';
-        badge.style.boxShadow = '0 3px 8px rgba(255, 59, 48, 0.4)';
+        badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
+        chatBtn.classList.remove('chat-btn-animated');
       }
-
-      chatBtn.classList.add('chat-btn-animated');
-    } else {
-      badge.style.display = 'none';
-      badge.innerText = '0';
-      badge.style.backgroundColor = '#ff3b30';
-      badge.style.color = '#ffffff';
-      badge.style.boxShadow = '0 3px 8px rgba(15, 23, 42, 0.28)';
-      chatBtn.classList.remove('chat-btn-animated');
-    }
   }
 
   if ('setAppBadge' in navigator) {
