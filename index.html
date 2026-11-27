@@ -18,7 +18,7 @@
   <link rel="preload" href="leaflet.js" as="script">
   <link rel="preload" href="setting.js" as="script">
 
-  <!-- 1. CSS LOKAL (Leaflet, MarkerCluster & FontAwesome) -->
+<!-- 1. CSS LOKAL (Leaflet, MarkerCluster & FontAwesome) -->
   <link rel="stylesheet" href="leaflet.css" media="print" onload="this.media='all'">
   <noscript><link rel="stylesheet" href="leaflet.css"></noscript>
   <link rel="stylesheet" href="MarkerCluster.css" media="print" onload="this.media='all'">
@@ -41,7 +41,7 @@
   <link rel="apple-touch-icon" href="kentongan-maskable.png">
   
   <!-- 2. JAVASCRIPT LOKAL (leaflet.markercluster.js dimuat dinamis di muatDataPetaWarga) -->
-  <script src="leaflet.js" defer></script>
+  <script src="leaflet.js" defer onload="if(window.initPetaDanData) window.initPetaDanData()"></script>
   <script type="module" src="utils.js"></script>
   <script src="setting.js" defer></script>
   
@@ -292,13 +292,8 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow:
-      0 8px 22px rgba(34, 197, 94, 0.45),
-      0 2px 6px rgba(15, 23, 42, 0.2),
-      inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    box-shadow: 0 6px 16px rgba(22, 163, 74, 0.38);
     cursor: pointer;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
   }
 
 #badge-chat-main {
@@ -308,17 +303,14 @@
     right: -3px;
     background: #ff3b30;
     color: #ffffff;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: -0.02em;
     padding: 0 5px;
     height: 20px;
     min-width: 20px;
-    width: auto;
     border-radius: 999px;
-    border: none;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.25);
     text-align: center;
     line-height: 20px;
     box-sizing: border-box;
@@ -327,42 +319,14 @@
   }
 
 @keyframes softPulse {
-    0% {
-      transform: scale(1);
-      box-shadow:
-        0 8px 22px rgba(34, 197, 94, 0.45),
-        0 2px 6px rgba(15, 23, 42, 0.2),
-        0 0 0 0 rgba(74, 222, 128, 0.45);
-    }
-    70% {
-      transform: scale(1.05);
-      box-shadow:
-        0 8px 22px rgba(34, 197, 94, 0.45),
-        0 2px 6px rgba(15, 23, 42, 0.2),
-        0 0 0 10px rgba(74, 222, 128, 0);
-    }
-    100% {
-      transform: scale(1);
-      box-shadow:
-        0 8px 22px rgba(34, 197, 94, 0.45),
-        0 2px 6px rgba(15, 23, 42, 0.2),
-        0 0 0 0 rgba(74, 222, 128, 0);
-    }
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.06); }
   }
 
   .chat-btn-animated {
     animation: softPulse 2.2s infinite ease-in-out !important;
   }
 
-  .badge-count {
-    background: #d32f2f;
-    color: white;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-weight: bold;
-  }
-   
   .badge-count {
     background: #d32f2f;
     color: white;
@@ -454,9 +418,8 @@
     z-index: 1500;
     width: 64px;
     height: 64px;
-    background-color: rgba(2, 136, 209, 0.7); 
-    backdrop-filter: blur(2px); 
-    border: 1px solid rgba(1, 87, 155, 0.3);
+    background-color: rgba(2, 136, 209, 0.88);
+    border: 1px solid rgba(1, 87, 155, 0.35);
     color: white;
     border-radius: 16px;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
@@ -553,7 +516,6 @@
   [role="button"],
   .img-popup {
     transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), opacity 0.12s ease;
-    will-change: transform;
     touch-action: manipulation;
   }
 
@@ -615,7 +577,7 @@
     ⚙️
   </button>
   
-  <div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-align: center; background-color: rgba(209, 250, 229, 0.95); color: #065f46; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(16, 185, 129, 0.25); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08); display: flex; align-items: center; gap: 6px;">
+  <div id="status-sync" style="padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-align: center; background-color: rgba(209, 250, 229, 0.95); color: #065f46; border: 1px solid rgba(16, 185, 129, 0.25); box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08); display: flex; align-items: center; gap: 6px;">
     <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; display: inline-block;"></span>
     <span id="teks-sinkron">Online</span>
   </div>
@@ -656,7 +618,7 @@
   <div class="filter-container" style="display: flex; flex-direction: column; gap: 7px;">
     <!-- BARIS 2: KARTU LIVE INFO RT (FULL WIDTH) -->
     <button type="button" id="btnInfoRT" class="btn-info-rt"
-       style="width: 100%; display: flex; align-items: center; justify-content: space-between; backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); padding: 8px 12px; border-radius: 12px; text-align: left; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22); border-width: 1px; border-style: solid; transition: transform 0.1s ease; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
+       style="width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-radius: 12px; text-align: left; cursor: pointer; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.22); border-width: 1px; border-style: solid; transition: transform 0.1s ease; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;">
       <div style="display: flex; align-items: center; gap: 9px; overflow: hidden; min-width: 0; flex: 1;">
         <span style="font-size: 16px; flex-shrink: 0;">📢</span>
         <div style="display: flex; flex-direction: column; overflow: hidden; min-width: 0; flex: 1; gap: 1px;">
@@ -887,7 +849,7 @@
       height: 28px; 
       object-fit: contain; 
       margin-bottom: 2px;
-      filter: brightness(0) invert(1) drop-shadow(0 0 1px #ffffff) drop-shadow(0 0 4px rgba(255, 255, 255, 0.9));
+      filter: brightness(0) invert(1);
     ">
     
     <span style="
@@ -1006,7 +968,7 @@
   <span id="badge-chat-main">0</span>
 </button>
 
-<div id="chat-overlay-modal" data-open="false" style="display: flex; visibility: hidden; opacity: 0; pointer-events: none; position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1000; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
+<div id="chat-overlay-modal" data-open="false" style="display: flex; visibility: hidden; opacity: 0; pointer-events: none; transform: translateX(-9999px); position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1600; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
   
   <div style="background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -1018,8 +980,7 @@
     </div>
   </div>
 
-  <iframe data-src="./chat" style="width: 100%; height: 100%; border: none; background: transparent;" allowtransparency="true"></iframe>
-  
+  <iframe data-src="./chat" title="Live Chat RT 05" allowtransparency="true" style="width: 100%; height: 100%; border: none; background: transparent; flex: 1;"></iframe>
 </div>
 
         <!-- Modal Setting -->
@@ -1212,9 +1173,17 @@
     });
   }
 
-  window.tampilkanLoncengUpdate = function() {
-    var container = document.getElementById('container-update-pwa');
-    if (container) container.style.display = 'flex';
+window.tampilkanLoncengUpdate = function() {
+    const munculkan = () => {
+      var container = document.getElementById('container-update-pwa');
+      if (container) container.style.display = 'flex';
+    };
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', munculkan, { once: true });
+    } else {
+      munculkan();
+    }
   };
 
   window.perbaruiAplikasiSekarang = function() {
@@ -1309,11 +1278,11 @@
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
-let jumlahPublicSebelumnya = null;
-  let jumlahPrivateSebelumnya = null;
+  let jumlahPublicSebelumnya = null;
+  let jumlahPrivateSebelumnya = Number(localStorage.getItem('rt05_unread_private_total') || 0);
   let jumlahPublicTerakhir = 0;
-  let jumlahPrivateTerakhir = 0;
-  let lastUnreadType = null;
+  let jumlahPrivateTerakhir = jumlahPrivateSebelumnya;
+  let lastUnreadType = jumlahPrivateTerakhir > 0 ? 'private' : null;
   let iframeChatSudahDimuat = false;
 
   function renderBadgeChatUtama() {
@@ -1403,7 +1372,7 @@ let jumlahPublicSebelumnya = null;
 
     renderBadgeChatUtama();
   }
-window.updatePublicTabBadge = updatePublicTabBadge;
+  window.updatePublicTabBadge = updatePublicTabBadge;
 
   // Tangkap perubahan unread private dari localStorage secara instan
   window.addEventListener('storage', (e) => {
@@ -1419,7 +1388,7 @@ window.updatePublicTabBadge = updatePublicTabBadge;
     }
   });
 
-  window.toggleChatModal = function() {
+window.toggleChatModal = function() {
     const modal = document.getElementById('chat-overlay-modal');
     const iframe = modal ? modal.querySelector('iframe') : null;
     if (!modal) return;
@@ -1436,8 +1405,10 @@ window.updatePublicTabBadge = updatePublicTabBadge;
       }
 
       modal.dataset.open = 'true';
+      modal.style.display = 'flex';
       modal.style.visibility = 'visible';
       modal.style.opacity = '1';
+      modal.style.transform = 'none';
       modal.style.pointerEvents = 'auto';
       renderBadgeChatUtama();
 
@@ -1448,6 +1419,7 @@ window.updatePublicTabBadge = updatePublicTabBadge;
       modal.dataset.open = 'false';
       modal.style.visibility = 'hidden';
       modal.style.opacity = '0';
+      modal.style.transform = 'translateX(-9999px)';
       modal.style.pointerEvents = 'none';
       renderBadgeChatUtama();
     }
@@ -1460,66 +1432,170 @@ window.updatePublicTabBadge = updatePublicTabBadge;
     }
   };
 
-function muatIframeChatLatarBelakang() {
-  if (iframeChatSudahDimuat) return;
-  const modal = document.getElementById('chat-overlay-modal');
-  const iframe = modal ? modal.querySelector('iframe') : null;
-  if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
-    const dataSrc = iframe.getAttribute('data-src');
-    if (dataSrc) {
-      iframe.onload = () => {
-        if (iframe.contentWindow) {
-          const isOpen = Boolean(modal && modal.dataset.open === 'true');
-          iframe.contentWindow.postMessage({ type: 'CHAT_MODAL_STATUS', isOpen: isOpen }, '*');
-          iframe.contentWindow.postMessage({ type: 'REQUEST_UNREAD_SYNC' }, '*');
-        }
-      };
-      iframe.src = dataSrc;
-      iframeChatSudahDimuat = true;
-    }
+// ==========================================
+// PEMANTAU UNREAD PRIVATE SAJA LANGSUNG DI INDEX.HTML
+// ==========================================
+let listenerPrivateLangsungAktif = false;
+
+async function jalankanPemantauPrivateDiIndex() {
+  if (listenerPrivateLangsungAktif) return;
+
+  const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
+  if (!savedUser || !savedUser.uid || savedUser.status !== 'aktif') return;
+
+  if (!window.db || typeof window.firebaseRef !== 'function' || typeof window.firebaseOnValue !== 'function') {
+    setTimeout(jalankanPemantauPrivateDiIndex, 300);
+    return;
   }
-  ['touchstart', 'pointerdown', 'click', 'keydown'].forEach(evt => {
-    window.removeEventListener(evt, muatIframeChatLatarBelakang);
+
+  try {
+    if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
+      await window.signInAnonymously(window.auth);
+    }
+  } catch (e) {}
+
+  listenerPrivateLangsungAktif = true;
+  const myUid = savedUser.uid;
+  const unreadMap = JSON.parse(localStorage.getItem('rt05_private_unread_map') || '{}');
+  const roomTerpantau = new Set();
+
+  const usersRef = window.firebaseRef(window.db, 'users');
+  window.firebaseOnValue(usersRef, (usersSnap) => {
+    if (!usersSnap.exists()) return;
+
+    usersSnap.forEach((uSnap) => {
+      const u = uSnap.val();
+      if (!u || u.status !== 'aktif' || u.uid === myUid || roomTerpantau.has(u.uid)) return;
+      roomTerpantau.add(u.uid);
+
+      const targetUid = u.uid;
+      const roomID = [myUid, targetUid].sort((a, b) => a.localeCompare(b)).join('_');
+      const roomRef = window.firebaseRef(window.db, `private_chats/${roomID}`);
+
+      window.firebaseOnValue(roomRef, (roomSnap) => {
+        const modal = document.getElementById('chat-overlay-modal');
+        const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
+        if (isModalOpen) return;
+
+        let unread = 0;
+        if (roomSnap.exists()) {
+          const lastReadMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key') || '{}');
+          const lastReadKey = lastReadMap[targetUid];
+          let found = false;
+
+          roomSnap.forEach((mSnap) => {
+            const m = mSnap.val();
+            if (!m || !m.text) return;
+            if (mSnap.key === lastReadKey) {
+              found = true;
+              unread = 0;
+            } else if (m.uid !== myUid && (found || !lastReadKey)) {
+              unread++;
+            }
+          });
+
+          if (lastReadKey && !found) {
+            unread = 0;
+            roomSnap.forEach((mSnap) => {
+              const m = mSnap.val();
+              if (m && m.uid !== myUid) unread++;
+            });
+          }
+        }
+
+        unreadMap[targetUid] = unread;
+        const totalPrivate = Object.values(unreadMap).reduce((sum, v) => sum + (Number(v) || 0), 0);
+
+        localStorage.setItem('rt05_private_unread_map', JSON.stringify(unreadMap));
+        localStorage.setItem('rt05_unread_private_total', String(totalPrivate));
+
+        // Kirim angka private terbaru sambil mempertahankan jumlahPublicTerakhir apa adanya
+        updatePublicTabBadge(jumlahPublicTerakhir, totalPrivate);
+      });
+    });
   });
 }
+jalankanPemantauPrivateDiIndex();
+document.addEventListener('visibilitychange', () => {
+  if (!document.hidden) {
+    if (typeof paksaSinkronBadgeDariIframe === 'function') {
+      paksaSinkronBadgeDariIframe();
+    }
+    jalankanPemantauPrivateDiIndex();
+  }
+});
+window.addEventListener('pageshow', () => {
+  if (typeof paksaSinkronBadgeDariIframe === 'function') {
+    paksaSinkronBadgeDariIframe();
+  }
+});
+window.addEventListener('focus', () => {
+  if (typeof paksaSinkronBadgeDariIframe === 'function') {
+    paksaSinkronBadgeDariIframe();
+  }
+});
+window.addEventListener('utilsSiap', jalankanPemantauPrivateDiIndex, { once: true });
+  
+  function muatIframeChatLatarBelakang() {
+    if (iframeChatSudahDimuat) return;
+    const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
+    if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
+      const dataSrc = iframe.getAttribute('data-src');
+      if (dataSrc) {
+        iframe.onload = () => {
+          paksaSinkronBadgeDariIframe();
+          setTimeout(paksaSinkronBadgeDariIframe, 1200);
+        };
+        iframe.src = dataSrc;
+        iframeChatSudahDimuat = true;
+      }
+    }
+  }
 
-  ['touchstart', 'pointerdown', 'click', 'keydown'].forEach(evt => {
-    window.addEventListener(evt, muatIframeChatLatarBelakang, { passive: true, once: true });
+  renderBadgeChatUtama();
+
+  // Jika warga sudah login chat, muat iframe lebih cepat (800ms setelah load) tanpa menunggu requestIdleCallback
+  window.addEventListener('load', () => {
+    const sudahLoginChat = Boolean(localStorage.getItem('rt05_chat_user'));
+    setTimeout(muatIframeChatLatarBelakang, sudahLoginChat ? 800 : 3000);
   });
-  setTimeout(muatIframeChatLatarBelakang, 4000);
 
-  window.addEventListener('message', function(event) {
+window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
       const publicCount = Number(event.data.unreadPublicCount || 0);
-      const privateCount = Number(event.data.unreadPrivateCount || 0);
+      const privateDariIframe = Number(event.data.unreadPrivateCount || 0);
+      const privateDariIndex = Number(localStorage.getItem('rt05_unread_private_total') || 0);
+      const privateCount = Math.max(privateDariIframe, privateDariIndex);
       updatePublicTabBadge(publicCount, privateCount);
     }
   });
-// Sinkronisasi ulang badge begitu iframe chat selesai dimuat atau PWA kembali ke layar
+
+  // Sinkronisasi ulang badge & listener private chat saat PWA dibuka kembali di HP
   function paksaSinkronBadgeDariIframe() {
+    if (!iframeChatSudahDimuat) {
+      muatIframeChatLatarBelakang();
+      return;
+    }
+
     const modal = document.getElementById('chat-overlay-modal');
     const iframe = modal ? modal.querySelector('iframe') : null;
     if (!iframe || !iframe.contentWindow) return;
 
     try {
       const cw = iframe.contentWindow;
-      // 1. Jika fungsi pengirim total sudah siap di dalam chat.html, panggil langsung
+      if (typeof cw.listenAllPrivateChats === 'function') {
+        cw.listenAllPrivateChats();
+      }
       if (typeof cw.sendTotalUnreadToParent === 'function') {
         cw.sendTotalUnreadToParent();
       }
-      // 2. Kirim sinyal postMessage sebagai cadangan
       const isOpen = Boolean(modal && modal.dataset.open === 'true');
       cw.postMessage({ type: 'CHAT_MODAL_STATUS', isOpen: isOpen }, '*');
       cw.postMessage({ type: 'REQUEST_UNREAD_SYNC' }, '*');
     } catch (e) {}
   }
 
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) paksaSinkronBadgeDariIframe();
-  });
-  window.addEventListener('focus', paksaSinkronBadgeDariIframe);
-  setTimeout(paksaSinkronBadgeDariIframe, 2500);
-  setTimeout(paksaSinkronBadgeDariIframe, 5000);
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
@@ -1550,14 +1626,22 @@ document.addEventListener('visibilitychange', () => {
     }
   }
 });  
+let lastInitPetaTime = 0;
+
 function initPetaDanData() {
+  const sekarang = Date.now();
+  if (sekarang - lastInitPetaTime < 120 && map && isDataReady) {
+    return;
+  }
+  lastInitPetaTime = sekarang;
+
   // 1. Render Peta Leaflet secara sinkron dan instan
   if (!map && typeof L !== 'undefined' && document.getElementById('map')) {
     let container = L.DomUtil.get('map');
     if (container && container._leaflet_id) container._leaflet_id = null;
 
     map = L.map('map', { zoomControl: false }).setView([-7.7423, 110.3842], 17);
-    
+
     var tileLayerUtama = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
       maxZoom: 20,
       subdomains: ['mt0', 'mt1', 'mt2', 'mt3'],
@@ -1577,39 +1661,40 @@ function initPetaDanData() {
     tileLayerUtama.addTo(map);
     perbaruiIndikatorSync();
 
-// Tunda sinkronisasi background (jimpitan offline & badge) agar TBT awal rendah
-const jalankanTugasLatarBelakang = () => {
-    if (window.db && typeof window.firebaseRef === 'function') {
-      if (navigator.onLine) kirimDataPendingJimpitan();
-    }
-    if (typeof muatBadgeInfoRT === 'function') {
-      muatBadgeInfoRT();
-    }
-  };
+    // Tunda sinkronisasi background (jimpitan offline & badge) agar TBT awal rendah
+    const jalankanTugasLatarBelakang = () => {
+      if (window.db && typeof window.firebaseRef === 'function') {
+        if (navigator.onLine) kirimDataPendingJimpitan();
+      }
+      if (typeof muatBadgeInfoRT === 'function') {
+        muatBadgeInfoRT();
+      }
+    };
 
-  if ('requestIdleCallback' in window) {
-    requestIdleCallback(jalankanTugasLatarBelakang, { timeout: 2500 });
-  } else {
-    setTimeout(jalankanTugasLatarBelakang, 1500);
-  }
+    if ('requestIdleCallback' in window) {
+      requestIdleCallback(jalankanTugasLatarBelakang, { timeout: 2500 });
+    } else {
+      setTimeout(jalankanTugasLatarBelakang, 1500);
+    }
   }
 
   // 1b. Gambar poligon batas wilayah (otomatis tergambar begitu RT05_CONFIG siap)
   if (map && !isPolygonDrawn && window.RT05_CONFIG && RT05_CONFIG.BATAS_WILAYAH) {
     isPolygonDrawn = true;
-    L.polygon(RT05_CONFIG.BATAS_WILAYAH, { 
-      color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1 
+    L.polygon(RT05_CONFIG.BATAS_WILAYAH, {
+      color: '#00c853', weight: 3, fillColor: '#00c853', fillOpacity: 0.1
     }).addTo(map);
   }
-  
+
 // 2. Ambil data peta warga (hanya jalan sekali saat RT05_CONFIG sudah siap)
   if (map && !isDataReady && window.RT05_CONFIG && window.RT05_CONFIG.PETA_PROXY_URL) {
     if (typeof muatDataPetaWarga === 'function') {
       isDataReady = true;
-      setTimeout(() => muatDataPetaWarga(), 300);
+      setTimeout(() => muatDataPetaWarga(), 50);
     }
   }
 }
+  window.initPetaDanData = initPetaDanData;
 
 function buatMarkerPin(pin) {
     // Jika marker sudah pernah dibuat sebelumnya, langsung kembalikan
@@ -1768,12 +1853,24 @@ function muatDataPetaWarga() {
 
               if (statusHidden) continue;
 
-              var markerPublik = buatMarkerPin(dataPinItem);
+              var teksKatItem = String(kategoriManual || dataIkon.kategori || '').toLowerCase();
+              var teksNamaItem = String(keywordPencarian || '').toLowerCase();
+              var isFasumAwal = teksKatItem.includes('fasum') || teksKatItem.includes('fasilitas') ||
+                teksKatItem.includes('pos') || teksNamaItem.includes('fasum') ||
+                teksNamaItem.includes('pos') || teksNamaItem.includes('musholla') ||
+                teksNamaItem.includes('masjid') || teksNamaItem.includes('balai') || teksNamaItem.includes('sd');
+              var isPengurusAwal = teksNamaItem.includes('ketua rt') || teksNamaItem.includes('ketua rw') ||
+                teksNamaItem.includes('pak rt') || teksNamaItem.includes('pak rw') ||
+                teksNamaItem.includes('rumah rt') || teksNamaItem.includes('rumah rw');
 
-              if (typeof markerGroup !== 'undefined' && markerGroup) {
-                markerGroup.addLayer(markerPublik);
-              } else {
-                markerPublik.addTo(map);
+              if (isFasumAwal || isPengurusAwal) {
+                var markerPublik = buatMarkerPin(dataPinItem);
+
+                if (typeof markerGroup !== 'undefined' && markerGroup) {
+                  markerGroup.addLayer(markerPublik);
+                } else {
+                  markerPublik.addTo(map);
+                }
               }
             }
           }
@@ -3715,273 +3812,34 @@ function bukaModalChatDanLogout() {
     }, 250);
   }
 
-    const dataChangelog = [
-      {
-        versi: "v1.8.9",
-        tanggal: "16 Nov 2026",
-        status: "Terbaru",
-        warna: "#4CAF50",
-        fitur: [
-          "Perbaikan antar muka pada index dan admin",
-          "Perbaikan kecepatan membuka aplikasi"
-        ]
-      },
-      {
-        versi: "v1.7.0",
-        tanggal: "9 Nov 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur Edit/Kelola Data Warga",
-          "Perbaikan Major pada halaman cloud storage",
-          "Penambahan keamanan database"
-        ]
-      },
-       {
-        versi: "v1.6.5",
-        tanggal: "4 Nov 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur Laporan Divisi",
-          "Perbaikan Major pada halaman admin",
-          "Kini bisa edit laporan dan upload bukti nota",
-          "Penambahan fitur upload foto pengumuman dan foto rumah warga"
-        ]
-      },
-       {
-        versi: "v1.6.4",
-        tanggal: "3 Nov 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur kelola data warga",
-          "Penambahan fitur edit inventaris dan pinjam inventaris/perkakas",
-          "Fix bug dan error badge unread"
-        ]
-      },
-       {
-        versi: "v1.6.1",
-        tanggal: "31 Okt 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur tombol Setting/Pengaturan suara notif",
-          "Kini bisa atur jenis notifikasi suara Grup Chat dan Obrolan Private Chat",
-          "Tambahan fitur export laporn dalam bentuk excel dan pdf"
-        ]
-      },
-       {
-        versi: "v1.5.9",
-        tanggal: "26 Okt 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur tombol Setting/Pengaturan",
-          "Penambahan pilihan suara notifikasi pesan/chat",
-          "Setiap akun kini memiliki warna berbeda didalam chat grup"
-        ]
-      },
-      {
-        versi: "v1.5.7",
-        tanggal: "17 Okt 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur buat akun chat",
-          "Penambahan tombol Setting/Pengaturan",
-          "Setiap akun chat kini memakai email dummy otomatis"
-        ]
-      },
-       {
-        versi: "v1.5.5",
-        tanggal: "14 Okt 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan fitur Polling di grup chat",
-          "Perbaikan warna username saat chat di grup chat",
-          "Perbaikan fitur badge unread dan notifikasi chat baru"
-        ]
-      },
-      {
-        versi: "v1.5.4",
-        tanggal: "8 Okt 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan fitur Push Notification",
-          "Perbaikan tampilan tombol di halaman Admin",
-          "Perbaikan fitur Program Kerja"
-        ]
-      },
-       {
-        versi: "v1.5.1",
-        tanggal: "2 Okt 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan fitur RAB/Program Kerja",
-          "Penambahan tab RAB/Program Kerja pada halaman info/pengumuman warga",
-          "Perbaikan fitur Filter Bangunan/Lokasi di halaman admin"
-        ]
-      },
-      {
-        versi: "v1.5.0",
-        tanggal: "30 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur info/pengumuman berupa gambar dan video sekarang otomatis fullscreen",
-          "Perbaikan fitur Form Warga Baru dan Tamu menginap"
-        ]
-      },
-       {
-        versi: "v1.4.9",
-        tanggal: "29 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur chat",
-          "Penambahan fungsi papan Info/Pengumuman bisa menampilkan gambar dan video",
-          "Perbaikan fitur Form Warga Baru dan Tamu menginap"
-        ]
-      },
-      {
-        versi: "v1.4.8",
-        tanggal: "28 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan fitur PIN untuk laporan per divisi",
-          "Perbaikan fitur Kelola Data Nama Warga"
-        ]
-      },
-      {
-        versi: "v1.4.7",
-        tanggal: "27 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan fitur Kelola Data Warga",
-          "Penambahan fitur Cari Nama Anggota Keluarga",
-          "Perbaikan fitur Senter/Torch"
-        ]
-      },
-       {
-        versi: "v1.4.6",
-        tanggal: "26 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan fitur lampu senter/torch",
-          "Perbaikan fitur notifikasi lonceng update versi/pembaruan"
-        ]
-      },
-      {
-        versi: "v1.4.5",
-        tanggal: "25 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan fitur read/unread badge",
-          "Perbaikan fitur online/idle/offline user",
-          "Perbaikan fitur notifikasi chat baru"
-        ]
-      },
-      {
-        versi: "v1.4.4",
-        tanggal: "23 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan fitur chat",
-          "Penambahan fitur admin chat",
-          "Penambahan fitur daftar/login untuk chat warga"
-        ]
-      },
-      {
-        versi: "v1.4.1",
-        tanggal: "22 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur update otomatis di browser",
-          "Perbaikan ikon lonceng notifikasi update dan text versi"
-        ]
-      },
-       {
-        versi: "v1.3.9",
-        tanggal: "22 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur update otomatis",
-          "Penambahan ikon lonceng notifikasi update"
-        ]
-      },
-          {
-        versi: "v1.3.8",
-        tanggal: "22 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur rekap jimpitan",
-          "Pernambahan indikator online, offline, dan sinkron",
-          "Perbaikan minor tampilan informasi changelog"
-        ]
-      },
-      {
-        versi: "v1.3.7",
-        tanggal: "21 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Perbaikan fitur inventaris",
-          "Perbaikan halaman Admin/Pengurus RT",
-          "Perbaikan fitur Lapor Warga Baru"
-        ]
-      },
-      {
-        versi: "v1.3.3",
-        tanggal: "20 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan Fitur Inventaris/Perkakas",
-          "Penambahan Fitur Pinjam Inventaris/Perkakas"
-        ]
-      },
-      {
-        versi: "v1.2.2",
-        tanggal: "19 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Penambahan Fitur Filter lokasi Kost/Kuliner/Minimarket/Resto/Fasum",
-          "Penambahan Fitur Laporan Keuangan All Divisi Terpadu",
-          "Penambahan Fitur Lapor Warga Baru",
-          "Penambahan Fitur Ronda Jimpitan Harian"
-        ]
-      },
-      {
-        versi: "v1.0.0",
-        tanggal: "12 Sep 2026",
-        status: "",
-        warna: "#888",
-        fitur: [
-          "Rilis awal PAPAN INFORMASI DIGITAL RT 05.",
-          "Fitur Cari nomor rumah warga",
-          "Fitur Informasi Kegiatan/Pengumuman"
-        ]
-      }
-    ];
-
 window.muatChangelog = function() {
   const container = document.getElementById("konten-changelog");
   if (!container) return;
 
-  container.innerHTML = dataChangelog.map(item => `
+  // Jika dataChangelog belum ada di memori, unduh file changelog.js sekarang
+  if (typeof window.dataChangelog === 'undefined') {
+    container.innerHTML = '<div style="text-align:center; padding:20px; color:#666; font-size:13px;">⏳ Memuat riwayat pembaruan...</div>';
+
+    // Cegah double-request jika tombol diklik berkali-kali saat sedang memuat
+    if (window._sedangMuatChangelog) return;
+    window._sedangMuatChangelog = true;
+
+    const script = document.createElement('script');
+    script.src = './changelog.js';
+    script.onload = function() {
+      window._sedangMuatChangelog = false;
+      window.muatChangelog(); // Render ulang setelah file selesai diunduh
+    };
+    script.onerror = function() {
+      window._sedangMuatChangelog = false;
+      container.innerHTML = '<div style="text-align:center; padding:20px; color:#d32f2f; font-size:13px;">Gagal memuat changelog. Periksa koneksi internet Anda.</div>';
+    };
+    document.body.appendChild(script);
+    return;
+  }
+
+  // Render HTML jika dataChangelog sudah tersedia
+  container.innerHTML = window.dataChangelog.map(item => `
     <div style="margin-bottom: 12px; border-bottom: 1px dashed #e0e0e0; padding-bottom: 8px;">
       <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
         <div>
@@ -3999,10 +3857,9 @@ window.muatChangelog = function() {
 };
 
 window.bukaModalChangelog = function() {
-  // 🛠️ Perbaikan minor: Gunakan window.muatChangelog()
-  if (typeof window.muatChangelog === 'function') window.muatChangelog();
   const modal = document.getElementById("modal-changelog");
   if (modal) modal.style.display = "flex";
+  if (typeof window.muatChangelog === 'function') window.muatChangelog();
 };
 
 window.tutupModalChangelog = function() {
@@ -4112,18 +3969,19 @@ window.simpanWargaBaru = async function() {
     }, 130);
   }, { passive: true });
   
-  // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initPetaDanData);
+// 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
+  const pemicuAwal = () => initPetaDanData();
+
+  if (document.getElementById('map') && typeof L !== 'undefined') {
+    pemicuAwal();
+  } else if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', pemicuAwal, { once: true });
   } else {
-    initPetaDanData();
+    pemicuAwal();
   }
 
-  window.addEventListener('utilsSiap', initPetaDanData);
+  window.addEventListener('utilsSiap', pemicuAwal, { once: true });
 
-  if (window.RT05_CONFIG) {
-    initPetaDanData();
-  }
   if (window.db && typeof window.firebaseRef === 'function') {
     muatBadgeInfoRT();
   }
