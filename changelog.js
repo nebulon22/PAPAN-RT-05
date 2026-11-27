@@ -1,7 +1,7 @@
 window.dataChangelog = [
       {
-        versi: "v1.9.2",
-        tanggal: "16 Nov 2026",
+        versi: "v1.9.3",
+        tanggal: "27 Nov 2026",
         status: "Terbaru",
         warna: "#4CAF50",
         fitur: [
