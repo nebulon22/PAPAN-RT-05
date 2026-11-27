@@ -1579,6 +1579,7 @@ function listenAllPrivateChats() {
     if (lastMsg && (openPrivateRooms[targetUID] || unreadTotalCount > 0)) {
   catatAktivitasPrivate(targetUID, lastMsg.timestamp || Date.now());
 }
+    if (typeof window.renderWargaSidebar === 'function') renderWargaSidebar();
       renderPrivateTabsUI();
       sendTotalUnreadToParent();
       isFirstLoad = false;
@@ -1586,7 +1587,6 @@ function listenAllPrivateChats() {
   });
 }
     
-
 // ===  KIRIM PESAN & PICU NOTIFIKASI SEKALI TEMBAK ===
 function executeSendMessage(e) {
   if (e) {
@@ -2908,7 +2908,7 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
     return `hsl(${hue}, 80%, 65%)`;
   }
     
-  window.renderWargaSidebar = () => {
+window.renderWargaSidebar = () => {
     const listContainer = document.getElementById('warga-list');
     if (!listContainer) return;
     listContainer.innerHTML = '';
@@ -2941,10 +2941,15 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
       let roleBadge = '';
       if (u.role === 'admin') roleBadge = '<span class="badge-admin">ADMIN</span>';
 
+      const msgUnread = (u.uid !== currentUser?.uid) ? (unreadCounts[u.uid] || 0) : 0;
+      const unreadBadgeHTML = msgUnread > 0
+        ? `<span style="background: #f59e0b; color: #0f172a; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; min-width: 16px; height: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 4px rgba(245, 158, 11, 0.7);">${msgUnread > 99 ? '99+' : msgUnread}</span>`
+        : '';
+
       const item = document.createElement('div');
       item.className = "warga-item";
       item.innerHTML = `
-        <div style="display: flex; align-items: center; gap: 6px; overflow: hidden;">
+        <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; flex: 1;">
           <span class="status-dot ${dotClass}"></span>
           <div style="overflow: hidden;">
             <div style="color: #e2e8f0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
@@ -2955,6 +2960,7 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
             </div>
           </div>
         </div>
+        ${unreadBadgeHTML}
       `;
       item.onclick = () => {
         if (u.uid !== currentUser.uid) {
@@ -3037,23 +3043,37 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
     }
   };
 
-  window.toggleSidebar = () => {
-    const sidebar = document.getElementById('sidebar-warga');
-    const btnToggle = document.getElementById('btn-toggle-center');
-    const arrowIcon = document.getElementById('sidebar-arrow-icon');
+window.toggleSidebar = () => {
+  const sidebar = document.getElementById('sidebar-warga');
+  const btnToggle = document.getElementById('btn-toggle-center');
+  const arrowIcon = document.getElementById('sidebar-arrow-icon');
 
-    if (!sidebar || !btnToggle) return;
+  if (!sidebar || !btnToggle) return;
 
-    if (sidebar.classList.contains('hidden')) {
-      sidebar.classList.remove('hidden');
-      btnToggle.style.right = window.innerWidth < 640 ? '110px' : '150px';
-      if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-right';
-    } else {
-      sidebar.classList.add('hidden');
-      btnToggle.style.right = '10px';
-      if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-left';
-    }
-  };
+  const akanBuka = sidebar.classList.contains('hidden');
+  if (akanBuka) {
+    sidebar.classList.remove('hidden');
+    btnToggle.style.right = window.innerWidth < 640 ? '150px' : '175px';
+    if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-right';
+
+    activeTab = 'semua';
+    window.activeTab = 'semua';
+
+    const tabAktif = document.getElementById('tab-aktif-btn');
+    const tabSemua = document.getElementById('tab-semua-btn');
+    const searchBox = document.getElementById('search-box-container');
+
+    if (tabSemua) tabSemua.classList.add('active');
+    if (tabAktif) tabAktif.classList.remove('active');
+    if (searchBox) searchBox.style.display = 'block';
+
+    renderWargaSidebar();
+  } else {
+    sidebar.classList.add('hidden');
+    btnToggle.style.right = '10px';
+    if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-left';
+  }
+};
 
   function escapeHTML(str) {
     return str ? str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)) : '';
