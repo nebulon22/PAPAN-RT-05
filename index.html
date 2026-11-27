@@ -1310,38 +1310,38 @@
 // ==========================================
   // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
-  let isMainChatListenerAktif = false;
-  let jumlahPublicSebelumnya = null;
+let jumlahPublicSebelumnya = null;
   let jumlahPrivateSebelumnya = null;
   let jumlahPublicTerakhir = 0;
   let jumlahPrivateTerakhir = 0;
+  let lastUnreadType = null;
   let iframeChatSudahDimuat = false;
 
-function renderBadgeChatUtama() {
-  const badge = document.getElementById('badge-chat-main');
-  const chatBtn = document.getElementById('floating-chat-btn');
-  const modal = document.getElementById('chat-overlay-modal');
-  const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
+  function renderBadgeChatUtama() {
+    const badge = document.getElementById('badge-chat-main');
+    const chatBtn = document.getElementById('floating-chat-btn');
+    const modal = document.getElementById('chat-overlay-modal');
+    const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
 
-  const storedPrivate = Number(localStorage.getItem('rt05_unread_private_total') || 0);
-  const privateAktif = jumlahPrivateTerakhir > 0 ? jumlahPrivateTerakhir : storedPrivate;
+    const storedPrivate = Number(localStorage.getItem('rt05_unread_private_total') || 0);
+    const privateAktif = jumlahPrivateTerakhir > 0 ? jumlahPrivateTerakhir : storedPrivate;
 
-  const effPublic = isModalOpen ? 0 : jumlahPublicTerakhir;
-  const effPrivate = isModalOpen ? 0 : privateAktif;
-  const totalCount = effPublic + effPrivate;
+    const effPublic = isModalOpen ? 0 : jumlahPublicTerakhir;
+    const effPrivate = isModalOpen ? 0 : privateAktif;
+    const totalCount = effPublic + effPrivate;
 
-  if (badge && chatBtn) {
-    if (totalCount > 0) {
+    if (badge && chatBtn) {
+      if (totalCount > 0) {
         badge.style.display = 'inline-block';
         badge.innerText = totalCount > 99 ? '99+' : totalCount;
 
-        if (effPrivate > 0) {
-          // Badge Private: Kuning keemasan tanpa garis tepi
+        const pakaiKuningPrivate = (effPrivate > 0 && lastUnreadType === 'private') || (effPrivate > 0 && effPublic === 0 && lastUnreadType !== 'group');
+
+        if (pakaiKuningPrivate) {
           badge.style.backgroundColor = '#f59e0b';
           badge.style.color = '#0f172a';
           badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
         } else {
-          // Badge Grup: Merah iOS solid tanpa garis tepi
           badge.style.backgroundColor = '#ff3b30';
           badge.style.color = '#ffffff';
           badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
@@ -1356,26 +1356,20 @@ function renderBadgeChatUtama() {
         badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
         chatBtn.classList.remove('chat-btn-animated');
       }
+    }
+
+    if ('setAppBadge' in navigator) {
+      try {
+        if (totalCount > 0) {
+          navigator.setAppBadge(totalCount).catch(() => {});
+        } else {
+          navigator.clearAppBadge().catch(() => {});
+        }
+      } catch (e) {}
+    }
   }
 
-  if ('setAppBadge' in navigator) {
-    try {
-      if (totalCount > 0) {
-        navigator.setAppBadge(totalCount).catch(() => {});
-      } else {
-        navigator.clearAppBadge().catch(() => {});
-      }
-    } catch (e) {}
-  }
-}
-
-function updatePublicTabBadge(publicCount, privateCount = jumlahPrivateTerakhir) {
-    console.log('[BADGE DEBUG]', {
-      publicCount,
-      privateCount,
-      isModalOpen: document.getElementById('chat-overlay-modal')?.dataset.open
-    });
-
+  function updatePublicTabBadge(publicCount, privateCount = jumlahPrivateTerakhir) {
     const modal = document.getElementById('chat-overlay-modal');
     const iframe = modal ? modal.querySelector('iframe') : null;
     const isIframeLoaded = Boolean(
@@ -1383,10 +1377,21 @@ function updatePublicTabBadge(publicCount, privateCount = jumlahPrivateTerakhir)
     );
     const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
 
+    const adaPrivateBaru = jumlahPrivateSebelumnya !== null && privateCount > jumlahPrivateSebelumnya;
+    const adaGrupBaru = jumlahPublicSebelumnya !== null && publicCount > jumlahPublicSebelumnya;
+
+    if (adaPrivateBaru) {
+      lastUnreadType = 'private';
+    } else if (adaGrupBaru) {
+      lastUnreadType = 'group';
+    } else if (privateCount === 0) {
+      lastUnreadType = 'group';
+    }
+
     if (!isIframeLoaded && !isModalOpen && typeof window.picuNotifikasiMedia === 'function') {
-      if (jumlahPrivateSebelumnya !== null && privateCount > jumlahPrivateSebelumnya) {
+      if (adaPrivateBaru) {
         window.picuNotifikasiMedia('private');
-      } else if (jumlahPublicSebelumnya !== null && publicCount > jumlahPublicSebelumnya) {
+      } else if (adaGrupBaru) {
         window.picuNotifikasiMedia('grup');
       }
     }
@@ -1399,12 +1404,18 @@ function updatePublicTabBadge(publicCount, privateCount = jumlahPrivateTerakhir)
 
     renderBadgeChatUtama();
   }
-  window.updatePublicTabBadge = updatePublicTabBadge;
+window.updatePublicTabBadge = updatePublicTabBadge;
 
   // Tangkap perubahan unread private dari localStorage secara instan
   window.addEventListener('storage', (e) => {
     if (e.key === 'rt05_unread_private_total') {
-      jumlahPrivateTerakhir = Number(e.newValue || 0);
+      const nilaiBaru = Number(e.newValue || 0);
+      if (nilaiBaru > jumlahPrivateTerakhir) {
+        lastUnreadType = 'private';
+      } else if (nilaiBaru === 0 && lastUnreadType === 'private') {
+        lastUnreadType = 'group';
+      }
+      jumlahPrivateTerakhir = nilaiBaru;
       renderBadgeChatUtama();
     }
   });
