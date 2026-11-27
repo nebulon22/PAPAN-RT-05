@@ -968,7 +968,7 @@
   <span id="badge-chat-main">0</span>
 </button>
 
-<div id="chat-overlay-modal" data-open="false" style="display: none; position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1600; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
+<div id="chat-overlay-modal" data-open="false" style="display: flex; visibility: hidden; opacity: 0; pointer-events: none; transform: translateX(-9999px); position: fixed; top: 90px; bottom: 80px; left: 12px; right: 12px; max-width: 480px; margin: auto; z-index: 1600; background-color: rgba(2, 6, 23, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2); overflow: hidden; flex-direction: column;">
   
   <div style="background: rgba(15, 23, 42, 0.2); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); padding: 10px 14px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
     <div style="display: flex; align-items: center; gap: 8px;">
@@ -980,6 +980,7 @@
     </div>
   </div>
 
+  <iframe data-src="./chat" title="Live Chat RT 05" allowtransparency="true" style="width: 100%; height: 100%; border: none; background: transparent; flex: 1;"></iframe>
 </div>
 
         <!-- Modal Setting -->
@@ -1274,13 +1275,15 @@ window.tampilkanLoncengUpdate = function() {
       );
     }
   };
- // ==========================================
-  // 2. LOGIKA CHAT & PEMANTAU BADGE LANGSUNG (ANTI-FREEZE PWA)
+// ==========================================
+  // 2. LOGIKA CHAT & BADGE NOTIFIKASI (LAZY LOAD)
   // ==========================================
+  let jumlahPublicSebelumnya = null;
+  let jumlahPrivateSebelumnya = Number(localStorage.getItem('rt05_unread_private_total') || 0);
   let jumlahPublicTerakhir = 0;
-  let jumlahPrivateTerakhir = Number(localStorage.getItem('rt05_unread_private_total') || 0);
+  let jumlahPrivateTerakhir = jumlahPrivateSebelumnya;
   let lastUnreadType = jumlahPrivateTerakhir > 0 ? 'private' : null;
-  let listenerBadgeChatAktif = false;
+  let iframeChatSudahDimuat = false;
 
   function renderBadgeChatUtama() {
     const badge = document.getElementById('badge-chat-main');
@@ -1300,24 +1303,25 @@ window.tampilkanLoncengUpdate = function() {
         badge.style.display = 'inline-block';
         badge.innerText = totalCount > 99 ? '99+' : totalCount;
 
-        const pakaiKuningPrivate =
-          (effPrivate > 0 && lastUnreadType === 'private') ||
-          (effPrivate > 0 && effPublic === 0 && lastUnreadType !== 'group');
+        const pakaiKuningPrivate = (effPrivate > 0 && lastUnreadType === 'private') || (effPrivate > 0 && effPublic === 0 && lastUnreadType !== 'group');
 
         if (pakaiKuningPrivate) {
           badge.style.backgroundColor = '#f59e0b';
           badge.style.color = '#0f172a';
+          badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
         } else {
           badge.style.backgroundColor = '#ff3b30';
           badge.style.color = '#ffffff';
+          badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
         }
-        badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
+
         chatBtn.classList.add('chat-btn-animated');
       } else {
         badge.style.display = 'none';
         badge.innerText = '0';
         badge.style.backgroundColor = '#ff3b30';
         badge.style.color = '#ffffff';
+        badge.style.boxShadow = '0 2px 6px rgba(0, 0, 0, 0.22)';
         chatBtn.classList.remove('chat-btn-animated');
       }
     }
@@ -1334,198 +1338,124 @@ window.tampilkanLoncengUpdate = function() {
   }
 
   function updatePublicTabBadge(publicCount, privateCount = jumlahPrivateTerakhir) {
-    if (privateCount > jumlahPrivateTerakhir) {
+    const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
+    const isIframeLoaded = Boolean(
+      iframe && iframe.src && iframe.src !== 'about:blank' && iframe.src !== window.location.href
+    );
+    const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
+
+    const adaPrivateBaru = jumlahPrivateSebelumnya !== null && privateCount > jumlahPrivateSebelumnya;
+    const adaGrupBaru = jumlahPublicSebelumnya !== null && publicCount > jumlahPublicSebelumnya;
+
+    if (adaPrivateBaru) {
       lastUnreadType = 'private';
-    } else if (publicCount > jumlahPublicTerakhir) {
+    } else if (adaGrupBaru) {
       lastUnreadType = 'group';
-    } else if (privateCount === 0 && publicCount > 0) {
+    } else if (privateCount === 0) {
       lastUnreadType = 'group';
     }
 
+    if (!isIframeLoaded && !isModalOpen && typeof window.picuNotifikasiMedia === 'function') {
+      if (adaPrivateBaru) {
+        window.picuNotifikasiMedia('private');
+      } else if (adaGrupBaru) {
+        window.picuNotifikasiMedia('grup');
+      }
+    }
+
+    jumlahPublicSebelumnya = publicCount;
+    jumlahPrivateSebelumnya = privateCount;
     jumlahPublicTerakhir = publicCount;
     jumlahPrivateTerakhir = privateCount;
     localStorage.setItem('rt05_unread_private_total', String(privateCount));
+
     renderBadgeChatUtama();
   }
   window.updatePublicTabBadge = updatePublicTabBadge;
 
-  // Buka & tutup modal transparan secara dinamis (buat iframe saat buka, hapus saat tutup)
-  window.toggleChatModal = function() {
+  // Tangkap perubahan unread private dari localStorage secara instan
+  window.addEventListener('storage', (e) => {
+    if (e.key === 'rt05_unread_private_total') {
+      const nilaiBaru = Number(e.newValue || 0);
+      if (nilaiBaru > jumlahPrivateTerakhir) {
+        lastUnreadType = 'private';
+      } else if (nilaiBaru === 0 && lastUnreadType === 'private') {
+        lastUnreadType = 'group';
+      }
+      jumlahPrivateTerakhir = nilaiBaru;
+      renderBadgeChatUtama();
+    }
+  });
+
+window.toggleChatModal = function() {
     const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
     if (!modal) return;
 
     const isOpening = modal.dataset.open !== 'true';
 
     if (isOpening) {
+      if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
+        const dataSrc = iframe.getAttribute('data-src');
+        if (dataSrc) {
+          iframe.src = dataSrc;
+          iframeChatSudahDimuat = true;
+        }
+      }
+
       modal.dataset.open = 'true';
       modal.style.display = 'flex';
-
-      let iframe = modal.querySelector('iframe');
-      if (!iframe) {
-        iframe = document.createElement('iframe');
-        iframe.src = './chat';
-        iframe.title = 'Live Chat RT 05';
-        iframe.setAttribute('allowtransparency', 'true');
-        iframe.style.cssText = 'width: 100%; height: 100%; border: none; background: transparent; flex: 1;';
-        iframe.onload = () => {
-          if (iframe.contentWindow) {
-            iframe.contentWindow.postMessage({ type: 'CHAT_MODAL_STATUS', isOpen: true }, '*');
-          }
-        };
-        modal.appendChild(iframe);
-      }
+      modal.style.visibility = 'visible';
+      modal.style.opacity = '1';
+      modal.style.transform = 'none';
+      modal.style.pointerEvents = 'auto';
       renderBadgeChatUtama();
+
+      if (iframe && iframe.contentWindow && typeof iframe.contentWindow.switchChatRoom === 'function') {
+        iframe.contentWindow.switchChatRoom('public');
+      }
     } else {
       modal.dataset.open = 'false';
-      modal.style.display = 'none';
-
-      const iframe = modal.querySelector('iframe');
-      if (iframe) iframe.remove();
-
-      jumlahPrivateTerakhir = Number(localStorage.getItem('rt05_unread_private_total') || 0);
+      modal.style.visibility = 'hidden';
+      modal.style.opacity = '0';
+      modal.style.transform = 'translateX(-9999px)';
+      modal.style.pointerEvents = 'none';
       renderBadgeChatUtama();
+    }
+
+    if (iframe && iframe.contentWindow) {
+      iframe.contentWindow.postMessage({
+        type: 'CHAT_MODAL_STATUS',
+        isOpen: isOpening
+      }, '*');
     }
   };
 
-  // Pemantau unread grup & private langsung di index.html agar tidak pernah dibekukan PWA Android
-  async function mulaiPantauBadgeChat() {
-    renderBadgeChatUtama();
-    if (listenerBadgeChatAktif) return;
-
-    const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
-    if (!savedUser || !savedUser.uid || savedUser.status !== 'aktif') return;
-
-    if (typeof window.firebaseRef !== 'function' || !window.db) {
-      setTimeout(mulaiPantauBadgeChat, 200);
-      return;
+  function muatIframeChatLatarBelakang() {
+    if (iframeChatSudahDimuat) return;
+    const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
+    if (iframe && (!iframe.src || iframe.src === 'about:blank' || iframe.src === window.location.href)) {
+      const dataSrc = iframe.getAttribute('data-src');
+      if (dataSrc) {
+        iframe.onload = () => {
+          paksaSinkronBadgeDariIframe();
+          setTimeout(paksaSinkronBadgeDariIframe, 1200);
+        };
+        iframe.src = dataSrc;
+        iframeChatSudahDimuat = true;
+      }
     }
-
-    try {
-      if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
-        await window.signInAnonymously(window.auth);
-      }
-    } catch (e) {}
-
-    listenerBadgeChatAktif = true;
-    const myUid = savedUser.uid;
-    const unreadPerUser = JSON.parse(localStorage.getItem('rt05_private_unread_map') || '{}');
-    const watchedPrivateRooms = new Set();
-    let isFirstGroup = true;
-
-    const isModalTerbuka = () => {
-      const m = document.getElementById('chat-overlay-modal');
-      return Boolean(m && m.dataset.open === 'true');
-    };
-
-    // 1. Pantau pesan unread Grup RT 05
-    const chatsRef = window.firebaseRef(window.db, 'chats');
-    window.firebaseOnValue(chatsRef, (snap) => {
-      if (!snap.exists() || isModalTerbuka()) return;
-
-      const readMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key') || '{}');
-      let lastReadKey = readMap[myUid];
-
-      if (!lastReadKey && isFirstGroup) {
-        let latest = null;
-        snap.forEach(c => { if (c.key !== 'pinned_poll') latest = c.key; });
-        if (latest) {
-          readMap[myUid] = latest;
-          localStorage.setItem('rt05_chat_last_read_public_key', JSON.stringify(readMap));
-          lastReadKey = latest;
-        }
-      }
-
-      let count = 0;
-      snap.forEach(c => {
-        const val = c.val();
-        if (c.key !== 'pinned_poll' && val && val.uid !== myUid && lastReadKey && c.key > lastReadKey) {
-          count++;
-        }
-      });
-
-      if (!isFirstGroup && count > jumlahPublicTerakhir) {
-        lastUnreadType = 'group';
-        if (typeof window.picuNotifikasiMedia === 'function') window.picuNotifikasiMedia('grup');
-      }
-
-      jumlahPublicTerakhir = count;
-      isFirstGroup = false;
-      renderBadgeChatUtama();
-    });
-
-    // 2. Pantau pesan unread semua room Private Chat
-    const usersRef = window.firebaseRef(window.db, 'users');
-    window.firebaseOnValue(usersRef, (usersSnap) => {
-      if (!usersSnap.exists()) return;
-
-      usersSnap.forEach(uSnap => {
-        const u = uSnap.val();
-        if (!u || u.status !== 'aktif' || u.uid === myUid || watchedPrivateRooms.has(u.uid)) return;
-        watchedPrivateRooms.add(u.uid);
-
-        const targetUid = u.uid;
-        const roomID = [myUid, targetUid].sort((a, b) => a.localeCompare(b)).join('_');
-        const roomRef = window.firebaseRef(window.db, `private_chats/${roomID}`);
-        let isFirstRoom = true;
-
-        window.firebaseOnValue(roomRef, (roomSnap) => {
-          if (isModalTerbuka()) return;
-
-          if (!roomSnap.exists()) {
-            unreadPerUser[targetUid] = 0;
-          } else {
-            const readPrivateMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key') || '{}');
-            const lastRead = readPrivateMap[targetUid];
-            let found = false;
-            let unread = 0;
-
-            roomSnap.forEach(mSnap => {
-              const m = mSnap.val();
-              if (!m || !m.text) return;
-              if (mSnap.key === lastRead) {
-                found = true;
-                unread = 0;
-              } else if (m.uid !== myUid && (found || !lastRead)) {
-                unread++;
-              }
-            });
-
-            if (lastRead && !found) {
-              unread = 0;
-              roomSnap.forEach(mSnap => {
-                const m = mSnap.val();
-                if (m && m.uid !== myUid) unread++;
-              });
-            }
-
-            const prevUnread = unreadPerUser[targetUid] || 0;
-            unreadPerUser[targetUid] = unread;
-
-            if (!isFirstRoom && unread > prevUnread) {
-              lastUnreadType = 'private';
-              if (typeof window.picuNotifikasiMedia === 'function') window.picuNotifikasiMedia('private');
-            }
-          }
-
-          const totalPriv = Object.values(unreadPerUser).reduce((a, b) => a + (Number(b) || 0), 0);
-          localStorage.setItem('rt05_private_unread_map', JSON.stringify(unreadPerUser));
-          localStorage.setItem('rt05_unread_private_total', String(totalPriv));
-
-          jumlahPrivateTerakhir = totalPriv;
-          if (totalPriv === 0 && jumlahPublicTerakhir > 0) lastUnreadType = 'group';
-          isFirstRoom = false;
-          renderBadgeChatUtama();
-        });
-      });
-    });
   }
 
-  mulaiPantauBadgeChat();
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) mulaiPantauBadgeChat();
+  renderBadgeChatUtama();
+
+  // Jika warga sudah login chat, muat iframe lebih cepat (800ms setelah load) tanpa menunggu requestIdleCallback
+  window.addEventListener('load', () => {
+    const sudahLoginChat = Boolean(localStorage.getItem('rt05_chat_user'));
+    setTimeout(muatIframeChatLatarBelakang, sudahLoginChat ? 800 : 3000);
   });
-  window.addEventListener('pageshow', mulaiPantauBadgeChat);
-  window.addEventListener('utilsSiap', mulaiPantauBadgeChat, { once: true });
 
   window.addEventListener('message', function(event) {
     if (event.data && event.data.type === 'RT05_CHAT_UNREAD_UPDATE') {
@@ -1534,6 +1464,37 @@ window.tampilkanLoncengUpdate = function() {
       updatePublicTabBadge(publicCount, privateCount);
     }
   });
+
+  // Sinkronisasi ulang badge & listener private chat saat PWA dibuka kembali di HP
+  function paksaSinkronBadgeDariIframe() {
+    if (!iframeChatSudahDimuat) {
+      muatIframeChatLatarBelakang();
+      return;
+    }
+
+    const modal = document.getElementById('chat-overlay-modal');
+    const iframe = modal ? modal.querySelector('iframe') : null;
+    if (!iframe || !iframe.contentWindow) return;
+
+    try {
+      const cw = iframe.contentWindow;
+      if (typeof cw.listenAllPrivateChats === 'function') {
+        cw.listenAllPrivateChats();
+      }
+      if (typeof cw.sendTotalUnreadToParent === 'function') {
+        cw.sendTotalUnreadToParent();
+      }
+      const isOpen = Boolean(modal && modal.dataset.open === 'true');
+      cw.postMessage({ type: 'CHAT_MODAL_STATUS', isOpen: isOpen }, '*');
+      cw.postMessage({ type: 'REQUEST_UNREAD_SYNC' }, '*');
+    } catch (e) {}
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) paksaSinkronBadgeDariIframe();
+  });
+  window.addEventListener('pageshow', paksaSinkronBadgeDariIframe);
+  window.addEventListener('focus', paksaSinkronBadgeDariIframe);
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
