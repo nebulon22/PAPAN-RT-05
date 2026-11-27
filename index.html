@@ -1524,6 +1524,16 @@ document.addEventListener('visibilitychange', () => {
     jalankanPemantauPrivateDiIndex();
   }
 });
+window.addEventListener('pageshow', () => {
+  if (typeof paksaSinkronBadgeDariIframe === 'function') {
+    paksaSinkronBadgeDariIframe();
+  }
+});
+window.addEventListener('focus', () => {
+  if (typeof paksaSinkronBadgeDariIframe === 'function') {
+    paksaSinkronBadgeDariIframe();
+  }
+});
 window.addEventListener('utilsSiap', jalankanPemantauPrivateDiIndex, { once: true });
   
   function muatIframeChatLatarBelakang() {
@@ -1586,99 +1596,6 @@ window.addEventListener('message', function(event) {
     } catch (e) {}
   }
 
-  // Pemantau langsung private_chats di index.html agar tidak tertahan oleh iframe di PWA HP
-  let listenerPrivateLangsungAktif = false;
-
-  async function jalankanPemantauPrivateDiIndex() {
-    if (listenerPrivateLangsungAktif) return;
-
-    const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
-    if (!savedUser || !savedUser.uid || savedUser.status !== 'aktif') return;
-
-    if (!window.db || typeof window.firebaseRef !== 'function' || typeof window.firebaseOnValue !== 'function') {
-      setTimeout(jalankanPemantauPrivateDiIndex, 300);
-      return;
-    }
-
-    try {
-      if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
-        await window.signInAnonymously(window.auth);
-      }
-    } catch (e) {}
-
-    listenerPrivateLangsungAktif = true;
-    const myUid = savedUser.uid;
-    const unreadMap = JSON.parse(localStorage.getItem('rt05_private_unread_map') || '{}');
-    const roomTerpantau = new Set();
-
-    const usersRef = window.firebaseRef(window.db, 'users');
-    window.firebaseOnValue(usersRef, (usersSnap) => {
-      if (!usersSnap.exists()) return;
-
-      usersSnap.forEach((uSnap) => {
-        const u = uSnap.val();
-        if (!u || u.status !== 'aktif' || u.uid === myUid || roomTerpantau.has(u.uid)) return;
-        roomTerpantau.add(u.uid);
-
-        const targetUid = u.uid;
-        const roomID = [myUid, targetUid].sort((a, b) => a.localeCompare(b)).join('_');
-        const roomRef = window.firebaseRef(window.db, `private_chats/${roomID}`);
-
-        window.firebaseOnValue(roomRef, (roomSnap) => {
-          const modal = document.getElementById('chat-overlay-modal');
-          const isModalOpen = Boolean(modal && modal.dataset.open === 'true');
-          if (isModalOpen) return;
-
-          let unread = 0;
-          if (roomSnap.exists()) {
-            const lastReadMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key') || '{}');
-            const lastReadKey = lastReadMap[targetUid];
-            let found = false;
-
-            roomSnap.forEach((mSnap) => {
-              const m = mSnap.val();
-              if (!m || !m.text) return;
-              if (mSnap.key === lastReadKey) {
-                found = true;
-                unread = 0;
-              } else if (m.uid !== myUid && (found || !lastReadKey)) {
-                unread++;
-              }
-            });
-
-            if (lastReadKey && !found) {
-              unread = 0;
-              roomSnap.forEach((mSnap) => {
-                const m = mSnap.val();
-                if (m && m.uid !== myUid) unread++;
-              });
-            }
-          }
-
-          unreadMap[targetUid] = unread;
-          const totalPrivate = Object.values(unreadMap).reduce((sum, v) => sum + (Number(v) || 0), 0);
-
-          localStorage.setItem('rt05_private_unread_map', JSON.stringify(unreadMap));
-          localStorage.setItem('rt05_unread_private_total', String(totalPrivate));
-
-          // Pertahankan jumlahPublicTerakhir apa adanya agar grup chat tidak terganggu
-          updatePublicTabBadge(jumlahPublicTerakhir, totalPrivate);
-        });
-      });
-    });
-  }
-
-  jalankanPemantauPrivateDiIndex();
-
-  document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-      paksaSinkronBadgeDariIframe();
-      jalankanPemantauPrivateDiIndex();
-    }
-  });
-  window.addEventListener('pageshow', paksaSinkronBadgeDariIframe);
-  window.addEventListener('focus', paksaSinkronBadgeDariIframe);
-  window.addEventListener('utilsSiap', jalankanPemantauPrivateDiIndex, { once: true });
 // ==========================================
   // 3. INISIALISASI PETA & DATA UTAMA
   // ==========================================
