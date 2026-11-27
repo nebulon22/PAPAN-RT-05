@@ -19,7 +19,8 @@
   <link rel="preload" href="setting.js" as="script">
 
 <!-- 1. CSS LOKAL (Leaflet, MarkerCluster & FontAwesome) -->
-  <link rel="stylesheet" href="leaflet.css">
+  <link rel="stylesheet" href="leaflet.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="leaflet.css"></noscript>
   <link rel="stylesheet" href="MarkerCluster.css" media="print" onload="this.media='all'">
   <link rel="stylesheet" href="MarkerCluster.Default.css" media="print" onload="this.media='all'">
   <noscript>
@@ -40,7 +41,7 @@
   <link rel="apple-touch-icon" href="kentongan-maskable.png">
   
   <!-- 2. JAVASCRIPT LOKAL (leaflet.markercluster.js dimuat dinamis di muatDataPetaWarga) -->
-  <script src="leaflet.js" defer></script>
+  <script src="leaflet.js" defer onload="if(window.initPetaDanData) window.initPetaDanData()"></script>
   <script type="module" src="utils.js"></script>
   <script src="setting.js" defer></script>
   
@@ -1615,6 +1616,7 @@ function initPetaDanData() {
     }
   }
 }
+  window.initPetaDanData = initPetaDanData;
 
 function buatMarkerPin(pin) {
     // Jika marker sudah pernah dibuat sebelumnya, langsung kembalikan
@@ -4132,7 +4134,9 @@ window.simpanWargaBaru = async function() {
 // 🌟 DITARUH DI PALING BAWAH AGAR SEMUA FUNGSI SUDAH SIAP DI MEMORI
   const pemicuAwal = () => initPetaDanData();
 
-  if (document.readyState === 'loading') {
+  if (document.getElementById('map') && typeof L !== 'undefined') {
+    pemicuAwal();
+  } else if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', pemicuAwal, { once: true });
   } else {
     pemicuAwal();
