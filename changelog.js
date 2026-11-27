@@ -1,4 +1,4 @@
-    const dataChangelog = [
+window.dataChangelog = [
       {
         versi: "v1.9.0",
         tanggal: "16 Nov 2026",
