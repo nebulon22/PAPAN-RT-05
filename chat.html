@@ -1232,9 +1232,7 @@ window.logoutUser = () => {
         });
       }
     };
-   
-
-    
+  
 window.addEventListener('DOMContentLoaded', () => {
     const regModal = document.getElementById('reg-modal');
     if (regModal) {
@@ -1245,6 +1243,9 @@ window.addEventListener('DOMContentLoaded', () => {
 
     // 🌟 1. TAMPILKAN CACHE PROFIL & CHAT SECARA INSTAN (0ms, tanpa tunggu Firebase Auth)
     const savedUser = JSON.parse(localStorage.getItem('rt05_chat_user'));
+    const savedUnreadMap = JSON.parse(localStorage.getItem('rt05_private_unread_map') || '{}');
+    Object.assign(unreadCounts, savedUnreadMap);
+    sendTotalUnreadToParent();
     const cachedPublic = localStorage.getItem('rt05_public_chat_cache');
     const chatStream = document.getElementById('chat-stream');
 
@@ -1946,7 +1947,7 @@ function sendTotalUnreadToParent() {
   Object.keys(unreadCounts).forEach(uid => {
     totalPrivateUnread += (unreadCounts[uid] || 0);
   });
-
+  localStorage.setItem('rt05_private_unread_map', JSON.stringify(unreadCounts));
   // Simpan ke localStorage agar index.html selalu sinkron
   localStorage.setItem('rt05_unread_private_total', String(totalPrivateUnread));
 
