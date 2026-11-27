@@ -216,7 +216,7 @@
     }
     
 /* Tombol Panah Toggle Sidebar */
-    #btn-toggle-center {
+#btn-toggle-center {
       position: absolute;
       right: 10px;
       top: 50%;
@@ -234,6 +234,24 @@
       cursor: pointer;
       box-shadow: 0 4px 10px rgba(0,0,0,0.35);
       transition: right 0.25s ease, transform 0.2s ease, background 0.2s ease;
+    }
+
+    @keyframes arrowUnreadPulse {
+      0%, 100% {
+        transform: translateY(-50%) scale(1);
+        box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.75), 0 4px 10px rgba(0, 0, 0, 0.35);
+      }
+      50% {
+        transform: translateY(-50%) translateX(-2px) scale(1.08);
+        box-shadow: 0 0 0 6px rgba(245, 158, 11, 0), 0 4px 12px rgba(245, 158, 11, 0.55);
+      }
+    }
+
+    #btn-toggle-center.has-unread-alert {
+      background: linear-gradient(135deg, #fbbf24, #f59e0b) !important;
+      color: #0f172a !important;
+      border-color: #fef08a !important;
+      animation: arrowUnreadPulse 1.5s infinite ease-in-out;
     }
 
     /* Sidebar Warga Menumpuk (Overlay) Tanpa Mempersempit Chat */
@@ -263,7 +281,7 @@
     @media (min-width: 640px) {
       aside#sidebar-warga { width: 175px; }
     }
-
+    
     .tab-header { display: flex; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 10px; font-weight: 600; background: rgba(15, 23, 42, 0.2); }
     .tab-btn { flex: 1; padding: 6px 0; background: none; border: none; color: #94a3b8; cursor: pointer; text-align: center; border-bottom: 2px solid transparent; }
     .tab-btn.active { color: #38bdf8; border-bottom-color: #38bdf8; }
@@ -1470,6 +1488,9 @@ window.closePrivateTab = (e, targetUID) => {
       sendTotalUnreadToParent();
     }
   }
+  if (typeof updateSidebarArrowAlert === 'function') {
+    updateSidebarArrowAlert();
+  }
 };
 
 
@@ -1591,6 +1612,7 @@ function listenAllPrivateChats() {
     if (typeof window.renderWargaSidebar === 'function') renderWargaSidebar();
       renderPrivateTabsUI();
       sendTotalUnreadToParent();
+    if (typeof updateSidebarArrowAlert === 'function') updateSidebarArrowAlert();
       isFirstLoad = false;
     });
   });
@@ -1868,7 +1890,7 @@ function listenPublicGroupUnread() {
         }
       }
     }
-
+    if (typeof updateSidebarArrowAlert === 'function') updateSidebarArrowAlert();
     isFirstPublicLoad = false;
   });
 }
@@ -2989,6 +3011,24 @@ window.renderWargaSidebar = () => {
     if (countBadge) countBadge.innerText = activeCount;
   };
 
+    function updateSidebarArrowAlert() {
+  const btnToggle = document.getElementById('btn-toggle-center');
+  const sidebar = document.getElementById('sidebar-warga');
+  if (!btnToggle) return;
+
+  const isSidebarOpen = sidebar && !sidebar.classList.contains('hidden');
+  const totalPrivateUnread = Object.values(unreadCounts || {}).reduce(
+    (sum, val) => sum + (Number(val) || 0),
+    0
+  );
+  const hasAnyUnread = !isSidebarOpen && (totalPrivateUnread > 0 || (lastPublicUnreadCount || 0) > 0);
+
+  btnToggle.classList.toggle('has-unread-alert', hasAnyUnread);
+  btnToggle.title = hasAnyUnread
+    ? `Ada ${totalPrivateUnread + (lastPublicUnreadCount || 0)} pesan belum dibaca — buka daftar warga`
+    : 'Sembunyikan/Tampilkan Daftar Warga';
+}
+
   window.switchTab = (tab) => {
     activeTab = tab;
     window.activeTab = activeTab;
@@ -3083,6 +3123,9 @@ window.toggleSidebar = (forceState) => {
     sidebar.classList.add('hidden');
     btnToggle.style.right = '10px';
     if (arrowIcon) arrowIcon.className = 'fa-solid fa-chevron-left';
+  }
+  if (typeof updateSidebarArrowAlert === 'function') {
+    updateSidebarArrowAlert();
   }
 };
     const chatContainerOutsideEl = document.getElementById('chat-container');
