@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rt-kayen-v1.8.9'; // 🌟 Naikkan versi agar HP warga memperbarui SW
+const CACHE_NAME = 'rt-kayen-v1.9.0'; // 🌟 Naikkan versi agar HP warga memperbarui SW
 
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js');
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js');
@@ -150,10 +150,15 @@ if (
   ) {
     return;
   }
-// 4. Longgarkan tangkapan untuk navigasi halaman, Clean URLs, API, Firebase, dan Media
+// 4. Network-First untuk halaman HTML, Clean URLs, JS lokal, API, Firebase, dan Media
   if (
     event.request.mode === 'navigate' ||
-    url.origin === self.location.origin && !url.pathname.includes('.') ||
+    (url.origin === self.location.origin && (
+      !url.pathname.includes('.') || 
+      url.pathname.endsWith('.html') ||
+      url.pathname.endsWith('utils.js') ||
+      url.pathname.endsWith('setting.js')
+    )) ||
     url.origin.includes('firebase') ||
     url.origin.includes('gstatic') ||
     url.origin.includes('firebasestorage') ||
@@ -162,11 +167,22 @@ if (
     url.origin.includes('r2.dev') ||
     url.pathname.match(/\.(mp4|webm|jpg|jpeg|png|gif|webp)$/i)
   ) {
+    // Paksa validasi ke server (no-cache) untuk aset lokal asal sendiri
+    const fetchReq = (url.origin === self.location.origin)
+      ? new Request(event.request, { cache: 'no-cache' })
+      : event.request;
+
     event.respondWith(
-      fetch(event.request).catch(() => {
+      fetch(fetchReq).then((networkResponse) => {
+        // Perbarui cache lokal secara otomatis jika berhasil menarik dari jaringan
+        if (networkResponse && networkResponse.status === 200 && url.origin === self.location.origin) {
+          const responseClone = networkResponse.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+        }
+        return networkResponse;
+      }).catch(() => {
         return caches.match(event.request).then((cached) => {
           if (cached) return cached;
-          // Jika /chat gagal, coba ambil cadangan ./chat.html dari cache
           if (!url.pathname.includes('.')) {
             return caches.match(url.pathname + '.html').then((htmlCached) => {
               return htmlCached || new Response(null, { status: 404, statusText: 'Not Found' });
@@ -178,7 +194,6 @@ if (
     );
     return;
   }
-
   // 5. Cache First untuk aset statis UI PWA
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
