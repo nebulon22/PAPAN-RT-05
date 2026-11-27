@@ -714,10 +714,9 @@ window.debuggingAktivasi = "Script modul sukses berjalan!";
 
     // 🌟 Pengaman Global: Cek apakah Modal Chat sedang dibuka di halaman utama (index.html)
 window.isChatModalOpen = function() {
+  if (window.parent === window) return true;
   try {
-    const modal = (window.parent && window.parent.document) 
-      ? window.parent.document.getElementById('chat-overlay-modal') 
-      : document.getElementById('chat-overlay-modal');
+    const modal = window.parent.document.getElementById('chat-overlay-modal');
     if (modal) {
       if (modal.dataset.open !== undefined) {
         return modal.dataset.open === 'true';
@@ -1516,8 +1515,8 @@ function listenAllPrivateChats() {
     const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(30));
     let isFirstLoad = true;
 
-    privateRoomListeners[targetUID] = onValue(roomRef, (roomSnap) => {
-      if (!activeUser || !activeUser.uid) return;
+      privateRoomListeners[targetUID] = onValue(roomRef, (roomSnap) => {
+      if (!currentUser || !currentUser.uid) return;
 
       if (!roomSnap.exists()) {
         unreadCounts[targetUID] = 0;
@@ -1664,6 +1663,7 @@ function executeSendMessage(e) {
     const targetName = allUsersCache[activePrivateUID]?.username || allUsersCache[activePrivateUID]?.nama || "Warga";
     openPrivateRooms[activePrivateUID] = targetName;
     localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+    catatAktivitasPrivate(activePrivateUID, Date.now());
     renderPrivateTabsUI();
 
     set(newMsgRef, {
@@ -2876,6 +2876,7 @@ function createMessageElement(msg, isUnread = false, msgKey = '') {
     }
   } else if (msg.uid === currentUser?.uid) {
     nameClass = "role-self";
+    textClass = "msg-text msg-text-self";
   } else {
     customColor = getUniqueColorFromName(msg.sender);
   }
