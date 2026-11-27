@@ -1495,10 +1495,9 @@ let privateRoomListeners = {};
 const lastNotifiedMsgKeys = {};
 
 function listenAllPrivateChats() {
-  const activeUser = currentUser;
+  const activeUser = currentUser || JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
   if (!activeUser || !activeUser.uid) return;
 
-  // Gabungkan daftar UID dari tab yang sudah terbuka & seluruh warga aktif di cache
   const targetUIDs = new Set([
     ...Object.keys(openPrivateRooms || {}),
     ...Object.keys(allUsersCache || {})
@@ -1506,118 +1505,105 @@ function listenAllPrivateChats() {
   targetUIDs.delete(activeUser.uid);
 
   targetUIDs.forEach((targetUID) => {
-    if (!targetUID || privateRoomListeners[targetUID]) return; // Cegah listener ganda
+    if (!targetUID || privateRoomListeners[targetUID]) return;
 
     const roomID = [activeUser.uid, targetUID].sort((a, b) => a.localeCompare(b)).join('_');
     const roomRef = query(ref(db, `private_chats/${roomID}`), limitToLast(30));
     let isFirstLoad = true;
 
-      privateRoomListeners[targetUID] = onValue(roomRef, (roomSnap) => {
-      if (!currentUser || !currentUser.uid) return;
+    privateRoomListeners[targetUID] = onValue(roomRef, (roomSnap) => {
+      const nowUser = currentUser || JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
+      if (!nowUser || !nowUser.uid) return;
 
       if (!roomSnap.exists()) {
         unreadCounts[targetUID] = 0;
         isFirstLoad = false;
         sendTotalUnreadToParent();
+        if (typeof updateSidebarArrowAlert === 'function') updateSidebarArrowAlert();
         return;
       }
 
-      const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+      const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key') || '{}');
       const lastReadKey = lastReadKeyMap[targetUID];
 
       let lastMsg = null;
       let lastMsgKey = null;
-      let foundLastKey = false;
+      let passedLastRead = !lastReadKey;
       let unreadTotalCount = 0;
 
       roomSnap.forEach((msgSnap) => {
         const msgKey = msgSnap.key;
         const msgData = msgSnap.val();
-        if (msgData && typeof msgData === 'object' && msgData.text) {
-          lastMsg = msgData;
-          lastMsgKey = msgKey;
+        if (!msgData || typeof msgData !== 'object' || !msgData.text) return;
 
-          if (msgKey === lastReadKey) {
-            foundLastKey = true;
-            unreadTotalCount = 0;
-          } else if (msgData.uid !== activeUser.uid) {
-            if (foundLastKey || !lastReadKey) {
-              unreadTotalCount++;
-            }
-          }
+        lastMsg = msgData;
+        lastMsgKey = msgKey;
+
+        if (lastReadKey && msgKey === lastReadKey) {
+          passedLastRead = true;
+          unreadTotalCount = 0;
+          return;
+        }
+
+        if (passedLastRead && msgData.uid !== nowUser.uid) {
+          unreadTotalCount++;
         }
       });
 
-      // Fallback jika lastReadKey lama sudah tertimbun/terhapus
-      if (lastReadKey && !foundLastKey) {
+      // Fallback bila lastReadKey sudah terhapus dari 30 pesan terakhir
+      if (lastReadKey && !passedLastRead) {
         unreadTotalCount = 0;
         roomSnap.forEach((msgSnap) => {
           const msgData = msgSnap.val();
-          if (msgData && typeof msgData === 'object' && msgData.uid !== activeUser.uid) {
+          if (msgData && typeof msgData === 'object' && msgData.uid !== nowUser.uid) {
             unreadTotalCount++;
           }
         });
       }
 
-const isCurrentlyViewingThisChat =
-  activeChatType === 'private' &&
-  activePrivateUID === targetUID &&
-  typeof window.isUserViewingChat === 'function' &&
-  window.isUserViewingChat();
+      const isCurrentlyViewingThisChat =
+        activeChatType === 'private' &&
+        activePrivateUID === targetUID &&
+        typeof window.isUserViewingChat === 'function' &&
+        window.isUserViewingChat();
 
-if (isCurrentlyViewingThisChat) {
-  unreadTotalCount = 0;
-  markRoomAsRead(targetUID);
-}
-
-// 1. Jika ada pesan unread baru, otomatis munculkan tab lawan chat
-if (unreadTotalCount > 0 && lastMsg && !openPrivateRooms[targetUID]) {
-  const senderName =
-    (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) ||
-    lastMsg.sender ||
-    'Warga';
-  openPrivateRooms[targetUID] = senderName;
-  localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
-}
-
-// 2. Simpan unread count untuk room ini
-unreadCounts[targetUID] = unreadTotalCount;
-
-// 3. Notifikasi Suara (dari repo via parent) & Melayang OS
-if (!isFirstLoad && lastMsg && lastMsg.uid !== activeUser.uid && isChatReady && unreadTotalCount > 0) {
-  if (lastNotifiedMsgKeys[targetUID] !== lastMsgKey && !isCurrentlyViewingThisChat) {
-    lastNotifiedMsgKeys[targetUID] = lastMsgKey;
-
-    try {
-      if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
-        window.parent.picuNotifikasiMedia('private');
+      if (isCurrentlyViewingThisChat) {
+        unreadTotalCount = 0;
+        markRoomAsRead(targetUID);
       }
-    } catch (e) {}
 
-    if (Notification.permission === 'granted' && !window.isUserViewingChat()) {
-      const senderName =
-        (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) ||
-        lastMsg.sender ||
-        'Warga';
-      new Notification(`Pesan Private dari ${senderName}`, {
-        body: lastMsg.text || 'Mengirim pesan...',
-        icon: './kentongan-slit-drum.png',
-        tag: `private-${targetUID}`,
-        renotify: true
-      });
-    }
-  }
-}
+      if (unreadTotalCount > 0 && lastMsg && !openPrivateRooms[targetUID]) {
+        const senderName =
+          (allUsersCache[targetUID]?.username || allUsersCache[targetUID]?.nama) ||
+          lastMsg.sender ||
+          'Warga';
+        openPrivateRooms[targetUID] = senderName;
+        localStorage.setItem('rt05_open_private_rooms', JSON.stringify(openPrivateRooms));
+      }
 
-if (lastMsg && (openPrivateRooms[targetUID] || unreadTotalCount > 0)) {
-  catatAktivitasPrivate(targetUID, lastMsg.timestamp || Date.now());
-}
+      unreadCounts[targetUID] = unreadTotalCount;
 
-if (typeof window.renderWargaSidebar === 'function') renderWargaSidebar();
-renderPrivateTabsUI();
-sendTotalUnreadToParent();
-if (typeof updateSidebarArrowAlert === 'function') updateSidebarArrowAlert();
-isFirstLoad = false;
+      if (!isFirstLoad && lastMsg && lastMsg.uid !== nowUser.uid && unreadTotalCount > 0) {
+        if (lastNotifiedMsgKeys[targetUID] !== lastMsgKey && !isCurrentlyViewingThisChat) {
+          lastNotifiedMsgKeys[targetUID] = lastMsgKey;
+
+          try {
+            if (window.parent && typeof window.parent.picuNotifikasiMedia === 'function') {
+              window.parent.picuNotifikasiMedia('private');
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (lastMsg && (openPrivateRooms[targetUID] || unreadTotalCount > 0)) {
+        catatAktivitasPrivate(targetUID, lastMsg.timestamp || Date.now());
+      }
+
+      if (typeof window.renderWargaSidebar === 'function') renderWargaSidebar();
+      renderPrivateTabsUI();
+      sendTotalUnreadToParent();
+      if (typeof updateSidebarArrowAlert === 'function') updateSidebarArrowAlert();
+      isFirstLoad = false;
     });
   });
 }
