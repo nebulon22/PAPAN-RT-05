@@ -79,6 +79,7 @@ const coreFiles = [
         './index.html',
         './admin.html',
         './admin',
+        './changelog.js',
         './chat.html',
         './chat',
         './pengumuman.html',
