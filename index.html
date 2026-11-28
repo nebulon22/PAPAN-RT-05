@@ -913,7 +913,8 @@
     </div>
   </div>
 
-    <div id="modal-layanan-rt" class="modal-bg" data-click="tutupModalLayananRTLuar">
+<!-- 1. MODAL HUB LAYANAN DIGITAL RT 05 -->
+<div id="modal-layanan-rt" class="modal-bg" data-click="tutupModalLayananRTLuar">
   <div class="modal-content" style="max-width: 420px; width: 92%;">
     <div class="modal-header">
       <h3>🏛️ Layanan Digital RT 05</h3>
@@ -932,16 +933,16 @@
         <span style="color: #0f766e; font-weight: bold;">›</span>
       </button>
 
-      <!-- Layanan 2: Permohonan Surat Pengantar RT -->
-      <a href="https://wa.me/6285643335300?text=Halo%20Pengurus%20RT%2005%20Kayen,%20saya%20ingin%20mengajukan%20Surat%20Pengantar%20RT%20untuk%20keperluan:%20..." target="_blank"
-        style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; text-align: left; text-decoration: none; box-sizing: border-box;">
+      <!-- Layanan 2: Permohonan Surat Pengantar RT (Buka Sub-Modal Cetak PDF + WA) -->
+      <button type="button" data-click="bukaModalSuratPengantar"
+        style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 11px 12px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; text-align: left; cursor: pointer;">
         <span style="font-size: 22px; flex-shrink: 0;">📄</span>
         <div style="flex: 1;">
           <div style="font-size: 13px; font-weight: 700; color: #1d4ed8;">Surat Pengantar RT</div>
-          <div style="font-size: 11px; color: #475569; margin-top: 2px;">Pengajuan pengantar KTP, KK, SKCK, domisili, & administrasi</div>
+          <div style="font-size: 11px; color: #475569; margin-top: 2px;">Cetak mandiri draf PDF ber-QR verifikasi (Domisili, Akta, KTP/KK, SKCK)</div>
         </div>
         <span style="color: #1d4ed8; font-weight: bold;">›</span>
-      </a>
+      </button>
 
       <!-- Layanan 3: Aduan Lingkungan & Kelistrikan -->
       <a href="https://wa.me/6285385489677?text=Halo%20Pengurus%20RT%2005%20Kayen,%20saya%20ingin%20melaporkan%20kendala%20lingkungan/fasum:%20..." target="_blank"
@@ -964,6 +965,120 @@
         </div>
         <span style="color: #b91c1c; font-weight: bold;">›</span>
       </a>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- MODAL SURAT PENGANTAR RT (BERLAPIS z-index: 2100) -->
+<div id="modal-surat-pengantar" class="modal-bg" data-click="tutupModalSuratPengantarLuar" style="z-index: 2100;">
+  <div class="modal-content" style="max-width: 440px; width: 92%; max-height: 86vh;">
+    <div class="modal-header">
+      <h3 id="judul-modal-surat">📄 Pilih Surat Pengantar RT</h3>
+      <button type="button" class="close-btn" data-click="tutupModalSuratPengantar" aria-label="Tutup">&times;</button>
+    </div>
+
+    <!-- LANGKAH 1: PILIH JENIS SURAT -->
+    <div id="step-pilih-surat" class="modal-body" style="gap: 8px;">
+      <div style="font-size: 11.5px; color: #1e3a8a; background: #eff6ff; padding: 9px 11px; border-radius: 8px; border: 1px solid #bfdbfe; line-height: 1.45;">
+        🔒 Setiap pencetakan otomatis tercatat dengan <b>Kode Tiket & QR Verifikasi</b>. Draf baru sah setelah diberi <b>Nomor Agenda, TTD Basah, & Stempel</b> oleh Ketua RT 05.
+      </div>
+
+      <button type="button" data-click="pilihJenisSurat" data-arg="Pengantar Pindah Domisili"
+        style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 9px; cursor: pointer; text-align: left;">
+        <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">1. 🚚 Pengantar Pindah Domisili</span>
+        <span style="color: #0288d1; font-weight: bold;">›</span>
+      </button>
+
+      <button type="button" data-click="pilihJenisSurat" data-arg="Pengantar Pembuatan Akta Kelahiran"
+        style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 9px; cursor: pointer; text-align: left;">
+        <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">2. 👶 Pengantar Akta Kelahiran</span>
+        <span style="color: #0288d1; font-weight: bold;">›</span>
+      </button>
+
+      <button type="button" data-click="pilihJenisSurat" data-arg="Pengantar Pembuatan / Perubahan KTP & KK"
+        style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 9px; cursor: pointer; text-align: left;">
+        <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">3. 🪪 Pengantar KTP / Kartu Keluarga (KK)</span>
+        <span style="color: #0288d1; font-weight: bold;">›</span>
+      </button>
+
+      <button type="button" data-click="pilihJenisSurat" data-arg="Pengantar Permohonan SKCK"
+        style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 9px; cursor: pointer; text-align: left;">
+        <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">4. 🛡️ Pengantar SKCK Kepolisian</span>
+        <span style="color: #0288d1; font-weight: bold;">›</span>
+      </button>
+
+      <button type="button" data-click="pilihJenisSurat" data-arg="Surat Keterangan Usaha / Domisili Usaha"
+        style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 9px; cursor: pointer; text-align: left;">
+        <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">5. 🏪 Pengantar Keterangan Usaha</span>
+        <span style="color: #0288d1; font-weight: bold;">›</span>
+      </button>
+
+      <button type="button" data-click="pilihJenisSurat" data-arg="Pengantar Nikah / Keterangan Kematian / Lainnya"
+        style="display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: #fff; border: 1px solid #cbd5e1; border-radius: 9px; cursor: pointer; text-align: left;">
+        <span style="font-size: 12.5px; font-weight: 700; color: #1e293b;">6. 📋 Pengantar Nikah / Kematian / Lainnya</span>
+        <span style="color: #0288d1; font-weight: bold;">›</span>
+      </button>
+    </div>
+
+    <!-- LANGKAH 2: FORM BIODATA & CETAK -->
+    <div id="step-form-surat" class="modal-body" style="display: none; gap: 9px;">
+      <button type="button" data-click="kembaliKeDaftarSurat"
+        style="align-self: flex-start; background: #f1f5f9; color: #334155; border: 1px solid #cbd5e1; border-radius: 6px; padding: 4px 10px; font-size: 11px; font-weight: bold; cursor: pointer;">
+        ← Ganti Jenis Surat
+      </button>
+
+      <input type="hidden" id="suratJenisTerpilih">
+
+      <div>
+        <label for="suratNama" style="font-size: 11.5px; font-weight: bold; color: #374151;">Nama Lengkap Pemohon:</label>
+        <input type="text" id="suratNama" class="form-input-rt" placeholder="Sesuai KTP / KK">
+      </div>
+
+      <div>
+        <label for="suratNik" style="font-size: 11.5px; font-weight: bold; color: #374151;">NIK (16 Digit):</label>
+        <input type="text" id="suratNik" class="form-input-rt" inputmode="numeric" maxlength="16" placeholder="3404xxxxxxxxxxxx">
+      </div>
+
+      <div>
+        <label for="suratTtl" style="font-size: 11.5px; font-weight: bold; color: #374151;">Tempat, Tanggal Lahir:</label>
+        <input type="text" id="suratTtl" class="form-input-rt" placeholder="Contoh: Sleman, 17 Agustus 1995">
+      </div>
+
+      <div>
+        <label for="suratAlamat" style="font-size: 11.5px; font-weight: bold; color: #374151;">Alamat / No. Rumah di RT 05:</label>
+        <input type="text" id="suratAlamat" class="form-input-rt" placeholder="Contoh: Kayen RT 05 / RW 44, Rumah No. 12">
+      </div>
+
+      <div>
+        <label for="suratKeperluan" style="font-size: 11.5px; font-weight: bold; color: #374151;">Keterangan / Keperluan Tambahan:</label>
+        <textarea id="suratKeperluan" class="form-input-rt" rows="2" placeholder="Contoh: Pindah domisili ke Kec. Ngaglik"></textarea>
+      </div>
+
+      <div style="display: flex; gap: 8px; margin-top: 4px;">
+        <button type="button" id="btnCetakPdfSurat" data-click="cetakPdfSuratPengantar"
+          style="flex: 1.3; padding: 10px; background: #0288d1; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">
+          🖨️ Cetak / Simpan PDF
+        </button>
+        <button type="button" data-click="kirimWaSuratPengantar"
+          style="flex: 1; padding: 10px; background: #16a34a; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">
+          📲 Kirim ke WA RT
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL HASIL VERIFIKASI QR SURAT PENGANTAR -->
+<div id="modal-verifikasi-surat" class="modal-bg" data-click="tutupModalVerifikasiSuratLuar" style="z-index: 3200;">
+  <div class="modal-content" style="max-width: 400px; width: 92%; text-align: center;">
+    <div class="modal-header">
+      <h3>🔍 Verifikasi Keaslian Surat</h3>
+      <button type="button" class="close-btn" data-click="tutupModalVerifikasiSurat" aria-label="Tutup">&times;</button>
+    </div>
+    <div id="konten-verifikasi-surat" class="modal-body" style="padding: 8px 0; text-align: left; font-size: 13px;">
+      Memeriksa keaslian dokumen...
     </div>
   </div>
 </div>
@@ -2555,8 +2670,6 @@ window.muatDataKeuangan = async function(paksaRefresh = false) {
   }
 };
 
-
-
 window.tampilkanRekeningKoran = function() {
   var selectDivisi = document.getElementById('filterDivisi');
   var divisiTerpilih = selectDivisi ? selectDivisi.value : 'semua';
@@ -2753,6 +2866,377 @@ window.cetakPDFRekeningKoran = () => {
   });
 };
 
+// ==========================================
+// LAYANAN DIGITAL & SURAT PENGANTAR ANTI-PALSU
+// ==========================================
+window.bukaModalLayananRT = function() {
+  const modal = document.getElementById('modal-layanan-rt');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.tutupModalLayananRT = function() {
+  const modal = document.getElementById('modal-layanan-rt');
+  if (modal) modal.style.display = 'none';
+};
+
+window.tutupModalLayananRTLuar = function(e) {
+  if (e && e.target && e.target.id === 'modal-layanan-rt') window.tutupModalLayananRT();
+};
+
+window.bukaModalSuratPengantar = function() {
+  window.kembaliKeDaftarSurat();
+  const modal = document.getElementById('modal-surat-pengantar');
+  if (modal) modal.style.display = 'flex';
+};
+
+window.tutupModalSuratPengantar = function() {
+  const modal = document.getElementById('modal-surat-pengantar');
+  if (modal) modal.style.display = 'none';
+};
+
+window.tutupModalSuratPengantarLuar = function(e) {
+  if (e && e.target && e.target.id === 'modal-surat-pengantar') window.tutupModalSuratPengantar();
+};
+
+window.pilihJenisSurat = function(target) {
+  const jenis = (typeof target === 'string') ? target : target?.dataset?.arg;
+  if (!jenis) return;
+
+  document.getElementById('suratJenisTerpilih').value = jenis;
+  document.getElementById('judul-modal-surat').innerText = '📄 ' + jenis;
+  document.getElementById('step-pilih-surat').style.display = 'none';
+  document.getElementById('step-form-surat').style.display = 'flex';
+};
+
+window.kembaliKeDaftarSurat = function() {
+  document.getElementById('judul-modal-surat').innerText = '📄 Pilih Surat Pengantar RT';
+  document.getElementById('step-form-surat').style.display = 'none';
+  document.getElementById('step-pilih-surat').style.display = 'flex';
+};
+
+function buatKodeTiketSurat() {
+  const now = new Date();
+  const ymd = String(now.getFullYear()).slice(-2) +
+              String(now.getMonth() + 1).padStart(2, '0') +
+              String(now.getDate()).padStart(2, '0');
+  const acak = Math.random().toString(36).substring(2, 6).toUpperCase();
+  return `RT05-${ymd}-${acak}`;
+}
+
+function sensorNikAudit(nik) {
+  const bersih = String(nik || '').replace(/\D/g, '');
+  if (bersih.length < 8) return bersih;
+  return bersih.slice(0, 4) + '********' + bersih.slice(-4);
+}
+
+function ambilDataFormSurat() {
+  return {
+    jenis: document.getElementById('suratJenisTerpilih')?.value.trim() || 'Surat Pengantar RT',
+    nama: document.getElementById('suratNama')?.value.trim() || '',
+    nik: document.getElementById('suratNik')?.value.trim() || '',
+    ttl: document.getElementById('suratTtl')?.value.trim() || '',
+    alamat: document.getElementById('suratAlamat')?.value.trim() || '',
+    keperluan: document.getElementById('suratKeperluan')?.value.trim() || ''
+  };
+}
+
+async function simpanLogCetakSurat(kodeTiket, d) {
+  if (!navigator.onLine) {
+    throw new Error('Koneksi internet diperlukan untuk mendaftarkan Kode Tiket verifikasi surat.');
+  }
+
+  if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
+    await window.signInAnonymously(window.auth);
+  }
+
+  const authUid = window.auth?.currentUser?.uid || '';
+  if (!authUid) {
+    throw new Error('Sesi autentikasi perangkat belum siap. Muat ulang halaman lalu coba lagi.');
+  }
+
+  let chatUser = null;
+  try {
+    chatUser = JSON.parse(localStorage.getItem('rt05_chat_user') || 'null');
+  } catch (e) {}
+
+  const payloadLog = {
+    kodeTiket: kodeTiket,
+    jenisSurat: d.jenis,
+    namaPemohon: d.nama,
+    nikSensor: sensorNikAudit(d.nik),
+    ttl: d.ttl || '-',
+    alamat: d.alamat,
+    keperluan: d.keperluan || d.jenis,
+    status: 'BELUM_DISAHKAN',
+    waktuCetak: new Date().toLocaleString('id-ID'),
+    timestamp: Date.now(),
+    creatorAuthUid: authUid,
+    chatUserUid: chatUser?.uid || '',
+    chatUsername: chatUser?.username || chatUser?.nama || '',
+    perangkat: navigator.userAgent.slice(0, 140)
+  };
+
+  if (typeof window.firebaseSet === 'function' && window.db && typeof window.firebaseRef === 'function') {
+    await window.firebaseSet(window.firebaseRef(window.db, `surat_pengantar/${kodeTiket}`), payloadLog);
+    return;
+  }
+
+  // Fallback langsung via Firebase REST API memakai token auth aktif
+  const dbUrl = window.db?.app?.options?.databaseURL;
+  const idToken = await window.auth.currentUser.getIdToken();
+  if (!dbUrl || !idToken) throw new Error('Konfigurasi database belum siap.');
+
+  const res = await fetch(`${dbUrl.replace(/\/$/, '')}/surat_pengantar/${encodeURIComponent(kodeTiket)}.json?auth=${encodeURIComponent(idToken)}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payloadLog)
+  });
+
+  if (!res.ok) {
+    throw new Error('Gagal mencatat tiket verifikasi ke server.');
+  }
+}
+
+window.cetakPdfSuratPengantar = async function() {
+  const d = ambilDataFormSurat();
+  if (!d.nama || !d.nik || !d.alamat) {
+    alert('Mohon isi minimal Nama Lengkap, NIK (16 digit), dan Alamat / No. Rumah terlebih dahulu.');
+    return;
+  }
+  if (d.nik.replace(/\D/g, '').length !== 16) {
+    alert('NIK harus terdiri dari 16 digit angka.');
+    return;
+  }
+
+  const btn = document.getElementById('btnCetakPdfSurat');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerText = '⏳ Mendaftarkan Tiket...';
+  }
+
+  const kodeTiket = buatKodeTiketSurat();
+
+  try {
+    // Wajib tercatat di server dulu sebelum PDF boleh dicetak (mencegah cetak tanpa jejak log)
+    await simpanLogCetakSurat(kodeTiket, d);
+  } catch (err) {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerText = '🖨️ Cetak / Simpan PDF';
+    }
+    alert('❌ ' + err.message);
+    return;
+  }
+
+  if (btn) {
+    btn.disabled = false;
+    btn.innerText = '🖨️ Cetak / Simpan PDF';
+  }
+
+  const tglSurat = new Date().toLocaleDateString('id-ID', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  });
+  const tahun = new Date().getFullYear();
+  const urlVerifikasi = `${window.location.origin}/?cek=${encodeURIComponent(kodeTiket)}`;
+  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=95x95&data=${encodeURIComponent(urlVerifikasi)}`;
+
+  const win = window.open('', '_blank', 'width=820,height=920');
+  if (!win) {
+    alert(`Tiket ${kodeTiket} sudah terdaftar, namun popup cetak diblokir browser. Izinkan popup lalu coba lagi.`);
+    return;
+  }
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="id">
+    <head>
+      <meta charset="UTF-8">
+      <title>${escapeHTML(d.jenis)} - ${escapeHTML(kodeTiket)}</title>
+      <style>
+        body { font-family: "Times New Roman", Times, serif; margin: 32px 44px; color: #000; font-size: 14px; line-height: 1.5; position: relative; }
+        .watermark { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%) rotate(-28deg); font-size: 28px; font-weight: bold; color: rgba(0,0,0,0.06); text-align: center; pointer-events: none; z-index: 0; white-space: nowrap; }
+        .kop { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 16px; position: relative; z-index: 1; }
+        .kop h2, .kop h3, .kop p { margin: 2px 0; }
+        .judul { text-align: center; margin: 14px 0 18px; position: relative; z-index: 1; }
+        .judul h3 { margin: 0; text-decoration: underline; text-transform: uppercase; }
+        .judul span { font-size: 13px; }
+        table.biodata { width: 100%; border-collapse: collapse; margin: 12px 0 16px; position: relative; z-index: 1; }
+        table.biodata td { padding: 4px 6px; vertical-align: top; }
+        table.biodata td.label { width: 190px; }
+        table.biodata td.sep { width: 14px; }
+        .ttd-wrap { display: flex; justify-content: space-between; margin-top: 32px; text-align: center; position: relative; z-index: 1; }
+        .ttd-box { width: 45%; }
+        .spasi-ttd { height: 68px; }
+        .footer-audit { margin-top: 28px; padding-top: 10px; border-top: 1px dashed #666; display: flex; align-items: center; gap: 12px; font-family: Arial, sans-serif; font-size: 10.5px; color: #333; position: relative; z-index: 1; }
+        @media print { body { margin: 16mm 18mm; } }
+      </style>
+    </head>
+    <body>
+      <div class="watermark">DRAF PERMOHONAN WARGA<br>SAH JIKA ADA TTD BASAH & STEMPEL RT 05</div>
+
+      <div class="kop">
+        <h3>RUKUN TETANGGA 05 / RUKUN WARGA 44</h3>
+        <h2>DUSUN KAYEN, CONDONGCATUR, DEPOK, SLEMAN</h2>
+        <p style="font-size: 12px;">Daerah Istimewa Yogyakarta</p>
+      </div>
+
+      <div class="judul">
+        <h3>SURAT PENGANTAR</h3>
+        <span>Nomor: ............ / RT.05 / ........ / ${tahun}</span>
+      </div>
+
+      <p>Yang bertanda tangan di bawah ini Ketua RT 05 / RW 44 Dusun Kayen, Condongcatur, Depok, Sleman menerangkan dengan sesungguhnya bahwa:</p>
+
+      <table class="biodata">
+        <tr><td class="label">Nama Lengkap</td><td class="sep">:</td><td><b>${escapeHTML(d.nama)}</b></td></tr>
+        <tr><td class="label">NIK</td><td class="sep">:</td><td>${escapeHTML(d.nik)}</td></tr>
+        <tr><td class="label">Tempat, Tanggal Lahir</td><td class="sep">:</td><td>${escapeHTML(d.ttl || '-')}</td></tr>
+        <tr><td class="label">Alamat</td><td class="sep">:</td><td>${escapeHTML(d.alamat)}</td></tr>
+        <tr><td class="label">Jenis Permohonan</td><td class="sep">:</td><td><b>${escapeHTML(d.jenis)}</b></td></tr>
+        <tr><td class="label">Keperluan / Keterangan</td><td class="sep">:</td><td>${escapeHTML(d.keperluan || d.jenis)}</td></tr>
+      </table>
+
+      <p>Orang tersebut di atas adalah benar-benar warga kami yang berdomisili di lingkungan RT 05 Kayen. Surat pengantar ini diberikan untuk dipergunakan sebagaimana mestinya.</p>
+
+      <div class="ttd-wrap">
+        <div class="ttd-box">
+          <div>Mengetahui,<br>Ketua RW 44 Kayen</div>
+          <div class="spasi-ttd"></div>
+          <div>( ........................................ )</div>
+        </div>
+        <div class="ttd-box">
+          <div>Kayen, ${escapeHTML(tglSurat)}<br>Ketua RT 05 Kayen</div>
+          <div class="spasi-ttd"></div>
+          <div>( ........................................ )</div>
+        </div>
+      </div>
+
+      <div class="footer-audit">
+        <img src="${qrImgUrl}" width="72" height="72" alt="QR Verifikasi" onerror="this.style.display='none'" style="border: 1px solid #ccc; padding: 2px;">
+        <div>
+          <b>Kode Tiket Audit Sistem RT 05: ${escapeHTML(kodeTiket)}</b><br>
+          Dokumen ini dicetak mandiri oleh pemohon dan <b>TIDAK SAH</b> tanpa pengisian Nomor Agenda resmi, tanda tangan basah, serta stempel asli Ketua RT 05.<br>
+          Cek status pengesahan online: <b>${escapeHTML(urlVerifikasi)}</b>
+        </div>
+      </div>
+    </body>
+    </html>
+  `);
+  win.document.close();
+  win.focus();
+  setTimeout(() => { win.print(); }, 450);
+};
+
+window.kirimWaSuratPengantar = function() {
+  const d = ambilDataFormSurat();
+  if (!d.nama || !d.alamat) {
+    alert('Mohon isi minimal Nama Lengkap dan Alamat / No. Rumah.');
+    return;
+  }
+
+  const teks = [
+    `Halo Pengurus RT 05 Kayen, saya mengajukan *${d.jenis}*:`,
+    `• Nama: ${d.nama}`,
+    `• NIK: ${d.nik || '-'}`,
+    `• TTL: ${d.ttl || '-'}`,
+    `• Alamat: ${d.alamat}`,
+    `• Keperluan: ${d.keperluan || '-'}`
+  ].join('\n');
+
+  window.open(`https://wa.me/6285875778897?text=${encodeURIComponent(teks)}`, '_blank');
+};
+
+// ==========================================
+// PEMERIKSA OTOMATIS QR CODE (?cek=KODE_TIKET)
+// ==========================================
+window.tutupModalVerifikasiSurat = function() {
+  const modal = document.getElementById('modal-verifikasi-surat');
+  if (modal) modal.style.display = 'none';
+};
+
+window.tutupModalVerifikasiSuratLuar = function(e) {
+  if (e && e.target && e.target.id === 'modal-verifikasi-surat') window.tutupModalVerifikasiSurat();
+};
+
+async function cekParameterVerifikasiSurat() {
+  const params = new URLSearchParams(window.location.search);
+  const kodeCek = (params.get('cek') || '').trim().toUpperCase();
+  if (!kodeCek) return;
+
+  const modal = document.getElementById('modal-verifikasi-surat');
+  const konten = document.getElementById('konten-verifikasi-surat');
+  if (!modal || !konten) return;
+
+  modal.style.display = 'flex';
+  konten.innerHTML = `<div style="text-align:center; padding:16px; color:#475569;">⏳ Memverifikasi tiket <b>${escapeHTML(kodeCek)}</b>...</div>`;
+
+  // Tunggu Firebase siap
+  let percobaan = 0;
+  while ((!window.db || typeof window.firebaseGet !== 'function') && percobaan < 25) {
+    await new Promise(r => setTimeout(r, 200));
+    percobaan++;
+  }
+
+  try {
+    if (window.auth && !window.auth.currentUser && typeof window.signInAnonymously === 'function') {
+      await window.signInAnonymously(window.auth);
+    }
+
+    const snap = await window.firebaseGet(window.firebaseRef(window.db, `surat_pengantar/${kodeCek}`));
+    const data = snap.val();
+
+    if (!data) {
+      konten.innerHTML = `
+        <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:14px; text-align:center; color:#991b1b;">
+          <div style="font-size:28px; margin-bottom:6px;">❌</div>
+          <b>KODE TIKET TIDAK TERDAFTAR</b>
+          <p style="font-size:12px; margin:6px 0 0;">Kode <b>${escapeHTML(kodeCek)}</b> tidak ditemukan dalam sistem administrasi RT 05 Kayen. Dokumen berpotensi palsu.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const isSah = data.status === 'SAH_TERVERIFIKASI';
+    if (isSah) {
+      konten.innerHTML = `
+        <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:10px; padding:14px; color:#065f46;">
+          <div style="text-align:center; font-size:28px; margin-bottom:4px;">✅</div>
+          <div style="text-align:center; font-weight:800; font-size:14px; margin-bottom:10px;">SURAT SAH & TERVERIFIKASI RT 05</div>
+          <div style="font-size:12px; line-height:1.6;">
+            • <b>Kode Tiket:</b> ${escapeHTML(data.kodeTiket)}<br>
+            • <b>No. Agenda Resmi:</b> ${escapeHTML(data.nomorAgendaResmi || '-')}<br>
+            • <b>Jenis Surat:</b> ${escapeHTML(data.jenisSurat)}<br>
+            • <b>Pemohon:</b> ${escapeHTML(data.namaPemohon)} (${escapeHTML(data.nikSensor)})<br>
+            • <b>Alamat:</b> ${escapeHTML(data.alamat)}<br>
+            • <b>Disahkan Pada:</b> ${escapeHTML(data.waktuSah || '-')}
+          </div>
+        </div>
+      `;
+    } else {
+      konten.innerHTML = `
+        <div style="background:#fffbeb; border:1px solid #fde68a; border-radius:10px; padding:14px; color:#92400e;">
+          <div style="text-align:center; font-size:28px; margin-bottom:4px;">⚠️</div>
+          <div style="text-align:center; font-weight:800; font-size:14px; margin-bottom:10px;">DRAF BELUM DISAHKAN KETUA RT 05</div>
+          <div style="font-size:12px; line-height:1.6;">
+            • <b>Kode Tiket:</b> ${escapeHTML(data.kodeTiket)}<br>
+            • <b>Status:</b> Belum ditandatangani / belum masuk buku agenda RT<br>
+            • <b>Jenis Surat:</b> ${escapeHTML(data.jenisSurat)}<br>
+            • <b>Pemohon:</b> ${escapeHTML(data.namaPemohon)} (${escapeHTML(data.nikSensor)})<br>
+            • <b>Waktu Cetak Draf:</b> ${escapeHTML(data.waktuCetak)}
+          </div>
+          <p style="font-size:11.5px; margin:10px 0 0; font-weight:600; color:#b91c1c;">
+            Jika kertas fisik ini sudah memiliki tanda tangan/stempel sementara status di atas masih BELUM DISAHKAN, harap konfirmasi langsung ke Ketua RT 05.
+          </p>
+        </div>
+      `;
+    }
+  } catch (err) {
+    konten.innerHTML = `<div style="color:#dc2626; text-align:center; padding:12px;">Gagal memeriksa tiket: ${escapeHTML(err.message)}</div>`;
+  }
+}
+cekParameterVerifikasiSurat();
+
+  
 let isDenahOpen = false;
 let denahTimer = null;
 
