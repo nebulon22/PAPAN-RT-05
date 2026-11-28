@@ -2550,6 +2550,47 @@ let isLoadingMore = false;
 // Variable penanda sederhana untuk memaksa turun ke bawah
 let shouldForceScrollDown = false;
 
+function syncMessagesToStream(chatStream, messagesList) {
+  if (!chatStream) return;
+
+  // Hapus pesan placeholder "Memuat percakapan..." / "Belum ada pesan..." jika ada
+  Array.from(chatStream.children).forEach((child) => {
+    if (!child.classList.contains('msg-row')) {
+      child.remove();
+    }
+  });
+
+  const existingMap = new Map();
+  chatStream.querySelectorAll('.msg-row[data-msg-id]').forEach((el) => {
+    existingMap.set(el.getAttribute('data-msg-id'), el);
+  });
+
+  const activeKeys = new Set();
+  const fragment = document.createDocumentFragment();
+
+  messagesList.forEach(({ msgKey, msgData, isUnread }) => {
+    if (!msgKey || !msgData || !msgData.text || !msgData.text.trim()) return;
+    activeKeys.add(msgKey);
+
+    let el = existingMap.get(msgKey);
+    if (!el) {
+      el = createMessageElement(msgData, isUnread, msgKey);
+    }
+    if (el) {
+      fragment.appendChild(el);
+    }
+  });
+
+  // Hapus baris pesan lama yang sudah keluar dari batas limitToLast
+  existingMap.forEach((el, key) => {
+    if (!activeKeys.has(key)) {
+      el.remove();
+    }
+  });
+
+  chatStream.appendChild(fragment);
+}
+
 function loadChatStream(onLoaded) {
     if (currentChatUnsubscribe) {
         currentChatUnsubscribe();
@@ -2578,41 +2619,45 @@ if (!chatStream.querySelector('.msg-row') && cachedPublic) {
 
         if (!snapshot.exists()) return;
 
-        let cacheData = {};
-        const fragment = document.createDocumentFragment();
+let cacheData = {};
+    const messagesList = [];
 
-        const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
-        const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
+    const lastReadPublicMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_public_key')) || {};
+    const lastReadPublicMapKey = lastReadPublicMap[currentUser?.uid];
 
-        let isUnreadSection = !lastReadPublicMapKey;
-        let latestPublicKey = null;
+    let isUnreadSection = !lastReadPublicMapKey;
+    let latestPublicKey = null;
 
     snapshot.forEach((childSnap) => {
-    const msgKey = childSnap.key;
-    const msgData = childSnap.val();
-    cacheData[msgKey] = msgData;
+      const msgKey = childSnap.key;
+      const msgData = childSnap.val();
+      cacheData[msgKey] = msgData;
 
-    if (msgKey === 'pinned_poll') return;
-    latestPublicKey = msgKey;
+      if (msgKey === 'pinned_poll') return;
+      latestPublicKey = msgKey;
 
-    if (msgKey === lastReadPublicMapKey) {
+      if (msgKey === lastReadPublicMapKey) {
         isUnreadSection = true;
-    }
+      }
 
-   let isUnreadMsg = false;
-    if (lastReadPublicMapKey && currentUser?.uid && isUnreadSection && msgData.uid !== currentUser.uid && msgKey !== lastReadPublicMapKey) {
+      let isUnreadMsg = false;
+      if (
+        lastReadPublicMapKey &&
+        currentUser?.uid &&
+        isUnreadSection &&
+        msgData.uid !== currentUser.uid &&
+        msgKey !== lastReadPublicMapKey
+      ) {
         isUnreadMsg = true;
-    }
+      }
 
-    const msgEl = createMessageElement(msgData, isUnreadMsg, msgKey);
-    if (msgEl) fragment.appendChild(msgEl);
+      messagesList.push({ msgKey, msgData, isUnread: isUnreadMsg });
     });
 
-        localStorage.setItem('rt05_public_chat_cache', JSON.stringify(cacheData));
+    localStorage.setItem('rt05_public_chat_cache', JSON.stringify(cacheData));
 
-        // 1x operasi DOM untuk merender semua pesan
-        chatStream.innerHTML = '';
-        chatStream.appendChild(fragment);
+    // Render incremental tanpa membongkar ulang pesan yang sudah ada
+    syncMessagesToStream(chatStream, messagesList);
 
         if (latestPublicKey && currentUser?.uid && activeChatType === 'public' && window.isUserViewingChat()) {
             markPublicGroupAsRead();
@@ -2703,28 +2748,31 @@ function loadPrivateChatStream(targetUID, onLoaded) {
         const lastReadKey = lastReadKeyMap[targetUID];
 
         let isUnreadSection = !lastReadKey;
-        const fragment = document.createDocumentFragment();
+        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
+    const lastReadKey = lastReadKeyMap[targetUID];
 
-        snapshot.forEach((childSnap) => {
-            const msgKey = childSnap.key;
-            const msgData = childSnap.val();
+    let isUnreadSection = !lastReadKey;
+    const messagesList = [];
 
-            let isUnreadMsg = false;
-            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
-                isUnreadMsg = true;
-            }
+    snapshot.forEach((childSnap) => {
+      const msgKey = childSnap.key;
+      const msgData = childSnap.val();
 
-            if (msgKey === lastReadKey) {
-                isUnreadSection = true;
-            }
+      let isUnreadMsg = false;
+      if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
+        isUnreadMsg = true;
+      }
 
-            const msgEl = createMessageElement(msgData, isUnreadMsg, msgKey);
-            if (msgEl) fragment.appendChild(msgEl);
-        });
+      if (msgKey === lastReadKey) {
+        isUnreadSection = true;
+      }
 
-        chatStream.innerHTML = '';
-        chatStream.appendChild(fragment);
-        isInitialPrivateChatLoaded[targetUID] = true;
+      messagesList.push({ msgKey, msgData, isUnread: isUnreadMsg });
+    });
+
+    syncMessagesToStream(chatStream, messagesList);
+    isInitialPrivateChatLoaded[targetUID] = true;
+
         
         if (shouldForceScrollDown) {
             chatStream.scrollTop = chatStream.scrollHeight;
