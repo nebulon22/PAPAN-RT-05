@@ -361,9 +361,15 @@ html.has-session-token #login-overlay {
     
 </div>
 
-  <!-- PANEL VERIFIKASI SURAT PENGANTAR (admin.html) -->
+<!-- PANEL VERIFIKASI SURAT PENGANTAR (admin.html) -->
 <div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-top:16px;">
-  <h3 style="margin:0 0 10px; font-size:15px; color:#0f172a;">📄 Log & Pengesahan Surat Pengantar RT</h3>
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px;">
+    <h3 style="margin:0; font-size:15px; color:#0f172a;">📄 Log & Pengesahan Surat Pengantar RT</h3>
+    <button type="button" onclick="muatLogSuratAdmin()"
+      style="padding:5px 10px; background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+      🔄 Muat Ulang
+    </button>
+  </div>
   <div id="list-log-surat-admin" style="display:flex; flex-direction:column; gap:8px; font-size:12px;">
     Memuat log pencetakan surat...
   </div>
@@ -2343,75 +2349,135 @@ function tutupModalIframeQR() {
   document.getElementById('modal-iframe-qr').style.display = 'none';
 }
 
-function muatLogSuratAdmin() {
-    if (!window.db || typeof window.firebaseRef !== 'function') {
+const escHtmlAdmin = (str) => (window.utils?.escapeHTML || window.escapeHTML)(str);
+  async function muatLogSuratAdmin() {
+    const container = document.getElementById('list-log-surat-admin');
+    if (!container) return;
+
+    if (!window.db || !window.auth) {
       setTimeout(muatLogSuratAdmin, 300);
       return;
     }
 
-    const refSurat = window.firebaseRef(window.db, 'surat_pengantar');
-    window.firebaseOnValue(refSurat, (snap) => {
-      const container = document.getElementById('list-log-surat-admin');
-      if (!container) return;
+    if (!window.auth.currentUser) {
+      container.innerHTML = '<div style="color:#64748b;">Menunggu login Admin selesai...</div>';
+      setTimeout(muatLogSuratAdmin, 500);
+      return;
+    }
 
-      const data = snap.val();
-      if (!data) {
-        container.innerHTML = '<div style="color:#64748b;">Belum ada riwayat cetak surat pengantar.</div>';
+    try {
+      if (typeof window.firebaseRef === 'function' && typeof window.firebaseOnValue === 'function') {
+        const refSurat = window.firebaseRef(window.db, 'surat_pengantar');
+        window.firebaseOnValue(refSurat, (snap) => {
+          renderDaftarSuratAdmin(snap.val());
+        }, (err) => {
+          container.innerHTML = `<div style="color:#dc2626;">Gagal membaca log: ${escHtmlAdmin(err.message)} (Pastikan akun memiliki role 'admin')</div>`;
+        });
         return;
       }
 
-      const daftar = Object.values(data).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      container.innerHTML = daftar.map(item => {
-        const isSah = item.status === 'SAH_TERVERIFIKASI';
-        return `
-          <div style="border:1px solid ${isSah ? '#a7f3d0' : '#fde68a'}; background:${isSah ? '#f0fdf4' : '#fffbeb'}; border-radius:8px; padding:10px;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-              <b>${item.kodeTiket} — ${item.jenisSurat}</b>
-              <span style="padding:2px 7px; border-radius:999px; font-size:10px; font-weight:bold; background:${isSah ? '#10b981' : '#f59e0b'}; color:#fff;">
-                ${isSah ? 'SAH (' + (item.nomorAgendaResmi || '-') + ')' : 'BELUM DISAHKAN'}
-              </span>
-            </div>
-            <div style="color:#334155; line-height:1.5;">
-              Pemohon: <b>${item.namaPemohon}</b> (${item.nikSensor}) • Alamat: ${item.alamat}<br>
-              Keperluan: ${item.keperluan} • Dicetak: ${item.waktuCetak}<br>
-              <span style="font-size:10.5px; color:#64748b;">Jejak Akun: ${item.chatUsername || 'Tamu/Anonim'} (${item.creatorAuthUid})</span>
-            </div>
-            ${!isSah ? `
-              <button type="button" onclick="sahkanSuratRT('${item.kodeTiket}')"
-                style="margin-top:8px; padding:6px 12px; background:#0288d1; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:11px;">
+      const dbUrl = window.db.app.options.databaseURL.replace(/\/$/, '');
+      const idToken = await window.auth.currentUser.getIdToken();
+      const res = await fetch(`${dbUrl}/surat_pengantar.json?auth=${encodeURIComponent(idToken)}`);
+      if (!res.ok) throw new Error('Akses ditolak. Pastikan akun admin memiliki role "admin" di Firebase.');
+      const data = await res.json();
+      renderDaftarSuratAdmin(data);
+    } catch (err) {
+      container.innerHTML = `<div style="color:#dc2626;">❌ ${escHtmlAdmin(err.message)}</div>`;
+    }
+  }
+
+  function renderDaftarSuratAdmin(data) {
+    const container = document.getElementById('list-log-surat-admin');
+    if (!container) return;
+
+    if (!data) {
+      container.innerHTML = '<div style="color:#64748b;">Belum ada riwayat cetak surat pengantar.</div>';
+      return;
+    }
+
+    const daftar = Object.values(data).sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+    container.innerHTML = daftar.map(item => {
+      const isDipakai = item.status === 'SUDAH_DIGUNAKAN';
+      const isSah = item.status === 'SAH_TERVERIFIKASI';
+
+      let border = '#fde68a', bg = '#fffbeb', badgeBg = '#f59e0b', badgeTeks = 'BELUM DISAHKAN';
+      if (isDipakai) {
+        border = '#cbd5e1'; bg = '#f8fafc'; badgeBg = '#475569';
+        badgeTeks = `SUDAH DIPAKAI (${escHtmlAdmin(item.instansiPengguna || '-')})`;
+      } else if (isSah) {
+        border = '#a7f3d0'; bg = '#f0fdf4'; badgeBg = '#10b981';
+        badgeTeks = `SAH (${escHtmlAdmin(item.nomorAgendaResmi || '-')})`;
+      }
+
+      return `
+        <div style="border:1px solid ${border}; background:${bg}; border-radius:8px; padding:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap; margin-bottom:4px;">
+            <b>${escHtmlAdmin(item.kodeTiket)} — ${escHtmlAdmin(item.jenisSurat)}</b>
+            <span style="padding:2px 8px; border-radius:999px; font-size:10px; font-weight:bold; background:${badgeBg}; color:#fff;">
+              ${badgeTeks}
+            </span>
+          </div>
+          <div style="color:#334155; line-height:1.55;">
+            • <b>Pemohon:</b> ${escHtmlAdmin(item.namaPemohon)} (${escHtmlAdmin(item.nikSensor)})<br>
+            • <b>Alamat:</b> ${escHtmlAdmin(item.alamat)}<br>
+            • <b>Tujuan Instansi:</b> <b>${escHtmlAdmin(item.tujuan || '-')}</b><br>
+            • <b>Keperluan:</b> ${escHtmlAdmin(item.keperluan || '-')}<br>
+            • <b>Dibuat:</b> ${escHtmlAdmin(item.waktuCetak)}<br>
+            <span style="font-size:10.5px; color:#64748b;">Jejak Akun: ${escHtmlAdmin(item.chatUsername || 'Tamu/Anonim')} (${escHtmlAdmin(item.creatorAuthUid)})</span>
+          </div>
+          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+            ${(!isSah && !isDipakai) ? `
+              <button type="button" onclick="sahkanSuratRT('${escHtmlAdmin(item.kodeTiket)}')"
+                style="padding:6px 12px; background:#0288d1; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:11px;">
                 ✅ Sahkan & Isi Nomor Agenda
               </button>
             ` : ''}
+            <a href="/?cek=${encodeURIComponent(item.kodeTiket)}" target="_blank"
+              style="padding:6px 10px; background:#fff; color:#334155; border:1px solid #cbd5e1; border-radius:6px; font-weight:bold; text-decoration:none; font-size:11px;">
+              🔍 Cek QR
+            </a>
           </div>
-        `;
-      }).join('');
-    });
+        </div>
+      `;
+    }).join('');
   }
 
   window.sahkanSuratRT = async function(kodeTiket) {
-    const tahun = new Date().getFullYear();
-    const noAgenda = prompt(`Masukkan Nomor Agenda Resmi untuk tiket ${kodeTiket}:`, `001/RT.05/XI/${tahun}`);
+    const now = new Date();
+    const bulanRomawi = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'][now.getMonth()];
+    const noAgenda = prompt(`Masukkan Nomor Agenda Resmi untuk tiket ${kodeTiket}:`, `001/RT.05/${bulanRomawi}/${now.getFullYear()}`);
     if (!noAgenda || !noAgenda.trim()) return;
 
     const adminUser = JSON.parse(localStorage.getItem('rt05_chat_user') || '{}');
     const updateData = {
       status: 'SAH_TERVERIFIKASI',
       nomorAgendaResmi: noAgenda.trim(),
-      waktuSah: new Date().toLocaleString('id-ID'),
+      waktuSah: now.toLocaleString('id-ID'),
       adminUid: adminUser.uid || window.auth?.currentUser?.uid || 'admin'
     };
 
-    const dbUrl = window.db?.app?.options?.databaseURL;
-    const idToken = await window.auth.currentUser.getIdToken();
-    const res = await fetch(`${dbUrl.replace(/\/$/, '')}/surat_pengantar/${encodeURIComponent(kodeTiket)}.json?auth=${encodeURIComponent(idToken)}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(updateData)
-    });
-
-    if (res.ok) alert(`✅ Surat ${kodeTiket} resmi disahkan dengan nomor ${noAgenda.trim()}`);
-    else alert('❌ Gagal mengesahkan surat.');
+    try {
+      if (typeof window.firebaseUpdate === 'function' && typeof window.firebaseRef === 'function') {
+        await window.firebaseUpdate(window.firebaseRef(window.db, `surat_pengantar/${kodeTiket}`), updateData);
+      } else {
+        const dbUrl = window.db.app.options.databaseURL.replace(/\/$/, '');
+        const idToken = await window.auth.currentUser.getIdToken();
+        const res = await fetch(`${dbUrl}/surat_pengantar/${encodeURIComponent(kodeTiket)}.json?auth=${encodeURIComponent(idToken)}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updateData)
+        });
+        if (!res.ok) throw new Error('Gagal mengesahkan surat.');
+        muatLogSuratAdmin();
+      }
+      alert(`✅ Surat ${kodeTiket} resmi disahkan dengan nomor ${noAgenda.trim()}`);
+    } catch (err) {
+      alert('❌ ' + err.message);
+    }
   };
+
   muatLogSuratAdmin();
     
 function bukaModalPinjamAdmin() {
