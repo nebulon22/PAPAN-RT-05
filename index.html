@@ -1071,14 +1071,21 @@
         <textarea id="suratKeperluan" class="form-input-rt" rows="2" placeholder="Contoh: Pindah domisili ke Kec. Ngaglik"></textarea>
       </div>
 
-      <div style="display: flex; gap: 8px; margin-top: 4px;">
-        <button type="button" id="btnCetakPdfSurat" data-click="cetakPdfSuratPengantar"
-          style="flex: 1.3; padding: 10px; background: #0288d1; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">
-          🖨️ Cetak / Simpan PDF
-        </button>
+      <div style="display: flex; flex-direction: column; gap: 8px; margin-top: 4px;">
+        <div style="display: flex; gap: 8px;">
+          <button type="button" id="btnSimpanPdfSurat" data-click="prosesPdfSuratPengantar" data-arg="simpan"
+            style="flex: 1; padding: 10px; background: #0288d1; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">
+            📥 Simpan PDF
+          </button>
+          <button type="button" id="btnSharePdfSurat" data-click="prosesPdfSuratPengantar" data-arg="share"
+            style="flex: 1; padding: 10px; background: #4f46e5; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">
+            📤 Share PDF
+          </button>
+        </div>
+
         <button type="button" data-click="kirimWaSuratPengantar"
-          style="flex: 1; padding: 10px; background: #16a34a; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">
-          📲 Kirim ke WA RT
+          style="width: 100%; padding: 10px; background: #16a34a; color: #fff; border: none; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer;">
+          📲 Kirim Draf ke WA RT
         </button>
       </div>
     </div>
@@ -3013,8 +3020,10 @@ async function simpanLogCetakSurat(kodeTiket, d) {
   }
 }
 
-window.cetakPdfSuratPengantar = async function() {
+window.prosesPdfSuratPengantar = async function(target) {
+  const mode = (typeof target === 'string') ? target : (target?.dataset?.arg || 'simpan');
   const d = ambilDataFormSurat();
+
   if (!d.nama || !d.nik || !d.alamat || !d.tujuan) {
     alert('Mohon isi Nama Lengkap, NIK (16 digit), Alamat / No. Rumah, dan Instansi / Tujuan Surat terlebih dahulu.');
     return;
@@ -3024,123 +3033,67 @@ window.cetakPdfSuratPengantar = async function() {
     return;
   }
 
-  const btn = document.getElementById('btnCetakPdfSurat');
-  if (btn) {
-    btn.disabled = true;
-    btn.innerText = '⏳ Mendaftarkan Tiket...';
-  }
+  const btnSimpan = document.getElementById('btnSimpanPdfSurat');
+  const btnShare = document.getElementById('btnSharePdfSurat');
+  if (btnSimpan) btnSimpan.disabled = true;
+  if (btnShare) btnShare.disabled = true;
+
+  const tombolAktif = mode === 'share' ? btnShare : btnSimpan;
+  const labelAsli = tombolAktif ? tombolAktif.innerText : '';
+  if (tombolAktif) tombolAktif.innerText = '⏳ Membuat PDF...';
 
   const kodeTiket = buatKodeTiketSurat();
 
   try {
+    // 1. Daftarkan tiket ke Firebase terlebih dahulu (status: BELUM_DISAHKAN)
     await simpanLogCetakSurat(kodeTiket, d);
-  } catch (err) {
-    if (btn) {
-      btn.disabled = false;
-      btn.innerText = '🖨️ Cetak / Simpan PDF';
+
+    // 2. Bangun file PDF biner lengkap dengan QR Code verifikasi
+    const { pdfBlob, fileName } = await bangunFilePdfSurat(kodeTiket, d);
+
+    if (mode === 'share') {
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      // Buka dialog Share bawaan HP agar warga bebas memilih WA/kontak mana saja
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          files: [pdfFile],
+          title: fileName
+        });
+      } else {
+        // Fallback jika dibuka lewat PC/browser yang tidak mendukung share file
+        const urlUnduh = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = urlUnduh;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(urlUnduh);
+        alert(`Browser perangkat ini belum mendukung fitur Share langsung. File PDF (${fileName}) otomatis disimpan ke perangkat Anda.`);
+      }
+    } else {
+      // Mode Simpan PDF langsung ke penyimpanan perangkat
+      const urlUnduh = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = urlUnduh;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(urlUnduh);
+      alert(`✅ File PDF berhasil disimpan (${fileName}) dengan Kode Tiket ${kodeTiket}.`);
     }
-    alert('❌ ' + err.message);
-    return;
+  } catch (err) {
+    if (err && err.name !== 'AbortError') {
+      alert('❌ ' + err.message);
+    }
+  } finally {
+    if (btnSimpan) {
+      btnSimpan.disabled = false;
+      btnSimpan.innerText = mode === 'simpan' ? labelAsli : '📥 Simpan PDF';
+    }
+    if (btnShare) {
+      btnShare.disabled = false;
+      btnShare.innerText = mode === 'share' ? labelAsli : '📤 Share PDF';
+    }
   }
-
-  if (btn) {
-    btn.disabled = false;
-    btn.innerText = '🖨️ Cetak / Simpan PDF';
-  }
-
-  const tglSurat = new Date().toLocaleDateString('id-ID', {
-    day: 'numeric', month: 'long', year: 'numeric'
-  });
-  const tahun = new Date().getFullYear();
-  const urlVerifikasi = `${window.location.origin}/?cek=${encodeURIComponent(kodeTiket)}`;
-  const qrImgUrl = `https://api.qrserver.com/v1/create-qr-code/?size=95x95&data=${encodeURIComponent(urlVerifikasi)}`;
-
-  const win = window.open('', '_blank', 'width=820,height=920');
-  if (!win) {
-    alert(`Tiket ${kodeTiket} sudah terdaftar, namun popup cetak diblokir browser. Izinkan popup lalu coba lagi.`);
-    return;
-  }
-
-  win.document.write(`
-    <!DOCTYPE html>
-    <html lang="id">
-    <head>
-      <meta charset="UTF-8">
-      <title>${escapeHTML(d.jenis)} - ${escapeHTML(kodeTiket)}</title>
-      <style>
-        body { font-family: "Times New Roman", Times, serif; margin: 32px 44px; color: #000; font-size: 14px; line-height: 1.5; position: relative; }
-        .watermark { position: fixed; top: 45%; left: 50%; transform: translate(-50%, -50%) rotate(-28deg); font-size: 28px; font-weight: bold; color: rgba(0,0,0,0.06); text-align: center; pointer-events: none; z-index: 0; white-space: nowrap; }
-        .kop { text-align: center; border-bottom: 3px double #000; padding-bottom: 10px; margin-bottom: 16px; position: relative; z-index: 1; }
-        .kop h2, .kop h3, .kop p { margin: 2px 0; }
-        .judul { text-align: center; margin: 14px 0 18px; position: relative; z-index: 1; }
-        .judul h3 { margin: 0; text-decoration: underline; text-transform: uppercase; }
-        .judul span { font-size: 13px; }
-        table.biodata { width: 100%; border-collapse: collapse; margin: 12px 0 16px; position: relative; z-index: 1; }
-        table.biodata td { padding: 4px 6px; vertical-align: top; }
-        table.biodata td.label { width: 190px; }
-        table.biodata td.sep { width: 14px; }
-        .ttd-wrap { display: flex; justify-content: space-between; margin-top: 32px; text-align: center; position: relative; z-index: 1; }
-        .ttd-box { width: 45%; }
-        .spasi-ttd { height: 68px; }
-        .footer-audit { margin-top: 28px; padding-top: 10px; border-top: 1px dashed #666; display: flex; align-items: center; gap: 12px; font-family: Arial, sans-serif; font-size: 10.5px; color: #333; position: relative; z-index: 1; }
-        @media print { body { margin: 16mm 18mm; } }
-      </style>
-    </head>
-    <body>
-      <div class="watermark">DRAF PERMOHONAN WARGA<br>SAH JIKA ADA TTD BASAH & STEMPEL RT 05</div>
-
-      <div class="kop">
-        <h3>RUKUN TETANGGA 05 / RUKUN WARGA 44</h3>
-        <h2>DUSUN KAYEN, CONDONGCATUR, DEPOK, SLEMAN</h2>
-        <p style="font-size: 12px;">Daerah Istimewa Yogyakarta</p>
-      </div>
-
-      <div class="judul">
-        <h3>SURAT PENGANTAR</h3>
-        <span>Nomor: ............ / RT.05 / ........ / ${tahun}</span>
-      </div>
-
-      <p>Yang bertanda tangan di bawah ini Ketua RT 05 / RW 44 Dusun Kayen, Condongcatur, Depok, Sleman menerangkan dengan sesungguhnya bahwa:</p>
-
-      <table class="biodata">
-        <tr><td class="label">Nama Lengkap</td><td class="sep">:</td><td><b>${escapeHTML(d.nama)}</b></td></tr>
-        <tr><td class="label">NIK</td><td class="sep">:</td><td>${escapeHTML(d.nik)}</td></tr>
-        <tr><td class="label">Tempat, Tanggal Lahir</td><td class="sep">:</td><td>${escapeHTML(d.ttl || '-')}</td></tr>
-        <tr><td class="label">Alamat</td><td class="sep">:</td><td>${escapeHTML(d.alamat)}</td></tr>
-        <tr><td class="label">Jenis Permohonan</td><td class="sep">:</td><td><b>${escapeHTML(d.jenis)}</b></td></tr>
-        <tr><td class="label">Ditujukan Kepada</td><td class="sep">:</td><td><b>${escapeHTML(d.tujuan)}</b> (Berlaku 1 kali pakai)</td></tr>
-        <tr><td class="label">Keperluan / Keterangan</td><td class="sep">:</td><td>${escapeHTML(d.keperluan || d.jenis)}</td></tr>
-      </table>
-
-      <p>Orang tersebut di atas adalah benar-benar warga kami yang berdomisili di lingkungan RT 05 Kayen. Surat pengantar ini hanya berlaku untuk 1 (satu) kali penggunaan pada instansi tujuan tersebut di atas.</p>
-
-      <div class="ttd-wrap">
-        <div class="ttd-box">
-          <div>Mengetahui,<br>Ketua RW 44 Kayen</div>
-          <div class="spasi-ttd"></div>
-          <div>( ........................................ )</div>
-        </div>
-        <div class="ttd-box">
-          <div>Kayen, ${escapeHTML(tglSurat)}<br>Ketua RT 05 Kayen</div>
-          <div class="spasi-ttd"></div>
-          <div>( ........................................ )</div>
-        </div>
-      </div>
-
-      <div class="footer-audit">
-        <img src="${qrImgUrl}" width="72" height="72" alt="QR Verifikasi" onerror="this.style.display='none'" style="border: 1px solid #ccc; padding: 2px;">
-        <div>
-          <b>Kode Tiket Audit Sistem RT 05: ${escapeHTML(kodeTiket)}</b><br>
-          Dokumen ini dicetak mandiri oleh pemohon, <b>TIDAK SAH</b> tanpa Nomor Agenda resmi, TTD basah, &amp; stempel asli Ketua RT 05, serta <b>hangus setelah 1x diklaim</b> (fotokopi tidak berlaku untuk instansi lain).<br>
-          Verifikasi keaslian &amp; status pakai: <b>${escapeHTML(urlVerifikasi)}</b>
-        </div>
-      </div>
-    </body>
-    </html>
-  `);
-  win.document.close();
-  win.focus();
-  setTimeout(() => { win.print(); }, 450);
 };
 
 window.kirimWaSuratPengantar = function() {
@@ -3163,6 +3116,246 @@ window.kirimWaSuratPengantar = function() {
   window.open(`https://wa.me/6285643335300?text=${encodeURIComponent(teks)}`, '_blank');
 };
 
+// 1. Muat pustaka jsPDF secara dinamis hanya saat tombol diklik (0 KB beban awal halaman)
+function muatLibraryJsPDF() {
+  return new Promise((resolve, reject) => {
+    if (window.jspdf && window.jspdf.jsPDF) {
+      resolve(window.jspdf.jsPDF);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+    script.onload = () => resolve(window.jspdf.jsPDF);
+    script.onerror = () => reject(new Error('Gagal memuat pembuat PDF. Periksa koneksi internet Anda.'));
+    document.head.appendChild(script);
+  });
+}
+
+// 2. Ubah QR Code menjadi DataURL gambar agar tertanam di dalam file PDF
+function ambilQrDataUrl(urlData) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.width;
+        canvas.height = img.height;
+        canvas.getContext('2d').drawImage(img, 0, 0);
+        resolve(canvas.toDataURL('image/png'));
+      } catch (e) {
+        resolve(null);
+      }
+    };
+    img.onerror = () => resolve(null);
+    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(urlData)}`;
+  });
+}
+
+// 3. Susun dokumen PDF A4 resmi beserta Watermark & QR Verifikasi
+async function bangunFilePdfSurat(kodeTiket, d) {
+  const JsPDF = await muatLibraryJsPDF();
+  const doc = new JsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const tglSurat = new Date().toLocaleDateString('id-ID', {
+    day: 'numeric', month: 'long', year: 'numeric'
+  });
+  const tahun = new Date().getFullYear();
+  const urlVerifikasi = `${window.location.origin}/?cek=${encodeURIComponent(kodeTiket)}`;
+  const qrDataUrl = await ambilQrDataUrl(urlVerifikasi);
+
+  // Watermark samar di tengah halaman
+  doc.setTextColor(232, 232, 232);
+  doc.setFont('times', 'bold');
+  doc.setFontSize(22);
+  doc.text('DRAF PERMOHONAN WARGA', 105, 145, { align: 'center', angle: 28 });
+  doc.text('SAH JIKA ADA TTD BASAH & STEMPEL RT 05', 105, 158, { align: 'center', angle: 28 });
+
+  // Kop Surat
+  doc.setTextColor(0, 0, 0);
+  doc.setFont('times', 'bold');
+  doc.setFontSize(13);
+  doc.text('RUKUN TETANGGA 05 / RUKUN WARGA 44', 105, 22, { align: 'center' });
+  doc.setFontSize(15);
+  doc.text('DUSUN KAYEN, CONDONGCATUR, DEPOK, SLEMAN', 105, 28.5, { align: 'center' });
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11);
+  doc.text('Daerah Istimewa Yogyakarta', 105, 34, { align: 'center' });
+
+  // Garis ganda kop surat
+  doc.setLineWidth(0.8);
+  doc.line(20, 37.5, 190, 37.5);
+  doc.setLineWidth(0.3);
+  doc.line(20, 39, 190, 39);
+
+  // Judul & Nomor Surat
+  doc.setFont('times', 'bold');
+  doc.setFontSize(13);
+  doc.text('SURAT PENGANTAR', 105, 50, { align: 'center' });
+  const lebarJudul = doc.getTextWidth('SURAT PENGANTAR');
+  doc.line(105 - lebarJudul / 2, 51.2, 105 + lebarJudul / 2, 51.2);
+
+  doc.setFont('times', 'normal');
+  doc.setFontSize(11.5);
+  doc.text(`Nomor: ............ / RT.05 / ........ / ${tahun}`, 105, 56.5, { align: 'center' });
+
+  // Paragraf Pembuka
+  const pembuka = doc.splitTextToSize(
+    'Yang bertanda tangan di bawah ini Ketua RT 05 / RW 44 Dusun Kayen, Condongcatur, Depok, Sleman menerangkan dengan sesungguhnya bahwa:',
+    170
+  );
+  doc.text(pembuka, 20, 68);
+
+  // Tabel Biodata
+  let y = 82;
+  const barisData = [
+    ['Nama Lengkap', d.nama, true],
+    ['NIK', d.nik, false],
+    ['Tempat, Tanggal Lahir', d.ttl || '-', false],
+    ['Alamat', d.alamat, false],
+    ['Jenis Permohonan', d.jenis, true],
+    ['Ditujukan Kepada', `${d.tujuan} (Berlaku 1 kali pakai)`, true],
+    ['Keperluan / Keterangan', d.keperluan || d.jenis, false]
+  ];
+
+  barisData.forEach(([label, nilai, isBold]) => {
+    doc.setFont('times', 'normal');
+    doc.text(label, 24, y);
+    doc.text(':', 72, y);
+
+    doc.setFont('times', isBold ? 'bold' : 'normal');
+    const teksNilai = doc.splitTextToSize(String(nilai), 114);
+    doc.text(teksNilai, 76, y);
+    y += Math.max(7, teksNilai.length * 5.8);
+  });
+
+  // Paragraf Penutup
+  y += 4;
+  const penutup = doc.splitTextToSize(
+    'Orang tersebut di atas adalah benar-benar warga kami yang berdomisili di lingkungan RT 05 Kayen. Surat pengantar ini hanya berlaku untuk 1 (satu) kali penggunaan pada instansi tujuan tersebut di atas.',
+    170
+  );
+  doc.setFont('times', 'normal');
+  doc.text(penutup, 20, y);
+
+  // Area Tanda Tangan
+  y += 22;
+  doc.text('Mengetahui,', 52, y, { align: 'center' });
+  doc.text('Ketua RW 44 Kayen', 52, y + 5.5, { align: 'center' });
+  doc.text('( ........................................ )', 52, y + 29, { align: 'center' });
+
+  doc.text(`Kayen, ${tglSurat}`, 155, y, { align: 'center' });
+  doc.text('Ketua RT 05 Kayen', 155, y + 5.5, { align: 'center' });
+  doc.text('( ........................................ )', 155, y + 29, { align: 'center' });
+
+  // Footer Audit & QR Code Verifikasi
+  const yFooter = 246;
+  doc.setDrawColor(150);
+  doc.setLineDashPattern([2, 2], 0);
+  doc.line(20, yFooter, 190, yFooter);
+  doc.setLineDashPattern([], 0);
+
+  if (qrDataUrl) {
+    doc.addImage(qrDataUrl, 'PNG', 20, yFooter + 3, 22, 22);
+  }
+
+  const xTeksAudit = qrDataUrl ? 45 : 20;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.setTextColor(30, 30, 30);
+  doc.text(`Kode Tiket Audit Sistem RT 05: ${kodeTiket}`, xTeksAudit, yFooter + 7);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.8);
+  const ketAudit = doc.splitTextToSize(
+    `Dokumen ini dibuat mandiri oleh pemohon, TIDAK SAH tanpa Nomor Agenda resmi, TTD basah, & stempel asli Ketua RT 05, serta hangus setelah 1x diklaim (fotokopi tidak berlaku untuk instansi lain).\nVerifikasi keaslian online: ${urlVerifikasi}`,
+    190 - xTeksAudit
+  );
+  doc.text(ketAudit, xTeksAudit, yFooter + 11.5);
+
+  const namaBersih = d.nama.replace(/[^a-zA-Z0-9]/g, '_').slice(0, 20);
+  const fileName = `Surat_Pengantar_${namaBersih}_${kodeTiket}.pdf`;
+  const pdfBlob = doc.output('blob');
+
+  return { pdfBlob, fileName, urlVerifikasi };
+}
+
+// 4. Fungsi utama untuk tombol Simpan PDF (arg="simpan") & Share PDF (arg="share")
+window.prosesPdfSuratPengantar = async function(target) {
+  const mode = (typeof target === 'string') ? target : (target?.dataset?.arg || 'simpan');
+  const d = ambilDataFormSurat();
+
+  if (!d.nama || !d.nik || !d.alamat || !d.tujuan) {
+    alert('Mohon isi Nama Lengkap, NIK (16 digit), Alamat / No. Rumah, dan Instansi / Tujuan Surat terlebih dahulu.');
+    return;
+  }
+  if (d.nik.replace(/\D/g, '').length !== 16) {
+    alert('NIK harus terdiri dari 16 digit angka.');
+    return;
+  }
+
+  const btnSimpan = document.getElementById('btnSimpanPdfSurat');
+  const btnShare = document.getElementById('btnSharePdfSurat');
+  if (btnSimpan) btnSimpan.disabled = true;
+  if (btnShare) btnShare.disabled = true;
+
+  const tombolAktif = mode === 'share' ? btnShare : btnSimpan;
+  const labelAsli = tombolAktif ? tombolAktif.innerText : '';
+  if (tombolAktif) tombolAktif.innerText = '⏳ Membuat PDF...';
+
+  const kodeTiket = buatKodeTiketSurat();
+
+  try {
+    // Daftarkan log tiket ke Firebase dulu (status: BELUM_DISAHKAN)
+    await simpanLogCetakSurat(kodeTiket, d);
+
+    // Bangun file PDF biner lengkap dengan QR Code verifikasi
+    const { pdfBlob, fileName } = await bangunFilePdfSurat(kodeTiket, d);
+
+    if (mode === 'share') {
+      const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+      // Buka dialog Share bawaan HP agar warga bebas memilih kontak/WA siapa saja
+      if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+        await navigator.share({
+          files: [pdfFile],
+          title: fileName
+        });
+      } else {
+        // Fallback jika dibuka dari komputer/browser yang tidak mendukung Share file
+        const urlUnduh = URL.createObjectURL(pdfBlob);
+        const a = document.createElement('a');
+        a.href = urlUnduh;
+        a.download = fileName;
+        a.click();
+        URL.revokeObjectURL(urlUnduh);
+        alert(`Perangkat ini tidak mendukung Share file langsung. File PDF (${fileName}) otomatis disimpan ke perangkat Anda.`);
+      }
+    } else {
+      // Mode Simpan PDF langsung ke penyimpanan perangkat
+      const urlUnduh = URL.createObjectURL(pdfBlob);
+      const a = document.createElement('a');
+      a.href = urlUnduh;
+      a.download = fileName;
+      a.click();
+      URL.revokeObjectURL(urlUnduh);
+      alert(`✅ File PDF berhasil disimpan (${fileName}) dengan Kode Tiket ${kodeTiket}.`);
+    }
+  } catch (err) {
+    if (err && err.name !== 'AbortError') {
+      alert('❌ ' + err.message);
+    }
+  } finally {
+    if (btnSimpan) {
+      btnSimpan.disabled = false;
+      btnSimpan.innerText = mode === 'simpan' ? labelAsli : '📥 Simpan PDF';
+    }
+    if (btnShare) {
+      btnShare.disabled = false;
+      btnShare.innerText = mode === 'share' ? labelAsli : '📤 Share PDF';
+    }
+  }
+};
 // ==========================================
 // PEMERIKSA OTOMATIS QR CODE (?cek=KODE_TIKET)
 // ==========================================
