@@ -565,14 +565,73 @@ window.tutupFotoBesar = function() {
   window._penjagaBackGlobalAktif = true;
 
   let waktuBackTerakhir = 0;
-  let guardTerpasang = false;
+  let baseGuardTerpasang = false;
+  let jumlahLayerTercatat = 0;
+  let sedangSinkronHistory = false;
 
-  function pasangPenjagaHistory() {
-    if (guardTerpasang) return;
-    try {
-      window.history.pushState({ rt05BackGuard: true }, '', window.location.href);
-      guardTerpasang = true;
-    } catch (e) {}
+  function cariFotoModalTerbuka() {
+    return (
+      document.getElementById('modal-foto-besar') ||
+      document.getElementById('lightbox-foto') ||
+      document.querySelector('[data-lightbox="foto-besar"]') ||
+      Array.from(document.body.children).find(el => {
+        const s = window.getComputedStyle(el);
+        return (
+          s.position === 'fixed' &&
+          s.display !== 'none' &&
+          s.visibility !== 'hidden' &&
+          Number(s.zIndex) >= 2000 &&
+          el.querySelector('img') &&
+          !el.classList.contains('modal-bg')
+        );
+      })
+    );
+  }
+
+  function daftarModalBiasaTerbuka() {
+    return Array.from(
+      document.querySelectorAll('.modal-bg, #modal-catatan-ronda, #rt05-custom-alert, [role="dialog"]')
+    ).filter(el => {
+      const s = window.getComputedStyle(el);
+      return s.display !== 'none' && s.visibility !== 'hidden';
+    });
+  }
+
+  function hitungLayerTerbuka() {
+    let total = daftarModalBiasaTerbuka().length;
+    const chatModal = document.getElementById('chat-overlay-modal');
+    if (chatModal && chatModal.dataset.open === 'true') total++;
+    if (cariFotoModalTerbuka()) total++;
+    return total;
+  }
+
+  function sinkronLayerSetelahKlik() {
+    // 1. Pastikan 1 penjaga dasar terpasang pada sentuhan pertama
+    if (!baseGuardTerpasang) {
+      try {
+        window.history.pushState({ rt05BaseGuard: true, layer: 0 }, '', window.location.href);
+        baseGuardTerpasang = true;
+      } catch (e) {}
+    }
+
+    const layerSekarang = hitungLayerTerbuka();
+
+    // 2. Jika ada modal atau foto baru terbuka, tambah entri riwayat sesuai jumlah lapisannya
+    if (layerSekarang > jumlahLayerTercatat) {
+      try {
+        window.history.pushState({ rt05Layer: layerSekarang }, '', window.location.href);
+        jumlahLayerTercatat = layerSekarang;
+      } catch (e) {}
+    }
+    // 3. Jika modal/foto ditutup lewat tombol X (bukan tombol Back), kurangi tumpukan riwayat berlebih
+    else if (layerSekarang < jumlahLayerTercatat) {
+      const selisih = jumlahLayerTercatat - layerSekarang;
+      jumlahLayerTercatat = layerSekarang;
+      if (window.history.state && typeof window.history.state.rt05Layer === 'number') {
+        sedangSinkronHistory = true;
+        window.history.go(-selisih);
+      }
+    }
   }
 
   function tampilkanPeringatanKeluar() {
@@ -594,37 +653,28 @@ window.tutupFotoBesar = function() {
     toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
   }
 
-  function tutupModalYangSedangTerbuka() {
-    // 1. Cek foto/lightbox besar
-    const fotoModal = document.getElementById('modal-foto-besar') ||
-                      document.getElementById('lightbox-foto') ||
-                      document.querySelector('[data-lightbox="foto-besar"]') ||
-                      Array.from(document.body.children).find(el => {
-                        const s = window.getComputedStyle(el);
-                        return s.position === 'fixed' && s.display !== 'none' && Number(s.zIndex) >= 2000 && el.querySelector('img') && !el.classList.contains('modal-bg');
-                      });
-
-    if (fotoModal && window.getComputedStyle(fotoModal).display !== 'none') {
+  function tutupSatuLayerTeratas() {
+    // Prioritas 1: Foto/lightbox besar paling atas
+    const fotoModal = cariFotoModalTerbuka();
+    if (fotoModal) {
       if (typeof window.tutupFotoBesar === 'function') window.tutupFotoBesar();
       else fotoModal.style.display = 'none';
       return true;
     }
 
-    // 2. Cek modal chat overlay di index.html
+    // Prioritas 2: Modal chat overlay di index.html
     const chatModal = document.getElementById('chat-overlay-modal');
     if (chatModal && chatModal.dataset.open === 'true' && typeof window.toggleChatModal === 'function') {
       window.toggleChatModal();
       return true;
     }
 
-    // 3. Cek modal lain yang sedang tampil (Keuangan, Inventaris, Jimpitan, Pengumuman, Setting, dll)
-    const modalTerbuka = Array.from(document.querySelectorAll('.modal-bg, #modal-catatan-ronda, #rt05-custom-alert, [role="dialog"]'))
-      .reverse()
-      .find(el => window.getComputedStyle(el).display !== 'none' && window.getComputedStyle(el).visibility !== 'hidden');
-
-    if (modalTerbuka) {
-      modalTerbuka.style.display = 'none';
-      if (modalTerbuka.id === 'modal-qr-scanner' && typeof window.stopScanQR === 'function') {
+    // Prioritas 3: Modal biasa paling terakhir dibuka
+    const daftarModal = daftarModalBiasaTerbuka();
+    if (daftarModal.length > 0) {
+      const modalTeratas = daftarModal[daftarModal.length - 1];
+      modalTeratas.style.display = 'none';
+      if (modalTeratas.id === 'modal-qr-scanner' && typeof window.stopScanQR === 'function') {
         window.stopScanQR();
       }
       return true;
@@ -633,40 +683,45 @@ window.tutupFotoBesar = function() {
     return false;
   }
 
-  // Setiap sentuhan/klik warga (membuka modal, klik foto, dll) memastikan guard aktif dengan user gesture yang sah
-  ['pointerdown', 'keydown'].forEach(evt => {
-    window.addEventListener(evt, pasangPenjagaHistory, { passive: true });
+  // Pantau setiap klik (fase bubble, setelah handler tombol membuka/menutup modal)
+  document.addEventListener('click', () => {
+    setTimeout(sinkronLayerSetelahKlik, 10);
   });
 
   window.addEventListener('popstate', () => {
-    guardTerpasang = false;
-
-    // Jika di dalam iframe (misal chat.html di dalam index.html), serahkan ke parent
-    if (window.parent && window.parent !== window) return;
-
-    // Prioritas 1: Tutup foto besar atau modal yang sedang terbuka
-    if (tutupModalYangSedangTerbuka()) {
-      pasangPenjagaHistory();
+    if (sedangSinkronHistory) {
+      sedangSinkronHistory = false;
       return;
     }
+
+    // Jika berada di dalam iframe (misal chat.html di dalam index.html), serahkan ke parent
+    if (window.parent && window.parent !== window) return;
+
+    // Tutup lapisan paling atas (Foto Besar dulu, lalu Modal Keuangan, dst)
+    if (tutupSatuLayerTeratas()) {
+      jumlahLayerTercatat = hitungLayerTerbuka();
+      return;
+    }
+
+    jumlahLayerTercatat = 0;
+    baseGuardTerpasang = false;
 
     const path = window.location.pathname.toLowerCase();
     const adalahHalamanAnak = path.includes('pengumuman') || path.includes('chat') || path.includes('admin');
 
-    // Prioritas 2: Jika berada di halaman anak, kembali ke beranda index.html
+    // Jika berada di halaman anak, kembali ke beranda index.html
     if (adalahHalamanAnak) {
       window.location.href = 'index.html';
       return;
     }
 
-    // Prioritas 3: Di index.html, konfirmasi tekan Back 2x dalam 2 detik untuk keluar
+    // Di index.html: konfirmasi tekan Back 2x dalam 2 detik untuk keluar aplikasi
     const sekarang = Date.now();
     if (sekarang - waktuBackTerakhir < 2000) {
       window.history.back();
     } else {
       waktuBackTerakhir = sekarang;
       tampilkanPeringatanKeluar();
-      pasangPenjagaHistory();
     }
   });
 })();
