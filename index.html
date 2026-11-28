@@ -2963,6 +2963,66 @@ function ambilDataFormSurat() {
   };
 }
 
+  const KEY_DRAF_FORM_SURAT = 'rt05_draf_form_surat_12jam';
+const DURASI_DRAF_MS = 12 * 60 * 60 * 1000; // Berlaku 12 jam
+
+function simpanDrafFormSementara() {
+  try {
+    const d = ambilDataFormSurat();
+    // NIK tidak pernah disimpan demi keamanan privasi
+    const drafAman = {
+      tersimpanPada: Date.now(),
+      nama: d.nama,
+      ttl: d.ttl,
+      alamat: d.alamat,
+      tujuan: d.tujuan,
+      keperluan: d.keperluan
+    };
+    localStorage.setItem(KEY_DRAF_FORM_SURAT, JSON.stringify(drafAman));
+  } catch (e) {}
+}
+
+function pulihkanDrafFormSementara() {
+  try {
+    const raw = localStorage.getItem(KEY_DRAF_FORM_SURAT);
+    if (!raw) return;
+    const draf = JSON.parse(raw);
+
+    // Hapus otomatis jika sudah lewat 12 jam
+    if (!draf.tersimpanPada || (Date.now() - draf.tersimpanPada) > DURASI_DRAF_MS) {
+      localStorage.removeItem(KEY_DRAF_FORM_SURAT);
+      return;
+    }
+
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el && val && !el.value) el.value = val;
+    };
+
+    setVal('suratNama', draf.nama);
+    setVal('suratTtl', draf.ttl);
+    setVal('suratAlamat', draf.alamat);
+    setVal('suratTujuan', draf.tujuan);
+    setVal('suratKeperluan', draf.keperluan);
+
+    // Kosongkan kolom NIK & beri fokus agar warga mengetik ulang NIK secara sadar
+    const elNik = document.getElementById('suratNik');
+    if (elNik) {
+      elNik.value = '';
+      elNik.placeholder = 'Ketik ulang 16 digit NIK Anda';
+    }
+  } catch (e) {}
+}
+
+// Pasang auto-save setiap kali warga mengetik di kolom selain NIK
+document.addEventListener('DOMContentLoaded', () => {
+  ['suratNama', 'suratTtl', 'suratAlamat', 'suratTujuan', 'suratKeperluan'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', simpanDrafFormSementara);
+  });
+  pulihkanDrafFormSementara();
+});
+
 async function simpanLogCetakSurat(kodeTiket, d) {
   if (!navigator.onLine) {
     throw new Error('Koneksi internet diperlukan untuk mendaftarkan Kode Tiket verifikasi surat.');
