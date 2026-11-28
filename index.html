@@ -326,6 +326,23 @@
   .chat-btn-animated {
     animation: softPulse 2.2s infinite ease-in-out !important;
   }
+   .lampu-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+    flex-shrink: 0;
+    will-change: opacity, transform;
+  }
+
+  @keyframes lampuKedipAcak {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    45% { opacity: 0.2; transform: scale(0.82); }
+  }
+
+  .lampu-status.kedip {
+    animation: lampuKedipAcak 0.45s ease-in-out;
+  }
 
   .badge-count {
     background: #d32f2f;
@@ -3012,28 +3029,30 @@ function perbaruiIndikatorSync() {
   
   if (!badge) return;
 
+  const buatLampu = (warna) => `<span class="lampu-status" style="background:${warna};"></span>`;
+
   if (sedangMengirim) {
-    badge.innerHTML = `🔵 Sedang Menyinkronkan...`;
-    badge.style.backgroundColor = 'rgba(219, 234, 254, 0.9)';
+    badge.innerHTML = `${buatLampu('#2563eb')} <span>Sedang Menyinkronkan...</span>`;
+    badge.style.backgroundColor = 'rgba(219, 234, 254, 0.95)';
     badge.style.color = '#1e40af';
   } else if (!navigator.onLine) {
     if (antrean.length > 0) {
-      badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-      badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
+      badge.innerHTML = `${buatLampu('#f59e0b')} <span>${antrean.length} Data Menunggu Sinyal</span>`;
+      badge.style.backgroundColor = 'rgba(254, 243, 199, 0.95)';
       badge.style.color = '#92400e';
     } else {
-      badge.innerHTML = '🔴 Anda Sedang Offline';
-      badge.style.backgroundColor = 'rgba(254, 226, 226, 0.9)';
+      badge.innerHTML = `${buatLampu('#ef4444')} <span>Anda Sedang Offline</span>`;
+      badge.style.backgroundColor = 'rgba(254, 226, 226, 0.95)';
       badge.style.color = '#991b1b';
     }
   } else {
     if (antrean.length === 0) {
-      badge.innerHTML = '🟢 Online';
-      badge.style.backgroundColor = 'rgba(209, 250, 229, 0.9)';
+      badge.innerHTML = `${buatLampu('#10b981')} <span id="teks-sinkron">Online</span>`;
+      badge.style.backgroundColor = 'rgba(209, 250, 229, 0.95)';
       badge.style.color = '#065f46';
     } else {
-      badge.innerHTML = `🟡 ${antrean.length} Data Menunggu Sinyal`;
-      badge.style.backgroundColor = 'rgba(254, 243, 199, 0.9)';
+      badge.innerHTML = `${buatLampu('#f59e0b')} <span>${antrean.length} Data Menunggu Sinyal</span>`;
+      badge.style.backgroundColor = 'rgba(254, 243, 199, 0.95)';
       badge.style.color = '#92400e';
     }
   }
@@ -3048,6 +3067,36 @@ function perbaruiIndikatorSync() {
     }
   }
 }
+
+// Timer kedip acak super ringan (otomatis berhenti saat layar mati/tab tersembunyi)
+(function mulaiKedipLampuAcak() {
+  let timerKedip = null;
+
+  function jadwalkanKedipBerikutnya() {
+    clearTimeout(timerKedip);
+    if (document.hidden) return;
+
+    // Jeda acak antara 5 detik sampai 14 detik
+    const jedaMs = 5000 + Math.floor(Math.random() * 9000);
+    timerKedip = setTimeout(() => {
+      if (document.hidden) return;
+      const lampu = document.querySelector('#status-sync .lampu-status');
+      if (lampu) {
+        lampu.classList.remove('kedip');
+        void lampu.offsetWidth; // reset animasi
+        lampu.classList.add('kedip');
+      }
+      jadwalkanKedipBerikutnya();
+    }, jedaMs);
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) clearTimeout(timerKedip);
+    else jadwalkanKedipBerikutnya();
+  });
+
+  jadwalkanKedipBerikutnya();
+})();
 
 async function kirimDataPendingJimpitan() {
   if (sedangMengirim) return;
