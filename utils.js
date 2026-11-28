@@ -557,6 +557,120 @@ window.tutupFotoBesar = function() {
   if (imgElem) imgElem.src = ''; // Kosongkan memori gambar saat ditutup
 };
 
+// ==========================================
+// PENJAGA GLOBAL TOMBOL BACK HP (PWA)
+// ==========================================
+(function() {
+  if (window._penjagaBackGlobalAktif) return;
+  window._penjagaBackGlobalAktif = true;
+
+  let waktuBackTerakhir = 0;
+  let guardTerpasang = false;
+
+  function pasangPenjagaHistory() {
+    if (guardTerpasang) return;
+    try {
+      window.history.pushState({ rt05BackGuard: true }, '', window.location.href);
+      guardTerpasang = true;
+    } catch (e) {}
+  }
+
+  function tampilkanPeringatanKeluar() {
+    if (typeof window.tampilkanToast === 'function') {
+      window.tampilkanToast('Tekan Back sekali lagi untuk keluar aplikasi', 'warning');
+      return;
+    }
+
+    let toast = document.getElementById('rt05-exit-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'rt05-exit-toast';
+      toast.style.cssText = 'position:fixed; bottom:84px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.92); color:#f8fafc; padding:10px 18px; border-radius:999px; font-size:12.5px; font-weight:600; z-index:2147483647; box-shadow:0 8px 20px rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.15); pointer-events:none; transition:opacity 0.2s; white-space:nowrap;';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = 'Tekan Back sekali lagi untuk keluar aplikasi';
+    toast.style.opacity = '1';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+  }
+
+function tutupModalYangSedangTerbuka() {
+    // 1. Cek foto/lightbox besar (baik yang punya ID maupun overlay fixed bergambar)
+    const fotoModal = document.getElementById('modal-foto-besar') ||
+                      document.getElementById('lightbox-foto') ||
+                      document.querySelector('[data-lightbox="foto-besar"]') ||
+                      Array.from(document.body.children).find(el => {
+                        const s = window.getComputedStyle(el);
+                        return s.position === 'fixed' && s.display !== 'none' && Number(s.zIndex) >= 2000 && el.querySelector('img') && !el.classList.contains('modal-bg');
+                      });
+
+    if (fotoModal && fotoModal.style.display !== 'none') {
+      if (typeof window.tutupFotoBesar === 'function') window.tutupFotoBesar();
+      else fotoModal.style.display = 'none';
+      return true;
+    }
+
+    // 2. Cek modal chat overlay di index.html
+    const chatModal = document.getElementById('chat-overlay-modal');
+    if (chatModal && chatModal.dataset.open === 'true' && typeof window.toggleChatModal === 'function') {
+      window.toggleChatModal();
+      return true;
+    }
+
+    // 3. Cek modal-bg lain yang sedang tampil (Keuangan, Inventaris, Jimpitan, Setting, dll)
+    const modalTerbuka = Array.from(document.querySelectorAll('.modal-bg, #modal-catatan-ronda, #rt05-custom-alert'))
+      .reverse()
+      .find(el => window.getComputedStyle(el).display !== 'none');
+
+    if (modalTerbuka) {
+      modalTerbuka.style.display = 'none';
+      if (modalTerbuka.id === 'modal-qr-scanner' && typeof window.stopScanQR === 'function') {
+        window.stopScanQR();
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  // Aktifkan state setelah sentuhan/klik pertama agar diizinkan kebijakan Chrome Android
+  ['pointerdown', 'keydown'].forEach(evt => {
+    window.addEventListener(evt, pasangPenjagaHistory, { once: true, passive: true });
+  });
+
+  window.addEventListener('popstate', () => {
+    guardTerpasang = false;
+
+    // Jika dijalankan di dalam iframe (misal chat.html di dalam index.html), serahkan ke parent
+    if (window.parent && window.parent !== window) return;
+
+    // Prioritas 1: Tutup foto besar atau modal yang sedang terbuka
+    if (tutupModalYangSedangTerbuka()) {
+      pasangPenjagaHistory();
+      return;
+    }
+
+    const path = window.location.pathname.toLowerCase();
+    const adalahHalamanAnak = path.includes('pengumuman') || path.includes('chat') || path.includes('admin');
+
+    // Prioritas 2: Jika berada di halaman anak (bukan index), kembali ke index.html
+    if (adalahHalamanAnak) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Prioritas 3: Di index.html, terapkan konfirmasi tekan Back 2x dalam 2 detik
+    const sekarang = Date.now();
+    if (sekarang - waktuBackTerakhir < 2000) {
+      window.history.back(); // Keluar aplikasi
+    } else {
+      waktuBackTerakhir = sekarang;
+      tampilkanPeringatanKeluar();
+      pasangPenjagaHistory();
+    }
+  });
+})();
+
 // DAFTARKAN SEMUA FUNGSI KE WINDOW GLOBAL
 window.RT05_CONFIG = RT05_CONFIG;
 window.perbaikiKoordinat = perbaikiKoordinat;
