@@ -3243,6 +3243,35 @@ async function cekParameterVerifikasiSurat() {
 }
 cekParameterVerifikasiSurat();
 
+window.kunciSuratSudahDipakai = async function(kodeTiket) {
+  const instansi = document.getElementById('inputInstansiKlaim')?.value.trim();
+  if (!instansi) {
+    alert('Mohon isi nama instansi penerima surat terlebih dahulu.');
+    return;
+  }
+  if (!confirm(`Kunci surat ${kodeTiket} sebagai SUDAH DIPAKAI di "${instansi}"? Setelah dikunci, surat ini tidak bisa digunakan di instansi lain.`)) {
+    return;
+  }
+
+  try {
+    const dbUrl = window.db?.app?.options?.databaseURL;
+    const idToken = await window.auth.currentUser.getIdToken();
+    const res = await fetch(`${dbUrl.replace(/\/$/, '')}/surat_pengantar/${encodeURIComponent(kodeTiket)}.json?auth=${encodeURIComponent(idToken)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        status: 'SUDAH_DIGUNAKAN',
+        instansiPengguna: instansi,
+        waktuDigunakan: new Date().toLocaleString('id-ID')
+      })
+    });
+
+    if (!res.ok) throw new Error('Gagal mengunci status surat.');
+    cekParameterVerifikasiSurat(); // Muat ulang tampilan menjadi status TERKUNCI
+  } catch (err) {
+    alert('❌ ' + err.message);
+  }
+};
   
 let isDenahOpen = false;
 let denahTimer = null;
