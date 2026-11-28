@@ -606,31 +606,34 @@ window.tutupFotoBesar = function() {
   }
 
   function sinkronLayerSetelahKlik() {
-    // 1. Pastikan 1 penjaga dasar terpasang pada sentuhan pertama
-    if (!baseGuardTerpasang) {
-      try {
-        window.history.pushState({ rt05BaseGuard: true, layer: 0 }, '', window.location.href);
-        baseGuardTerpasang = true;
-      } catch (e) {}
-    }
-
     const layerSekarang = hitungLayerTerbuka();
 
-    // 2. Jika ada modal atau foto baru terbuka, tambah entri riwayat sesuai jumlah lapisannya
+    // 1. Jika membuka modal/foto baru, tambah TEPAT 1 entri riwayat yang sah per sentuhan
     if (layerSekarang > jumlahLayerTercatat) {
       try {
         window.history.pushState({ rt05Layer: layerSekarang }, '', window.location.href);
         jumlahLayerTercatat = layerSekarang;
       } catch (e) {}
+      return;
     }
-    // 3. Jika modal/foto ditutup lewat tombol X (bukan tombol Back), kurangi tumpukan riwayat berlebih
-    else if (layerSekarang < jumlahLayerTercatat) {
+
+    // 2. Jika modal/foto ditutup lewat tombol X (bukan Back), kurangi tumpukan riwayat berlebih
+    if (layerSekarang < jumlahLayerTercatat) {
       const selisih = jumlahLayerTercatat - layerSekarang;
       jumlahLayerTercatat = layerSekarang;
       if (window.history.state && typeof window.history.state.rt05Layer === 'number') {
         sedangSinkronHistory = true;
         window.history.go(-selisih);
       }
+      return;
+    }
+
+    // 3. Jika sedang di beranda (0 modal terbuka), pasang 1 penjaga keluar aplikasi
+    if (layerSekarang === 0 && !baseGuardTerpasang) {
+      try {
+        window.history.pushState({ rt05BaseGuard: true }, '', window.location.href);
+        baseGuardTerpasang = true;
+      } catch (e) {}
     }
   }
 
@@ -669,7 +672,7 @@ window.tutupFotoBesar = function() {
       return true;
     }
 
-    // Prioritas 3: Modal biasa paling terakhir dibuka
+    // Prioritas 3: Modal biasa paling terakhir dibuka (termasuk Modal Keuangan)
     const daftarModal = daftarModalBiasaTerbuka();
     if (daftarModal.length > 0) {
       const modalTeratas = daftarModal[daftarModal.length - 1];
@@ -683,9 +686,9 @@ window.tutupFotoBesar = function() {
     return false;
   }
 
-  // Pantau setiap klik (fase bubble, setelah handler tombol membuka/menutup modal)
+  // Gunakan queueMicrotask agar berjalan tepat setelah handler klik tanpa memutus user gesture
   document.addEventListener('click', () => {
-    setTimeout(sinkronLayerSetelahKlik, 10);
+    queueMicrotask(sinkronLayerSetelahKlik);
   });
 
   window.addEventListener('popstate', () => {
@@ -697,7 +700,7 @@ window.tutupFotoBesar = function() {
     // Jika berada di dalam iframe (misal chat.html di dalam index.html), serahkan ke parent
     if (window.parent && window.parent !== window) return;
 
-    // Tutup lapisan paling atas (Foto Besar dulu, lalu Modal Keuangan, dst)
+    // Tutup lapisan paling atas (Foto Besar -> Modal Keuangan -> Beranda)
     if (tutupSatuLayerTeratas()) {
       jumlahLayerTercatat = hitungLayerTerbuka();
       return;
@@ -709,13 +712,11 @@ window.tutupFotoBesar = function() {
     const path = window.location.pathname.toLowerCase();
     const adalahHalamanAnak = path.includes('pengumuman') || path.includes('chat') || path.includes('admin');
 
-    // Jika berada di halaman anak, kembali ke beranda index.html
     if (adalahHalamanAnak) {
       window.location.href = 'index.html';
       return;
     }
 
-    // Di index.html: konfirmasi tekan Back 2x dalam 2 detik untuk keluar aplikasi
     const sekarang = Date.now();
     if (sekarang - waktuBackTerakhir < 2000) {
       window.history.back();
