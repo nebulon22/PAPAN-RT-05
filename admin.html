@@ -310,6 +310,12 @@ html.has-session-token #login-overlay {
   </button>
 </div>
     
+<div class="filter-row" style="display: flex; gap: 6px; width: 100%; margin-top: 6px;">
+  <button type="button" class="btn-filter" style="flex: 1; background: #0288d1; color: white; border-color: #0369a1; justify-content: center;" onclick="bukaModalSuratAdmin()">
+    📄 Log & Pengesahan Surat Pengantar RT
+  </button>
+</div>
+    
     <!-- Section Persetujuan Chat Warga Ringkas -->
 <div style="margin-top: 8px; background-color: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 6px 10px; color: #ffffff; box-shadow: 0 4px 10px rgba(0,0,0,0.3); font-family: sans-serif;">
   <details id="details-chat-admin">
@@ -1312,17 +1318,31 @@ html.has-session-token #login-overlay {
   
   </div>
 </div>
-  <!-- PANEL VERIFIKASI SURAT PENGANTAR (admin.html) -->
-<div style="background:#fff; border:1px solid #e2e8f0; border-radius:12px; padding:14px; margin-top:16px;">
-  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; gap:8px;">
-    <h3 style="margin:0; font-size:15px; color:#0f172a;">📄 Log & Pengesahan Surat Pengantar RT</h3>
-    <button type="button" onclick="muatLogSuratAdmin()"
-      style="padding:5px 10px; background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
-      🔄 Muat Ulang
+  <!-- MODAL VERIFIKASI & PENGESAHAN SURAT PENGANTAR RT -->
+<div id="modal-admin-surat" class="modal-bg" style="display: none; position: fixed; inset: 0; width: 100vw; height: 100dvh; background: rgba(15, 23, 42, 0.65); z-index: 9999; align-items: center; justify-content: center; padding: 12px; box-sizing: border-box;" onclick="if(event.target.id==='modal-admin-surat') tutupModalSuratAdmin()">
+  <div class="modal-content" style="width: 100%; max-width: 540px; max-height: 86dvh; padding: 16px; display: flex; flex-direction: column; overflow: hidden; background: #ffffff; border-radius: 14px; box-sizing: border-box; box-shadow: 0 10px 30px rgba(0,0,0,0.35);">
+    
+    <!-- Header Modal -->
+    <div class="modal-header" style="flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; padding-bottom: 8px; margin-bottom: 10px;">
+      <h3 style="margin:0; font-size:15px; color:#0f172a;">📄 Log & Pengesahan Surat Pengantar RT</h3>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <button type="button" onclick="muatLogSuratAdmin()"
+          style="padding:4px 9px; background:#f1f5f9; color:#334155; border:1px solid #cbd5e1; border-radius:6px; font-size:11px; font-weight:bold; cursor:pointer;">
+          🔄 Muat Ulang
+        </button>
+        <button type="button" class="close-btn" onclick="tutupModalSuratAdmin()">&times;</button>
+      </div>
+    </div>
+
+    <!-- Daftar Log Surat (Bisa di-scroll) -->
+    <div id="list-log-surat-admin" style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; font-size: 12px; padding-right: 4px;">
+      Memuat log pencetakan surat...
+    </div>
+
+    <!-- Tombol Tutup di Bawah -->
+    <button type="button" onclick="tutupModalSuratAdmin()" style="width: 100%; margin-top: 10px; padding: 8px; background: #6b7280; color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 12px; flex-shrink: 0;">
+      Tutup
     </button>
-  </div>
-  <div id="list-log-surat-admin" style="display:flex; flex-direction:column; gap:8px; font-size:12px;">
-    Memuat log pencetakan surat...
   </div>
 </div>
     
@@ -5419,6 +5439,17 @@ function bukaTabAdmin(tabName) {
     }
   }
 }
+
+window.bukaModalSuratAdmin = function() {
+  const modal = document.getElementById('modal-admin-surat');
+  if (modal) modal.style.display = 'flex';
+  muatLogSuratAdmin();
+};
+
+window.tutupModalSuratAdmin = function() {
+  const modal = document.getElementById('modal-admin-surat');
+  if (modal) modal.style.display = 'none';
+};
   </script>
 
 <script type="module">
