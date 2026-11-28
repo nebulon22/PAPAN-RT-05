@@ -1052,6 +1052,11 @@
       </div>
 
       <div>
+        <label for="suratTujuan" style="font-size: 11.5px; font-weight: bold; color: #374151;">Instansi / Tujuan Surat (Wajib Spesifik 1 Tempat):</label>
+        <input type="text" id="suratTujuan" class="form-input-rt" placeholder="Contoh: Kalurahan Condongcatur / Polsek Depok Timur">
+      </div>
+      
+      <div>
         <label for="suratKeperluan" style="font-size: 11.5px; font-weight: bold; color: #374151;">Keterangan / Keperluan Tambahan:</label>
         <textarea id="suratKeperluan" class="form-input-rt" rows="2" placeholder="Contoh: Pindah domisili ke Kec. Ngaglik"></textarea>
       </div>
@@ -2936,6 +2941,7 @@ function ambilDataFormSurat() {
     nik: document.getElementById('suratNik')?.value.trim() || '',
     ttl: document.getElementById('suratTtl')?.value.trim() || '',
     alamat: document.getElementById('suratAlamat')?.value.trim() || '',
+    tujuan: document.getElementById('suratTujuan')?.value.trim() || '',
     keperluan: document.getElementById('suratKeperluan')?.value.trim() || ''
   };
 }
@@ -2966,6 +2972,7 @@ async function simpanLogCetakSurat(kodeTiket, d) {
     nikSensor: sensorNikAudit(d.nik),
     ttl: d.ttl || '-',
     alamat: d.alamat,
+    tujuan: d.tujuan,
     keperluan: d.keperluan || d.jenis,
     status: 'BELUM_DISAHKAN',
     waktuCetak: new Date().toLocaleString('id-ID'),
@@ -2981,7 +2988,6 @@ async function simpanLogCetakSurat(kodeTiket, d) {
     return;
   }
 
-  // Fallback langsung via Firebase REST API memakai token auth aktif
   const dbUrl = window.db?.app?.options?.databaseURL;
   const idToken = await window.auth.currentUser.getIdToken();
   if (!dbUrl || !idToken) throw new Error('Konfigurasi database belum siap.');
@@ -2999,8 +3005,8 @@ async function simpanLogCetakSurat(kodeTiket, d) {
 
 window.cetakPdfSuratPengantar = async function() {
   const d = ambilDataFormSurat();
-  if (!d.nama || !d.nik || !d.alamat) {
-    alert('Mohon isi minimal Nama Lengkap, NIK (16 digit), dan Alamat / No. Rumah terlebih dahulu.');
+  if (!d.nama || !d.nik || !d.alamat || !d.tujuan) {
+    alert('Mohon isi Nama Lengkap, NIK (16 digit), Alamat / No. Rumah, dan Instansi / Tujuan Surat terlebih dahulu.');
     return;
   }
   if (d.nik.replace(/\D/g, '').length !== 16) {
@@ -3017,7 +3023,6 @@ window.cetakPdfSuratPengantar = async function() {
   const kodeTiket = buatKodeTiketSurat();
 
   try {
-    // Wajib tercatat di server dulu sebelum PDF boleh dicetak (mencegah cetak tanpa jejak log)
     await simpanLogCetakSurat(kodeTiket, d);
   } catch (err) {
     if (btn) {
@@ -3093,10 +3098,11 @@ window.cetakPdfSuratPengantar = async function() {
         <tr><td class="label">Tempat, Tanggal Lahir</td><td class="sep">:</td><td>${escapeHTML(d.ttl || '-')}</td></tr>
         <tr><td class="label">Alamat</td><td class="sep">:</td><td>${escapeHTML(d.alamat)}</td></tr>
         <tr><td class="label">Jenis Permohonan</td><td class="sep">:</td><td><b>${escapeHTML(d.jenis)}</b></td></tr>
+        <tr><td class="label">Ditujukan Kepada</td><td class="sep">:</td><td><b>${escapeHTML(d.tujuan)}</b> (Berlaku 1 kali pakai)</td></tr>
         <tr><td class="label">Keperluan / Keterangan</td><td class="sep">:</td><td>${escapeHTML(d.keperluan || d.jenis)}</td></tr>
       </table>
 
-      <p>Orang tersebut di atas adalah benar-benar warga kami yang berdomisili di lingkungan RT 05 Kayen. Surat pengantar ini diberikan untuk dipergunakan sebagaimana mestinya.</p>
+      <p>Orang tersebut di atas adalah benar-benar warga kami yang berdomisili di lingkungan RT 05 Kayen. Surat pengantar ini hanya berlaku untuk 1 (satu) kali penggunaan pada instansi tujuan tersebut di atas.</p>
 
       <div class="ttd-wrap">
         <div class="ttd-box">
@@ -3115,8 +3121,8 @@ window.cetakPdfSuratPengantar = async function() {
         <img src="${qrImgUrl}" width="72" height="72" alt="QR Verifikasi" onerror="this.style.display='none'" style="border: 1px solid #ccc; padding: 2px;">
         <div>
           <b>Kode Tiket Audit Sistem RT 05: ${escapeHTML(kodeTiket)}</b><br>
-          Dokumen ini dicetak mandiri oleh pemohon dan <b>TIDAK SAH</b> tanpa pengisian Nomor Agenda resmi, tanda tangan basah, serta stempel asli Ketua RT 05.<br>
-          Cek status pengesahan online: <b>${escapeHTML(urlVerifikasi)}</b>
+          Dokumen ini dicetak mandiri oleh pemohon, <b>TIDAK SAH</b> tanpa Nomor Agenda resmi, TTD basah, &amp; stempel asli Ketua RT 05, serta <b>hangus setelah 1x diklaim</b> (fotokopi tidak berlaku untuk instansi lain).<br>
+          Verifikasi keaslian &amp; status pakai: <b>${escapeHTML(urlVerifikasi)}</b>
         </div>
       </div>
     </body>
@@ -3129,8 +3135,8 @@ window.cetakPdfSuratPengantar = async function() {
 
 window.kirimWaSuratPengantar = function() {
   const d = ambilDataFormSurat();
-  if (!d.nama || !d.alamat) {
-    alert('Mohon isi minimal Nama Lengkap dan Alamat / No. Rumah.');
+  if (!d.nama || !d.alamat || !d.tujuan) {
+    alert('Mohon isi minimal Nama Lengkap, Alamat / No. Rumah, dan Instansi / Tujuan Surat.');
     return;
   }
 
@@ -3140,10 +3146,11 @@ window.kirimWaSuratPengantar = function() {
     `• NIK: ${d.nik || '-'}`,
     `• TTL: ${d.ttl || '-'}`,
     `• Alamat: ${d.alamat}`,
+    `• Tujuan Instansi: ${d.tujuan}`,
     `• Keperluan: ${d.keperluan || '-'}`
   ].join('\n');
 
-  window.open(`https://wa.me/6285875778897?text=${encodeURIComponent(teks)}`, '_blank');
+  window.open(`https://wa.me/6285643335300?text=${encodeURIComponent(teks)}`, '_blank');
 };
 
 // ==========================================
