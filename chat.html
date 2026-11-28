@@ -2748,32 +2748,27 @@ function loadPrivateChatStream(targetUID, onLoaded) {
         const lastReadKey = lastReadKeyMap[targetUID];
 
         let isUnreadSection = !lastReadKey;
-        const lastReadKeyMap = JSON.parse(localStorage.getItem('rt05_chat_last_read_key')) || {};
-    const lastReadKey = lastReadKeyMap[targetUID];
+        const messagesList = [];
 
-    let isUnreadSection = !lastReadKey;
-    const messagesList = [];
+        snapshot.forEach((childSnap) => {
+            const msgKey = childSnap.key;
+            const msgData = childSnap.val();
 
-    snapshot.forEach((childSnap) => {
-      const msgKey = childSnap.key;
-      const msgData = childSnap.val();
+            let isUnreadMsg = false;
+            if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
+                isUnreadMsg = true;
+            }
 
-      let isUnreadMsg = false;
-      if (isUnreadSection && msgData.uid !== currentUser?.uid && isInitialPrivateChatLoaded[targetUID]) {
-        isUnreadMsg = true;
-      }
+            if (msgKey === lastReadKey) {
+                isUnreadSection = true;
+            }
 
-      if (msgKey === lastReadKey) {
-        isUnreadSection = true;
-      }
+            messagesList.push({ msgKey, msgData, isUnread: isUnreadMsg });
+        });
 
-      messagesList.push({ msgKey, msgData, isUnread: isUnreadMsg });
-    });
+        syncMessagesToStream(chatStream, messagesList);
+        isInitialPrivateChatLoaded[targetUID] = true;
 
-    syncMessagesToStream(chatStream, messagesList);
-    isInitialPrivateChatLoaded[targetUID] = true;
-
-        
         if (shouldForceScrollDown) {
             chatStream.scrollTop = chatStream.scrollHeight;
             shouldForceScrollDown = false;
@@ -2798,7 +2793,6 @@ function loadPrivateChatStream(targetUID, onLoaded) {
     });
     window.currentChatUnsubscribe = currentChatUnsubscribe;
 }
-    
 // === 3. FUNGSI TRIGGER LOAD MORE PUBLIK (ANTI-BOUNCE KE ATAS) ===
 function triggerLoadMorePublic() {
     if (isLoadingMore) return;
