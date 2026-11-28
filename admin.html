@@ -2446,11 +2446,15 @@ const escHtmlAdmin = (str) => (window.utils?.escapeHTML || window.escapeHTML)(st
             • <b>Dibuat:</b> ${escHtmlAdmin(item.waktuCetak)}<br>
             <span style="font-size:10.5px; color:#64748b;">Jejak Akun: ${escHtmlAdmin(item.chatUsername || 'Tamu/Anonim')} (${escHtmlAdmin(item.creatorAuthUid)})</span>
           </div>
-          <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
+           <div style="display:flex; gap:6px; flex-wrap:wrap; margin-top:8px;">
             ${(!isSah && !isDipakai) ? `
               <button type="button" onclick="sahkanSuratRT('${escHtmlAdmin(item.kodeTiket)}')"
                 style="padding:6px 12px; background:#0288d1; color:#fff; border:none; border-radius:6px; font-weight:bold; cursor:pointer; font-size:11px;">
                 ✅ Sahkan & Isi Nomor Agenda
+              </button>
+              <button type="button" onclick="hapusDrafSuratRT('${escHtmlAdmin(item.kodeTiket)}')"
+                style="padding:6px 10px; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca; border-radius:6px; font-weight:bold; cursor:pointer; font-size:11px;">
+                🗑️ Hapus Draf
               </button>
             ` : ''}
             <a href="/?cek=${encodeURIComponent(item.kodeTiket)}" target="_blank"
@@ -2497,7 +2501,26 @@ const escHtmlAdmin = (str) => (window.utils?.escapeHTML || window.escapeHTML)(st
     }
   };
 
-  muatLogSuratAdmin();
+window.hapusDrafSuratRT = async function(kodeTiket) {
+  if (!confirm(`Hapus draf tiket ${kodeTiket} yang belum disahkan ini?`)) return;
+
+  try {
+    if (typeof window.firebaseRemove === 'function' && typeof window.firebaseRef === 'function') {
+      await window.firebaseRemove(window.firebaseRef(window.db, `surat_pengantar/${kodeTiket}`));
+    } else {
+      const dbUrl = window.db.app.options.databaseURL.replace(/\/$/, '');
+      const idToken = await window.auth.currentUser.getIdToken();
+      const res = await fetch(`${dbUrl}/surat_pengantar/${encodeURIComponent(kodeTiket)}.json?auth=${encodeURIComponent(idToken)}`, {
+        method: 'DELETE'
+      });
+      if (!res.ok) throw new Error('Gagal menghapus draf surat.');
+      muatLogSuratAdmin();
+    }
+  } catch (err) {
+    alert('❌ ' + err.message);
+  }
+};
+muatLogSuratAdmin();
     
 function bukaModalPinjamAdmin() {
   if (typeof muatPeminjamanAdmin === 'function') {
