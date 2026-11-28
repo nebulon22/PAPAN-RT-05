@@ -3025,7 +3025,7 @@ window.renderWargaSidebar = () => {
     const searchBox = document.getElementById('search-warga');
     const filterText = (searchBox ? searchBox.value : '').toLowerCase();
 
-    Object.values(allUsersCache).forEach(u => {
+Object.values(allUsersCache).forEach(u => {
       if (u.status !== 'aktif') return;
       
       totalCount++;
@@ -3045,36 +3045,46 @@ window.renderWargaSidebar = () => {
       if (isOnline) dotClass = "dot-online";
       if (u.state === 'idle') dotClass = "dot-idle";
 
+      const isMe = (u.uid === currentUser?.uid);
+      const selfLabel = isMe
+        ? '<span style="color: #facc15; font-size: 9px; font-weight: 700; margin-left: 3px;">(Saya)</span>'
+        : '';
+
       let roleBadge = '';
       if (u.role === 'admin') roleBadge = '<span class="badge-admin">ADMIN</span>';
 
-      const msgUnread = (u.uid !== currentUser?.uid) ? (unreadCounts[u.uid] || 0) : 0;
+      const msgUnread = !isMe ? (unreadCounts[u.uid] || 0) : 0;
       const unreadBadgeHTML = msgUnread > 0
         ? `<span style="background: #f59e0b; color: #0f172a; font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 12px; min-width: 16px; height: 16px; line-height: 1; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 0 4px rgba(245, 158, 11, 0.7);">${msgUnread > 99 ? '99+' : msgUnread}</span>`
         : '';
 
       const item = document.createElement('div');
       item.className = "warga-item";
+      if (isMe) {
+        item.style.borderColor = 'rgba(250, 204, 21, 0.35)';
+      }
+
       item.innerHTML = `
         <div style="display: flex; align-items: center; gap: 6px; overflow: hidden; flex: 1;">
           <span class="status-dot ${dotClass}"></span>
-          <div style="overflow: hidden;">
-            <div style="color: #e2e8f0; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              ${escapeHTML(u.username || u.nama)} ${roleBadge}
+          <div style="overflow: hidden; flex: 1;">
+            <div style="color: ${isMe ? '#fef08a' : '#e2e8f0'}; font-weight: ${isMe ? '600' : '500'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              ${escapeHTML(u.username || u.nama)}${selfLabel}
             </div>
-            <div style="font-size: 9px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-              ${escapeHTML(u.hunian)}
+            <div style="display: flex; align-items: center; gap: 4px; font-size: 9px; color: #64748b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+              <span style="overflow: hidden; text-overflow: ellipsis;">${escapeHTML(u.hunian)}</span>
+              ${roleBadge}
             </div>
           </div>
         </div>
         ${unreadBadgeHTML}
       `;
       item.onclick = () => {
-        if (u.uid !== currentUser.uid) {
+        if (!isMe) {
           openPrivateTab(u.uid, u.username || u.nama);
         }
       };
-      item.style.cursor = u.uid !== currentUser.uid ? 'pointer' : 'default';
+      item.style.cursor = !isMe ? 'pointer' : 'default';
       listContainer.appendChild(item);
     });
 
