@@ -557,6 +557,175 @@ window.tutupFotoBesar = function() {
   if (imgElem) imgElem.src = ''; // Kosongkan memori gambar saat ditutup
 };
 
+// ==========================================
+// PENJAGA GLOBAL TOMBOL BACK HP (PWA)
+// ==========================================
+(function() {
+  if (window._penjagaBackGlobalAktif) return;
+  window._penjagaBackGlobalAktif = true;
+
+  let waktuBackTerakhir = 0;
+  let baseGuardTerpasang = false;
+  let jumlahLayerTercatat = 0;
+  let sedangSinkronHistory = false;
+
+  function cariFotoModalTerbuka() {
+    return (
+      document.getElementById('modal-foto-besar') ||
+      document.getElementById('lightbox-foto') ||
+      document.querySelector('[data-lightbox="foto-besar"]') ||
+      Array.from(document.body.children).find(el => {
+        const s = window.getComputedStyle(el);
+        return (
+          s.position === 'fixed' &&
+          s.display !== 'none' &&
+          s.visibility !== 'hidden' &&
+          Number(s.zIndex) >= 2000 &&
+          el.querySelector('img') &&
+          !el.classList.contains('modal-bg')
+        );
+      })
+    );
+  }
+
+  function daftarModalBiasaTerbuka() {
+    return Array.from(
+      document.querySelectorAll('.modal-bg, #modal-catatan-ronda, #rt05-custom-alert, [role="dialog"]')
+    ).filter(el => {
+      const s = window.getComputedStyle(el);
+      return s.display !== 'none' && s.visibility !== 'hidden';
+    });
+  }
+
+  function hitungLayerTerbuka() {
+    let total = daftarModalBiasaTerbuka().length;
+    const chatModal = document.getElementById('chat-overlay-modal');
+    if (chatModal && chatModal.dataset.open === 'true') total++;
+    if (cariFotoModalTerbuka()) total++;
+    return total;
+  }
+
+  function sinkronLayerSetelahKlik() {
+    // 1. Pastikan 1 penjaga dasar terpasang pada sentuhan pertama
+    if (!baseGuardTerpasang) {
+      try {
+        window.history.pushState({ rt05BaseGuard: true, layer: 0 }, '', window.location.href);
+        baseGuardTerpasang = true;
+      } catch (e) {}
+    }
+
+    const layerSekarang = hitungLayerTerbuka();
+
+    // 2. Jika ada modal atau foto baru terbuka, tambah entri riwayat sesuai jumlah lapisannya
+    if (layerSekarang > jumlahLayerTercatat) {
+      try {
+        window.history.pushState({ rt05Layer: layerSekarang }, '', window.location.href);
+        jumlahLayerTercatat = layerSekarang;
+      } catch (e) {}
+    }
+    // 3. Jika modal/foto ditutup lewat tombol X (bukan tombol Back), kurangi tumpukan riwayat berlebih
+    else if (layerSekarang < jumlahLayerTercatat) {
+      const selisih = jumlahLayerTercatat - layerSekarang;
+      jumlahLayerTercatat = layerSekarang;
+      if (window.history.state && typeof window.history.state.rt05Layer === 'number') {
+        sedangSinkronHistory = true;
+        window.history.go(-selisih);
+      }
+    }
+  }
+
+  function tampilkanPeringatanKeluar() {
+    if (typeof window.tampilkanToast === 'function') {
+      window.tampilkanToast('Tekan Back sekali lagi untuk keluar aplikasi', 'warning');
+      return;
+    }
+
+    let toast = document.getElementById('rt05-exit-toast');
+    if (!toast) {
+      toast = document.createElement('div');
+      toast.id = 'rt05-exit-toast';
+      toast.style.cssText = 'position:fixed; bottom:84px; left:50%; transform:translateX(-50%); background:rgba(15,23,42,0.92); color:#f8fafc; padding:10px 18px; border-radius:999px; font-size:12.5px; font-weight:600; z-index:2147483647; box-shadow:0 8px 20px rgba(0,0,0,0.35); border:1px solid rgba(255,255,255,0.15); pointer-events:none; transition:opacity 0.2s; white-space:nowrap;';
+      document.body.appendChild(toast);
+    }
+    toast.textContent = 'Tekan Back sekali lagi untuk keluar aplikasi';
+    toast.style.opacity = '1';
+    clearTimeout(toast._timer);
+    toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+  }
+
+  function tutupSatuLayerTeratas() {
+    // Prioritas 1: Foto/lightbox besar paling atas
+    const fotoModal = cariFotoModalTerbuka();
+    if (fotoModal) {
+      if (typeof window.tutupFotoBesar === 'function') window.tutupFotoBesar();
+      else fotoModal.style.display = 'none';
+      return true;
+    }
+
+    // Prioritas 2: Modal chat overlay di index.html
+    const chatModal = document.getElementById('chat-overlay-modal');
+    if (chatModal && chatModal.dataset.open === 'true' && typeof window.toggleChatModal === 'function') {
+      window.toggleChatModal();
+      return true;
+    }
+
+    // Prioritas 3: Modal biasa paling terakhir dibuka
+    const daftarModal = daftarModalBiasaTerbuka();
+    if (daftarModal.length > 0) {
+      const modalTeratas = daftarModal[daftarModal.length - 1];
+      modalTeratas.style.display = 'none';
+      if (modalTeratas.id === 'modal-qr-scanner' && typeof window.stopScanQR === 'function') {
+        window.stopScanQR();
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  // Pantau setiap klik (fase bubble, setelah handler tombol membuka/menutup modal)
+  document.addEventListener('click', () => {
+    setTimeout(sinkronLayerSetelahKlik, 10);
+  });
+
+  window.addEventListener('popstate', () => {
+    if (sedangSinkronHistory) {
+      sedangSinkronHistory = false;
+      return;
+    }
+
+    // Jika berada di dalam iframe (misal chat.html di dalam index.html), serahkan ke parent
+    if (window.parent && window.parent !== window) return;
+
+    // Tutup lapisan paling atas (Foto Besar dulu, lalu Modal Keuangan, dst)
+    if (tutupSatuLayerTeratas()) {
+      jumlahLayerTercatat = hitungLayerTerbuka();
+      return;
+    }
+
+    jumlahLayerTercatat = 0;
+    baseGuardTerpasang = false;
+
+    const path = window.location.pathname.toLowerCase();
+    const adalahHalamanAnak = path.includes('pengumuman') || path.includes('chat') || path.includes('admin');
+
+    // Jika berada di halaman anak, kembali ke beranda index.html
+    if (adalahHalamanAnak) {
+      window.location.href = 'index.html';
+      return;
+    }
+
+    // Di index.html: konfirmasi tekan Back 2x dalam 2 detik untuk keluar aplikasi
+    const sekarang = Date.now();
+    if (sekarang - waktuBackTerakhir < 2000) {
+      window.history.back();
+    } else {
+      waktuBackTerakhir = sekarang;
+      tampilkanPeringatanKeluar();
+    }
+  });
+})();
+
 // DAFTARKAN SEMUA FUNGSI KE WINDOW GLOBAL
 window.RT05_CONFIG = RT05_CONFIG;
 window.perbaikiKoordinat = perbaikiKoordinat;
