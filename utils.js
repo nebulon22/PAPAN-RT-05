@@ -594,8 +594,8 @@ window.tutupFotoBesar = function() {
     toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2000);
   }
 
-function tutupModalYangSedangTerbuka() {
-    // 1. Cek foto/lightbox besar (baik yang punya ID maupun overlay fixed bergambar)
+  function tutupModalYangSedangTerbuka() {
+    // 1. Cek foto/lightbox besar
     const fotoModal = document.getElementById('modal-foto-besar') ||
                       document.getElementById('lightbox-foto') ||
                       document.querySelector('[data-lightbox="foto-besar"]') ||
@@ -604,7 +604,7 @@ function tutupModalYangSedangTerbuka() {
                         return s.position === 'fixed' && s.display !== 'none' && Number(s.zIndex) >= 2000 && el.querySelector('img') && !el.classList.contains('modal-bg');
                       });
 
-    if (fotoModal && fotoModal.style.display !== 'none') {
+    if (fotoModal && window.getComputedStyle(fotoModal).display !== 'none') {
       if (typeof window.tutupFotoBesar === 'function') window.tutupFotoBesar();
       else fotoModal.style.display = 'none';
       return true;
@@ -617,10 +617,10 @@ function tutupModalYangSedangTerbuka() {
       return true;
     }
 
-    // 3. Cek modal-bg lain yang sedang tampil (Keuangan, Inventaris, Jimpitan, Setting, dll)
-    const modalTerbuka = Array.from(document.querySelectorAll('.modal-bg, #modal-catatan-ronda, #rt05-custom-alert'))
+    // 3. Cek modal lain yang sedang tampil (Keuangan, Inventaris, Jimpitan, Pengumuman, Setting, dll)
+    const modalTerbuka = Array.from(document.querySelectorAll('.modal-bg, #modal-catatan-ronda, #rt05-custom-alert, [role="dialog"]'))
       .reverse()
-      .find(el => window.getComputedStyle(el).display !== 'none');
+      .find(el => window.getComputedStyle(el).display !== 'none' && window.getComputedStyle(el).visibility !== 'hidden');
 
     if (modalTerbuka) {
       modalTerbuka.style.display = 'none';
@@ -633,15 +633,15 @@ function tutupModalYangSedangTerbuka() {
     return false;
   }
 
-  // Aktifkan state setelah sentuhan/klik pertama agar diizinkan kebijakan Chrome Android
+  // Setiap sentuhan/klik warga (membuka modal, klik foto, dll) memastikan guard aktif dengan user gesture yang sah
   ['pointerdown', 'keydown'].forEach(evt => {
-    window.addEventListener(evt, pasangPenjagaHistory, { once: true, passive: true });
+    window.addEventListener(evt, pasangPenjagaHistory, { passive: true });
   });
 
   window.addEventListener('popstate', () => {
     guardTerpasang = false;
 
-    // Jika dijalankan di dalam iframe (misal chat.html di dalam index.html), serahkan ke parent
+    // Jika di dalam iframe (misal chat.html di dalam index.html), serahkan ke parent
     if (window.parent && window.parent !== window) return;
 
     // Prioritas 1: Tutup foto besar atau modal yang sedang terbuka
@@ -653,16 +653,16 @@ function tutupModalYangSedangTerbuka() {
     const path = window.location.pathname.toLowerCase();
     const adalahHalamanAnak = path.includes('pengumuman') || path.includes('chat') || path.includes('admin');
 
-    // Prioritas 2: Jika berada di halaman anak (bukan index), kembali ke index.html
+    // Prioritas 2: Jika berada di halaman anak, kembali ke beranda index.html
     if (adalahHalamanAnak) {
       window.location.href = 'index.html';
       return;
     }
 
-    // Prioritas 3: Di index.html, terapkan konfirmasi tekan Back 2x dalam 2 detik
+    // Prioritas 3: Di index.html, konfirmasi tekan Back 2x dalam 2 detik untuk keluar
     const sekarang = Date.now();
     if (sekarang - waktuBackTerakhir < 2000) {
-      window.history.back(); // Keluar aplikasi
+      window.history.back();
     } else {
       waktuBackTerakhir = sekarang;
       tampilkanPeringatanKeluar();
