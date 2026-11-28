@@ -3042,43 +3042,82 @@ window.prosesPdfSuratPengantar = async function(target) {
   const labelAsli = tombolAktif ? tombolAktif.innerText : '';
   if (tombolAktif) tombolAktif.innerText = '⏳ Membuat PDF...';
 
-  const kodeTiket = buatKodeTiketSurat();
+  // Sidik jari form + tanggal hari ini (tanpa menyimpan NIK utuh)
+  const hariIni = new Date().toISOString().slice(0, 10);
+  const sidikForm = JSON.stringify({
+    tgl: hariIni,
+    jenis: d.jenis,
+    nama: d.nama.toLowerCase(),
+    nikSensor: sensorNikAudit(d.nik),
+    alamat: d.alamat.toLowerCase(),
+    tujuan: d.tujuan.toLowerCase(),
+    keperluan: (d.keperluan || '').toLowerCase()
+  });
+
+  let kodeTiket = '';
+  let sudahTercatat = false;
 
   try {
-    // 1. Daftarkan tiket ke Firebase terlebih dahulu (status: BELUM_DISAHKAN)
-    await simpanLogCetakSurat(kodeTiket, d);
+    const cacheTiket = JSON.parse(localStorage.getItem('rt05_tiket_surat_harian') || 'null');
+    if (cacheTiket && cacheTiket.sidik === sidikForm && cacheTiket.kodeTiket) {
+      const dbUrl = window.db?.app?.options?.databaseURL?.replace(/\/$/, '');
+      const idToken = await window.auth?.currentUser?.getIdToken();
+      if (dbUrl && idToken) {
+        const cekRes = await fetch(`${dbUrl}/surat_pengantar/${encodeURIComponent(cacheTiket.kodeTiket)}.json?auth=${encodeURIComponent(idToken)}`);
+        const dataLama = cekRes.ok ? await cekRes.json() : null;
 
-    // 2. Bangun file PDF biner lengkap dengan QR Code verifikasi
+        // Pakai ulang tiket jika masih ada di database dan statusnya BELUM dipakai
+        if (dataLama && dataLama.status !== 'SUDAH_DIGUNAKAN') {
+          kodeTiket = cacheTiket.kodeTiket;
+          sudahTercatat = true;
+        }
+      }
+    }
+  } catch (e) {}
+
+  if (!kodeTiket) {
+    kodeTiket = buatKodeTiketSurat();
+  }
+
+  try {
+    if (!sudahTercatat) {
+      await simpanLogCetakSurat(kodeTiket, d);
+      try {
+        localStorage.setItem('rt05_tiket_surat_harian', JSON.stringify({
+          sidik: sidikForm,
+          kodeTiket: kodeTiket
+        }));
+      } catch (e) {}
+    }
+
     const { pdfBlob, fileName } = await bangunFilePdfSurat(kodeTiket, d);
 
     if (mode === 'share') {
       const pdfFile = new File([pdfBlob], fileName, { type: 'application/pdf' });
-
-      // Buka dialog Share bawaan HP agar warga bebas memilih WA/kontak mana saja
       if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-        await navigator.share({
-          files: [pdfFile],
-          title: fileName
-        });
+        await navigator.share({ files: [pdfFile], title: fileName });
       } else {
-        // Fallback jika dibuka lewat PC/browser yang tidak mendukung share file
         const urlUnduh = URL.createObjectURL(pdfBlob);
         const a = document.createElement('a');
         a.href = urlUnduh;
         a.download = fileName;
         a.click();
         URL.revokeObjectURL(urlUnduh);
-        alert(`Browser perangkat ini belum mendukung fitur Share langsung. File PDF (${fileName}) otomatis disimpan ke perangkat Anda.`);
+        alert(`Perangkat ini tidak mendukung Share file langsung. File PDF (${fileName}) otomatis disimpan ke perangkat Anda.`);
       }
     } else {
-      // Mode Simpan PDF langsung ke penyimpanan perangkat
       const urlUnduh = URL.createObjectURL(pdfBlob);
       const a = document.createElement('a');
       a.href = urlUnduh;
       a.download = fileName;
       a.click();
       URL.revokeObjectURL(urlUnduh);
-      alert(`✅ File PDF berhasil disimpan (${fileName}) dengan Kode Tiket ${kodeTiket}.`);
+
+      if (sudahTercatat) {
+        alert(`ℹ️ Anda sudah pernah membuat surat yang sama hari ini.\nFile PDF diunduh ulang menggunakan Kode Tiket yang sama (${kodeTiket}) agar tidak ganda.`);
+      } else {
+        alert(`✅ File PDF berhasil disimpan (${fileName}) dengan Kode Tiket ${kodeTiket}.`);
+      }
     }
   } catch (err) {
     if (err && err.name !== 'AbortError') {
