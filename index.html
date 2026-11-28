@@ -3468,7 +3468,23 @@ window.tutupModalVerifikasiSuratLuar = function(e) {
   if (e && e.target && e.target.id === 'modal-verifikasi-surat') window.tutupModalVerifikasiSurat();
 };
 
+  const amanHtml = (str) => {
+  const fn = window.utils?.escapeHTML || window.utils?.escapeHtml || window.escapeHTML || window.escapeHtml;
+  if (typeof fn === 'function') return fn(str);
+  return String(str || '').replace(/[&<>"']/g, m => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[m]));
+};
+
 async function cekParameterVerifikasiSurat() {
+  const amanHtml = (str) => {
+    const fn = window.utils?.escapeHTML || window.utils?.escapeHtml || window.escapeHTML || window.escapeHtml;
+    if (typeof fn === 'function') return fn(str);
+    return String(str || '').replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+  };
+
   const params = new URLSearchParams(window.location.search);
   const kodeCek = (params.get('cek') || '').trim().toUpperCase();
   if (!kodeCek) return;
@@ -3478,7 +3494,7 @@ async function cekParameterVerifikasiSurat() {
   if (!modal || !konten) return;
 
   modal.style.display = 'flex';
-  konten.innerHTML = `<div style="text-align:center; padding:16px; color:#475569;">⏳ Memverifikasi tiket <b>${escapeHTML(kodeCek)}</b>...</div>`;
+  konten.innerHTML = `<div style="text-align:center; padding:16px; color:#475569;">⏳ Memverifikasi tiket <b>${amanHtml(kodeCek)}</b>...</div>`;
 
   // Tunggu Firebase siap
   let percobaan = 0;
@@ -3500,25 +3516,56 @@ async function cekParameterVerifikasiSurat() {
         <div style="background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:14px; text-align:center; color:#991b1b;">
           <div style="font-size:28px; margin-bottom:6px;">❌</div>
           <b>KODE TIKET TIDAK TERDAFTAR</b>
-          <p style="font-size:12px; margin:6px 0 0;">Kode <b>${escapeHTML(kodeCek)}</b> tidak ditemukan dalam sistem administrasi RT 05 Kayen. Dokumen berpotensi palsu.</p>
+          <p style="font-size:12px; margin:6px 0 0;">Kode <b>${amanHtml(kodeCek)}</b> tidak ditemukan dalam sistem administrasi RT 05 Kayen. Dokumen berpotensi palsu.</p>
         </div>
       `;
       return;
     }
 
-    const isSah = data.status === 'SAH_TERVERIFIKASI';
-    if (isSah) {
+    if (data.status === 'SUDAH_DIGUNAKAN') {
+      konten.innerHTML = `
+        <div style="background:#f1f5f9; border:1px solid #94a3b8; border-radius:10px; padding:14px; color:#334155;">
+          <div style="text-align:center; font-size:28px; margin-bottom:4px;">⛔</div>
+          <div style="text-align:center; font-weight:800; font-size:14px; color:#b91c1c; margin-bottom:10px;">SURAT SUDAH PERNAH DIGUNAKAN (HANGUS)</div>
+          <div style="font-size:12px; line-height:1.6;">
+            • <b>Kode Tiket:</b> ${amanHtml(data.kodeTiket)}<br>
+            • <b>No. Agenda Resmi:</b> ${amanHtml(data.nomorAgendaResmi || '-')}<br>
+            • <b>Pemohon:</b> ${amanHtml(data.namaPemohon)} (${amanHtml(data.nikSensor)})<br>
+            • <b>Tujuan Awal:</b> ${amanHtml(data.tujuan || '-')}<br>
+            • <b>Telah Dipakai Di:</b> <b>${amanHtml(data.instansiPengguna || '-')}</b><br>
+            • <b>Waktu Pemakaian:</b> ${amanHtml(data.waktuDipakai || '-')}
+          </div>
+          <p style="font-size:11.5px; margin:10px 0 0; font-weight:600; color:#b91c1c;">
+            Dokumen ini hanya berlaku untuk 1 kali pengajuan. Fotokopi atau penggunaan ulang tidak diperkenankan.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
+    if (data.status === 'SAH_TERVERIFIKASI') {
       konten.innerHTML = `
         <div style="background:#ecfdf5; border:1px solid #a7f3d0; border-radius:10px; padding:14px; color:#065f46;">
           <div style="text-align:center; font-size:28px; margin-bottom:4px;">✅</div>
           <div style="text-align:center; font-weight:800; font-size:14px; margin-bottom:10px;">SURAT SAH & TERVERIFIKASI RT 05</div>
           <div style="font-size:12px; line-height:1.6;">
-            • <b>Kode Tiket:</b> ${escapeHTML(data.kodeTiket)}<br>
-            • <b>No. Agenda Resmi:</b> ${escapeHTML(data.nomorAgendaResmi || '-')}<br>
-            • <b>Jenis Surat:</b> ${escapeHTML(data.jenisSurat)}<br>
-            • <b>Pemohon:</b> ${escapeHTML(data.namaPemohon)} (${escapeHTML(data.nikSensor)})<br>
-            • <b>Alamat:</b> ${escapeHTML(data.alamat)}<br>
-            • <b>Disahkan Pada:</b> ${escapeHTML(data.waktuSah || '-')}
+            • <b>Kode Tiket:</b> ${amanHtml(data.kodeTiket)}<br>
+            • <b>No. Agenda Resmi:</b> ${amanHtml(data.nomorAgendaResmi || '-')}<br>
+            • <b>Jenis Surat:</b> ${amanHtml(data.jenisSurat)}<br>
+            • <b>Pemohon:</b> ${amanHtml(data.namaPemohon)} (${amanHtml(data.nikSensor)})<br>
+            • <b>Alamat:</b> ${amanHtml(data.alamat)}<br>
+            • <b>Instansi Tujuan:</b> <b>${amanHtml(data.tujuan || '-')}</b><br>
+            • <b>Disahkan Pada:</b> ${amanHtml(data.waktuSah || '-')}
+          </div>
+
+          <div style="margin-top:12px; padding-top:10px; border-top:1px dashed #6ee7b7;">
+            <div style="font-size:11px; color:#047857; margin-bottom:6px; font-weight:600;">
+              Khusus Petugas Instansi Penerima (RW / Kalurahan / Polsek / dll):
+            </div>
+            <button type="button" onclick="tandaiSuratSudahDipakai('${amanHtml(data.kodeTiket)}', '${amanHtml(data.tujuan || '')}')"
+              style="width:100%; padding:9px; background:#0f172a; color:#fff; border:none; border-radius:8px; font-weight:bold; font-size:12px; cursor:pointer;">
+              🔒 Tandai Surat Sudah Dipakai di Sini
+            </button>
           </div>
         </div>
       `;
@@ -3528,11 +3575,12 @@ async function cekParameterVerifikasiSurat() {
           <div style="text-align:center; font-size:28px; margin-bottom:4px;">⚠️</div>
           <div style="text-align:center; font-weight:800; font-size:14px; margin-bottom:10px;">DRAF BELUM DISAHKAN KETUA RT 05</div>
           <div style="font-size:12px; line-height:1.6;">
-            • <b>Kode Tiket:</b> ${escapeHTML(data.kodeTiket)}<br>
+            • <b>Kode Tiket:</b> ${amanHtml(data.kodeTiket)}<br>
             • <b>Status:</b> Belum ditandatangani / belum masuk buku agenda RT<br>
-            • <b>Jenis Surat:</b> ${escapeHTML(data.jenisSurat)}<br>
-            • <b>Pemohon:</b> ${escapeHTML(data.namaPemohon)} (${escapeHTML(data.nikSensor)})<br>
-            • <b>Waktu Cetak Draf:</b> ${escapeHTML(data.waktuCetak)}
+            • <b>Jenis Surat:</b> ${amanHtml(data.jenisSurat)}<br>
+            • <b>Pemohon:</b> ${amanHtml(data.namaPemohon)} (${amanHtml(data.nikSensor)})<br>
+            • <b>Instansi Tujuan:</b> ${amanHtml(data.tujuan || '-')}<br>
+            • <b>Waktu Cetak Draf:</b> ${amanHtml(data.waktuCetak)}
           </div>
           <p style="font-size:11.5px; margin:10px 0 0; font-weight:600; color:#b91c1c;">
             Jika kertas fisik ini sudah memiliki tanda tangan/stempel sementara status di atas masih BELUM DISAHKAN, harap konfirmasi langsung ke Ketua RT 05.
@@ -3541,9 +3589,30 @@ async function cekParameterVerifikasiSurat() {
       `;
     }
   } catch (err) {
-    konten.innerHTML = `<div style="color:#dc2626; text-align:center; padding:12px;">Gagal memeriksa tiket: ${escapeHTML(err.message)}</div>`;
+    konten.innerHTML = `<div style="color:#dc2626; text-align:center; padding:12px;">Gagal memeriksa tiket: ${amanHtml(err.message)}</div>`;
   }
 }
+
+window.tandaiSuratSudahDipakai = async function(kodeTiket, saranInstansi) {
+  const namaInstansi = prompt('Masukkan nama instansi / petugas yang menerima surat ini:', saranInstansi || '');
+  if (!namaInstansi || !namaInstansi.trim()) return;
+
+  if (!confirm(`Konfirmasi bahwa surat ${kodeTiket} sudah diterima oleh "${namaInstansi.trim()}"?\n\nSetelah ditandai, surat ini tidak dapat dipakai ulang.`)) {
+    return;
+  }
+
+  try {
+    await window.firebaseUpdate(window.firebaseRef(window.db, `surat_pengantar/${kodeTiket}`), {
+      status: 'SUDAH_DIGUNAKAN',
+      instansiPengguna: namaInstansi.trim(),
+      waktuDipakai: new Date().toLocaleString('id-ID')
+    });
+    cekParameterVerifikasiSurat();
+  } catch (err) {
+    alert('❌ Gagal menandai status surat: ' + err.message);
+  }
+};
+
 cekParameterVerifikasiSurat();
 
 window.kunciSuratSudahDipakai = async function(kodeTiket) {
